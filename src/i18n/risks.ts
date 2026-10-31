@@ -107,6 +107,9 @@ const pl: Dict = {
   job_label_backup: 'kopia zapasowa (backup-export)',
   // --- funkcje Edge (integracje)
   rk_ferry_status_unknown: 'Nieznany status rejsu {vessel} {dep} — bez zmiany, do weryfikacji HHL',
+  /* F7 #688 r3: osobne klucze Digitraffic Viking (DUP / wycofane) */
+  rk_ferry_digitraffic_dup: 'Zdublowany rejs Vikinga — sprawdź ({vessel}, {dep})',
+  rk_ferry_digitraffic_withdrawn: 'Digitraffic: zgłoszenie portowe wycofane — sprawdź {vessel} {dep}',
   /* BN3 decyzja 59: Tallink Alert bez jednoznacznego rejsu → tylko ryzyko MEDIUM */
   rk_tallink_alert_ambiguous: 'Tallink Alert: odwołanie — wiele rejsów, weryfikacja HHL',
   rk_tallink_alert_unmatched: 'Tallink Alert: odwołanie bez jednoznacznego rejsu — weryfikacja HHL',
@@ -131,6 +134,7 @@ const pl: Dict = {
   rk_src_DFDS_STATUS: 'status promów (DFDS)',
   rk_src_DIGITRAFFIC: 'AIS promów (Digitraffic)',
   rk_src_DIGITRAFFIC_PORTCALL: 'godziny portowe (Digitraffic Portnet)',
+  rk_src_DIGITRAFFIC_VIKING: 'rozkład Viking (Digitraffic Portnet)',
   rk_src_PORT_TALLINN: 'odjazdy/przyjazdy (Port of Tallinn)',
   rk_src_PORTS_STOCKHOLM: 'odjazdy/przyjazdy (Ports of Stockholm)',
   rk_src_STENA_IRM: 'pozycje promów Stena (IRM)',

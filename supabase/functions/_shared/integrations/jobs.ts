@@ -25,8 +25,11 @@ import {
   TALLINK_BOOKING, TALLINK_UA, parseTallinkTimetable, tallinkTimetableUrl,
 } from '../ferry/tallink.ts';
 import {
-  DIGITRAFFIC_PORT_CALLS_URL, digitrafficPortCallsUrl, parseDigitrafficPortCalls,
+  DIGITRAFFIC_PORT_CALLS_URL, DIGITRAFFIC_PORTCALL_SOURCE_REF_PREFIX, DIGITRAFFIC_USER,
+  digitrafficPortCallSourceRef, digitrafficPortCallsUrl, parseDigitrafficPortCalls,
+  vikingScheduleFromDigitrafficPortCalls, VIKING_DIGITRAFFIC_HORIZON_DAYS, VIKING_XPRS_MMSI,
 } from '../ferry/digitrafficPortCalls.ts';
+export { DIGITRAFFIC_USER };
 import {
   PORT_TALLINN_ARRIVALS_URL, PORT_TALLINN_DEPARTURES_URL, PORT_TALLINN_UA,
   parsePortTallinnHtml,
@@ -95,7 +98,6 @@ import {
 
 /** Wyłącznie ASCII (nagłówek HTTP) — test pilnuje. */
 export const USER_AGENT = 'TOWER-WatchTower/1.0 (+https://log-mar.pl; H&H Logistics; read max every 15 min)';
-export const DIGITRAFFIC_USER = 'TOWER-WatchTower/HHL';
 /** AIS-SRC: jedno zapytanie Stena IRM, nagłówek z nazwą Watch Tower. */
 export const STENA_IRM_UA = 'Watch Tower (https://tower.log-mar.pl; ferry positions)';
 
@@ -212,6 +214,10 @@ export interface SyncStore {
   insertSailings(rows: SailingInsert[]): Promise<void>;
   /** aktualizacja z warunkiem source <> 'RECZNIE' (wyścig ze zmianą ręczną HHL) — zwraca, czy zapisano */
   updateSailing(id: string, patch: SailingPatch): Promise<boolean>;
+  /** #685-a / decyzja 74: liczba transportów z sailing_id (przed usunięciem Portnet). */
+  sailingAssignedLoadCount?(sailingId: string): Promise<number>;
+  /** #685-a / decyzja 74: usuń rejs (nie RECZNIE). */
+  deleteSailing?(id: string): Promise<boolean>;
   /** BN3 decyzja 57: AUTO komunikat do historii operator_notices (created_by null). */
   insertOperatorNotice?(row: {
     sailingId: string;
@@ -795,6 +801,327 @@ export function pickUniqueInWindow<T>(
   return { kind: 'hit', item: inWin[0]! };
 }
 
+/**
+ * #685-a / decyzja 63a — Digitraffic FIHEL ES / Viking XPRS → sailings TLLA-HEL / HELA-TLL (źródło VIKING).
+ * Dopasowanie jak #682: jeden kandydat w oknie ±30 min; RECZNIE bez zmian; ambiguous → ryzyko MEDIUM.
+ * Nie zamyka SOURCE_DOWN:VIKING_SCHEDULE (to 63c / plik ≥ 30 dni).
+ */
+async function applyDigitrafficVikingNearSchedule(deps: JobDeps, sinceIso: string): Promise<{
+  inserted: number; updated: number; manualKept: number; removed: number; warnings: string[]; fail: boolean; risks: number;
+}> {
+  const now = deps.now();
+  /* F7 #688 r1 B1: etaFrom/etaTo (i etd*) filtrują po ETA/ETD — nie po portCallTimestamp (from/to). */
+  const winFrom = new Date(now.getTime() - 3 * 3600_000).toISOString();
+  const winTo = new Date(now.getTime() + VIKING_DIGITRAFFIC_HORIZON_DAYS * 864e5).toISOString();
+  const urlEta = digitrafficPortCallsUrl({
+    locode: 'FIHEL', mmsi: VIKING_XPRS_MMSI, etaFrom: winFrom, etaTo: winTo,
+  });
+  const urlEtd = digitrafficPortCallsUrl({
+    locode: 'FIHEL', mmsi: VIKING_XPRS_MMSI, etdFrom: winFrom, etdTo: winTo,
+  });
+  const headers = {
+    'User-Agent': USER_AGENT,
+    Accept: 'application/json',
+    'Accept-Encoding': 'gzip',
+    'Digitraffic-User': DIGITRAFFIC_USER,
+  };
+  const [pageEta, pageEtd] = await Promise.all([
+    readText(deps, urlEta, { headers }),
+    readText(deps, urlEtd, { headers }),
+  ]);
+  /* F7 #688 r2 B1: obie strony padły → fail; jedna OK → dalej, ale bez usuwania. */
+  if (!pageEta.ok && !pageEtd.ok) {
+    return {
+      inserted: 0, updated: 0, manualKept: 0, removed: 0,
+      warnings: [pageEta.warning || pageEtd.warning], fail: true, risks: 0,
+    };
+  }
+  const hasPortCallsArray = (json: unknown): boolean =>
+    !!json && typeof json === 'object' && Array.isArray((json as { portCalls?: unknown }).portCalls);
+  const mergePortCalls = (a: unknown, b: unknown): { portCalls: unknown[] } => {
+    const list: unknown[] = [];
+    const seen = new Set<number>();
+    for (const json of [a, b]) {
+      if (!hasPortCallsArray(json)) continue;
+      const arr = (json as { portCalls: unknown[] }).portCalls;
+      for (const row of arr) {
+        if (!row || typeof row !== 'object') continue;
+        const id = Number((row as { portCallId?: unknown }).portCallId);
+        if (Number.isFinite(id) && seen.has(id)) continue;
+        if (Number.isFinite(id)) seen.add(id);
+        list.push(row);
+      }
+    }
+    return { portCalls: list };
+  };
+  let jsonEta: unknown = null;
+  let jsonEtd: unknown = null;
+  let etaParseFail = false;
+  let etdParseFail = false;
+  if (pageEta.ok) {
+    try { jsonEta = JSON.parse(pageEta.text); } catch {
+      etaParseFail = true;
+    }
+  }
+  if (pageEtd.ok) {
+    try { jsonEtd = JSON.parse(pageEtd.text); } catch {
+      etdParseFail = true;
+    }
+  }
+  if (etaParseFail && etdParseFail) {
+    return {
+      inserted: 0, updated: 0, manualKept: 0, removed: 0,
+      warnings: ['Digitraffic Portnet (Viking): nieczytelny JSON'], fail: true, risks: 0,
+    };
+  }
+  /* F7 #688 r2 B1: tablica portCalls sprawdzana osobno przed scaleniem (merge nie maskuje struktury). */
+  const etaHasArr = !etaParseFail && hasPortCallsArray(jsonEta);
+  const etdHasArr = !etdParseFail && hasPortCallsArray(jsonEtd);
+  const warnings: string[] = [];
+  if (pageEta.ok && !etaParseFail && jsonEta !== null && !etaHasArr) {
+    warnings.push('Struktura Portnet (Viking ETA) zmieniona: brak tablicy portCalls.');
+  }
+  if (pageEtd.ok && !etdParseFail && jsonEtd !== null && !etdHasArr) {
+    warnings.push('Struktura Portnet (Viking ETD) zmieniona: brak tablicy portCalls.');
+  }
+  if (etaParseFail) warnings.push('Digitraffic Portnet (Viking ETA): nieczytelny JSON');
+  if (etdParseFail) warnings.push('Digitraffic Portnet (Viking ETD): nieczytelny JSON');
+  const json = mergePortCalls(
+    etaHasArr ? jsonEta : null,
+    etdHasArr ? jsonEtd : null,
+  );
+  /* F7 #688 r3 nieblokujące: niepusta lista osobno na ETA i ETD (nie tylko scalona). */
+  const etaLen = etaHasArr ? (jsonEta as { portCalls: unknown[] }).portCalls.length : 0;
+  const etdLen = etdHasArr ? (jsonEtd as { portCalls: unknown[] }).portCalls.length : 0;
+  const completeForRemoval =
+    pageEta.ok && pageEtd.ok
+    && !etaParseFail && !etdParseFail
+    && etaHasArr && etdHasArr
+    && etaLen > 0 && etdLen > 0;
+  const parsed = vikingScheduleFromDigitrafficPortCalls(json, { now });
+  warnings.push(...parsed.warnings);
+  if (!pageEta.ok) warnings.push(`Digitraffic Viking ETA: ${pageEta.warning}`);
+  if (!pageEtd.ok) warnings.push(`Digitraffic Viking ETD: ${pageEtd.warning}`);
+  if (!completeForRemoval) {
+    warnings.push('Digitraffic Viking: niepełna odpowiedź Portnet — bez usuwania rejsów');
+  }
+  const [projectId, vessels, existing] = await Promise.all([
+    deps.store.projectId(), deps.store.vessels(), deps.store.sailingsSince(sinceIso),
+  ]);
+  const byName = new Map(vessels.map((v) => [v.name, v.id]));
+  const WINDOW_MS = 30 * 60_000;
+  /* F7 #688 r3 B2: odstępy XPRS ≥ 3 h — najbliższy wiersz rozkładu (bez digitraffic:) w ±3 h. */
+  const SCHEDULE_WIN_MS = 3 * 3600_000;
+  let inserted = 0;
+  let updated = 0;
+  let manualKept = 0;
+  let removed = 0;
+  let risks = 0;
+  const seenRefs = new Set<string>();
+  const isDigitrafficRef = (ref: string | null | undefined) =>
+    (ref ?? '').startsWith(DIGITRAFFIC_PORTCALL_SOURCE_REF_PREFIX);
+  const nearestScheduleNeighbor = (
+    vesselId: string, route: string, depMs: number, exceptId?: string,
+  ) => {
+    let best: (typeof existing)[number] | undefined;
+    let bestAbs = Infinity;
+    for (const s of existing) {
+      if (s.id === exceptId) continue;
+      if (s.vessel_id !== vesselId || s.route !== route) continue;
+      /* F7 #688 r4: VIKING / RECZNIE / DANE_STARTOWE = rozkład w ±3 h (Digitraffic nie dubluje). */
+      if (s.source !== 'VIKING' && s.source !== 'RECZNIE' && s.source !== 'DANE_STARTOWE') continue;
+      if (isDigitrafficRef(s.source_ref)) continue;
+      const abs = Math.abs(Date.parse(s.departure_at) - depMs);
+      if (abs > SCHEDULE_WIN_MS || abs >= bestAbs) continue;
+      bestAbs = abs;
+      best = s;
+    }
+    return best;
+  };
+  /* F7 #688 r3 nieblokujące: wyścig Awizacja/FK → ostrzeżenie, job nie pada. */
+  const safeDelete = async (id: string): Promise<boolean> => {
+    if (!deps.store.deleteSailing) return false;
+    try {
+      return await deps.store.deleteSailing(id);
+    } catch (e) {
+      warnings.push(
+        `Digitraffic Viking: nie usunięto rejsu ${id} (${e instanceof Error ? e.message : 'błąd'})`,
+      );
+      return false;
+    }
+  };
+  const raiseDupRisk = async (
+    row: (typeof existing)[number],
+    vessel: string,
+    sourceRef: string,
+    htmlDep: string,
+    loads: number,
+  ) => {
+    await deps.store.raiseRisk({
+      kind: 'FERRY', severity: 'MEDIUM',
+      title: `Zdublowany rejs Vikinga — sprawdź (${vessel}, ${row.departure_at.slice(0, 16)})`,
+      titleKey: 'rk_ferry_digitraffic_dup',
+      params: { vessel, dep: row.departure_at.slice(0, 16) },
+      detail: {
+        zrodlo: 'DIGITRAFFIC_VIKING_SCHEDULE', source_ref: sourceRef, trasa: row.route,
+        odejscie: row.departure_at, html_odejscie: htmlDep, transporty: loads,
+      },
+      dedup: `FERRY_UNKNOWN:DIGITRAFFIC_VIKING_DUP:${row.id}`,
+      sourceUrl: DIGITRAFFIC_PORT_CALLS_URL,
+    });
+    risks += 1;
+  };
+  for (const inc of parsed.sailings) {
+    if (Date.parse(inc.departureUtc) < Date.parse(sinceIso)) continue;
+    const vesselId = byName.get(inc.vessel);
+    if (!vesselId) {
+      if (!warnings.includes(`Statek spoza rejestru: ${inc.vessel}`)) {
+        warnings.push(`Statek spoza rejestru: ${inc.vessel}`);
+      }
+      continue;
+    }
+    const sourceRef = digitrafficPortCallSourceRef(inc.portCallId, inc.route);
+    seenRefs.add(sourceRef);
+    const byRef = existing.find((s) => s.source_ref === sourceRef);
+    if (byRef) {
+      if (byRef.source === 'RECZNIE') { manualKept += 1; continue; }
+      /* F7 #688 r2 B2 + r3 B2: HTML/plik w ±3 h wygrywa — usuń Digitraffic, nie aktualizuj. */
+      const depMsInc = Date.parse(inc.departureUtc);
+      const depMsRef = Date.parse(byRef.departure_at);
+      const htmlWin = nearestScheduleNeighbor(vesselId, inc.route, depMsInc, byRef.id)
+        ?? nearestScheduleNeighbor(vesselId, inc.route, depMsRef, byRef.id);
+      if (htmlWin) {
+        const loads = deps.store.sailingAssignedLoadCount
+          ? await deps.store.sailingAssignedLoadCount(byRef.id)
+          : 0;
+        if (loads > 0) {
+          await raiseDupRisk(byRef, inc.vessel, sourceRef, htmlWin.departure_at, loads);
+        } else if (await safeDelete(byRef.id)) {
+          removed += 1;
+          const ix = existing.findIndex((x) => x.id === byRef.id);
+          if (ix >= 0) existing.splice(ix, 1);
+        }
+        continue;
+      }
+      const patch: SailingPatch = {};
+      const depIso = new Date(inc.departureUtc).toISOString();
+      const arrIso = new Date(inc.arrivalUtc).toISOString();
+      if (new Date(byRef.departure_at).toISOString() !== depIso) patch.departure_at = depIso;
+      if (new Date(byRef.arrival_at).toISOString() !== arrIso) patch.arrival_at = arrIso;
+      if (byRef.source !== 'VIKING') patch.source = 'VIKING';
+      if (Object.keys(patch).length === 0) continue;
+      if (await deps.store.updateSailing(byRef.id, patch)) {
+        updated += 1;
+        Object.assign(byRef, patch);
+      }
+      continue;
+    }
+    const depMs = Date.parse(inc.departureUtc);
+    const pool = existing.filter((s) => s.vessel_id === vesselId && s.route === inc.route);
+    const pick = pickUniqueInWindow(pool, depMs, (s) => Date.parse(s.departure_at), WINDOW_MS);
+    if (pick.kind === 'ambiguous') {
+      warnings.push(
+        `Digitraffic Viking: niejednoznaczne dopasowanie ${inc.vessel} ${inc.route} (±30 min, ${pick.items.length} rejsy)`,
+      );
+      await deps.store.raiseRisk({
+        kind: 'FERRY', severity: 'MEDIUM',
+        title: `Digitraffic: niejednoznaczne dopasowanie ${inc.vessel} — bez zmiany, do weryfikacji HHL`,
+        titleKey: 'rk_ferry_status_unknown',
+        params: { vessel: inc.vessel, dep: inc.departureUtc.slice(0, 16) },
+        detail: {
+          zrodlo: 'DIGITRAFFIC_VIKING_SCHEDULE', statek: inc.vessel, trasa: inc.route,
+          odejscie: inc.departureUtc, rejsy: pick.items.length,
+        },
+        dedup: `FERRY_UNKNOWN:DIGITRAFFIC_VIKING:${vesselId}:${inc.route}:${inc.departureUtc}`,
+        sourceUrl: DIGITRAFFIC_PORT_CALLS_URL,
+      });
+      risks += 1;
+      continue;
+    }
+    if (pick.kind === 'hit') {
+      /* F7 #688 r1 B3: przy trafieniu oknem ±30 min niczego nie zmienia — HTML/plik/RECZNIE wygrywają. */
+      if (pick.item.source === 'RECZNIE') manualKept += 1;
+      continue;
+    }
+    /* F7 #688 r3 B2: rozkład w ±3 h → bez insertu (opóźnienie tylko delayed_* z ferry-portnet). */
+    const schedNear = nearestScheduleNeighbor(vesselId, inc.route, depMs);
+    if (schedNear) continue;
+    const row: SailingInsert = {
+      project_id: projectId,
+      vessel_id: vesselId,
+      route: inc.route,
+      departure_at: new Date(inc.departureUtc).toISOString(),
+      arrival_at: new Date(inc.arrivalUtc).toISOString(),
+      delayed_departure_at: null,
+      delayed_arrival_at: null,
+      status: 'ZAPLANOWANY',
+      source: 'VIKING',
+      source_ref: sourceRef,
+    };
+    /* F7 #688 r3 nieblokujące: konflikt unikalnego source_ref (wiersz poza sinceIso) → bez wyjątku. */
+    try {
+      await deps.store.insertSailings([row]);
+    } catch (e) {
+      warnings.push(
+        `Digitraffic Viking: konflikt source_ref ${sourceRef} (${e instanceof Error ? e.message : 'błąd'})`,
+      );
+      continue;
+    }
+    existing.push({
+      id: `digitraffic-vk-${inserted}`,
+      vessel_id: vesselId,
+      route: inc.route,
+      departure_at: row.departure_at,
+      arrival_at: row.arrival_at,
+      delayed_departure_at: null,
+      delayed_arrival_at: null,
+      status: 'ZAPLANOWANY',
+      source: 'VIKING',
+      source_ref: sourceRef,
+    });
+    inserted += 1;
+  }
+  /* F7 #688 r2 B1 + r3: usuwanie tylko gdy obie strony OK + niepusta lista ETA i ETD osobno. */
+  const nowMs = now.getTime();
+  if (completeForRemoval) {
+    for (const s of [...existing]) {
+      const ref = s.source_ref ?? '';
+      if (!ref.startsWith(DIGITRAFFIC_PORTCALL_SOURCE_REF_PREFIX)) continue;
+      if (seenRefs.has(ref)) continue;
+      if (s.source === 'RECZNIE') continue;
+      if (s.status !== 'ZAPLANOWANY') continue;
+      if (Date.parse(s.departure_at) < nowMs) continue;
+      const loads = deps.store.sailingAssignedLoadCount
+        ? await deps.store.sailingAssignedLoadCount(s.id)
+        : 0;
+      if (loads > 0) {
+        await deps.store.raiseRisk({
+          kind: 'FERRY', severity: 'MEDIUM',
+          title: `Digitraffic: zgłoszenie portowe wycofane — sprawdź Viking XPRS ${s.departure_at.slice(0, 16)}`,
+          titleKey: 'rk_ferry_digitraffic_withdrawn',
+          params: { vessel: 'Viking XPRS', dep: s.departure_at.slice(0, 16) },
+          detail: {
+            zrodlo: 'DIGITRAFFIC_VIKING_SCHEDULE', source_ref: ref, trasa: s.route,
+            odejscie: s.departure_at, transporty: loads,
+          },
+          dedup: `FERRY_UNKNOWN:DIGITRAFFIC_VIKING_WITHDRAWN:${s.id}`,
+          sourceUrl: DIGITRAFFIC_PORT_CALLS_URL,
+        });
+        risks += 1;
+        continue;
+      }
+      if (await safeDelete(s.id)) {
+        removed += 1;
+        const ix = existing.findIndex((x) => x.id === s.id);
+        if (ix >= 0) existing.splice(ix, 1);
+      }
+    }
+  }
+  /* F7 #688 r4: klauzule 1–2 (obie 5xx / oba JSON) już early-return z fail — tu tylko struktura. */
+  const totalFail = pageEta.ok && pageEtd.ok && !etaHasArr && !etdHasArr;
+  return { inserted, updated, manualKept, removed, warnings, fail: totalFail, risks };
+}
+
 /** BN2/BN3 — Portnet Digitraffic: ATA/ATD → actual_*; ATA spóźnione ≥ FERRY_PORT_DELAY_MIN → delayed_arrival. */
 async function applyDigitrafficPortCallActuals(deps: JobDeps, sinceIso: string): Promise<{
   updated: number; warnings: string[]; fail: boolean;
@@ -1156,6 +1483,26 @@ export async function runFerrySchedule(deps: JobDeps): Promise<JobResult> {
     const r = await applySailings(deps, incomingV, since, 'VIKING');
     inserted += r.plan.inserts.length; updated += r.updated; manualKept += r.manualKept; unchanged += r.plan.unchanged;
     warnings.push(...r.plan.unknownVessels.map((v) => `Statek spoza rejestru: ${v}`));
+  }
+  /* #685-a / decyzja 63a: Digitraffic FIHEL ES / XPRS — najbliższe dni (także gdy HTML 403).
+     SOURCE_DOWN zostaje przy vkFail (zamyka dopiero 63c / plik ≥ 30 dni). */
+  const vkDt = await applyDigitrafficVikingNearSchedule(deps, since);
+  warnings.push(...vkDt.warnings);
+  inserted += vkDt.inserted;
+  updated += vkDt.updated;
+  manualKept += vkDt.manualKept;
+  risks += vkDt.risks;
+  /* F7 #688 r2 nieblokujące: całkowita awaria Digitraffic przy działającym HTML → SOURCE_DOWN DIGITRAFFIC_VIKING. */
+  if (vkDt.fail) {
+    await deps.store.raiseRisk(sourceDownRisk(
+      'DIGITRAFFIC_VIKING',
+      vkDt.warnings.length ? vkDt.warnings : ['Digitraffic Portnet (Viking) niedostępny'],
+      now,
+      DIGITRAFFIC_PORT_CALLS_URL,
+    ));
+    risks += 1;
+  } else {
+    await deps.store.resolveRisks('SOURCE_DOWN:DIGITRAFFIC_VIKING:');
   }
   if (vkFail) {
     await deps.store.raiseRisk(sourceDownRisk(

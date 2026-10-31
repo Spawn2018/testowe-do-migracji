@@ -10,7 +10,7 @@ import { legDefFromRow } from '../here/legDefFromRow.ts';
 
 // deno-lint-ignore no-explicit-any
 type Client = any;
-const SAILING_COLS = 'id,vessel_id,route,departure_at,arrival_at,delayed_departure_at,delayed_arrival_at,actual_departure_at,actual_arrival_at,status,source';
+const SAILING_COLS = 'id,vessel_id,route,departure_at,arrival_at,delayed_departure_at,delayed_arrival_at,actual_departure_at,actual_arrival_at,status,source,source_ref';
 
 export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncStore {
   let pid: string | null = null;
@@ -56,6 +56,18 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
         wrote = wrote || r.length > 0;
       }
       return wrote;
+    },
+    async sailingAssignedLoadCount(sailingId: string) {
+      const res = await sb.from('loads').select('id', { count: 'exact', head: true }).eq('sailing_id', sailingId);
+      if (res.error) throw new Error(`loads by sailing: ${res.error.message}`);
+      return res.count ?? 0;
+    },
+    async deleteSailing(id: string) {
+      const r = must(
+        await sb.from('sailings').delete().eq('id', id).neq('source', 'RECZNIE').select('id'),
+        'sailings delete',
+      ) as unknown[];
+      return r.length > 0;
     },
     async insertOperatorNotice(row: {
       sailingId: string;

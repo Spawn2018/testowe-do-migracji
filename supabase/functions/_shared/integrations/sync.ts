@@ -29,16 +29,19 @@ export interface DbSailing {
   /** #421 F7: rzeczywiste wypłynięcie/dopłynięcie z AIS — ferry-status nie nadpisuje. */
   actual_departure_at?: string | null; actual_arrival_at?: string | null;
   status: DbSailingStatus; source: SailingSource;
+  /** #685-a / decyzja 74 (0359): np. digitraffic:portcall:<id>:<route> */
+  source_ref?: string | null;
 }
 export interface IncomingSailing {
   route: FerryRoute; vessel: string; departureUtc: string; arrivalUtc: string;
   /** tylko odczyt komunikatów (ferry-status); rozkład (ferry-schedule) nie zmienia statusu */
   status?: FerryStatus; expectedDepartureUtc?: string; expectedArrivalUtc?: string;
 }
-export type SailingPatch = Partial<Pick<DbSailing, 'vessel_id' | 'arrival_at' | 'delayed_departure_at' | 'delayed_arrival_at' | 'actual_departure_at' | 'actual_arrival_at' | 'status' | 'source'>>;
+export type SailingPatch = Partial<Pick<DbSailing, 'vessel_id' | 'departure_at' | 'arrival_at' | 'delayed_departure_at' | 'delayed_arrival_at' | 'actual_departure_at' | 'actual_arrival_at' | 'status' | 'source' | 'source_ref'>>;
 export interface SailingInsert {
   project_id: string; vessel_id: string; route: FerryRoute; departure_at: string; arrival_at: string;
   delayed_departure_at: string | null; delayed_arrival_at: string | null; status: DbSailingStatus; source: AutoSailingSource;
+  source_ref?: string | null;
 }
 export type RiskKind = 'FERRY' | 'ROAD_SE' | 'ROAD_PL' | 'WEATHER' | 'JOB_FAILURE' | 'SILENT_VEHICLE' | 'RESOURCE_MISSING';
 export type RiskSeverity = 'INFO' | 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
@@ -100,6 +103,10 @@ export function planSailingSync(o: {
     }
     if (SOURCE_RANK[cur.source] > SOURCE_RANK[src]) { plan.manualKept += 1; continue; }
     const want: SailingPatch = { source: src };
+    /* F7 #688 r3 B1: HTML Viking adoptuje wiersz Digitraffic → czyść source_ref (nie kasuj przy wycofaniu portCall). */
+    if (src === 'VIKING' && (cur.source_ref ?? '').startsWith('digitraffic:')) {
+      want.source_ref = null;
+    }
     if (cur.vessel_id !== vesselId) want.vessel_id = vesselId;
     if (iso(cur.arrival_at) !== iso(inc.arrivalUtc)) want.arrival_at = new Date(inc.arrivalUtc).toISOString();
     if (inc.status) {
@@ -142,7 +149,7 @@ export type SourceId =
   | 'STENA_STATUS' | 'STENA_SCHEDULE'
   | 'TALLINK_SCHEDULE' | 'TALLINK_STATUS' | 'VIKING_SCHEDULE' | 'ECKERO_SCHEDULE' | 'ECKERO_STATUS'
   | 'DFDS_SCHEDULE' | 'DFDS_STATUS'
-  | 'DIGITRAFFIC' | 'DIGITRAFFIC_PORTCALL' | 'PORT_TALLINN' | 'PORTS_STOCKHOLM'
+  | 'DIGITRAFFIC' | 'DIGITRAFFIC_PORTCALL' | 'DIGITRAFFIC_VIKING' | 'PORT_TALLINN' | 'PORTS_STOCKHOLM'
   | 'STENA_IRM' | 'TRAFIKVERKET' | 'KPD_GDDKIA' | 'TOMTOM'
   | 'FMI' | 'DMI' | 'SMHI' | 'MARINE_WEATHER'
   | 'HERE_TRAFFIC_PL' | 'HERE_ROADS' | 'EMTRACK_WEB' | 'RIO' | 'KSH_SHAREPOINT';
@@ -154,6 +161,7 @@ const SOURCE_LABEL: Record<SourceId, string> = {
   ECKERO_SCHEDULE: 'rozkład promów (Eckerö/Finbo)', ECKERO_STATUS: 'status promów (Eckerö/Finbo)',
   DFDS_SCHEDULE: 'rozkład promów (DFDS)', DFDS_STATUS: 'status promów (DFDS)',
   DIGITRAFFIC: 'AIS promów (Digitraffic)', DIGITRAFFIC_PORTCALL: 'godziny portowe (Digitraffic Portnet)',
+  DIGITRAFFIC_VIKING: 'rozkład Viking (Digitraffic Portnet)',
   PORT_TALLINN: 'odjazdy/przyjazdy (Port of Tallinn)', PORTS_STOCKHOLM: 'odjazdy/przyjazdy (Ports of Stockholm)',
   STENA_IRM: 'pozycje promów Stena (IRM)', TRAFIKVERKET: 'utrudnienia drogowe SE (Trafikverket)',
   KPD_GDDKIA: 'utrudnienia drogowe PL (KPD GDDKiA)', TOMTOM: 'prędkość ruchu (TomTom — wycofane)',
@@ -170,7 +178,8 @@ const SOURCE_KIND: Record<SourceId, RiskKind> = {
   STENA_STATUS: 'FERRY', STENA_SCHEDULE: 'FERRY',
   TALLINK_SCHEDULE: 'FERRY', TALLINK_STATUS: 'FERRY', VIKING_SCHEDULE: 'FERRY',
   ECKERO_SCHEDULE: 'FERRY', ECKERO_STATUS: 'FERRY', DFDS_SCHEDULE: 'FERRY', DFDS_STATUS: 'FERRY',
-  DIGITRAFFIC: 'FERRY', DIGITRAFFIC_PORTCALL: 'FERRY', PORT_TALLINN: 'FERRY', PORTS_STOCKHOLM: 'FERRY',
+  DIGITRAFFIC: 'FERRY', DIGITRAFFIC_PORTCALL: 'FERRY', DIGITRAFFIC_VIKING: 'FERRY',
+  PORT_TALLINN: 'FERRY', PORTS_STOCKHOLM: 'FERRY',
   STENA_IRM: 'FERRY', TRAFIKVERKET: 'ROAD_SE', KPD_GDDKIA: 'ROAD_PL', TOMTOM: 'ROAD_SE',
   FMI: 'FERRY', DMI: 'FERRY', SMHI: 'FERRY', MARINE_WEATHER: 'FERRY',
   HERE_TRAFFIC_PL: 'ROAD_PL', HERE_ROADS: 'JOB_FAILURE',
