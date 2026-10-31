@@ -89,8 +89,20 @@ export function parseLocalTime(raw: string): { hm: string; nextDay: boolean } | 
 }
 
 export function stripTags(s: string): string {
-  return s.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/gi, ' ').replace(/&amp;/g, '&')
-    .replace(/\s+/g, ' ').trim();
+  return s
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&#x([0-9a-fA-F]+);/gi, (_, h: string) => {
+      try { return String.fromCodePoint(Number.parseInt(h, 16)); } catch { return ' '; }
+    })
+    .replace(/&#(\d+);/g, (_, d: string) => {
+      try { return String.fromCodePoint(Number(d)); } catch { return ' '; }
+    })
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&ndash;/gi, '–')
+    .replace(/&mdash;/gi, '—')
+    .replace(/&amp;/g, '&')
+    .replace(/\s+/g, ' ')
+    .trim();
 }
 
 const MONTH: Record<string, string> = {

@@ -87,10 +87,10 @@ begin
 
   select p.id into v_project
     from public.projects p
-   order by p.created_at nulls last, p.id
+   where p.code = 'STEGRA_BODEN'
    limit 1;
   if v_project is null then
-    raise exception 'Brak projektu' using errcode = 'P0002';
+    raise exception 'Brak projektu STEGRA_BODEN' using errcode = 'P0002';
   end if;
 
   insert into public.viking_schedule_imports (

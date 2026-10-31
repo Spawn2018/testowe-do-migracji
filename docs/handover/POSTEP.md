@@ -7457,6 +7457,34 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (odbiór prod):** SELECT `here_road_legs` — **12** / active 12 / `browser_fetch` 5; core bez zmian (3495/12561/3742/18854/19408); BN7 7× null. `here-roads` **#108803** @ 04:49Z ok (0 prób — core świeże; BN7 poza cronem). Komentarz w #667. **Dalej:** BN3 (#573).
 - Bez push na main.
 
+## 2026-10-31 23:55 — #685-b F7 r1 POPRAWKI B2–B7 (PR #690)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE; #685 W TOKU (b). Bez nowych `pilne`.
+- Scalanie: F7 r1 POPRAWKI @ 9e508d9f; B1 już w `de27c7d5` (UTF-8 + nullguard 905, CI ✔). Bez push na main.
+- **Krok F7 #690 r1:**
+  - **B2/B3** — tylko `ZAPLANOWANY`+przyszłe do usuń/przejmij; nietykalne blokują insert;
+  - **B4** — sezon: VIKING `source_ref` null w dniach pliku, nie w pliku → usuń / ryzyko MEDIUM;
+  - **B5** — cron `ferry-schedule`: SOURCE_DOWN tylko gdy pokrycie od teraz < 30 d;
+  - **B6** — testy mutacji (2,5/3,5 h, trasa/statek, 29/30 d, ODWOLANY/W_REJSIE, sezon, idempotencja);
+  - **B7** — Edge 3 MB → 413; parser max 40 tabel / 500 wierszy;
+  - vitest 685b **11**.
+- **Dalej:** push → CI → gotowe do F7.
+- Bez push na main.
+
+## 2026-10-31 23:55 — #690 F7 r1 POPRAWKI (B2–B7 + parser pliku właściciela)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE; #685 W TOKU (b / PR #690). Bez nowych `pilne`.
+- Scalanie: F7 r1 **POPRAWKI** @ `de27c7d5` (CI unit/db/visual ✔). Brak „F7: gotowe do scalenia”. Bez push na main.
+- **Krok F7 #690 r1:**
+  - B2/B3: tylko `ZAPLANOWANY` + `departure_at > now` w ±3 h; ODWOLANY/W_REJSIE/przeszłe blokują insert;
+  - B4: sezon — nieobecne VIKING (`source_ref` null) w zakresie pliku: bez transportu → usuń; z transportem → ryzyko MEDIUM;
+  - B5/63c: pokrycie **od teraz** ≥ 30 d; cron nie wystawia `SOURCE_DOWN:VIKING_SCHEDULE` przy pokryciu;
+  - B7: Edge max 3 MB → 413; min `days` 30; `record` projekt `STEGRA_BODEN`; bez surowego `recErr.message`;
+  - parser: `stripTags` dekoduje `&#x2013;`; `li.c-accordion__item`; fixture `viking-cargo-hel-tll-saved-sample.html` (żywy plik → 260 rejsów / 60 d);
+  - vitest `685b-viking-file-import` **11** + bn2-ferry **46**.
+- **Dalej:** push → CI → gotowe do F7 @ sha. Ekran BN9-c1 — koordynator.
+- Bez push na main.
+
 ## 2026-10-31 23:15 — #685-b CI db: UTF-8 null-guard + EXPECTED 905; odbiór ferry-schedule
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE; #685 W TOKU (b / PR #690). Bez nowych `pilne`.
