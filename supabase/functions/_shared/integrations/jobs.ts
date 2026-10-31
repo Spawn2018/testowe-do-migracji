@@ -928,8 +928,8 @@ async function applyDigitrafficVikingNearSchedule(deps: JobDeps, sinceIso: strin
     for (const s of existing) {
       if (s.id === exceptId) continue;
       if (s.vessel_id !== vesselId || s.route !== route) continue;
-      /* F7 #688 r3 B2: najbliższy wiersz VIKING bez digitraffic: (nie DANE_STARTOWE/RECZNIE). */
-      if (s.source !== 'VIKING') continue;
+      /* F7 #688 r4: VIKING / RECZNIE / DANE_STARTOWE = rozkład w ±3 h (Digitraffic nie dubluje). */
+      if (s.source !== 'VIKING' && s.source !== 'RECZNIE' && s.source !== 'DANE_STARTOWE') continue;
       if (isDigitrafficRef(s.source_ref)) continue;
       const abs = Math.abs(Date.parse(s.departure_at) - depMs);
       if (abs > SCHEDULE_WIN_MS || abs >= bestAbs) continue;
@@ -1117,9 +1117,8 @@ async function applyDigitrafficVikingNearSchedule(deps: JobDeps, sinceIso: strin
       }
     }
   }
-  const totalFail = (!pageEta.ok && !pageEtd.ok)
-    || (etaParseFail && etdParseFail)
-    || (pageEta.ok && pageEtd.ok && !etaHasArr && !etdHasArr);
+  /* F7 #688 r4: klauzule 1–2 (obie 5xx / oba JSON) już early-return z fail — tu tylko struktura. */
+  const totalFail = pageEta.ok && pageEtd.ok && !etaHasArr && !etdHasArr;
   return { inserted, updated, manualKept, removed, warnings, fail: totalFail, risks };
 }
 

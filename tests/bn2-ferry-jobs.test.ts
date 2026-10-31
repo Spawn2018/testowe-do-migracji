@@ -77,10 +77,12 @@ class MemStore implements SyncStore {
     return wrote;
   }
   assignedLoads = new Set<string>();
+  deleteThrows = false;
   async sailingAssignedLoadCount(sailingId: string) {
     return this.assignedLoads.has(sailingId) ? 1 : 0;
   }
   async deleteSailing(id: string) {
+    if (this.deleteThrows) throw new Error('fk loads.sailing_id');
     const s = this.sailings.find((x) => x.id === id);
     if (!s || s.source === 'RECZNIE') return false;
     this.sailings = this.sailings.filter((x) => x.id !== id);
@@ -2021,5 +2023,356 @@ describe('#685-a Digitraffic Viking near schedule (decyzja 63a)', () => {
     }))).resolves.toBeTruthy();
     /* Nowy insert z tym samym ref nie przeszedł; job nie rzucił. */
     expect(st.sailings.filter((s) => s.source_ref === 'digitraffic:portcall:9101:TLLA-HEL')).toHaveLength(1);
+  });
+
+  it('F7 #688 r4: filtr trasy — HTML HELA-TLL 23:00Z nie blokuje Digitraffic TLLA-HEL 20:00Z', async () => {
+    const st = new MemStore();
+    st.sailings.push({
+      id: 'html-hela-2300', vessel_id: 'v-xprs', route: 'HELA-TLL',
+      departure_at: '2026-11-01T23:00:00.000Z', arrival_at: '2026-11-02T01:40:00.000Z',
+      delayed_departure_at: null, delayed_arrival_at: null,
+      status: 'ZAPLANOWANY', source: 'VIKING',
+    });
+    const port = {
+      portCalls: [{
+        portCallId: 9601, portCallTimestamp: '2026-10-30T08:00:00.000Z',
+        portToVisit: 'FIHEL', prevPort: 'EETLL', nextPort: 'EETLL',
+        vesselName: 'Viking XPRS', mmsi: 230705000,
+        /* ETA 22:30Z → TLLA-HEL dep 20:00Z (= dokładnie 180 min od HELA 23:00 — inna trasa). */
+        portAreaDetails: [{
+          eta: '2026-11-01T22:30:00.000Z', etd: null,
+          portAreaCode: 'ES', berthCode: 'KATAJANOKKA',
+        }],
+      }],
+    };
+    await runFerrySchedule(deps(st, {
+      ...tallinkPages,
+      'viking-line-cargo': 403,
+      'sales.vikingline.com': 403,
+      'port-calls': JSON.stringify(port),
+      'eckeroline.com': 503,
+      'dfds.com': 503,
+      'ctfassets.net': 503,
+    }));
+    expect(st.sailings.some((s) => s.source_ref === 'digitraffic:portcall:9601:TLLA-HEL'
+      && s.departure_at === '2026-11-01T20:00:00.000Z')).toBe(true);
+    expect(st.sailings.filter((s) => s.id === 'html-hela-2300')).toHaveLength(1);
+  });
+
+  it('F7 #688 r4: !isDigitrafficRef — 100@13:30 → 101@14:15: jest 101, nie ma 100', async () => {
+    const wall = new Date('2026-10-30T12:00:00.000Z');
+    /* Tylko ETD → HELA-TLL (bez ETA), żeby uniknąć kolizji vessel+departure w MemStore. */
+    const pc100 = {
+      portCalls: [{
+        portCallId: 100, portCallTimestamp: '2026-10-29T10:00:00.000Z',
+        portToVisit: 'FIHEL', prevPort: 'FIHEL', nextPort: 'EETLL',
+        vesselName: 'Viking XPRS', mmsi: 230705000,
+        portAreaDetails: [{
+          etd: '2026-10-31T13:30:00.000Z',
+          portAreaCode: 'ES', berthCode: 'KATAJANOKKA',
+        }],
+      }],
+    };
+    const st = new MemStore();
+    const pages = {
+      ...tallinkPages,
+      'viking-line-cargo': 403 as const,
+      'sales.vikingline.com': 403 as const,
+      'port-calls': JSON.stringify(pc100),
+      'eckeroline.com': 503 as const,
+      'dfds.com': 503 as const,
+      'ctfassets.net': 503 as const,
+    };
+    await runFerrySchedule(deps(st, pages, wall));
+    expect(st.sailings.some((s) => s.source_ref === 'digitraffic:portcall:100:HELA-TLL')).toBe(true);
+    const pc101 = {
+      portCalls: [{
+        portCallId: 101, portCallTimestamp: '2026-10-29T11:00:00.000Z',
+        portToVisit: 'FIHEL', prevPort: 'FIHEL', nextPort: 'EETLL',
+        vesselName: 'Viking XPRS', mmsi: 230705000,
+        portAreaDetails: [{
+          etd: '2026-10-31T14:15:00.000Z',
+          portAreaCode: 'ES', berthCode: 'KATAJANOKKA',
+        }],
+      }],
+    };
+    await runFerrySchedule(deps(st, { ...pages, 'port-calls': JSON.stringify(pc101) }, wall));
+    expect(st.sailings.some((s) => s.source_ref === 'digitraffic:portcall:101:HELA-TLL')).toBe(true);
+    expect(st.sailings.some((s) => s.source_ref === 'digitraffic:portcall:100:HELA-TLL')).toBe(false);
+  });
+
+  it('F7 #688 r4: {portCalls:[]} + lista bez 9102 — nic nie znika (oba warianty)', async () => {
+    const vkPages: Record<string, string | number> = {
+      ...tallinkPages,
+      'viking-line-cargo': 403,
+      'sales.vikingline.com': 403,
+      'eckeroline.com': 503,
+      'dfds.com': 503,
+      'ctfassets.net': 503,
+    };
+    const seed = new MemStore();
+    await runFerrySchedule(deps(seed, { ...vkPages, 'port-calls': PORTNET_XPRS_ES }));
+    const n0 = seed.sailings.filter((s) => s.source_ref?.startsWith('digitraffic:portcall:')).length;
+    const full = JSON.parse(PORTNET_XPRS_ES) as { portCalls: { portCallId: number }[] };
+    const without9102 = { portCalls: full.portCalls.filter((p) => p.portCallId !== 9102) };
+
+    const a = new MemStore();
+    a.sailings = seed.sailings.map((s) => ({ ...s }));
+    await runFerrySchedule(deps(a, {
+      ...vkPages,
+      'port-calls?etaFrom': JSON.stringify({ portCalls: [] }),
+      'port-calls?etdFrom': JSON.stringify(without9102),
+    }));
+    expect(a.sailings.filter((s) => s.source_ref?.startsWith('digitraffic:portcall:')).length).toBe(n0);
+
+    const b = new MemStore();
+    b.sailings = seed.sailings.map((s) => ({ ...s }));
+    await runFerrySchedule(deps(b, {
+      ...vkPages,
+      'port-calls?etaFrom': JSON.stringify(without9102),
+      'port-calls?etdFrom': JSON.stringify({ portCalls: [] }),
+    }));
+    expect(b.sailings.filter((s) => s.source_ref?.startsWith('digitraffic:portcall:')).length).toBe(n0);
+  });
+
+  it('F7 #688 r4: safeDelete rzuca → job kończy się, Tallink zapisany, ostrzeżenie', async () => {
+    const st = new MemStore();
+    st.deleteThrows = true;
+    st.sailings.push({
+      id: 'dt-orphan', vessel_id: 'v-xprs', route: 'HELA-TLL',
+      departure_at: '2026-10-31T12:15:00.000Z', arrival_at: '2026-10-31T14:55:00.000Z',
+      delayed_departure_at: null, delayed_arrival_at: null,
+      status: 'ZAPLANOWANY', source: 'VIKING',
+      source_ref: 'digitraffic:portcall:9601:HELA-TLL',
+    });
+    st.sailings.push({
+      id: 'html-1215', vessel_id: 'v-xprs', route: 'HELA-TLL',
+      departure_at: '2026-10-31T12:15:00.000Z', arrival_at: '2026-10-31T14:55:00.000Z',
+      delayed_departure_at: null, delayed_arrival_at: null,
+      status: 'ZAPLANOWANY', source: 'VIKING',
+    });
+    /* Unikalność vessel+departure — przesuń Digitraffic o 5 min (nadal w ±3 h od HTML). */
+    st.sailings[0]!.departure_at = '2026-10-31T12:20:00.000Z';
+    const port = {
+      portCalls: [{
+        portCallId: 9601, portCallTimestamp: '2026-10-30T08:00:00.000Z',
+        portToVisit: 'FIHEL', prevPort: 'EETLL', nextPort: 'EETLL',
+        vesselName: 'Viking XPRS', mmsi: 230705000,
+        portAreaDetails: [{
+          eta: '2026-10-31T15:00:00.000Z', etd: '2026-10-31T12:50:00.000Z',
+          portAreaCode: 'ES', berthCode: 'KATAJANOKKA',
+        }],
+      }],
+    };
+    const r = await runFerrySchedule(deps(st, {
+      ...tallinkPages,
+      'viking-line-cargo': 403,
+      'sales.vikingline.com': 403,
+      'port-calls': JSON.stringify(port),
+      'eckeroline.com': 503,
+      'dfds.com': 503,
+      'ctfassets.net': 503,
+    }));
+    expect(r.ok).toBe(true);
+    expect(st.sailings.some((s) => s.id === 'dt-orphan')).toBe(true);
+    expect(st.sailings.some((s) => s.source === 'TALLINK')).toBe(true);
+    expect(r.warnings.some((w) => /nie usunięto rejsu/i.test(w))).toBe(true);
+  });
+
+  it('F7 #688 r4: obie strony 200 {foo:1} → SOURCE_DOWN DIGITRAFFIC_VIKING MEDIUM', async () => {
+    const st = new MemStore();
+    await runFerrySchedule(deps(st, {
+      ...tallinkPages,
+      'viking-line-cargo': VIKING_CARGO_HTML,
+      'sales.vikingline.com': 403,
+      'port-calls': JSON.stringify({ foo: 1 }),
+      'eckeroline.com': 503,
+      'dfds.com': 503,
+      'ctfassets.net': 503,
+    }));
+    const risk = st.risks.find((x) => String(x.dedup).startsWith('SOURCE_DOWN:DIGITRAFFIC_VIKING:'));
+    expect(risk?.severity).toBe('MEDIUM');
+  });
+
+  it('F7 #688 r4: sąsiad wokół depMsRef — ETA >3 h od HTML, stary czas w oknie → usuń Digitraffic', async () => {
+    const wall = new Date('2026-10-30T12:00:00.000Z');
+    const st = new MemStore();
+    st.sailings.push({
+      id: 'html-1200', vessel_id: 'v-xprs', route: 'TLLA-HEL',
+      departure_at: '2026-10-31T12:00:00.000Z', arrival_at: '2026-10-31T14:30:00.000Z',
+      delayed_departure_at: null, delayed_arrival_at: null,
+      status: 'ZAPLANOWANY', source: 'VIKING',
+    });
+    st.sailings.push({
+      id: 'dt-1100', vessel_id: 'v-xprs', route: 'TLLA-HEL',
+      departure_at: '2026-10-31T11:00:00.000Z', arrival_at: '2026-10-31T13:30:00.000Z',
+      delayed_departure_at: null, delayed_arrival_at: null,
+      status: 'ZAPLANOWANY', source: 'VIKING',
+      source_ref: 'digitraffic:portcall:9701:TLLA-HEL',
+    });
+    /* Nowe ETA: dep 16:00Z (= +4 h od HTML) — poza ±3 h od HTML, ale depMsRef 11:00 w oknie. */
+    const shifted = {
+      portCalls: [{
+        portCallId: 9701, portCallTimestamp: '2026-10-28T10:00:00.000Z',
+        portToVisit: 'FIHEL', prevPort: 'EETLL', nextPort: 'EETLL',
+        vesselName: 'Viking XPRS', mmsi: 230705000,
+        portAreaDetails: [{
+          eta: '2026-10-31T18:30:00.000Z', etd: '2026-10-31T16:00:00.000Z',
+          portAreaCode: 'ES', berthCode: 'KATAJANOKKA',
+        }],
+      }],
+    };
+    await runFerrySchedule(deps(st, {
+      ...tallinkPages,
+      'viking-line-cargo': 403,
+      'sales.vikingline.com': 403,
+      'port-calls': JSON.stringify(shifted),
+      'eckeroline.com': 503,
+      'dfds.com': 503,
+      'ctfassets.net': 503,
+    }, wall));
+    expect(st.sailings.some((s) => s.source_ref === 'digitraffic:portcall:9701:TLLA-HEL')).toBe(false);
+    expect(st.sailings.filter((s) => s.id === 'html-1200')).toHaveLength(1);
+  });
+
+  it('F7 #688 r4: granica okna ±3 h — 2,5 h blokuje; 3,5 h wstawia', async () => {
+    const wall = new Date('2026-10-30T12:00:00.000Z');
+    const mkPort = (etd: string) => ({
+      portCalls: [{
+        portCallId: 9901, portCallTimestamp: '2026-10-29T08:00:00.000Z',
+        portToVisit: 'FIHEL', prevPort: 'EETLL', nextPort: 'EETLL',
+        vesselName: 'Viking XPRS', mmsi: 230705000,
+        portAreaDetails: [{
+          eta: '2026-11-01T20:00:00.000Z', etd,
+          portAreaCode: 'ES', berthCode: 'KATAJANOKKA',
+        }],
+      }],
+    });
+    const pagesBase: Record<string, string | number> = {
+      ...tallinkPages,
+      'viking-line-cargo': 403,
+      'sales.vikingline.com': 403,
+      'eckeroline.com': 503,
+      'dfds.com': 503,
+      'ctfassets.net': 503,
+    };
+
+    const near = new MemStore();
+    near.sailings.push({
+      id: 'html-1215', vessel_id: 'v-xprs', route: 'HELA-TLL',
+      departure_at: '2026-10-31T12:15:00.000Z', arrival_at: '2026-10-31T14:55:00.000Z',
+      delayed_departure_at: null, delayed_arrival_at: null,
+      status: 'ZAPLANOWANY', source: 'VIKING',
+    });
+    /* 12:15 + 2,5 h = 14:45 — w oknie 3 h → bez insertu. */
+    await runFerrySchedule(deps(near, {
+      ...pagesBase,
+      'port-calls': JSON.stringify(mkPort('2026-10-31T14:45:00.000Z')),
+    }, wall));
+    expect(near.sailings.some((s) => s.source_ref === 'digitraffic:portcall:9901:HELA-TLL')).toBe(false);
+
+    const far = new MemStore();
+    far.sailings.push({
+      id: 'html-1215b', vessel_id: 'v-xprs', route: 'HELA-TLL',
+      departure_at: '2026-10-31T12:15:00.000Z', arrival_at: '2026-10-31T14:55:00.000Z',
+      delayed_departure_at: null, delayed_arrival_at: null,
+      status: 'ZAPLANOWANY', source: 'VIKING',
+    });
+    /* 12:15 + 3,5 h = 15:45 — poza ±3 h → insert. */
+    await runFerrySchedule(deps(far, {
+      ...pagesBase,
+      'port-calls': JSON.stringify(mkPort('2026-10-31T15:45:00.000Z')),
+    }, wall));
+    expect(far.sailings.some((s) => s.source_ref === 'digitraffic:portcall:9901:HELA-TLL'
+      && s.departure_at === '2026-10-31T15:45:00.000Z')).toBe(true);
+  });
+
+  it('F7 #688 r4: titleKey rk_ferry_digitraffic_withdrawn przy wycofaniu z transportem', async () => {
+    const st = new MemStore();
+    const pages: Record<string, string | number> = {
+      ...tallinkPages,
+      'viking-line-cargo': 403,
+      'sales.vikingline.com': 403,
+      'port-calls': PORTNET_XPRS_ES,
+      'eckeroline.com': 503,
+      'dfds.com': 503,
+      'ctfassets.net': 503,
+    };
+    await runFerrySchedule(deps(st, pages));
+    const withLoad = st.sailings.find((s) => s.source_ref === 'digitraffic:portcall:9102:HELA-TLL')!;
+    st.assignedLoads.add(withLoad.id);
+    const full = JSON.parse(PORTNET_XPRS_ES) as { portCalls: { portCallId: number }[] };
+    const without9102 = { portCalls: full.portCalls.filter((p) => p.portCallId !== 9102) };
+    await runFerrySchedule(deps(st, { ...pages, 'port-calls': JSON.stringify(without9102) }));
+    expect(st.risks.some((x) => x.titleKey === 'rk_ferry_digitraffic_withdrawn'
+      && String(x.dedup).includes('DIGITRAFFIC_VIKING_WITHDRAWN'))).toBe(true);
+  });
+
+  it('F7 #688 r4: RECZNIE 12:15 + Portnet 12:50 → 1 wiersz RECZNIE, bez zmian', async () => {
+    const st = new MemStore();
+    st.sailings.push({
+      id: 'recz-1215', vessel_id: 'v-xprs', route: 'HELA-TLL',
+      departure_at: '2026-10-31T12:15:00.000Z', arrival_at: '2026-10-31T14:55:00.000Z',
+      delayed_departure_at: null, delayed_arrival_at: null,
+      status: 'ZAPLANOWANY', source: 'RECZNIE',
+    });
+    const port = {
+      portCalls: [{
+        portCallId: 9601, portCallTimestamp: '2026-10-30T08:00:00.000Z',
+        portToVisit: 'FIHEL', prevPort: 'FIHEL', nextPort: 'EETLL',
+        vesselName: 'Viking XPRS', mmsi: 230705000,
+        /* Tylko ETD → HELA-TLL (RECZNIE blokuje); bez ETA/TLLA. */
+        portAreaDetails: [{
+          etd: '2026-10-31T12:50:00.000Z',
+          portAreaCode: 'ES', berthCode: 'KATAJANOKKA',
+        }],
+      }],
+    };
+    await runFerrySchedule(deps(st, {
+      ...tallinkPages,
+      'viking-line-cargo': 403,
+      'sales.vikingline.com': 403,
+      'port-calls': JSON.stringify(port),
+      'eckeroline.com': 503,
+      'dfds.com': 503,
+      'ctfassets.net': 503,
+    }));
+    expect(st.sailings.filter((s) => s.vessel_id === 'v-xprs' && s.route === 'HELA-TLL')).toHaveLength(1);
+    expect(st.sailings.find((s) => s.id === 'recz-1215')).toMatchObject({
+      source: 'RECZNIE', departure_at: '2026-10-31T12:15:00.000Z',
+    });
+    expect(st.sailings.some((s) => s.source_ref?.startsWith('digitraffic:'))).toBe(false);
+  });
+
+  it('F7 #688 r4: DANE_STARTOWE w ±3 h blokuje insert Digitraffic', async () => {
+    const st = new MemStore();
+    st.sailings.push({
+      id: 'seed-1215', vessel_id: 'v-xprs', route: 'HELA-TLL',
+      departure_at: '2026-10-31T12:15:00.000Z', arrival_at: '2026-10-31T14:55:00.000Z',
+      delayed_departure_at: null, delayed_arrival_at: null,
+      status: 'ZAPLANOWANY', source: 'DANE_STARTOWE',
+    });
+    const port = {
+      portCalls: [{
+        portCallId: 9601, portCallTimestamp: '2026-10-30T08:00:00.000Z',
+        portToVisit: 'FIHEL', prevPort: 'FIHEL', nextPort: 'EETLL',
+        vesselName: 'Viking XPRS', mmsi: 230705000,
+        portAreaDetails: [{
+          etd: '2026-10-31T12:50:00.000Z',
+          portAreaCode: 'ES', berthCode: 'KATAJANOKKA',
+        }],
+      }],
+    };
+    await runFerrySchedule(deps(st, {
+      ...tallinkPages,
+      'viking-line-cargo': 403,
+      'sales.vikingline.com': 403,
+      'port-calls': JSON.stringify(port),
+      'eckeroline.com': 503,
+      'dfds.com': 503,
+      'ctfassets.net': 503,
+    }));
+    expect(st.sailings.filter((s) => s.vessel_id === 'v-xprs' && s.route === 'HELA-TLL')).toHaveLength(1);
+    expect(st.sailings.find((s) => s.id === 'seed-1215')!.source).toBe('DANE_STARTOWE');
   });
 });
