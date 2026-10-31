@@ -2293,5 +2293,4 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 31.10.2026 12:46 | #684 SCALONE `47112584` (DP-76 tory); #683 CI ✔ @ 380b98a1 | pętla |
 | 31.10.2026 13:05 | #683 F7 R7 POPRAWKI: stripTags całego Alertu; Scheduler 2025 bez fallbacku; bez CONDITIONAL (May); testy 24; potem #685 | pętla |
 | 31.10.2026 — | F7 #683 nieblokujące (osobna poprawka): Scheduler grudzień + „on 2 January” → rok bieżący, ciche wygaśnięcie; Alert INFO bez ryzyka/historii — świadomie | F7 #683 r7 |
-| 31.10.2026 13:05 | #683 F7 R7: stripTags całego Alertu; fallback bez auto przy Schedulerze 2025; bez OPAQUE/CONDITIONAL; May≠may; nieblokujące: rok grudzień→styczeń, Alert INFO bez ryzyka | pętla |
 
