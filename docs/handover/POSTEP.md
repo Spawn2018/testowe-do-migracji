@@ -7435,6 +7435,21 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (odbiór prod):** SELECT `here_road_legs` — **12** / active 12 / `browser_fetch` 5; core bez zmian (3495/12561/3742/18854/19408); BN7 7× null. `here-roads` **#108803** @ 04:49Z ok (0 prób — core świeże; BN7 poza cronem). Komentarz w #667. **Dalej:** BN3 (#573).
 - Bez push na main.
 
+## 2026-10-31 10:15 — #683 CI db FAIL → asercja 0358 `true/AUTO`
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE; #499/#537/#538/#500 w planie. Bez nowych `pilne`.
+- Scalanie: #683 — bez „F7: gotowe do scalenia” po POPRAWKACH; CI @ `d48abd58`: unit ✔, visual ✔, **db FAIL** (ferry-status 17/1). Bez push na main.
+- **Krok:** `ferry-status.sh` 0358 — `(created_by is null)::text` = `true` (nie `t`); oczekiwane `true/AUTO`. **Dalej:** CI → „gotowe do F7 @ sha”.
+- Bez push na main.
+
+## 2026-10-31 10:00 — #683 db FAIL: ferry-status 0358 AUTO `t`→`true`
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE; #499/#537/#538/#500 w planie. Bez nowych `pilne`.
+- Scalanie: #683 — brak „F7: gotowe do scalenia” po `d48abd58` (tylko „gotowe do F7”); unit/visual ✔, **db FAIL**. Bez push na main.
+- **Krok:** `tests/db/ferry-status.sh` — asercja 0358 AUTO: `(created_by is null)::text` na PG17 daje `true`, nie `t` (jak i2/security). Oczekiwane `true/AUTO`.
+- **Dalej:** CI → „gotowe do F7 @ sha”; F7; potem DP-97 / pkt 7–8.
+- Bez push na main.
+
 ## 2026-10-31 09:45 — #683 F7 POPRAWKI B1–B5 (Tallink Alert)
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE; #499/#537/#538/#500 w planie. Bez nowych `pilne`.

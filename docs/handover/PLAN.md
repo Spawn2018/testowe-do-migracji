@@ -2266,4 +2266,5 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 31.10.2026 08:36 | #682 SCALONE `a9c396d7` (F7: gotowe do scalenia @ 085dc5e6); start BN3 wycinek 3 `pakiet/bn3-tallink-tsee-auto` — DP-94/95/96 | pętla |
 | 31.10.2026 09:05 | BN3 wycinek 3: Tallink Alert + ts.ee Lisainfo + **0358** `operator_notices.source` AUTO; PR #683 | pętla |
 | 31.10.2026 09:45 | #683 F7 POPRAWKI B1–B5 Tallink Alert (pełna pula, data/HH:MM z treści, negacja, multi-statek, testy+0358 DB); DP-98…103 | pętla |
+| 31.10.2026 10:15 | #683 CI db FAIL: ferry-status 0358 asercja `true/AUTO` (nie `t`); czekam CI → gotowe do F7 | pętla |
 

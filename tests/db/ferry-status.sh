@@ -104,11 +104,12 @@ insert into sailings (id, project_id, vessel_id, route, departure_at, arrival_at
   ('$SID5','22222222-0000-0000-0000-000000000001','55555555-0000-0000-0000-0000000000f3','TLL-HEL',
    now() + interval '8 days', now() + interval '8 days 3 hours', 'ZAPLANOWANY', 'TALLINK');" >/dev/null
 
+# ::text boolean → true/false (jak i2.sh), nie t/f.
 auto=$(sys "
 insert into operator_notices (sailing_id, operator, kind, note, created_by, source, source_url)
 values ('$SID5','TALLINK','ODWOLANY','AUTO test 0358', null, 'AUTO', 'https://www.tallink.com/')
 returning (created_by is null)::text||'/'||source")
-if [ "$auto" = "t/AUTO" ]; then ok=$((ok+1)); echo "  OK    0358 AUTO: created_by null + source=AUTO"; else fail=$((fail+1)); echo "  FAIL  0358 AUTO ($auto)"; fi
+if [ "$auto" = "true/AUTO" ]; then ok=$((ok+1)); echo "  OK    0358 AUTO: created_by null + source=AUTO"; else fail=$((fail+1)); echo "  FAIL  0358 AUTO ($auto)"; fi
 
 badsrc=$(sys "
 insert into operator_notices (sailing_id, operator, kind, note, created_by, source)
