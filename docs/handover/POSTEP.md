@@ -7378,3 +7378,20 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: **#673 SCALONE** `5e8eb1ba` (A–D / 0352–0354, 01:28Z). Nowy PR `pakiet/667-e-bn7-road-dict` (0355). Bez push na main.
 - **Krok (#667 E / DP-23):** migracja **0355** — `here_road_legs` (12: 5 core + 7 BN7); FK zamiast `CHECK IN (…)`; store/dev/map_display_state ze słownika; BN7 `points=null`, `browser_fetch=false` (bez auto-fetch do kalibracji). Edge: `listLegs` + `browserOnly` w przeglądarce. Front: `roadSpecFromRow` + `browserFetchLegCount`. bmapa 174→180. DP-38…40 z F7 #673 r7. Unit fokus i667/bmapa ✔ (38). **Dalej:** push → CI → gotowe do F7; potem F e2e.
 - Bez push na main.
+
+## 2026-10-31 02:49 — #667 PILNE SE-KAA: clear retry_after + job here-roads (5/5)
+
+- Skrzynka: **#667** pilne odbiór po #673 (01:34Z) + komentarz PR #677; #608 w planie; #550 WSTRZYMANE. PR #676 wygląd bez F7.
+- Scalanie: brak „F7: gotowe do scalenia”. #677 CI unit/db/visual ✔ @ `0cd8f720` — czekam F7. Bez push na main.
+- **Krok (PILNE produkcja, bez migracji):**
+  1. Przyczyna: `retry_after` SE-KAA = 2026-11-01 01:15Z (+24 h, ścieżka odrzucenia / stary przebieg przed korytarzem 0354 `updated_at` 01:29Z); `summary` nadal placeholder „oczekuje”; `integration_runs` puste (próba z przeglądarki).
+  2. `retry_after` SE-KAA → null (service_role jednorazowo); POST Edge `here-roads` (service) → LIVE ok, stored=5/attempted=5, warnings=[], risks=0.
+  3. SELECT: PL-GDN 3495, PL-GDY 3742, SE-NYN 12561, **SE-KAA 18854**, **SE-KAA-INLAND 19408** (fetched_at ~01:48–01:49Z); run `here-roads` @ 01:49:00Z ok.
+- Wniosek: legi 0354 mają punkty → **0355 (#677) OK pod F7**. **Dalej:** F7 #677 → F e2e prod.
+
+## 2026-10-31 03:00 — #667 PILNE SE-KAA: diagnostyka + 5 legów z punktami
+
+- Skrzynka: **#667** pilne (odbiór 01:34Z) zrobione w komentarzu; #608 w planie; #550 WSTRZYMANE. #676 wygląd bez „F7: gotowe do scalenia”.
+- Scalanie: brak „F7: gotowe do scalenia” na #677/#676. CI #677 unit/db/visual ✔ @ `0cd8f720`. Bez push na main.
+- **Krok (PILNE diagnostyka PROD):** `retry_after` SE-KAA = 01.11 01:15Z = odrzucenie geometrii (+24 h) ścieżką JWT na **starej** Edge (v117 dopiero 01:30:13Z); brak `integration_runs` do 01:49. Po jobie `here-roads` 01:49:00Z (#108023): PL-GDN 3495, PL-GDY 3742, SE-NYN 12561, SE-KAA 18854, SE-KAA-INLAND 19408 — wszystkie `retry_after` null. SELECT + wniosek w #667. 0355 wolne do F7. **Dalej:** F7 #677 → F e2e prod.
+- Bez push na main.

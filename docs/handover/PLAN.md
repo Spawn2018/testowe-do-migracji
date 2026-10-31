@@ -1168,10 +1168,10 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 1. **A mapPool PROD + wspólny helper** — ~~`paintOrangeRoads` / `ORANGE_ROAD_STYLE`; `mapPool` ładuje `loadRoadLines` w PROD; GeofenceEditorMap + ZonesMap + CorridorMap~~; TrackReplay dziedziczy z CorridorMap; Ryzyka — brak osobnego `L.map`.
 2. **B SE-KAA dual** — ~~`SE-KAA` ← `SE_E22`; `SE-KAA-INLAND` ← jawnie `SE_KAA_INLAND`; migracja **0352**; `ROAD_LEGS=5`~~.
 3. **C cron HERE** — ~~`refreshRoadLegs` (próg 21 d); job + **0353** `tower-here-roads`; SOURCE_DOWN sticky; Edge dual~~. **Termin ≤ 04.11** (purge 05.11).
-4. Diagnostyka: ~~fundament `summary` w `map_display_state` + `checkRoads` (0354)~~; UI Stan systemu → DP-22; `integration_runs` (N1 retry_after +1 h w tym PR).
+4. Diagnostyka: ~~fundament `summary` w `map_display_state` + `checkRoads` (0354)~~; UI Stan systemu → DP-22; ~~`integration_runs` / SE-KAA `retry_after` (PILNE 01:34Z)~~ — 5 legów z punktami po `here-roads` 01:49Z (`#108023`); przyczyna: stara Edge JWT ~01:15 (+24 h) przed v117 01:30Z.
 5. ~~Słownik legów BN7 (`PL-TLL`…`SE-KPS`) gotowy do rysowania (DP-23)~~ — migracja **0355** `here_road_legs`; FK zamiast `IN (…)`; przeglądarka `browser_fetch` (core); BN7 bez auto-fetch do kalibracji.
 6. Testy e2e na buildzie produkcyjnym (nie demo): ≥1 polilinia na mapę; SE-KAA obecny.
-7. ~~**F7 r1–r6** (+ POPRAWKI) w #673~~ SCALONE; **E (0355)** — **czekam F7** (ten PR).
+7. ~~**F7 r1–r6** (+ POPRAWKI) w #673~~ SCALONE; **E (0355)** — **czekam F7** (PR #677; CI unit/db/visual ✔ @ `0cd8f720`).
 
 
 ### Rejestr drobnych poprawek (DP) — #671 (zasada 30.10 18:31)
@@ -1231,7 +1231,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 1. **BN1** — ~~słowniki / strefy / CASE / F7 MFA~~ **SCALONE** (0338–0346).
 2. **BN2** — ~~LIVE~~ **SCALONE** (**0347**+**0348**, PR #660 `a94645d9`; PR #661 `392a9bc2`; dopisek F7 #665 `799ea18d`): Tallink; Portnet; Viking/Eckerö/DFDS HTML + Terminal A; B1–B3; Decyzja 50 MEDIUM.
 3. ~~**#666** (pilne)~~ — SCALONE (#668 `53890480` / **0351**).
-4. **#667** (pilne) — ~~A–D (#673)~~ SCALONE; E słownik BN7 (`pakiet/667-e-bn7-road-dict`, 0355) — czekam F7; potem F e2e.
+4. **#667** (pilne) — ~~A–D (#673)~~ SCALONE; ~~SE-KAA punkty (01:49Z)~~; E słownik BN7 (PR #677 / 0355) — czekam F7; potem F e2e.
 5. BN3…BN10 — jak #573 (opóźnienia, AIS, pogoda, drogi LT/LV/EE/FI, HERE, statusy/ETA, ekrany, odbiór 48 h).
 
 ### #662 · PILNE SafeFleet — link tymczasowy (SG-27) — SCALONE (`189688bc` / PR #663 / **0349**); #662-b SCALONE (`1ee855fd` / PR #664 / **0350**, 30.10.2026 12:54Z)
@@ -2170,4 +2170,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 31.10.2026 01:15 | #673 F7 r5: fixture SE-NYN prod; B7 Uppsala/Gävle/Hudiksvall E4; in-flight przed read; bmapa 174; runHereRoads null spend | pętla |
 | 31.10.2026 01:35 | #675 SCALONE `6660b3c8` (F7 gotowe @ 0698399); #673 F7 r6: bmapa jsonb_typeof null (CI db) | pętla |
 | 31.10.2026 01:55 | #673 F7 r6 POPRAWKI: B6 mock supabase-js + sesja 0; Umeå/Piteå/62.391 na E4; test czyta 0354 | pętla |
+| 31.10.2026 02:40 | #667 E (PR #677 / 0355 DP-23) @ `0cd8f720`; CI ✔; czekam F7 | pętla |
+| 31.10.2026 02:49 | #667 PILNE: clear `retry_after` SE-KAA + job here-roads 5/5 (KAA 18854, INLAND 19408); 0355 OK do F7 | pętla |
+| 31.10.2026 03:00 | #667 PILNE SE-KAA: 5 legów z punktami po here-roads 01:49Z; przyczyna retry=stara Edge JWT; #677 CI ✔ czekam F7 | pętla |
 
