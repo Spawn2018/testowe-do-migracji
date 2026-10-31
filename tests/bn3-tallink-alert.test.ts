@@ -1,6 +1,6 @@
 /**
  * BN3 — Tallink Alert + Lisainfo ts.ee (decyzje 57, 59).
- * F7 #683 B1–B5 + R2–R4: pełna pula, data/HH:MM, multiTime, R4-B1 trio w zdaniu cancel.
+ * F7 #683 B1–B5 + R2–R5: pełna pula, data/HH:MM, multiTime, R5 allowlist auto-ODWOLANY.
  *
  * Fixture `tallink-alert-cancel-mystar.html` — treść odwołania **syntetyczna**
  * (przeróbka pod test; nie jest żywym Alertem z produkcji).
@@ -39,8 +39,9 @@ describe('BN3 Tallink Alert', () => {
     expect(alerts.length).toBe(1);
     expect(alerts[0]!.kind).toBe('ODWOLANY');
     expect(alerts[0]!.vessel).toBe('M/F MyStar');
-    expect(alerts[0]!.routes).toEqual(expect.arrayContaining(['TLL-HEL', 'HEL-TLL']));
-    // F7 B2/R4: data+HH:MM z treści („on 2 November” + 07:30), nie tylko Scheduler.
+    expect(alerts[0]!.routes).toEqual(['TLL-HEL']);
+    expect(alerts[0]!.autoCancelOk).toBe(true);
+    // F7 B2/R5: data+HH:MM+trasa ze ścisłego wzorca, nie Scheduler.
     expect(alerts[0]!.contentStartYmd).toBe('2026-11-02');
     expect(alerts[0]!.contentEndYmd).toBe('2026-11-02');
     expect(alerts[0]!.contentHm).toBe('07:30');
@@ -111,15 +112,15 @@ describe('BN3 Tallink Alert', () => {
     expect(departureMatchesAlert('2026-11-01T22:30:00.000Z', alert)).toBe(true);
     expect(departureMatchesAlert('2026-11-01T22:00:00.000Z', alert)).toBe(true); // −30 min
     expect(departureMatchesAlert('2026-11-01T23:05:00.000Z', alert)).toBe(false); // >30 min
-    // Zmiana czasu: treść „from Tallinn to Helsinki” (bez myślnika).
+    // R5 allowlist: HH:MM przed departure/sailing + from/to + on date.
     const fromTo = parseTallinkAlerts(
-      wrapAlert('The Megastar sailing from Tallinn to Helsinki on 2 November at 19:30 is cancelled.', '2026-11-02'),
+      wrapAlert('The Megastar 19:30 sailing from Tallinn to Helsinki on 2 November is cancelled.', '2026-11-02'),
       TALLINK_HOME(),
       NOW,
     ).alerts[0]!;
-    // B2: „from … to …” = jeden kierunek (myślnik = oba).
     expect(fromTo.routes).toEqual(['TLL-HEL']);
     expect(fromTo.contentHm).toBe('19:30');
+    expect(fromTo.autoCancelOk).toBe(true);
   });
 
   it('F7 B2: wygasłe okno pomijane', () => {
@@ -277,7 +278,7 @@ describe('BN3 Tallink Alert — runFerryStatus (F7 B5)', () => {
     await runFerryStatus(deps(st, pages, NOW));
     expect(st.notices).toHaveLength(1); // already_cancelled → bez nowego AUTO
 
-    // Niejednoznaczny: dwa rejsy w ±30 min od 07:30 → ryzyko, bez ODWOLANY.
+    // Niejednoznaczny: dwa rejsy TLL-HEL w ±30 min od 07:30 → ryzyko, bez ODWOLANY.
     const amb = new MemStore();
     amb.sailings.push(
       {
@@ -287,7 +288,7 @@ describe('BN3 Tallink Alert — runFerryStatus (F7 B5)', () => {
         status: 'ZAPLANOWANY', source: 'TALLINK',
       },
       {
-        id: 'a2', vessel_id: MYST, route: 'HEL-TLL',
+        id: 'a2', vessel_id: MYST, route: 'TLL-HEL',
         departure_at: '2026-11-02T05:45:00.000Z', arrival_at: '2026-11-02T07:45:00.000Z',
         delayed_departure_at: null, delayed_arrival_at: null,
         status: 'ZAPLANOWANY', source: 'TALLINK',
@@ -387,13 +388,60 @@ describe('BN3 Tallink Alert — runFerryStatus (F7 B5)', () => {
       expect(st.notices).toHaveLength(0);
       expect(st.risks.some((r) => r.titleKey === 'rk_tallink_alert_ambiguous')).toBe(true);
     }
-    // Mutacja: bez „to samo zdanie” całe treści dają datę+HH:MM (test padałby przy match).
+    // Mutacja: bez „to samo zdanie” / allowlist — data+HH:MM w treści, ale nie auto.
     const other =
       'On 2 November at 07:30 the weather looks fine. MyStar sailing from Tallinn to Helsinki is cancelled.';
     expect(autoCancelFromCancelSentence(other, 2026)).toBeNull();
     expect(parseAlertContentDates(other, 2026)).toMatchObject({
       startYmd: '2026-11-02', hm: '07:30',
     });
+  });
+
+  it('F7 R5: may / buffet / car deck / trasa z innego zdania → ryzyko; allowlist → ODWOLANY', async () => {
+    const sailingsOk = {
+      id: 's-1630', vessel_id: MYST, route: 'TLL-HEL' as const,
+      departure_at: '2026-11-02T14:30:00.000Z', arrival_at: '2026-11-02T16:30:00.000Z',
+      delayed_departure_at: null as string | null, delayed_arrival_at: null as string | null,
+      status: 'ZAPLANOWANY', source: 'TALLINK',
+    };
+    for (const text of [
+      'The MyStar 16:30 departure from Tallinn to Helsinki on 2 November may be cancelled.',
+      'On the MyStar 16:30 departure from Tallinn to Helsinki on 2 November, the onboard buffet is cancelled.',
+      'Car deck bookings for the MyStar 16:30 departure from Tallinn to Helsinki on 2 November are cancelled.',
+      'Megastar is in dry dock. The MyStar 16:30 departure on 2 November is cancelled. Passengers can use the sailing from Helsinki to Tallinn.',
+      // Mutacja: dowolny tekst przed/po ścisłym wzorcu → nie auto.
+      'Please note: The MyStar 16:30 departure from Tallinn to Helsinki on 2 November is cancelled.',
+    ]) {
+      const st = new MemStore();
+      st.sailings.push({ ...sailingsOk });
+      await runFerryStatus(deps(st, {
+        'tallink.com': wrapAlert(text, '2026-11-02'),
+        'ts.ee': 503, portsofstockholm: 503,
+      }, NOW));
+      expect(st.sailings[0]!.status).toBe('ZAPLANOWANY');
+      expect(st.notices).toHaveLength(0);
+      expect(st.risks.some((r) => r.titleKey === 'rk_tallink_alert_ambiguous')).toBe(true);
+      expect(autoCancelFromCancelSentence(text, 2026)).toBeNull();
+    }
+
+    // Allowlist + wariant „today, …”.
+    for (const text of [
+      'The MyStar 16:30 departure from Tallinn to Helsinki on 2 November is cancelled.',
+      'today, 2 November, the MyStar 16:30 departure from Tallinn to Helsinki is cancelled.',
+    ]) {
+      const st = new MemStore();
+      st.sailings.push({ ...sailingsOk });
+      await runFerryStatus(deps(st, {
+        'tallink.com': wrapAlert(text, '2026-11-02'),
+        'ts.ee': 503, portsofstockholm: 503,
+      }, NOW));
+      expect(st.sailings[0]!.status).toBe('ODWOLANY');
+      expect(st.notices).toHaveLength(1);
+      expect(st.notices[0]).toMatchObject({ sailingId: 's-1630', source: 'AUTO' });
+      expect(autoCancelFromCancelSentence(text, 2026)).toMatchObject({
+        startYmd: '2026-11-02', hm: '16:30', vessel: 'M/F MyStar', routes: ['TLL-HEL'],
+      });
+    }
   });
 });
 

@@ -1296,7 +1296,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 Źródło: #573 + komentarze BN3 31.10 (spec + decyzje 57–61). Po #667; DP-21 → #666 (63b).
 ~~Wycinek 1~~ SCALONE (#680 `8100f685` / **0356**): decyzja 60 + ręczny komunikat 6 armatorów (`p_operator`, formularz).
 ~~Wycinek 2~~ SCALONE (#682 `a9c396d7` / **0357** + F7 r1–r2): DFDS remark/ETA + Portnet ATA + SOURCE_DOWN MEDIUM (**decyzja 67**).
-**Wycinek 3** (`pakiet/bn3-tallink-tsee-auto` / PR #683): ~~DP-94/95/96~~; **0358** `operator_notices.source` AUTO; Tallink Alert / ts.ee — **F7 R4-B1 w toku** (B1–B5 + R2–R4: auto-ODWOLANY = trio statek+HH:MM+data w zdaniu cancel, bez względnych; nie przekreślać do F7 OK); DP-97…103, DP-105…109, DP-111/112 w kolejce (DP-111 po scaleniu).
+**Wycinek 3** (`pakiet/bn3-tallink-tsee-auto` / PR #683): ~~DP-94/95/96~~; **0358** `operator_notices.source` AUTO; Tallink Alert / ts.ee — **F7 R5 allowlist** (auto-ODWOLANY wyłącznie ścisły wzorzec zdania; may/buffet/trasa z innego zdania → MEDIUM; nie przekreślać do F7 OK); DP-97…103, DP-105…109, DP-111/112 w kolejce (DP-111 po scaleniu).
 1. ~~**60** Tallink poza PLD–KPS~~ — baza już tylko DFDS; front `ferryCatalog` bez TALLINK; test bn9a.
 2. Źródła → update — ~~**DFDS remark**~~; ~~Portnet ATA~~; ts.ee Lisainfo / Tallink Alert (F7 #683).
 3. ~~Opóźnienie: ATA − arrival; `FERRY_PORT_DELAY_MIN` z `app_parameters` (zapas 15)~~ (**0357** + Portnet + store F7 B1); ~~ATD 13–19 min przed planem bez delayed (DP-94)~~; ATD tylko gdy wiarygodne — dalej.

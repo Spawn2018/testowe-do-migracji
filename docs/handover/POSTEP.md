@@ -7435,6 +7435,13 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (odbiór prod):** SELECT `here_road_legs` — **12** / active 12 / `browser_fetch` 5; core bez zmian (3495/12561/3742/18854/19408); BN7 7× null. `here-roads` **#108803** @ 04:49Z ok (0 prób — core świeże; BN7 poza cronem). Komentarz w #667. **Dalej:** BN3 (#573).
 - Bez push na main.
 
+## 2026-10-31 12:05 — #683 F7 R5 allowlist
+
+- Skrzynka: #685 w planie (po #683); #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne` do budowy.
+- Scalanie: #683 — F7 r5 **POPRAWKI** @ `ee8c8866` (CI unit/db/visual ✔). Bez „F7: gotowe do scalenia”. #684 wygląd bez F7. Bez push na main.
+- **Krok R5:** `autoCancelFromCancelSentence` = ścisły wzorzec allowlist (statek+HH:MM+from/to+data+is/has been cancelled); `CONDITIONAL_RE`; trasa tylko z wzorca; fixture dopasowany; testy may/buffet/car deck/trasa z innego zdania + today. vitest bn3-tallink-alert **19**. Probe Digitraffic FIHEL (przygotowanie #685-a): XPRS MMSI 230705000, `portAreaCode=ES`, ETA/ETD z Agent (nie tylko okno `from≥now`). **Dalej:** CI → „gotowe do F7 @ sha”; po F7 → #685-a.
+- Bez push na main.
+
 ## 2026-10-31 11:35 — #683 F7 R4-B1 + #685 w planie
 
 - Skrzynka: **#685** (Spawn2018, `dla-cursora`) — decyzja 63 → PLAN §4 (po #683) / §5 / §8 / POSTEP; podział PR a/b/c + prognoza godzin. #608 w planie; #550 WSTRZYMANE; #499/#537/#538/#500 w planie. Bez nowych `pilne` do budowy.

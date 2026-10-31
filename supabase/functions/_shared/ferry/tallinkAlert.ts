@@ -7,6 +7,7 @@
  * R3-B1: ODWOLANY tylko przy dacie sparsowanej z treści; Scheduler = wyłącznie wygaśnięcie.
  * R4-B1: auto-ODWOLANY tylko gdy w tym samym zdaniu co cancel: statek + 1×HH:MM + 1×data;
  *   bez wskazówek względnych/nierozpoznanych w całej treści (updated/tomorrow/dni tygodnia…).
+ * R5: auto-ODWOLANY wyłącznie przy ścisłym wzorcu zdania (allowlist) — bez may/buffet/trasy z innego zdania.
  * Kampanie pomijane. User-Agent uczciwy; bez obchodzenia.
  */
 import type { FerryRoute } from './polferries.ts';
@@ -52,6 +53,13 @@ const OPAQUE_HINT_RE = new RegExp(
     String.raw`|\bupdated\b`,
   'i',
 );
+/** F7 #683 R5: słowa warunkowe w całej treści → tylko ryzyko MEDIUM. */
+const CONDITIONAL_RE =
+  /\b(?:may|might|could|possibl\w*|risk|expected|likely|if|unless|in case)\b/i;
+
+const SHIP_NAME_ALT = String.raw`MyStar|Megastar|Victoria\s+I|Baltic\s*Queen|Silja\s*Europa`;
+const PORT_NAME_ALT = String.raw`Tallinn|Helsinki|Stockholm`;
+const DATE_CAPTURE = String.raw`(\d{1,2})\s+(${MONTH_NAMES})(?:\s+(\d{4}))?`;
 
 export type TallinkAlertKind = 'ODWOLANY' | 'INFO' | 'IGNORE';
 
@@ -60,9 +68,9 @@ export interface TallinkAlert {
   text: string;
   vessel: string | null;
   multiVessel: boolean;
-  /** F7 #683 R2-B2: >1 różna HH:MM lub >1 data w treści — albo R4-B1: brak autoCancelOk. */
+  /** F7 #683 R2-B2: >1 różna HH:MM lub >1 data w treści — albo R4/R5: brak autoCancelOk. */
   multiTime: boolean;
-  /** F7 #683 R4-B1: konserwatywne auto-ODWOLANY (zdanie cancel + trio + bez opaque). */
+  /** F7 #683 R5: auto-ODWOLANY tylko przy ścisłym wzorcu zdania (allowlist). */
   autoCancelOk: boolean;
   routes: FerryRoute[];
   /** Okno Scheduler (wyświetlanie CMS) — tylko do odrzucania wygasłych (R3-B1). */
@@ -193,34 +201,120 @@ function countRecognizedDates(text: string, year: number): string[] {
   return ymds;
 }
 
-/** F7 #683 R4-B1: zdania (kropka / średnik / dwukropek). */
+/** F7 #683 R5: zdania tylko po .!? — dwukropek nie wycina prefiksu („Please note: …”). */
 function alertSentences(text: string): string[] {
   return text
-    .split(/(?<=[.!?;])\s+|(?<=:)\s+/)
+    .split(/(?<=[.!?])\s+/)
     .map((s) => s.trim())
     .filter(Boolean);
 }
 
+export type AutoCancelFields = {
+  startYmd: string;
+  endYmd: string;
+  hm: string;
+  vessel: string;
+  routes: FerryRoute[];
+};
+
+function mapShipAlias(raw: string): string | null {
+  const n = raw.trim().toLowerCase().replace(/\s+/g, ' ');
+  for (const a of SHIP_ALIASES) {
+    if (a.re.test(n)) return a.vessel;
+  }
+  return null;
+}
+
+function ymdFromDateParts(dayRaw: string, monRaw: string, yearRaw: string | undefined, year: number): string {
+  const day = String(Number(dayRaw)).padStart(2, '0');
+  const mon = MONTH[monRaw.toLowerCase()]!;
+  const y = yearRaw ?? String(year);
+  return `${y}-${mon}-${day}`;
+}
+
+function routeFromPorts(aRaw: string, bRaw: string): FerryRoute | null {
+  const a = PORT_CODE[aRaw.toLowerCase()];
+  const b = PORT_CODE[bRaw.toLowerCase()];
+  if (!a || !b || a === b) return null;
+  return `${a}-${b}` as FerryRoute;
+}
+
 /**
- * F7 #683 R4-B1: auto-ODWOLANY tylko przy trio statek+HH:MM+data w zdaniu cancel
- * i bez wskazówek względnych w całej treści.
- * Mutacja: bez sprawdzania „to samo zdanie” → data z innego zdania wchodzi do match.
+ * F7 #683 R5: zdanie pasuje w całości do ścisłego wzorca allowlist
+ * (statek + HH:MM + from/to + data + is/has been cancelled; bez dodatkowego tekstu).
+ * Mutacja: poluzowanie (dowolny tekst przed/po) → test pada.
+ */
+function matchStrictAutoCancelSentence(sent: string, year: number): AutoCancelFields | null {
+  const s = sent.trim().replace(/\s+/g, ' ');
+  const ship = SHIP_NAME_ALT;
+  const port = PORT_NAME_ALT;
+  const date = DATE_CAPTURE;
+  const cancelTail = String.raw`(?:is|has been)\s+cancel(?:led|ed)\.?`;
+  const patterns: RegExp[] = [
+    // The MyStar 16:30 departure from Tallinn to Helsinki on 2 November is cancelled.
+    new RegExp(
+      String.raw`^(?:The\s+)?(${ship})\s+(\d{1,2}):(\d{2})\s+(?:departure|sailing)\s+from\s+(${port})\s+to\s+(${port})\s+on\s+(?:today,?\s+)?${date}\s+${cancelTail}$`,
+      'i',
+    ),
+    // The MyStar 16:30 departure on 2 November from Tallinn to Helsinki is cancelled.
+    new RegExp(
+      String.raw`^(?:The\s+)?(${ship})\s+(\d{1,2}):(\d{2})\s+(?:departure|sailing)\s+on\s+(?:today,?\s+)?${date}\s+from\s+(${port})\s+to\s+(${port})\s+${cancelTail}$`,
+      'i',
+    ),
+    // today, 2 November, the MyStar 16:30 departure from Tallinn to Helsinki is cancelled.
+    new RegExp(
+      String.raw`^(?:today,?\s+)?${date},?\s+(?:the\s+)?(${ship})\s+(\d{1,2}):(\d{2})\s+(?:departure|sailing)\s+from\s+(${port})\s+to\s+(${port})\s+${cancelTail}$`,
+      'i',
+    ),
+  ];
+  for (let i = 0; i < patterns.length; i++) {
+    const m = s.match(patterns[i]!);
+    if (!m) continue;
+    if (i === 0) {
+      const vessel = mapShipAlias(m[1]!);
+      const hm = `${String(Number(m[2])).padStart(2, '0')}:${m[3]}`;
+      const route = routeFromPorts(m[4]!, m[5]!);
+      const ymd = ymdFromDateParts(m[6]!, m[7]!, m[8], year);
+      if (!vessel || !route) return null;
+      return { startYmd: ymd, endYmd: ymd, hm, vessel, routes: [route] };
+    }
+    if (i === 1) {
+      const vessel = mapShipAlias(m[1]!);
+      const hm = `${String(Number(m[2])).padStart(2, '0')}:${m[3]}`;
+      const ymd = ymdFromDateParts(m[4]!, m[5]!, m[6], year);
+      const route = routeFromPorts(m[7]!, m[8]!);
+      if (!vessel || !route) return null;
+      return { startYmd: ymd, endYmd: ymd, hm, vessel, routes: [route] };
+    }
+    // i === 2: date first
+    const ymd = ymdFromDateParts(m[1]!, m[2]!, m[3], year);
+    const vessel = mapShipAlias(m[4]!);
+    const hm = `${String(Number(m[5])).padStart(2, '0')}:${m[6]}`;
+    const route = routeFromPorts(m[7]!, m[8]!);
+    if (!vessel || !route) return null;
+    return { startYmd: ymd, endYmd: ymd, hm, vessel, routes: [route] };
+  }
+  return null;
+}
+
+/**
+ * F7 #683 R5: jedna bramka auto-ODWOLANY — ścisły wzorzec + brak opaque/warunkowych/wznowienia.
+ * R4 trio w zdaniu zastąpione allowlistą (decyzja koordynatora przy decyzji 59).
  */
 export function autoCancelFromCancelSentence(
   text: string,
   year: number,
-): { startYmd: string; endYmd: string; hm: string } | null {
+): AutoCancelFields | null {
   if (OPAQUE_HINT_RE.test(text)) return null;
-  const cancelSents = alertSentences(text).filter(
-    (s) => CANCEL_RE.test(s) && !RESUME_RE.test(s),
-  );
-  if (cancelSents.length !== 1) return null;
-  const sent = cancelSents[0]!;
-  const ships = vesselsIn(sent);
-  if (!ships.vessel || ships.multi) return null;
-  const parsed = parseAlertContentDates(sent, year);
-  if (!parsed || parsed.multiTime || !parsed.startYmd || !parsed.hm) return null;
-  return { startYmd: parsed.startYmd, endYmd: parsed.endYmd || parsed.startYmd, hm: parsed.hm };
+  if (CONDITIONAL_RE.test(text)) return null;
+  if (RESUME_RE.test(text)) return null;
+  const hits: AutoCancelFields[] = [];
+  for (const sent of alertSentences(text)) {
+    const hit = matchStrictAutoCancelSentence(sent, year);
+    if (hit) hits.push(hit);
+  }
+  if (hits.length !== 1) return null;
+  return hits[0]!;
 }
 
 /** Data i opcjonalna godzina z treści Alertu (B2). R2-B2: wiele HH:MM/dat → multiTime. */
@@ -288,7 +382,7 @@ export function parseTallinkAlerts(
     if (kind === 'IGNORE') return;
     const yearHint = Number(dateStart?.slice(0, 4) ?? yearNow);
     const content = parseAlertContentDates(text, yearHint);
-    // R4-B1: pola match tylko z autoCancelFromCancelSentence; inaczej ambiguous.
+    // R5: pola match tylko z autoCancelFromCancelSentence (allowlist); inaczej ambiguous.
     const auto = kind === 'ODWOLANY' ? autoCancelFromCancelSentence(text, yearHint) : null;
     const contentStart = auto?.startYmd ?? null;
     const contentEnd = auto?.endYmd ?? null;
@@ -299,10 +393,10 @@ export function parseTallinkAlerts(
       : (content?.multiTime ?? false);
     const endForExpiry = contentEnd || content?.endYmd || dateEnd;
     if (endForExpiry && endForExpiry < today) return;
-    // Statek do match: z zdania cancel gdy auto OK, inaczej z całej treści (ryzyko).
-    const ships = autoCancelOk ? vesselsIn(
-      alertSentences(text).find((s) => CANCEL_RE.test(s) && !RESUME_RE.test(s)) ?? text,
-    ) : vesselsIn(text);
+    // Statek/trasa do match: wyłącznie z wzorca; przy ryzyku — z całej treści.
+    const ships = autoCancelOk
+      ? { vessel: auto!.vessel, multi: false }
+      : vesselsIn(text);
     alerts.push({
       kind,
       text: text.slice(0, 800),
@@ -310,7 +404,7 @@ export function parseTallinkAlerts(
       multiVessel: ships.multi,
       multiTime,
       autoCancelOk,
-      routes: routesIn(text),
+      routes: autoCancelOk ? auto!.routes : routesIn(text),
       windowStartYmd: dateStart,
       windowEndYmd: dateEnd,
       contentStartYmd: contentStart,
