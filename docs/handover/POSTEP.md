@@ -7331,6 +7331,28 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Bez push na main.
 
 
+## 2026-10-31 19:45 — #689 F7 r2 (R2-B1 test markera + nieblokujące)
+
+- Skrzynka: #687 / PR #689 F7 r2; #688 czeka po scaleniu #689; #608 w planie; #550 WSTRZYMANE.
+- Scalanie: brak «F7: gotowe do scalenia» (po r2 — czekam). Bez push na main.
+- **Krok F7 #689 r2 (tylko testy):**
+  - **R2-B1** — strona ≥2 KB bez Footer/Cws (`Service temporarily unavailable`) → `isTallinkAlertHtmlUsable` false + INCOMPLETE MEDIUM;
+  - nieblokujące: footer+`_Incapsula_Resource` → ok:false; resolve `TALLINK_ALERT_INCOMPLETE:` po pełnej puli; skip INCOMPLETE przy already_cancelled; throw tylko HOME albo tylko HEL.
+- vitest bn3-tallink-alert **59**. **Dalej:** CI → gotowe do F7 → scal #689 → F7 r1 #688 (decyzje 73/74).
+- Bez push na main.
+
+## 2026-10-31 19:10 — #689 F7 r1 POPRAWKI (DP-114 usable HTML + streak z runs)
+
+- Skrzynka: #689 F7 r1 POPRAWKI; #688 czeka po scaleniu #689; #608 w planie; #550 WSTRZYMANE.
+- Scalanie: brak «F7: gotowe do scalenia» (POPRAWKI). Bez push na main.
+- **Krok F7 #689 r1:**
+  - **B1** — `isTallinkAlertHtmlUsable` (Footer/Cws, bez Incapsula/captcha, ≥ 2 KB); brak Schedulera ≠ niepełna;
+  - **B2** — testy mutacji HOME/HEL 404/403/5xx/pustka/throw + Imperva 200;
+  - **B3** — `JobResult.tallink_alert_incomplete` + `recentJobResults` z `integration_runs` (zimny start Edge); test `vi.resetModules`;
+  - nieblokujące: INCOMPLETE titleKey; skip gdy już ODWOLANY; resolve INCOMPLETE przy pełnej puli; **DP-115** stenaIrmBackoff.
+- vitest bn3-tallink-alert **58**. **Dalej:** CI → gotowe do F7 → scal #689 → F7 r1 #688.
+- Bez push na main.
+
 ## 2026-10-31 00:10 — #667 F7 r3 POPRAWKI (B5 SE_E22 0298 + B4 sparse)
 
 - Skrzynka: #666 W TOKU (PR #668 @ `f0dfbc61` — F7 r7; CI db/visual w toku; czekam „F7: gotowe do scalenia”); #667 ten PR; #608 w planie; #550 WSTRZYMANE.
@@ -7435,24 +7457,38 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (odbiór prod):** SELECT `here_road_legs` — **12** / active 12 / `browser_fetch` 5; core bez zmian (3495/12561/3742/18854/19408); BN7 7× null. `here-roads` **#108803** @ 04:49Z ok (0 prób — core świeże; BN7 poza cronem). Komentarz w #667. **Dalej:** BN3 (#573).
 - Bez push na main.
 
+## 2026-10-31 20:15 — #689 SCALONE; start #688 F7 r1
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE. #685 W TOKU (a).
+- Scalanie: **#689 SCALONE** `5fc7d4a0` (F7: gotowe do scalenia @ `a12dfc23`). deploy-main bez migracji. Bez push na main.
+- **Krok:** merge `main` → #688; F7 r1 Digitraffic (etaFrom/150–160/source_ref 0359).
+- Bez push na main.
+
+## 2026-10-31 19:10 — #689 F7 r1 POPRAWKI (DP-114 R1-B1…B3)
+
+- Skrzynka: **#687** / PR #689 F7 r1; #685/#688 czekają po #687; #608 w planie; #550 WSTRZYMANE.
+- Scalanie: brak „F7: gotowe do scalenia”. Bez push na main.
+- **Krok F7 #689 r1:** usable HTML; mutacje HTTP; streak z integration_runs; vitest bn3-tallink-alert **58**.
+- Bez push na main.
+
+## 2026-10-31 18:20 — #687 DP-114 Tallink HEL–TLL URL + niepełna pula
+
+- Skrzynka: **#687** W TOKU; #608 w planie; #550 WSTRZYMANE.
+- **Krok DP-114:** nowy URL; niepełna pula → INCOMPLETE; streak≥3 SOURCE_DOWN; vitest **55**.
+- Bez push na main.
+
 ## 2026-10-31 17:55 — #685-a CI ✔; korekta docs (crossing 120 min)
 
-- Skrzynka: #685 W TOKU (a); #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne` do budowy.
-- Scalanie: **#688** — brak „F7: gotowe do scalenia” (tylko „gotowe do F7” @ `693a926d`). CI unit/db/visual ✔. Bez push na main.
-- **Krok:** poprawka opisu — przejście HEL⇄TLL = **120 min** (`VIKING_XPRS_CROSSING_MS`), nie „2h15” (błąd w POSTEP 17:35 / komentarzu PR). PLAN §4 #685-a: PR #688 @ `693a926d`, CI ✔, czekam F7. Plik HTML na dysku: `D:\Watch Tower\dane\viking-cargo-hel-tll.html` (pod #685-b; nazwa z myślnikami).
-- **Dalej:** F7 → scalenie #688 → #685-b.
+- Skrzynka: #685 W TOKU (a); #608 w planie; #550 WSTRZYMANE.
+- Scalanie: **#688** — CI ✔ @ `693a926d`. Bez push na main.
+- **Krok:** opis crossing 120 min (później F7 r1 → 150/160, decyzja 73).
 - Bez push na main.
 
 ## 2026-10-31 17:35 — #685-a Digitraffic Viking near schedule (63a)
 
-- Skrzynka: #685 W TOKU (a); #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne` do budowy.
-- Scalanie: **#683 SCALONE** `63088803` (F7: gotowe do scalenia @ `993e42fe`; CI ✔). Bez push na main.
-- **Krok #685-a (63a):**
-  - `vikingScheduleFromDigitrafficPortCalls` — FIHEL / ES / MMSI 230705000 → TLLA-HEL (ETA−120 min) / HELA-TLL (ETD+120 min), horyzont 3 d;
-  - `applyDigitrafficVikingNearSchedule` w `ferry-schedule` — source=VIKING; ±30 min jak #682; RECZNIE bez zmian; ambiguous → ryzyko MEDIUM; SOURCE_DOWN zostaje (63c);
-  - `Digitraffic-User: LOGMAR/WatchTower`; atrybucja CC BY 4.0 (Portnet);
-  - testy bn2-ferry-schedule + bn2-ferry-jobs **77** OK (w tym #685-a: parser + job HTML403/RECZNIE/ambiguous); fixture wycinek XPRS ES.
-- **Dalej:** push PR → CI → gotowe do F7; potem #685-b.
+- Skrzynka: #685 W TOKU (a); #608 w planie; #550 WSTRZYMANE.
+- Scalanie: **#683 SCALONE** `63088803`. Bez push na main.
+- **Krok #685-a (63a):** Digitraffic FIHEL/ES/XPRS → sailings VIKING; testy bn2 **77**.
 - Bez push na main.
 
 ## 2026-10-31 17:00 — #683 F7 R14 (tylko testy mutacji)

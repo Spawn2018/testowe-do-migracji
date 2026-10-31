@@ -110,6 +110,8 @@ const pl: Dict = {
   /* BN3 decyzja 59: Tallink Alert bez jednoznacznego rejsu → tylko ryzyko MEDIUM */
   rk_tallink_alert_ambiguous: 'Tallink Alert: odwołanie — wiele rejsów, weryfikacja HHL',
   rk_tallink_alert_unmatched: 'Tallink Alert: odwołanie bez jednoznacznego rejsu — weryfikacja HHL',
+  /* F7 #689 DP-114: niepełna pula stron Tallink Alert */
+  rk_tallink_alert_incomplete: 'Tallink Alert: niepełna pula stron — bez auto-odwołania, weryfikacja HHL',
   rk_ferry_weather: 'Pogoda morska: możliwe odwołanie — fala {wave} m / porywy {gust} węzłów ({vessel}; progi {wave_thr} m / {gust_thr} węzłów)',
   rk_source_down: 'Źródło niedostępne: {source} — HHL weryfikuje ręcznie',
   /* A8: jedna sprawa na źródło z „od kiedy” (`detail.od_kiedy`) */

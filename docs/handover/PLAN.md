@@ -1216,7 +1216,9 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-95 | Cursor | test tolerancji ±3 h w `runFerryPortnet`: dwa Megastar TLL-HEL (10:30/16:30) → ATA tylko do drugiego; wariant po północy (mutacja M3a) | F7 #682 r2 | BN3 wycinek 3 | DONE (bn3-tallink-tsee-auto) |
 | DP-96 | Cursor | decyzja 67 w PLAN §5 z uzasadnieniem (`TALLINK`/`ECKERO`/`DFDS_SCHEDULE` = MEDIUM przy całkowitej awarii; Polferries/Stena HIGH) | F7 #682 r2 | BN3 wycinek 3 | DONE (bn3-tallink-tsee-auto) |
 | DP-97 | Cursor | ryzyka `FERRY_UNKNOWN:PORTNET_ATA/ATD:…` bez auto-zamknięcia; `params.dep` w UTC zamiast czasu warszawskiego | F7 #682 r2 | BN3 | w kolejce |
-| DP-98 | Cursor | `TALLINK_HEL_TLL_URL` zwraca 404 → ostrzeżenie co 10 min — poprawić/usunąć | F7 #683 | BN3 | w kolejce |
+| DP-98 | Cursor | `TALLINK_HEL_TLL_URL` zwraca 404 → ostrzeżenie co 10 min — poprawić/usunąć | F7 #683 | BN3 | DONE w #687 (DP-114: nowy URL) |
+| DP-114 | Cursor | Tallink HEL–TLL 404 po #683: nowy URL; niepełna pula → brak auto; streak ≥ 3 SOURCE_DOWN; F7 r1 usable HTML + streak z integration_runs; F7 r2 test markera | #687 / F7 #689 r2 | przed scaleniem #688 | W TOKU (F7 r2 — czekam scalenie) |
+| DP-115 | Cursor | `stenaIrmBackoffUntilMs` — stan w pamięci modułu (jak dawny streak Tallink); ocenić persist / Edge cold start | F7 #689 r1 | BN3 / AIS | w kolejce |
 | DP-99 | Cursor | `operatorFromSailingSource` fallback MUU-VUO → VIKING (prod tylko ECKERO), domyślnie TALLINK → z `data-company` ts.ee albo `ferry_route_operators` (DP-1) | F7 #683 | BN3 | w kolejce |
 | DP-100 | Cursor | dedup AUTO tylko aplikacyjny → partial unique index `(sailing_id, kind) where source='AUTO'` albo `.neq('status','ODWOLANY')` w update | F7 #683 | BN3 | w kolejce |
 | DP-101 | Cursor | `insertOperatorNotice` z `must()` po zmianie statusu — przy błędzie wpis nie powstanie nigdy (kolejność / transakcja) | F7 #683 | BN3 | w kolejce |
@@ -1308,11 +1310,19 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 9. Testy: ~~DFDS remark / Portnet ATA / F7 B5 wycinek 2~~; ~~ts.ee/Alert (F7 #683 B5)~~; Imperva; tolerancja; RECZNIE; ODWOLANY→FERRY_CANCELLED — część dalej.
 10. ~~Role komunikatu: HHL_ADMIN + CARRIER_DISPATCH (SCX); KSH odmowa~~ (F7 #680).
 
-### #685 · Decyzja 63: rozkład Viking Line (Digitraffic + import z pliku) — W TOKU (po #683 SCALONE `63088803`)
+### #687 · DP-114 Tallink HEL–TLL 404 + niepełna pula Alert — SCALONE (`5fc7d4a0` / PR #689)
+Źródło: #687 (Spawn2018, `dla-cursora`). Po #683 prod: `TALLINK_HEL_TLL_URL` `/en/helsinki-tallinn` → HTTP 404; reguła 72 traci połowę puli.
+1. ~~URL~~ → `https://www.tallink.com/travelling/one-way/helsinki-tallinn-ferry` (link z HOME; zwykły GET 200).
+2. ~~Niepełna pula~~ (HTTP ≠ OK / pusta / challenge Incapsula / bez znacznika Cws|Footer / &lt; 2 KB) → **brak auto-ODWOLANY**; Alerty → `TALLINK_ALERT_INCOMPLETE` MEDIUM (`rk_tallink_alert_incomplete`). Brak Schedulera ≠ niepełna.
+3. ~~Streak ≥ 3~~ z `integration_runs.result.tallink_alert_incomplete` (nie pamięć modułu) → `SOURCE_DOWN:TALLINK_STATUS` MEDIUM.
+4. ~~F7 r2~~ — test R2-B1 (strona ≥2 KB bez Footer/Cws → INCOMPLETE) + nieblokujące. Testy bn3-tallink-alert **59**.
+DP-98 DONE; DP-114 DONE; DP-115 (Stena IRM backoff) w kolejce.
+
+### #685 · Decyzja 63: rozkład Viking Line (Digitraffic + import z pliku) — W TOKU (PR #688; F7 r1 POPRAWKI; po #687 SCALONE)
 Źródło: #685 (Spawn2018, `dla-cursora`; decyzja 63 potwierdzona właścicielem 31.10 09:56). Bez obchodzenia Imperva (cargo/sales 403).
 **Podział PR (prognoza):**
-1. **#685-a (63a)** — W TOKU (PR #688 `pakiet/685a-digitraffic-viking-schedule` @ `693a926d`; CI unit/db/visual ✔; czekam F7): Digitraffic port-calls `FIHEL` (CC BY 4.0; `Digitraffic-User: LOGMAR/WatchTower` + gzip), obszar ES / Viking XPRS MMSI 230705000, ETA/ETD ~2–3 dni → `sailings` TLLA-HEL / HELA-TLL source=VIKING (przejście 120 min); dopasowanie ±30 min jak #682; RECZNIE bez zmian; SOURCE_DOWN zostaje (zamyka 63c); testy na wycinku odpowiedzi.
-2. **#685-b (63b)** ~4–6 h baza/Edge (+ ekran BN9-c1 koordynator) — import HTML właściciela (`D:\Watch Tower\dane\viking-cargo-hel-tll.html`); RPC HHL_ADMIN+2FA: wczytaj → parser (DP-21) → podgląd → zapis z historią; fixture przycięty bez PII.
+1. **#685-a (63a)** — W TOKU (PR #688; F7 r1: etaFrom/etd, 150/160 min decyzja 73, source_ref 0359 decyzja 74).
+2. **#685-b (63b)** ~4–6 h baza/Edge (+ ekran BN9-c1 koordynator) — import HTML właściciela (`D:\Watch Tower\dane\viking-cargo-hel-tll.html`); RPC HHL_ADMIN+2FA; **zastępuje** `source_ref like 'digitraffic:%'`, RECZNIE nietykalne.
 3. **#685-c (63c)** ~1 h (z b) — `SOURCE_DOWN:VIKING_SCHEDULE` MEDIUM zamykane, gdy rozkład z pliku ≥ 30 dni.
 Kolejność: a → b(+c). DP-21 pozostaje w #666/63b.
 
@@ -2305,9 +2315,13 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 31.10.2026 16:00 | #683 F7 R12 POPRAWKI: B1 atrybuty/invalid; B2 globalny klucz (bez dni); B3 dedupe rawFull; 72a/b/c; testy 44; potem #685-a | pętla |
 | 31.10.2026 16:35 | #683 F7 R13 POPRAWKI: B1 luźny obok Schedulera; B2 `(?<![\w-])type`; B3 kampania-serwisowa; B4/B5 invalid_date; 72a łagodna w §5; testy 49; potem #685-a | pętla |
 | 31.10.2026 17:00 | #683 F7 R14: tylko testy mutacji (data-type na Schedulerze; campaignHasServiceText gałęzie); uwaga §8: licznik Alert w komentarzach/duplikatach — przy żywym Alercie + DP r10; `:type` Vue / `&quot;Alert&quot;` niska realność | pętla |
-| 31.10.2026 17:25 | #683 SCALONE `63088803` (F7: gotowe @ 993e42fe); start #685-a Digitraffic Viking ES/XPRS → sailings | pętla |
 | 31.10.2026 17:25 | #683 SCALONE `63088803` (F7: gotowe do scalenia @ 993e42fe); start #685-a Digitraffic Viking (FIHEL/ES/XPRS → sailings) | pętla |
 | 31.10.2026 17:55 | #685-a PR #688 @ 693a926d — CI unit/db/visual ✔; crossing 120 min (korekta docs); czekam F7; potem #685-b | pętla |
+| 31.10.2026 18:20 | #687 DP-114: URL HEL–TLL `travelling/one-way/helsinki-tallinn-ferry`; niepełna pula → brak auto; streak≥3 → SOURCE_DOWN; przed scaleniem #688 | pętla |
+| 31.10.2026 19:10 | #689 F7 r1 POPRAWKI: R1-B1 usable HTML (Cws/Footer, ≥2 KB, bez Incapsula); R1-B2 mutacje HTTP; R1-B3 streak z integration_runs; DP-115; testy 58 | pętla |
+| 31.10.2026 19:45 | #689 F7 r2: R2-B1 test markera; nieblokujące; testy 59 | pętla |
+| 31.10.2026 20:15 | #689 SCALONE `5fc7d4a0` (F7: gotowe @ a12dfc23); start #688 F7 r1 (73/74 / 0359) | pętla |
+| 31.10.2026 — | Decyzja 73: TLLA-HEL ETA−150 min / HELA-TLL ETD+160 min (fixture Cargo; nocny 165 min OK). Decyzja 74: `sailings.source_ref` 0359; Digitraffic `digitraffic:portcall:<id>:<route>`; #685-b zastępuje digitraffic:% | F7 #688 r1 |
 | 31.10.2026 — | F7 #683 nieblokujące (osobna poprawka): Scheduler grudzień + „on 2 January” → rok bieżący, ciche wygaśnięcie; Alert INFO bez ryzyka/historii — świadomie | F7 #683 r7 |
 | 31.10.2026 — | F7 #683 r8 nieblokujące (osobno): Alert poza Schedulerem obok Schedulera; sprzeczne bloki (resume→cofnięcie auto); rok przy długim oknie Schedulera; mutanty M10/M15–M17/M22 świadomie bez testów | F7 #683 r8 |
 | 31.10.2026 — | F7 #683 r10 uwaga właściciel: fixture kampanii ma `CwsAlert type=…`; jeśli Tallink opakuje serwisowe w `CwsAlert` / `CwsLink` („Read more”) → ryzyko; po pierwszym żywym Alercie serwisowym — surowy HTML jako fixture + ocena allowlisty (osobny DP) | F7 #683 r10 |
