@@ -7457,15 +7457,16 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (odbiór prod):** SELECT `here_road_legs` — **12** / active 12 / `browser_fetch` 5; core bez zmian (3495/12561/3742/18854/19408); BN7 7× null. `here-roads` **#108803** @ 04:49Z ok (0 prób — core świeże; BN7 poza cronem). Komentarz w #667. **Dalej:** BN3 (#573).
 - Bez push na main.
 
-## 2026-10-31 22:35 — #688 SCALONE; start #685-b (import HTML)
+## 2026-10-31 22:45 — #688 SCALONE; #685-b (0360 + Edge + apply)
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE; #685 W TOKU (b). Bez nowych `pilne`.
 - Scalanie: **#688 SCALONE** `774fd2c0` (F7: gotowe do scalenia @ `b31d504e`; CI unit/db/visual ✔). Bez push na main.
-- **Krok #685-b (start):**
-  - migracja **0360** — `viking_schedule_imports` + RPC `viking_schedule_import` (HHL_ADMIN+2FA; dry_run; ±3 h digitraffic; #685-c ≥30 d);
-  - `planVikingFileImport` (TS, ≠ `applySailings`) + testy `685b-viking-file-import`;
-  - Edge `viking-schedule-import` — parse HTML → RPC; ekran BN9-c1 (koordynator).
-- **Dalej:** CI → F7; odbiór na pliku właściciela.
+- **Krok #685-b:**
+  - migracja **0360** — `viking_schedule_imports` + `viking_schedule_import_assert` / `_record` (HHL_ADMIN+2FA);
+  - Edge `viking-schedule-import` — podgląd/zapis HTML; `parseVikingTimetableHtml`;
+  - `applyVikingFileSchedule` (≠ `applySailings`): ±3 h digitraffic usuń/przejmij; RECZNIE nietykalne; #685-c SOURCE_DOWN przy horyzoncie ≥ 30 d;
+  - vitest `bn2-viking-file-import` **7**; allowlist / null-guard / advisor.
+- **Dalej:** push → CI → gotowe do F7; ekran BN9-c1 (koordynator).
 - Bez push na main.
 
 ## 2026-10-31 22:10 — #688 F7 r4 POPRAWKI (mutacje + RECZNIE/DANE_STARTOWE)

@@ -1322,8 +1322,8 @@ DP-98 DONE; DP-114 DONE; DP-115 (Stena IRM backoff) w kolejce.
 Źródło: #685 (Spawn2018, `dla-cursora`; decyzja 63 potwierdzona właścicielem 31.10 09:56). Bez obchodzenia Imperva (cargo/sales 403).
 **Podział PR (prognoza):**
 1. **#685-a (63a)** — ~~SCALONE~~ (`774fd2c0` / PR #688 / **0359**, 31.10.2026 21:31Z; F7: gotowe @ `b31d504e`).
-2. **#685-b (63b)** — W TOKU (`pakiet/685b-viking-schedule-import`; **0360** `viking_schedule_import` HHL_ADMIN+2FA; `planVikingFileImport`; Edge parse→RPC; ±3 h digitraffic; ekran BN9-c1 koordynator).
-3. **#685-c (63c)** — w b: `SOURCE_DOWN:VIKING_SCHEDULE` zamykane przy pokryciu ≥ 30 dni (RPC + plan).
+2. **#685-b (63b)** — W TOKU (`pakiet/685b-viking-schedule-import`; **0360** assert/record HHL_ADMIN+2FA; Edge `viking-schedule-import` + `applyVikingFileSchedule` ≠ `applySailings`; ±3 h digitraffic; ekran BN9-c1 koordynator).
+3. **#685-c (63c)** — w b: `SOURCE_DOWN:VIKING_SCHEDULE` zamykane przy horyzoncie pliku ≥ 30 dni (`applyVikingFileSchedule`).
 Kolejność: a → b(+c). DP-21 w #685-b. **Wdrożenie:** **0359** na main; **0360** przed Edge `viking-schedule-import`.
 
 ### #662 · PILNE SafeFleet — link tymczasowy (SG-27) — SCALONE (`189688bc` / PR #663 / **0349**); #662-b SCALONE (`1ee855fd` / PR #664 / **0350**, 30.10.2026 12:54Z)

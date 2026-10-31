@@ -191,4 +191,3 @@ authenticated_security_definer_function_executable	public.admin_preview_start	E1
 authenticated_security_definer_function_executable	public.admin_preview_stop	E19 — allowlista RPC; B5 Podgląd; sprawdzenie roli w funkcji
 authenticated_security_definer_function_executable	public.assert_not_preview	E19 — allowlista RPC; B5 Podgląd
 authenticated_security_definer_function_executable	public.is_preview_read_only	E19 — allowlista RPC; B5 Podgląd
-authenticated_security_definer_function_executable	public.viking_schedule_import	E19 � allowlista RPC; HHL_ADMIN+2FA (#685-b)

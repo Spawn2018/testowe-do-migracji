@@ -250,4 +250,3 @@ authenticated assert_not_preview
 authenticated is_preview_read_only
 authenticated sailing_mismatch_suggest
 authenticated sailing_mismatch_assign
-authenticated viking_schedule_import
