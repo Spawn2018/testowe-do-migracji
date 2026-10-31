@@ -1296,7 +1296,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 Źródło: #573 + komentarze BN3 31.10 (spec + decyzje 57–61). Po #667; DP-21 → #666 (63b).
 ~~Wycinek 1~~ SCALONE (#680 `8100f685` / **0356**): decyzja 60 + ręczny komunikat 6 armatorów (`p_operator`, formularz).
 ~~Wycinek 2~~ SCALONE (#682 `a9c396d7` / **0357** + F7 r1–r2): DFDS remark/ETA + Portnet ATA + SOURCE_DOWN MEDIUM (**decyzja 67**).
-**Wycinek 3** (`pakiet/bn3-tallink-tsee-auto` / PR #683): ~~DP-94/95/96~~; **0358** `operator_notices.source` AUTO; Tallink Alert / ts.ee — **F7 R7** (decyzje **68–69** zaakceptowane przez właściciela 31.10 13:04; decyzja **68**: `stripTags` całego bloku Alert; jedno zdanie wzorcowe + przeprosiny; sufiks `due to …`; bez OPAQUE/CONDITIONAL/`may`≠May; fallback bez auto; **decyzja 69**: AUTO tylko przy ODWOLANY); CI ✔ @ `7b0ac3ee`; DP-97…103, DP-105…109, DP-111/112 w kolejce (DP-111 po scaleniu).
+**Wycinek 3** (`pakiet/bn3-tallink-tsee-auto` / PR #683): ~~DP-94/95/96~~; **0358** `operator_notices.source` AUTO; Tallink Alert / ts.ee — **F7 R8** (decyzje **68–69** zaakceptowane przez właściciela 31.10 13:04; **decyzja 70**: atrybuty tekstowe / komentarze HTML / from X to X → ryzyko; R8-B1 zbalansowany Scheduler; R8-B2 `^` we wzorcach 1–2; decyzja **68**: `stripTags` całego bloku; jedno zdanie + przeprosiny; **69**: AUTO tylko przy ODWOLANY); DP-97…103, DP-105…109, DP-111/112 w kolejce (DP-111 po scaleniu).
 1. ~~**60** Tallink poza PLD–KPS~~ — baza już tylko DFDS; front `ferryCatalog` bez TALLINK; test bn9a.
 2. Źródła → update — ~~**DFDS remark**~~; ~~Portnet ATA~~; ts.ee Lisainfo / Tallink Alert (F7 #683).
 3. ~~Opóźnienie: ATA − arrival; `FERRY_PORT_DELAY_MIN` z `app_parameters` (zapas 15)~~ (**0357** + Portnet + store F7 B1); ~~ATD 13–19 min przed planem bez delayed (DP-94)~~; ATD tylko gdy wiarygodne — dalej.
@@ -1664,6 +1664,7 @@ Bez ekranów Opcji (te w P10b, po P3).
 | **67** | `SOURCE_DOWN` dla `TALLINK_SCHEDULE`, `ECKERO_SCHEDULE`, `DFDS_SCHEDULE` = **MEDIUM** także przy **całkowitej** awarii źródła (nie tylko częściowej). Uzasadnienie: rozkłady pobierane raz na dobę; wcześniejsze rejsy zostają w bazie, więc brak świeżego pobrania nie jest awarią krytyczną dla operacji. **Polferries / Stena** bez zmian = **HIGH**. Zakres kodu: `sync.ts` `sourceDownRisk` (F7 #682 r1; DP-96). | **przyjęta** 31.10.2026 F7 #682 |
 | **68** | Tallink Alert: auto-ODWOLANY tylko gdy cała treść (po zdjęciu tagów) = **dokładnie jedno** zdanie wzorcowe allowlist, ewentualnie + zdania z zamkniętej listy przeprosin („We apologise/apologize for any/the inconvenience.”). Opcjonalny sufiks przed kropką: `due to (a )?(technical fault\|technical reasons\|weather conditions\|storm\|strong winds)`. Każde inne zdanie → FERRY MEDIUM. | **przyjęta** 31.10 F7 #683 r6; **zaakceptowana przez właściciela** 31.10 13:04 |
 | **69** | Wpis AUTO w `operator_notices` tylko przy ODWOLANY. Przy ryzyku (ambiguous/unmatched) historią jest samo ryzyko (`detail.tekst` + `sourceUrl`). Bez nowej migracji (`sailing_id` NOT NULL + FK). | **przyjęta** 31.10 F7 #683 r6; **zaakceptowana przez właściciela** 31.10 13:04 |
+| **70** | Tallink Alert (w ramach 68 — „cała treść”): (1) atrybut `title`/`text`/`alt`/`aria-label`/`label`/`caption`/`heading`/`subtitle`/`description` z ≥ 2 słowami → bez auto (ryzyko); (2) usuwać `<!-- … -->` (także niezamknięte) przed dopasowaniem; (3) „from X to X” (trasa nierozpoznana) → ryzyko. | **przyjęta** 31.10 F7 #683 r8 (koordynator) |
 
 ## §6. Czeka na dane albo decyzję, przeniesione do paczek, PO 1.0 (rezerwa usunięta 17.10)
 **Część 1 — Czeka na dane albo decyzję właściciela (zaczynasz po „W<nr> gotowe”, §3):**
@@ -2293,5 +2294,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 31.10.2026 12:46 | #684 SCALONE `47112584` (DP-76 tory); #683 CI ✔ @ 380b98a1 | pętla |
 | 31.10.2026 13:05 | #683 F7 R7 POPRAWKI: stripTags całego Alertu; Scheduler 2025 bez fallbacku; bez CONDITIONAL (May); testy 24; potem #685 | pętla |
 | 31.10.2026 13:25 | #683 CI ✔ @ 7b0ac3ee; decyzje 68–69 zaakceptowane przez właściciela 13:04 (PLAN §4/§5); czekam F7: gotowe do scalenia; potem #685-a | pętla |
+| 31.10.2026 13:50 | #683 F7 R8 POPRAWKI: zbalansowany Scheduler; `^` wzorce 1–2; decyzja 70 (atrybuty/komentarze/from–to); testy 27; potem #685-a | pętla |
 | 31.10.2026 — | F7 #683 nieblokujące (osobna poprawka): Scheduler grudzień + „on 2 January” → rok bieżący, ciche wygaśnięcie; Alert INFO bez ryzyka/historii — świadomie | F7 #683 r7 |
+| 31.10.2026 — | F7 #683 r8 nieblokujące (osobno): Alert poza Schedulerem obok Schedulera; sprzeczne bloki (resume→cofnięcie auto); rok przy długim oknie Schedulera; mutanty M10/M15–M17/M22 świadomie bez testów | F7 #683 r8 |
 

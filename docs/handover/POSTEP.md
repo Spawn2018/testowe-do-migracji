@@ -7435,6 +7435,18 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (odbiór prod):** SELECT `here_road_legs` — **12** / active 12 / `browser_fetch` 5; core bez zmian (3495/12561/3742/18854/19408); BN7 7× null. `here-roads` **#108803** @ 04:49Z ok (0 prób — core świeże; BN7 poza cronem). Komentarz w #667. **Dalej:** BN3 (#573).
 - Bez push na main.
 
+## 2026-10-31 13:50 — #683 F7 R8 POPRAWKI (B1/B2 + decyzja 70)
+
+- Skrzynka: #685 w planie (po #683); #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne` do budowy.
+- Scalanie: #683 — F7 r8 **POPRAWKI** @ `ac48eda3` (docs-only nie był odpowiedzią). Bez push na main.
+- **Krok R8:**
+  - **R8-B1** — `extractBalancedSchedulers` (licznik tagów); zagnieżdżony/niezbalansowany → `allowAutoCancel=false`;
+  - **R8-B2** — testy zabijające zdjęcie `^` we wzorcach 1 i 2 (`It is not true that…` / `Correction: today…`);
+  - **Decyzja 70** — atrybuty tekstowe ≥ 2 słowa → bez auto; `stripHtmlComments`; from X to X → ryzyko;
+  - PLAN §4/§5/§8 + nieblokujące r8; vitest bn3-tallink-alert **27**.
+- **Dalej:** CI → „gotowe do F7 @ sha”; po F7/scal → #685-a.
+- Bez push na main.
+
 ## 2026-10-31 13:25 — #683 CI ✔; decyzje 68–69 zaakceptowane przez właściciela
 
 - Skrzynka: #685 w planie (po #683); #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne` do budowy.

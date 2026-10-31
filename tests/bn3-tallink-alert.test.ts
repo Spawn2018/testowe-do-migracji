@@ -1,6 +1,6 @@
 /**
  * BN3 — Tallink Alert + Lisainfo ts.ee (decyzje 57, 59, 68, 69).
- * F7 #683 B1–B5 + R2–R7: allowlist + R6 jedno zdanie + R7 cała treść bloku / May.
+ * F7 #683 B1–B5 + R2–R8: allowlist + R6/R7 + R8 nested Scheduler / ^ / decyzja 70.
  *
  * Fixture `tallink-alert-cancel-mystar.html` — forma jak prawdziwy Alert
  * („due to a technical fault”); treść pod test, nie żywy CMS.
@@ -626,6 +626,114 @@ describe('BN3 Tallink Alert — runFerryStatus (F7 B5)', () => {
     }, new Date('2026-04-30T10:00:00.000Z')));
     expect(stMay.sailings[0]!.status).toBe('ODWOLANY');
     expect(stMay.notices).toHaveLength(1);
+  });
+
+  it('F7 R8-B1: zagnieżdżony Scheduler ucinał Alert → ryzyko (nie ODWOLANY)', async () => {
+    const sailingsOk = {
+      id: 's-1630', vessel_id: MYST, route: 'TLL-HEL' as const,
+      departure_at: '2026-11-02T14:30:00.000Z', arrival_at: '2026-11-02T16:30:00.000Z',
+      delayed_departure_at: null as string | null, delayed_arrival_at: null as string | null,
+      status: 'ZAPLANOWANY', source: 'TALLINK',
+    };
+    const nested =
+      `<Scheduler dateStart="2026-11-01" dateEnd="2026-11-03">` +
+      `<CwsSection data-analytics-group="Alert">` +
+      `<Scheduler dateStart="2026-11-02" dateEnd="2026-11-02">` +
+      `<CwsP>The MyStar 16:30 departure from Tallinn to Helsinki on 2 November is cancelled.</CwsP>` +
+      `</Scheduler>` +
+      `<CwsP>Correction: the departure will operate.</CwsP>` +
+      `</CwsSection></Scheduler>`;
+    const json = JSON.stringify({ page: { content: { rendered: nested } } })
+      .replace(/</g, '\\u003c')
+      .replace(/>/g, '\\u003e');
+    const html = `<!DOCTYPE html><html><body><script id="__CMS__">${json}</script></body></html>`;
+    const st = new MemStore();
+    st.sailings.push({ ...sailingsOk });
+    await runFerryStatus(deps(st, {
+      'tallink.com': html,
+      'ts.ee': 503, portsofstockholm: 503,
+    }, NOW));
+    expect(st.sailings[0]!.status).toBe('ZAPLANOWANY');
+    expect(st.notices).toHaveLength(0);
+    expect(st.risks.some((r) => r.titleKey === 'rk_tallink_alert_ambiguous')).toBe(true);
+  });
+
+  it('F7 R8-B2: bez ^ we wzorcach 1 i 2 → fałszywy match; z ^ → ryzyko', async () => {
+    const sailingsOk = {
+      id: 's-1630', vessel_id: MYST, route: 'TLL-HEL' as const,
+      departure_at: '2026-11-02T14:30:00.000Z', arrival_at: '2026-11-02T16:30:00.000Z',
+      delayed_departure_at: null as string | null, delayed_arrival_at: null as string | null,
+      status: 'ZAPLANOWANY', source: 'TALLINK',
+    };
+    const riskTexts = [
+      // Wzorzec 1 (on date from/to): bez ^ łapałby od „the MyStar…”.
+      'It is not true that the MyStar 16:30 departure on 2 November from Tallinn to Helsinki is cancelled.',
+      // Wzorzec 2 (today, date, ship…): bez ^ łapałby od „today, 2 November…”.
+      'Correction: today, 2 November, the MyStar 16:30 departure from Tallinn to Helsinki is cancelled.',
+    ];
+    for (const text of riskTexts) {
+      expect(autoCancelFromCancelSentence(text, 2026)).toBeNull();
+      const st = new MemStore();
+      st.sailings.push({ ...sailingsOk });
+      await runFerryStatus(deps(st, {
+        'tallink.com': wrapAlert(text, '2026-11-02'),
+        'ts.ee': 503, portsofstockholm: 503,
+      }, NOW));
+      expect(st.sailings[0]!.status).toBe('ZAPLANOWANY');
+      expect(st.notices).toHaveLength(0);
+    }
+  });
+
+  it('F7 R8 decyzja 70: atrybuty / komentarze HTML / from Tallinn to Tallinn → ryzyko', async () => {
+    const sailingsOk = {
+      id: 's-1630', vessel_id: MYST, route: 'TLL-HEL' as const,
+      departure_at: '2026-11-02T14:30:00.000Z', arrival_at: '2026-11-02T16:30:00.000Z',
+      delayed_departure_at: null as string | null, delayed_arrival_at: null as string | null,
+      status: 'ZAPLANOWANY', source: 'TALLINK',
+    };
+    const cancel =
+      'The MyStar 16:30 departure from Tallinn to Helsinki on 2 November is cancelled.';
+    const attrCases = [
+      `<CwsAlert title="Correction: the departure will operate as planned"><CwsP>${cancel}</CwsP></CwsAlert>`,
+      `<CwsLink text="Departure reinstated - details"/><CwsP>${cancel}</CwsP>`,
+    ];
+    for (const inner of attrCases) {
+      const st = new MemStore();
+      st.sailings.push({ ...sailingsOk });
+      await runFerryStatus(deps(st, {
+        'tallink.com': wrapAlertInner(inner, '2026-11-02'),
+        'ts.ee': 503, portsofstockholm: 503,
+      }, NOW));
+      expect(st.sailings[0]!.status).toBe('ZAPLANOWANY');
+      expect(st.notices).toHaveLength(0);
+      expect(st.risks.some((r) => r.titleKey === 'rk_tallink_alert_ambiguous')).toBe(true);
+    }
+
+    // Komentarz HTML z wzorcem → brak ODWOLANY.
+    const commented = `<!--<CwsP>${cancel}</CwsP><x-->`;
+    const stComment = new MemStore();
+    stComment.sailings.push({ ...sailingsOk });
+    await runFerryStatus(deps(stComment, {
+      'tallink.com': wrapAlertInner(commented, '2026-11-02'),
+      'ts.ee': 503, portsofstockholm: 503,
+    }, NOW));
+    expect(stComment.sailings[0]!.status).toBe('ZAPLANOWANY');
+    expect(stComment.notices).toHaveLength(0);
+    expect(stComment.risks.some((r) => String(r.titleKey).startsWith('rk_tallink_alert_'))).toBe(false);
+
+    // from Tallinn to Tallinn → trasa nierozpoznana → ryzyko.
+    const samePort =
+      'The MyStar 16:30 departure from Tallinn to Tallinn on 2 November is cancelled.';
+    expect(autoCancelFromCancelSentence(samePort, 2026)).toBeNull();
+    const stSame = new MemStore();
+    stSame.sailings.push({ ...sailingsOk });
+    await runFerryStatus(deps(stSame, {
+      'tallink.com': wrapAlert(samePort, '2026-11-02'),
+      'ts.ee': 503, portsofstockholm: 503,
+    }, NOW));
+    expect(stSame.sailings[0]!.status).toBe('ZAPLANOWANY');
+    expect(stSame.notices).toHaveLength(0);
+    expect(stSame.risks.some((r) => r.titleKey === 'rk_tallink_alert_ambiguous')).toBe(true);
   });
 });
 

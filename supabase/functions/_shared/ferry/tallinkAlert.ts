@@ -12,6 +12,8 @@
  *   opcjonalny sufiks „due to (a )?(technical fault|…)”; każde inne zdanie → ryzyko MEDIUM.
  * R7: stripTags całego bloku Alert (nie tylko CwsP); fallback bez auto przy braku Schedulera;
  *   bez OPAQUE/CONDITIONAL (`may` ≠ May); statek/trasa tylko z wzorca.
+ * R8: zbalansowany Scheduler (zagnieżdżony → bez auto); `^` we wzorcach 1–2;
+ *   decyzja 70: atrybuty tekstowe / komentarze HTML / from X to X → ryzyko.
  * Decyzja 69: wpis AUTO w operator_notices tylko przy ODWOLANY; przy ryzyku historią jest samo ryzyko.
  * Kampanie pomijane. User-Agent uczciwy; bez obchodzenia.
  */
@@ -98,9 +100,92 @@ export function decodeTallinkCmsHtml(raw: string): string {
     .replace(/\\\//g, '/');
 }
 
+/** F7 #683 R8 / decyzja 70: komentarze HTML przed jakimkolwiek dopasowaniem (także niezamknięte). */
+function stripHtmlComments(s: string): string {
+  return s.replace(/<!--[\s\S]*?-->/g, ' ').replace(/<!--[\s\S]*$/g, ' ');
+}
+
 function stripTags(s: string): string {
-  return s.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/gi, ' ').replace(/&#038;/g, '&')
+  return stripHtmlComments(s)
+    .replace(/<[^>]+>/g, ' ').replace(/&nbsp;/gi, ' ').replace(/&#038;/g, '&')
     .replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * F7 #683 R8 / decyzja 70: niepusty tekst (≥ 2 słowa) w atrybucie
+ * title|text|alt|aria-label|label|caption|heading|subtitle|description → bez auto.
+ */
+const ATTR_TEXT_NAMES =
+  'title|text|alt|aria-label|label|caption|heading|subtitle|description';
+
+function hasSignificantAttrText(html: string): boolean {
+  const re = new RegExp(
+    String.raw`\b(?:${ATTR_TEXT_NAMES})\s*=\s*(?:"([^"]*)"|'([^']*)')`,
+    'gi',
+  );
+  for (const m of html.matchAll(re)) {
+    const val = (m[1] ?? m[2] ?? '').trim();
+    if (val.split(/\s+/).filter(Boolean).length >= 2) return true;
+  }
+  return false;
+}
+
+/**
+ * F7 #683 R8-B1: elementy `<Scheduler>` zbalansowanym licznikiem tagów
+ * (leniwy `*?` kończy na wewnętrznym `</Scheduler>`).
+ */
+function extractBalancedSchedulers(
+  html: string,
+): Array<{ attrs: string; body: string; nestedOrUnbalanced: boolean }> {
+  const out: Array<{ attrs: string; body: string; nestedOrUnbalanced: boolean }> = [];
+  const openRe = /<Scheduler\b([^>]*)>/gi;
+  let m: RegExpExecArray | null;
+  while ((m = openRe.exec(html)) !== null) {
+    const attrs = m[1] ?? '';
+    const startBody = m.index + m[0].length;
+    let depth = 1;
+    let i = startBody;
+    let nested = false;
+    let closed = false;
+    while (i < html.length && depth > 0) {
+      const nextOpen = html.slice(i).search(/<Scheduler\b/i);
+      const nextClose = html.slice(i).search(/<\/Scheduler\s*>/i);
+      if (nextClose < 0) break;
+      if (nextOpen >= 0 && nextOpen < nextClose) {
+        nested = true;
+        depth += 1;
+        i += nextOpen + 1;
+        continue;
+      }
+      depth -= 1;
+      if (depth === 0) {
+        const closeAt = i + nextClose;
+        const closeLen = html.slice(closeAt).match(/^<\/Scheduler\s*>/i)![0].length;
+        const body = html.slice(startBody, closeAt);
+        const openCount = (body.match(/<Scheduler\b/gi) ?? []).length;
+        const closeCount = (body.match(/<\/Scheduler\s*>/gi) ?? []).length;
+        out.push({
+          attrs,
+          body,
+          nestedOrUnbalanced: nested || openCount !== closeCount,
+        });
+        openRe.lastIndex = closeAt + closeLen;
+        closed = true;
+        break;
+      }
+      i += nextClose + 1;
+    }
+    if (!closed) {
+      // Niezamknięty Scheduler — reszta jako body, bez auto.
+      out.push({
+        attrs,
+        body: html.slice(startBody),
+        nestedOrUnbalanced: true,
+      });
+      break;
+    }
+  }
+  return out;
 }
 
 function classify(text: string, blockHtml: string): TallinkAlertKind {
@@ -391,14 +476,11 @@ export function parseTallinkAlerts(
     });
   };
 
-  const blocks = [...decoded.matchAll(
-    /<Scheduler\b([^>]*)>([\s\S]*?)<\/Scheduler>/gi,
-  )];
+  const blocks = extractBalancedSchedulers(decoded);
   // R7-B2: licz bloki Alert (także wygasłe) — nie uruchamiaj fallbacku przy Schedulerze z zeszłego roku.
   let schedulerAlertBlocks = 0;
-  for (const m of blocks) {
-    const attrs = m[1] ?? '';
-    const body = m[2] ?? '';
+  for (const block of blocks) {
+    const { attrs, body, nestedOrUnbalanced } = block;
     if (!/data-analytics-group\s*=\s*"Alert"/i.test(body)
       && !/data-analytics-group\s*=\s*"Alert"/i.test(attrs)
       && !/data-analytics-group="Alert"/i.test(body)) continue;
@@ -406,10 +488,14 @@ export function parseTallinkAlerts(
     schedulerAlertBlocks += 1;
     const dateStart = attrs.match(/dateStart\s*=\s*"(\d{4}-\d{2}-\d{2})"/i)?.[1] ?? null;
     const dateEnd = attrs.match(/dateEnd\s*=\s*"(\d{4}-\d{2}-\d{2})"/i)?.[1] ?? null;
+    // R8-B1: zagnieżdżony/niezbalansowany Scheduler → bez auto.
+    // Decyzja 70: znaczący tekst w atrybutach → bez auto.
+    const allowAuto = !nestedOrUnbalanced && !hasSignificantAttrText(body);
     // R7-B1 / decyzja 68: cała treść Alertu po zdjęciu tagów (CwsH3/List/Text/goły tekst).
+    // R8 / decyzja 70: komentarze HTML usuwane w stripTags.
     const text = stripTags(body).trim();
     if (!text) continue;
-    pushAlert(text, body, dateStart, dateEnd, true);
+    pushAlert(text, body, dateStart, dateEnd, allowAuto);
   }
   if (schedulerAlertBlocks === 0) {
     const loose = [...decoded.matchAll(/data-analytics-group="Alert"[\s\S]{0,2500}/gi)];
