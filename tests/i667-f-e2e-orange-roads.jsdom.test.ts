@@ -1,6 +1,8 @@
 /**
  * @vitest-environment jsdom
  * #667 F — e2e pomarańczowych linii (jsdom + zachowanie PROD / SE-KAA).
+ * #677 F7 r3 B1–B3: ZonesMap/Geofence w VITE_AUTH_MODE=supabase + mock RPC;
+ * SE-KAA jako E22 + INLAND; brak POST przy komplecie 5 core; BN7 nie podnosi progu.
  * Playwright na buildzie VITE_AUTH_MODE=supabase: tests/i667-f-orange-maps.local.spec.ts
  */
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -48,9 +50,12 @@ vi.mock('../src/auth/config', () => ({
 const {
   loadRoadLines,
   checkRoads,
+  browserFetchLegCount,
+  roadSpecFromRow,
   __resetRoadLinesCacheForTests,
   __setHereRoadsSessionMsForTests,
 } = await import('../src/components/map/applyBasemap');
+const { ROAD_KAA, ROAD_KAA_E22 } = await import('../supabase/functions/_shared/map/draw');
 const {
   refreshRoadLegs,
   ROAD_CRON_REFRESH_MS,
@@ -58,6 +63,7 @@ const {
 } = await import('../supabase/functions/_shared/here/refreshRoadLegs.ts');
 type RoadGeomRow = import('../supabase/functions/_shared/here/refreshRoadLegs.ts').RoadGeomRow;
 type RoadRefreshStore = import('../supabase/functions/_shared/here/refreshRoadLegs.ts').RoadRefreshStore;
+type LatLng = [number, number];
 
 function orangeStrokeCount(root: ParentNode): number {
   return [...root.querySelectorAll('.leaflet-overlay-pane path')].filter((p) => {
@@ -67,8 +73,8 @@ function orangeStrokeCount(root: ParentNode): number {
   }).length;
 }
 
-function denseLine(from: [number, number], to: [number, number], n = 40): [number, number][] {
-  const out: [number, number][] = [];
+function denseLine(from: LatLng, to: LatLng, n = 40): LatLng[] {
+  const out: LatLng[] = [];
   for (let i = 0; i <= n; i += 1) {
     const t = i / n;
     out.push([from[0] + (to[0] - from[0]) * t, from[1] + (to[1] - from[1]) * t]);
@@ -76,8 +82,114 @@ function denseLine(from: [number, number], to: [number, number], n = 40): [numbe
   return out;
 }
 
-/** Demo Karlskrona→Sztokholm (E22) — ta sama linia co DEMO_ROAD_LINES[2]. */
-const SE_KAA_E22_LINE: [number, number][] = DEMO_ROAD_LINES[2]!.map(([lat, lng]) => [lat, lng]);
+/** Gęsta linia przez via — ROAD_KAA / ROAD_KAA_E22 (minPoints 2000). */
+function denseVia(pts: readonly LatLng[], stepKm: number): LatLng[] {
+  const out: LatLng[] = [];
+  for (let i = 0; i < pts.length - 1; i += 1) {
+    const [aLat, aLng] = pts[i]!;
+    const [bLat, bLng] = pts[i + 1]!;
+    const dLat = bLat - aLat;
+    const dLng = bLng - aLng;
+    const dist = Math.hypot(dLat * 111, dLng * 111 * Math.cos((aLat * Math.PI) / 180));
+    const n = Math.max(1, Math.ceil(dist / stepKm));
+    for (let k = 0; k < n; k += 1) {
+      out.push([aLat + (dLat * k) / n, aLng + (dLng * k) / n]);
+    }
+  }
+  out.push(pts[pts.length - 1]!);
+  return out;
+}
+
+const E22_CORRIDOR: LatLng[] = [
+  [56.1646, 15.6308],
+  [58.59, 16.18],
+  [59.33, 18.05],
+  [60.67, 17.14],
+  [62.39, 17.31],
+  [65.80539, 21.75914],
+];
+
+const INLAND_CORRIDOR: LatLng[] = [
+  [56.1646, 15.6308],
+  [58.59, 16.18],
+  [59.61, 16.54], // Västerås — ROAD_KAA; za daleko od Sztokholmu E22
+  [60.7, 17.1],
+  [62.4, 17.4],
+  [63.8, 20.2],
+  [65.3, 21.5],
+  [65.80539, 21.75914],
+];
+
+const SE_KAA_E22_LINE = denseVia(E22_CORRIDOR, 0.4);
+const SE_KAA_INLAND_LINE = denseVia(INLAND_CORRIDOR, 0.4);
+/** looseRoadOk: ≥200 pkt, odcinki ≤3 km, długość ≥80 km. */
+const LOOSE_OK = denseLine([54.0, 18.0], [54.8, 19.2], 220);
+const LOOSE_SE = denseVia(
+  [[58.9, 17.9], [60.0, 17.5], [62.0, 17.3], [64.0, 20.0], [65.8, 21.7]],
+  0.5,
+);
+
+function coreRoadsComplete() {
+  return [
+    {
+      leg: 'PL-GDN',
+      spec: 'loose',
+      corridor_code: null,
+      points: LOOSE_OK,
+      browser_fetch: true,
+      map_group: 'core',
+      summary: '',
+    },
+    {
+      leg: 'SE-NYN',
+      spec: 'loose',
+      corridor_code: null,
+      points: LOOSE_SE,
+      browser_fetch: true,
+      map_group: 'core',
+      summary: '',
+    },
+    {
+      leg: 'PL-GDY',
+      spec: 'loose',
+      corridor_code: null,
+      points: LOOSE_OK,
+      browser_fetch: true,
+      map_group: 'core',
+      summary: '',
+    },
+    {
+      leg: 'SE-KAA',
+      spec: 'kaa',
+      corridor_code: 'SE_E22',
+      points: SE_KAA_E22_LINE,
+      browser_fetch: true,
+      map_group: 'core',
+      summary: '',
+    },
+    {
+      leg: 'SE-KAA-INLAND',
+      spec: 'kaa',
+      corridor_code: 'SE_KAA_INLAND',
+      points: SE_KAA_INLAND_LINE,
+      browser_fetch: true,
+      map_group: 'core',
+      summary: '',
+    },
+  ];
+}
+
+function bn7Placeholders() {
+  return ['PL-TLL', 'PL-MUU', 'PL-PLD', 'FI-HEL', 'FI-VUO', 'SE-STO', 'SE-KPS'].map((leg) => ({
+    leg,
+    spec: 'loose',
+    corridor_code: null,
+    points: null as null,
+    browser_fetch: false,
+    map_group: 'bn7',
+    summary: '— oczekuje na HERE',
+  }));
+}
 
 describe('#667 F e2e — paintOrangeRoads + mapy (jsdom)', () => {
   let host: HTMLDivElement;
@@ -87,6 +199,8 @@ describe('#667 F e2e — paintOrangeRoads + mapy (jsdom)', () => {
     act(() => { root?.unmount(); });
     host?.remove();
     document.querySelectorAll('.leaflet-container').forEach((n) => n.remove());
+    vi.unstubAllEnvs();
+    __resetRoadLinesCacheForTests();
   });
 
   it('paintOrangeRoads: ≥1 polilinia #E5A544; SE-KAA demo w DEMO_ROAD_LINES', () => {
@@ -109,7 +223,27 @@ describe('#667 F e2e — paintOrangeRoads + mapy (jsdom)', () => {
     el.remove();
   });
 
-  it('ZonesMap i GeofenceEditorMap: ≥1 pomarańczowa polilinia na mapie', async () => {
+  it('B1 PROD: ZonesMap i GeofenceEditorMap ładują loadRoadLines (nie DEMO)', async () => {
+    vi.stubEnv('VITE_AUTH_MODE', 'supabase');
+    __resetRoadLinesCacheForTests();
+    __setHereRoadsSessionMsForTests(5 * 60_000);
+    rpc.mockReset();
+    getSession.mockReset();
+    // Jedna linia w RPC — DEMO ma 3; liczba pomarańczowych = 1 ⇒ gałąź PROD.
+    const roads = [
+      {
+        leg: 'PL-GDY',
+        spec: 'loose',
+        corridor_code: null,
+        points: LOOSE_OK,
+        browser_fetch: true,
+        map_group: 'core',
+        summary: '',
+      },
+    ];
+    rpc.mockResolvedValue({ data: { roads }, error: null });
+    getSession.mockResolvedValue({ data: { session: null } });
+
     useTowerStore.setState({ theme: 'day' });
     host = document.createElement('div');
     host.style.width = '640px';
@@ -118,11 +252,27 @@ describe('#667 F e2e — paintOrangeRoads + mapy (jsdom)', () => {
     root = createRoot(host);
 
     await act(async () => {
-      root.render(createElement(ZonesMap, { mode: 'all', label: 'f-zones', zones: [] }));
+      root.render(createElement(ZonesMap, { mode: 'all', label: 'f-zones-prod', zones: [] }));
     });
-    await act(async () => { await new Promise((r) => setTimeout(r, 300)); });
+    await act(async () => { await new Promise((r) => setTimeout(r, 400)); });
     expect(host.querySelector('[data-zones-map="all"]')).toBeTruthy();
-    expect(orangeStrokeCount(host)).toBeGreaterThanOrEqual(1);
+    expect(rpc).toHaveBeenCalled();
+    expect(orangeStrokeCount(host)).toBe(1);
+    expect(orangeStrokeCount(host)).not.toBe(DEMO_ROAD_LINES.length);
+
+    await act(async () => { root.unmount(); });
+    host.remove();
+    document.querySelectorAll('.leaflet-container').forEach((n) => n.remove());
+
+    __resetRoadLinesCacheForTests();
+    rpc.mockClear();
+    rpc.mockResolvedValue({ data: { roads }, error: null });
+
+    host = document.createElement('div');
+    host.style.width = '640px';
+    host.style.height = '480px';
+    document.body.appendChild(host);
+    root = createRoot(host);
 
     await act(async () => {
       root.render(createElement(GeofenceEditorMap, {
@@ -133,13 +283,50 @@ describe('#667 F e2e — paintOrangeRoads + mapy (jsdom)', () => {
         onMove: () => undefined,
       }));
     });
-    await act(async () => { await new Promise((r) => setTimeout(r, 300)); });
+    await act(async () => { await new Promise((r) => setTimeout(r, 400)); });
     expect(host.querySelector('[data-geofence-map]')).toBeTruthy();
+    expect(rpc).toHaveBeenCalled();
+    // ≥1 pomarańcz z RPC; ≠ DEMO×3 (mutacja M5: gałąź demo).
     expect(orangeStrokeCount(host)).toBeGreaterThanOrEqual(1);
+    expect(orangeStrokeCount(host)).toBeLessThan(DEMO_ROAD_LINES.length);
+  });
+
+  it('B1 mapPool PROD: acquireMap → loadRoadLines (1 linia, nie DEMO×3)', async () => {
+    vi.stubEnv('VITE_AUTH_MODE', 'supabase');
+    __resetRoadLinesCacheForTests();
+    rpc.mockReset();
+    getSession.mockReset();
+    const roads = [
+      {
+        leg: 'PL-GDY',
+        spec: 'loose',
+        corridor_code: null,
+        points: LOOSE_OK,
+        browser_fetch: true,
+        map_group: 'core',
+        summary: '',
+      },
+    ];
+    rpc.mockResolvedValue({ data: { roads }, error: null });
+    getSession.mockResolvedValue({ data: { session: null } });
+
+    const { acquireMap, releaseMap, __resetMapPool } = await import('../src/components/map/mapPool');
+    __resetMapPool();
+    host = document.createElement('div');
+    host.style.width = '640px';
+    host.style.height = '480px';
+    document.body.appendChild(host);
+    const entry = acquireMap(host, 'map');
+    await act(async () => { await new Promise((r) => setTimeout(r, 400)); });
+    expect(rpc).toHaveBeenCalled();
+    expect(orangeStrokeCount(host)).toBe(1);
+    expect(orangeStrokeCount(host)).not.toBe(DEMO_ROAD_LINES.length);
+    releaseMap(entry, 'map');
+    __resetMapPool();
   });
 });
 
-describe('#667 F e2e — SE-KAA w loadRoadLines (PROD mock)', () => {
+describe('#667 F e2e — SE-KAA E22 / INLAND (B2)', () => {
   beforeEach(() => {
     __resetRoadLinesCacheForTests();
     __setHereRoadsSessionMsForTests(5 * 60_000);
@@ -148,15 +335,52 @@ describe('#667 F e2e — SE-KAA w loadRoadLines (PROD mock)', () => {
     getSession.mockResolvedValue({ data: { session: null } });
   });
 
-  it('map_display_state zawiera SE-KAA z punktami; loadRoadLines przyjmuje luźny leg', async () => {
-    // looseRoadOk: ≥200 pkt, odcinki ≤3 km, długość ≥80 km
-    const looseOk = denseLine([54.0, 18.0], [54.8, 19.2], 220);
+  it('roadSpecFromRow kaa+SE_E22 → ROAD_KAA_E22; SE-KAA w accepted; INLAND vs E22', () => {
+    expect(SE_KAA_E22_LINE.length).toBeGreaterThanOrEqual(2000);
+    expect(roadSpecFromRow({ spec: 'kaa', corridor_code: 'SE_E22' })).toBe(ROAD_KAA_E22);
+    expect(roadSpecFromRow({ spec: 'kaa', corridor_code: 'SE_KAA_INLAND' })).toBe(ROAD_KAA);
+
+    const e22 = checkRoads([{
+      leg: 'SE-KAA',
+      spec: 'kaa',
+      corridor_code: 'SE_E22',
+      points: SE_KAA_E22_LINE,
+      browser_fetch: true,
+      map_group: 'core',
+    }]);
+    expect(e22.accepted).toHaveLength(1);
+    expect(e22.rejected.some((r) => r.leg === 'SE-KAA')).toBe(false);
+
+    const inlandAsE22 = checkRoads([{
+      leg: 'SE-KAA',
+      spec: 'kaa',
+      corridor_code: 'SE_E22',
+      points: SE_KAA_INLAND_LINE,
+      browser_fetch: true,
+      map_group: 'core',
+    }]);
+    expect(inlandAsE22.accepted).toHaveLength(0);
+    expect(inlandAsE22.rejected.some((r) => r.leg === 'SE-KAA')).toBe(true);
+
+    const inlandOk = checkRoads([{
+      leg: 'SE-KAA-INLAND',
+      spec: 'kaa',
+      corridor_code: 'SE_KAA_INLAND',
+      points: SE_KAA_INLAND_LINE,
+      browser_fetch: true,
+      map_group: 'core',
+    }]);
+    expect(inlandOk.accepted).toHaveLength(1);
+    expect(inlandOk.rejected).toHaveLength(0);
+  });
+
+  it('loadRoadLines: SE-KAA w wyniku; PL-GDY nie wystarcza sam', async () => {
     const roads = [
       {
         leg: 'PL-GDY',
         spec: 'loose',
         corridor_code: null,
-        points: looseOk,
+        points: LOOSE_OK,
         browser_fetch: true,
         map_group: 'core',
         summary: '',
@@ -180,21 +404,56 @@ describe('#667 F e2e — SE-KAA w loadRoadLines (PROD mock)', () => {
         summary: '— oczekuje na HERE',
       },
     ];
-    expect(roads.some((r) => r.leg === 'SE-KAA' && Array.isArray(r.points) && r.points!.length >= 2)).toBe(true);
     rpc.mockResolvedValue({ data: { roads }, error: null });
 
     const checked = checkRoads(roads);
-    expect(checked.accepted.length).toBeGreaterThanOrEqual(1);
+    expect(checked.accepted).toHaveLength(2);
     expect(checked.rejected.some((r) => r.leg === 'SE-KAA-INLAND')).toBe(true);
+    // Mutacja „pomiń SE-KAA” → accepted=1 (tylko PL-GDY).
+    expect(checked.accepted.some((line) => line.length === SE_KAA_E22_LINE.length)).toBe(true);
 
     const lines = await loadRoadLines();
-    expect(lines.length).toBeGreaterThanOrEqual(1);
+    expect(lines.length).toBe(2);
+    expect(lines.some((line) => line.length === SE_KAA_E22_LINE.length)).toBe(true);
     expect(rpc).toHaveBeenCalled();
   });
 });
 
-describe('#667 F e2e — mapy PROD + cron przed purge', () => {
-  it('wszystkie L.map / CorridorMap ładują loadRoadLines w PROD (nie tylko demo)', () => {
+describe('#667 F e2e — brak POST przy komplecie + BN7 (B3) + cron', () => {
+  beforeEach(() => {
+    __resetRoadLinesCacheForTests();
+    __setHereRoadsSessionMsForTests(5 * 60_000);
+    rpc.mockReset();
+    getSession.mockReset();
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('B3: komplet 5 core + BN7 null → brak POST; BN7 nie podnosi progu', async () => {
+    const fetchMock = vi.fn(async () => new Response('{}', { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    getSession.mockResolvedValue({ data: { session: { access_token: 'tok' } } });
+
+    const roads = [...coreRoadsComplete(), ...bn7Placeholders()];
+    expect(browserFetchLegCount(roads)).toBe(5);
+    // Mutacja M4 (licz BN7) → 12.
+    expect(browserFetchLegCount(roads)).toBeLessThan(roads.length);
+
+    const checked = checkRoads(roads);
+    expect(checked.accepted, `odrzucone: ${checked.rejected.map((r) => `${r.leg}:${r.why}`).join('; ')}`).toHaveLength(5);
+    expect(checked.rejected).toHaveLength(7); // BN7 bez punktów — nie rysowane
+    expect(checked.rejected.every((r) => bn7Placeholders().some((b) => b.leg === r.leg))).toBe(true);
+
+    rpc.mockResolvedValue({ data: { roads }, error: null });
+    const lines = await loadRoadLines();
+    expect(lines).toHaveLength(5);
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(getSession).not.toHaveBeenCalled();
+  });
+
+  it('wszystkie L.map / CorridorMap ładują loadRoadLines w PROD; TrackReplay bez własnego L.map', () => {
     const files = [
       'src/components/map/mapPool.ts',
       'src/components/map/CorridorMap.tsx',
@@ -205,12 +464,13 @@ describe('#667 F e2e — mapy PROD + cron przed purge', () => {
       const src = readFileSync(f, 'utf8');
       expect(src, f).toMatch(/loadRoadLines/);
       expect(src, f).toMatch(/paintOrangeRoads/);
+      expect(src, f).toMatch(/VITE_AUTH_MODE/);
     }
     // TrackReplay dziedziczy warstwę z CorridorMap / mapPool — bez osobnego L.map dróg
     expect(readFileSync('src/components/map/TrackReplay.tsx', 'utf8')).not.toMatch(/L\.map\(/);
   });
 
-  it('cron 21 d odświeża legi 25 d (przed purge 30 d) — attempted obejmuje SE-KAA', async () => {
+  it('cron 21 d: attempted obejmuje SE-KAA (nie tylko liczba 5)', async () => {
     expect(ROAD_CRON_REFRESH_MS).toBe(21 * 864e5);
     expect(ROAD_CRON_REFRESH_MS).toBeLessThan(30 * 864e5);
 
@@ -223,9 +483,11 @@ describe('#667 F e2e — mapy PROD + cron przed purge', () => {
       };
     }
     const byLeg = new Map(ROAD_LEGS.map((l) => [l.leg, geom(l.leg, 25 * 864e5)]));
+    const attemptedLegs: string[] = [];
     const s: RoadRefreshStore = {
       listGeometry: async () => [...byLeg.values()],
       async storeRoad(leg, points) {
+        attemptedLegs.push(leg);
         byLeg.set(leg, {
           leg,
           fetched_at: new Date().toISOString(),
@@ -236,8 +498,8 @@ describe('#667 F e2e — mapy PROD + cron przed purge', () => {
       },
       loadCorridor: async () => ({
         code: 'x',
-        pts: [[56.2, 15.6], [65.8, 21.7]] as [number, number][],
-        via: [[60, 18]] as [number, number][],
+        pts: [[56.2, 15.6], [65.8, 21.7]] as LatLng[],
+        via: [[60, 18]] as LatLng[],
         updatedAt: 0,
       }),
       monthSpend: async () => 0,
@@ -249,8 +511,13 @@ describe('#667 F e2e — mapy PROD + cron przed purge', () => {
       hereApiKey: 'k',
       maxAgeMs: ROAD_CRON_REFRESH_MS,
     });
-    // Cron woła HERE przy 25 d (przed purge 30 d). attempted=5 = wszystkie core, w tym SE-KAA.
     expect(r.attempted).toBe(5);
     expect(fetchFn.mock.calls.length).toBeGreaterThanOrEqual(5);
+    // HTTP 500 → storeRoad(leg, null) — SE-KAA wśród prób, nie tylko attempted===5.
+    expect(attemptedLegs).toContain('SE-KAA');
+    expect(attemptedLegs).toContain('SE-KAA-INLAND');
+    expect(attemptedLegs).toEqual(expect.arrayContaining([
+      'PL-GDN', 'SE-NYN', 'PL-GDY', 'SE-KAA', 'SE-KAA-INLAND',
+    ]));
   });
 });

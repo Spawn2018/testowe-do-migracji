@@ -7407,3 +7407,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (docs):** rejestr **DP-54…57** z F7 #677 r2 (nieblokujące, mały PR po #677): M1b browserOnly; M4b missingLegs BN7; test `{error}` store/Edge; CORS przy fail `listLegs`. PLAN §4/§8. **Dalej:** gotowe do F7 → scalenie → wdrożenie 0355→Edge → SELECT 12 legów + `here-roads` w #667.
 - Bez push na main.
 
+## 2026-10-31 04:45 — #677 F7 r3 POPRAWKI B1–B3
+
+- Skrzynka: **#667** pilne W TOKU (PR #677); #608 w planie; #550 WSTRZYMANE. #678 wygląd (DP-front-5) otwarte — nie scalać bez F7.
+- Scalanie: brak „F7: gotowe do scalenia” po F e2e / F7 r3. Bez push na main.
+- **Krok (F7 r3 B1–B3):** `i667-f-e2e-orange-roads.jsdom.test.ts` — `vi.stubEnv('VITE_AUTH_MODE','supabase')` + mock `map_display_state` (ZonesMap/Geofence/mapPool ≠ DEMO); SE-KAA jako E22 + przypadek INLAND; komplet 5 core → brak POST, BN7 `points:null` nie podnosi progu; cron attempted zawiera SE-KAA. Rejestr **DP-58** (local.spec warunkowe), **DP-59** (pkt 6 = stubEnv vs prawdziwy build). Unit i667-f ✔ (8). **Dalej:** CI → gotowe do F7.
+- Bez push na main.
+

@@ -1171,8 +1171,8 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 4. Diagnostyka: ~~fundament `summary` w `map_display_state` + `checkRoads` (0354)~~; UI Stan systemu → DP-22; ~~`integration_runs` / SE-KAA `retry_after` (PILNE 01:34Z)~~ — 5 legów z punktami po `here-roads` 01:49Z (`#108023`); przyczyna: stara Edge JWT ~01:15 (+24 h) przed v117 01:30Z.
 5. ~~Słownik legów BN7 (`PL-TLL`…`SE-KPS`) gotowy do rysowania (DP-23)~~ — migracja **0355** `here_road_legs`; FK zamiast `IN (…)`; przeglądarka `browser_fetch` (core); BN7 bez auto-fetch do kalibracji.
    - **Kolejność wdrożenia:** najpierw migracja **0355**, potem Edge `here-roads` (F7 #677 r1 B1 — bez fail-open na pusty słownik).
-6. ~~Testy e2e na buildzie produkcyjnym (nie demo): ≥1 polilinia na mapę; SE-KAA obecny~~ — `tests/i667-f-e2e-orange-roads.jsdom.test.ts` (CI); Playwright `tests/i667-f-orange-maps.local.spec.ts` (build supabase + lokalny SB).
-7. ~~**F7 r1–r6** (+ POPRAWKI) w #673~~ SCALONE; **E+F (0355)** — F7 #677 r1 B1+B2 + krok F e2e; CI unit/db/visual ✔ @ `fbe7b06d` — **czekam F7** (po F e2e; „gotowe do scalenia” było @ `70df5d96` przed F).
+6. ~~Testy e2e: ≥1 polilinia; SE-KAA; PROD `loadRoadLines`~~ — jsdom CI z `vi.stubEnv('VITE_AUTH_MODE','supabase')` + mock RPC (F7 r3 B1); Playwright lokalnie na prawdziwym buildzie supabase (`i667-f-orange-maps.local.spec.ts`, DP-58).
+7. ~~**F7 r1–r6** (+ POPRAWKI) w #673~~ SCALONE; **E+F (0355)** — F7 #677 r1 B1+B2 + **F7 r3 B1–B3** (PROD stubEnv, SE-KAA E22/INLAND, brak POST przy komplecie) — **czekam F7**.
 8. Wyłączanie legu: `active=false` (FK bez `ON DELETE` — DP-45).
 
 
@@ -1230,6 +1230,8 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-55 | Cursor | cron: BN7 z `browserFetch:true` bez punktów jest pobierany i liczony do `missingLegs` (mutacja M4b `return legs`) | F7 #677 r2 | po #667 E | w kolejce |
 | DP-56 | Cursor | test z fałszywym `sb` (`{error}` → rejects) dla `store` listHereRoadLegs i Edge `listLegs` (dziś testy tekstowe) | F7 #677 r2 | po #667 E | w kolejce |
 | DP-57 | Cursor | Edge `here-roads`: wyjątek z `listLegs` → try/catch `{ok:false, reason}` + `corsHeaders()` zamiast 500 bez CORS | F7 #677 r2 | po #667 E | w kolejce |
+| DP-58 | Cursor | `.local.spec.ts`: asercje bez `if (count())` / `.catch` z zapasowym `data-view`; dodać mapę telefonu i TrackReplay | F7 #677 r3 | po #667 E | w kolejce |
+| DP-59 | Cursor | PLAN pkt 6: doprecyzować — CI jsdom = PROD mock (`stubEnv`+RPC); Playwright local = prawdziwy build supabase (nie demo) | F7 #677 r3 | #667 F | w PR (#677) |
 
 ### BN9 — część na produkcji; ekrany zależne od danych (BN9-c*)
 Źródło: #671. BN9-a (#575) i BN9-b (#670) na produkcji. Zostają (koordynator, `wyglad/*`, zaraz po swoim etapie):
@@ -1245,7 +1247,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 1. **BN1** — ~~słowniki / strefy / CASE / F7 MFA~~ **SCALONE** (0338–0346).
 2. **BN2** — ~~LIVE~~ **SCALONE** (**0347**+**0348**, PR #660 `a94645d9`; PR #661 `392a9bc2`; dopisek F7 #665 `799ea18d`): Tallink; Portnet; Viking/Eckerö/DFDS HTML + Terminal A; B1–B3; Decyzja 50 MEDIUM.
 3. ~~**#666** (pilne)~~ — SCALONE (#668 `53890480` / **0351**).
-4. **#667** (pilne) — ~~A–D (#673)~~ SCALONE; ~~SE-KAA punkty (01:49Z)~~; ~~E słownik BN7 (PR #677 / 0355)~~ + ~~F e2e~~ — F7 r1 B1+B2 + jsdom/local; kolejność 0355→Edge; DP-43…47; **DP-54…57** (F7 r2 nieblokujące); CI ✔ @ `fbe7b06d`; czekam F7.
+4. **#667** (pilne) — ~~A–D (#673)~~ SCALONE; ~~SE-KAA punkty (01:49Z)~~; ~~E słownik BN7 (PR #677 / 0355)~~ + ~~F e2e~~ — F7 r3 B1–B3 (stubEnv PROD / SE-KAA / brak POST); kolejność 0355→Edge; DP-43…47; DP-54…59; czekam F7.
 5. BN3…BN10 — jak #573 (opóźnienia, AIS, pogoda, drogi LT/LV/EE/FI, HERE, statusy/ETA, ekrany, odbiór 48 h).
 
 ### #662 · PILNE SafeFleet — link tymczasowy (SG-27) — SCALONE (`189688bc` / PR #663 / **0349**); #662-b SCALONE (`1ee855fd` / PR #664 / **0350**, 30.10.2026 12:54Z)
@@ -2191,4 +2193,5 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 31.10.2026 03:55 | #676 SCALONE `4ec47bd2` (DP-13/33…37); #667 F e2e jsdom+local; DP-53; czekam F7 #677 | pętla |
 | 31.10.2026 03:55 | #667 F e2e: jsdom ≥1 #E5A544 + SE-KAA w RPC + cron 21d przed purge 30d; local.spec Playwright; #677 czekam F7 | pętla |
 | 31.10.2026 04:15 | #677 CI unit/db/visual ✔ @ `fbe7b06d`; rejestr DP-54…57 (F7 r2); czekam F7 gotowe do scalenia | pętla |
+| 31.10.2026 04:45 | #677 F7 r3 B1–B3: stubEnv PROD + SE-KAA E22/INLAND + brak POST; DP-58/59; czekam F7 | pętla |
 
