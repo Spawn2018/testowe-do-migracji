@@ -1318,10 +1318,10 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 4. ~~F7 r2~~ — test R2-B1 (strona ≥2 KB bez Footer/Cws → INCOMPLETE) + nieblokujące. Testy bn3-tallink-alert **59**.
 DP-98 DONE; DP-114 DONE; DP-115 (Stena IRM backoff) w kolejce.
 
-### #685 · Decyzja 63: rozkład Viking Line (Digitraffic + import z pliku) — W TOKU (PR #688; F7 r1 POPRAWKI; po #687 SCALONE)
+### #685 · Decyzja 63: rozkład Viking Line (Digitraffic + import z pliku) — W TOKU (PR #688; F7 r1 + mutacje; po #687 SCALONE)
 Źródło: #685 (Spawn2018, `dla-cursora`; decyzja 63 potwierdzona właścicielem 31.10 09:56). Bez obchodzenia Imperva (cargo/sales 403).
 **Podział PR (prognoza):**
-1. **#685-a (63a)** — W TOKU (PR #688; F7 r1: etaFrom/etd, 150/160 min decyzja 73, source_ref 0359 decyzja 74).
+1. **#685-a (63a)** — W TOKU (PR #688; F7 r1 B1–B4 + decyzje 73/74 / 0359; mutacje MMSI/nazwa/eePartner/horyzont/północ/manualKept/existing.push; fixture z portCallTimestamp/etaSource/berthCode).
 2. **#685-b (63b)** ~4–6 h baza/Edge (+ ekran BN9-c1 koordynator) — import HTML właściciela (`D:\Watch Tower\dane\viking-cargo-hel-tll.html`); RPC HHL_ADMIN+2FA; **zastępuje** `source_ref like 'digitraffic:%'`, RECZNIE nietykalne.
 3. **#685-c (63c)** ~1 h (z b) — `SOURCE_DOWN:VIKING_SCHEDULE` MEDIUM zamykane, gdy rozkład z pliku ≥ 30 dni.
 Kolejność: a → b(+c). DP-21 pozostaje w #666/63b.
@@ -2323,6 +2323,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 31.10.2026 19:10 | #689 F7 r1 POPRAWKI: R1-B1 usable HTML (Cws/Footer, ≥2 KB, bez Incapsula); R1-B2 mutacje HTTP; R1-B3 streak z integration_runs; DP-115; testy 58 | pętla |
 | 31.10.2026 19:45 | #689 F7 r2: R2-B1 test markera; nieblokujące; testy 59 | pętla |
 | 31.10.2026 20:15 | #689 SCALONE `5fc7d4a0` (F7: gotowe @ a12dfc23); start #688 F7 r1 (73/74 / 0359) | pętla |
+| 31.10.2026 20:45 | #688 F7 r1: CI ✔ @ 9a9c5e97; mutacje MMSI/eePartner/horyzont/północ/manualKept/existing.push; DIGITRAFFIC_USER w digitrafficPortCalls; fixture Portnet przycięty | pętla |
 | 31.10.2026 — | Decyzja 73: TLLA-HEL ETA−150 min / HELA-TLL ETD+160 min (fixture Cargo; nocny 165 min OK). Decyzja 74: `sailings.source_ref` 0359; Digitraffic `digitraffic:portcall:<id>:<route>`; #685-b zastępuje digitraffic:% | F7 #688 r1 |
 | 31.10.2026 — | F7 #683 nieblokujące (osobna poprawka): Scheduler grudzień + „on 2 January” → rok bieżący, ciche wygaśnięcie; Alert INFO bez ryzyka/historii — świadomie | F7 #683 r7 |
 | 31.10.2026 — | F7 #683 r8 nieblokujące (osobno): Alert poza Schedulerem obok Schedulera; sprzeczne bloki (resume→cofnięcie auto); rok przy długim oknie Schedulera; mutanty M10/M15–M17/M22 świadomie bez testów | F7 #683 r8 |

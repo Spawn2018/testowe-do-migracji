@@ -25,10 +25,11 @@ import {
   TALLINK_BOOKING, TALLINK_UA, parseTallinkTimetable, tallinkTimetableUrl,
 } from '../ferry/tallink.ts';
 import {
-  DIGITRAFFIC_PORT_CALLS_URL, DIGITRAFFIC_PORTCALL_SOURCE_REF_PREFIX,
+  DIGITRAFFIC_PORT_CALLS_URL, DIGITRAFFIC_PORTCALL_SOURCE_REF_PREFIX, DIGITRAFFIC_USER,
   digitrafficPortCallSourceRef, digitrafficPortCallsUrl, parseDigitrafficPortCalls,
   vikingScheduleFromDigitrafficPortCalls, VIKING_DIGITRAFFIC_HORIZON_DAYS, VIKING_XPRS_MMSI,
 } from '../ferry/digitrafficPortCalls.ts';
+export { DIGITRAFFIC_USER };
 import {
   PORT_TALLINN_ARRIVALS_URL, PORT_TALLINN_DEPARTURES_URL, PORT_TALLINN_UA,
   parsePortTallinnHtml,
@@ -97,8 +98,6 @@ import {
 
 /** Wyłącznie ASCII (nagłówek HTTP) — test pilnuje. */
 export const USER_AGENT = 'TOWER-WatchTower/1.0 (+https://log-mar.pl; H&H Logistics; read max every 15 min)';
-/** F7 #688 r1: jeden ciąg Digitraffic-User (decyzja 63a — LOGMAR/WatchTower). */
-export const DIGITRAFFIC_USER = 'LOGMAR/WatchTower';
 /** AIS-SRC: jedno zapytanie Stena IRM, nagłówek z nazwą Watch Tower. */
 export const STENA_IRM_UA = 'Watch Tower (https://tower.log-mar.pl; ferry positions)';
 

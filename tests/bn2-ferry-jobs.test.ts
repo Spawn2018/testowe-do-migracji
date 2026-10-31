@@ -1386,7 +1386,7 @@ describe('#685-a Digitraffic Viking near schedule (decyzja 63a)', () => {
     expect(st.risks.some((x) => String(x.dedup).startsWith('SOURCE_DOWN:VIKING_SCHEDULE:'))).toBe(true);
   });
 
-  it('RECZNIE w oknie ±30 min — bez nadpisania', async () => {
+  it('RECZNIE w oknie ±30 min — bez nadpisania; manualKept ≥ 1', async () => {
     const st = new MemStore();
     /* HELA-TLL z ETD 08:30 — departure = etd */
     st.sailings.push({
@@ -1405,11 +1405,55 @@ describe('#685-a Digitraffic Viking near schedule (decyzja 63a)', () => {
       'dfds.com': 503,
       'ctfassets.net': 503,
     };
-    await runFerrySchedule(deps(st, pages));
+    const result = await runFerrySchedule(deps(st, pages));
     const recz = st.sailings.find((s) => s.id === 'recz-hel')!;
     expect(recz.source).toBe('RECZNIE');
     expect(recz.departure_at).toBe('2026-10-31T08:25:00.000Z');
     expect(recz.arrival_at).toBe('2026-10-31T10:40:00.000Z');
+    /* F7 #688 r1: licznik manualKept przy chronionym RECZNIE */
+    expect((result.manualKept ?? 0)).toBeGreaterThanOrEqual(1);
+  });
+
+  it('F7 #688 r1: existing.push — drugi PortCall ±5 min → bez drugiego insertu', async () => {
+    const st = new MemStore();
+    const twin = {
+      portCalls: [
+        {
+          portCallId: 9301, portCallTimestamp: '2026-10-30T08:00:00.000Z',
+          portToVisit: 'FIHEL', prevPort: 'EETLL', nextPort: 'EETLL',
+          vesselName: 'Viking XPRS', mmsi: 230705000,
+          portAreaDetails: [{
+            eta: '2026-10-31T07:30:00.000Z', etd: '2026-10-31T08:30:00.000Z',
+            portAreaCode: 'ES', berthCode: 'KATAJANOKKA',
+          }],
+        },
+        {
+          portCallId: 9302, portCallTimestamp: '2026-10-30T08:01:00.000Z',
+          portToVisit: 'FIHEL', prevPort: 'EETLL', nextPort: 'EETLL',
+          vesselName: 'Viking XPRS', mmsi: 230705000,
+          portAreaDetails: [{
+            eta: '2026-10-31T07:35:00.000Z', etd: '2026-10-31T08:35:00.000Z',
+            portAreaCode: 'ES', berthCode: 'KATAJANOKKA',
+          }],
+        },
+      ],
+    };
+    const pages: Record<string, string | number> = {
+      ...tallinkPages,
+      'viking-line-cargo': 403,
+      'sales.vikingline.com': 403,
+      'port-calls': JSON.stringify(twin),
+      'eckeroline.com': 503,
+      'dfds.com': 503,
+      'ctfassets.net': 503,
+    };
+    await runFerrySchedule(deps(st, pages));
+    const tlla = st.sailings.filter((s) => s.route === 'TLLA-HEL' && s.source === 'VIKING');
+    const hela = st.sailings.filter((s) => s.route === 'HELA-TLL' && s.source === 'VIKING');
+    /* Pierwszy insert + existing.push; drugi w oknie ±30 → hit bez insertu */
+    expect(tlla).toHaveLength(1);
+    expect(hela).toHaveLength(1);
+    expect(tlla[0]!.source_ref).toBe('digitraffic:portcall:9301:TLLA-HEL');
   });
 
   it('dwa kandydaci w oknie → ambiguous + ryzyko MEDIUM, bez insertu na tę godzinę', async () => {

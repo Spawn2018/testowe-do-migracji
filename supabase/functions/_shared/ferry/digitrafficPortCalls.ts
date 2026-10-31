@@ -192,6 +192,9 @@ export function digitrafficPortCallSourceRef(
   return `${DIGITRAFFIC_PORTCALL_SOURCE_REF_PREFIX}${portCallId}:${route}`;
 }
 
+/** Nagłówek Digitraffic-User — jeden ciąg dla AIS i Portnet (F7 #688 r1). */
+export const DIGITRAFFIC_USER = 'LOGMAR/WatchTower';
+
 /** #685-a / decyzja 63a — Viking XPRS (MMSI) w Eteläsatama (ES / Katajanokka). */
 export const VIKING_XPRS_MMSI = 230705000;
 export const VIKING_HEL_AREA_ES = 'ES';

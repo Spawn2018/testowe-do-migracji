@@ -7457,6 +7457,19 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (odbiór prod):** SELECT `here_road_legs` — **12** / active 12 / `browser_fetch` 5; core bez zmian (3495/12561/3742/18854/19408); BN7 7× null. `here-roads` **#108803** @ 04:49Z ok (0 prób — core świeże; BN7 poza cronem). Komentarz w #667. **Dalej:** BN3 (#573).
 - Bez push na main.
 
+## 2026-10-31 20:45 — #688 F7 r1 mutacje (brakujące testy)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE; #685/#499/#537/#538/#500 w planie. Bez nowych `pilne`.
+- Scalanie: #688 — CI unit/db/visual ✔ @ `9a9c5e97`; brak „F7: gotowe do scalenia”. Bez push na main.
+- **Krok** (F7 #688 r1 „Testy brakujące” + nieblokujące):
+  - mutacje parsera: MMSI vs nazwa; `eePartner` poza EE; przeszłość/horyzont 3 d; ETA 22:30Z / ETD 23:00Z;
+  - job: `manualKept` przy RECZNIE; `existing.push` — drugi PortCall ±5 min bez drugiego insertu;
+  - `DIGITRAFFIC_USER` w `digitrafficPortCalls` (jeden ciąg); fixture z `portCallTimestamp`/`etaSource`/`berthCode` (bez PII);
+  - PLAN §8: jeden wiersz „17:25 #683 SCALONE” (bez duplikatu); Awizacja „brak rejsów” — #678 SCALONE na prod.
+  - vitest bn2-ferry-* **86**.
+- **Dalej:** push → CI → gotowe do F7 @ sha. Po F7/scal: #685-b.
+- Bez push na main.
+
 ## 2026-10-31 20:20 — #688 F7 r1 Digitraffic (73/74 / 0359)
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE. #685-a W TOKU.
