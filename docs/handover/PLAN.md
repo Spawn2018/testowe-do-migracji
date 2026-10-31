@@ -1233,7 +1233,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-57 | Cursor | Edge `here-roads`: wyjątek z `listLegs` → try/catch `{ok:false, reason}` + `corsHeaders()` zamiast 500 bez CORS | F7 #677 r2 | po #667 E | w kolejce |
 | DP-58 | Cursor | `.local.spec.ts`: asercje bez `if (count())` / `.catch` z zapasowym `data-view`; dodać mapę telefonu i TrackReplay | F7 #677 r3 | po #667 E | w kolejce |
 | DP-59 | Cursor | PLAN pkt 6: doprecyzować — CI jsdom = PROD mock (`stubEnv`+RPC); Playwright local = prawdziwy build supabase (nie demo) | F7 #677 r3 | #667 F | w PR (#677) |
-| DP-48 | koordynator | Awizacja › rejs przed planowanym załadunkiem — linia pod polem (`data-awiz-sailing-before`) | F7 #678 | wyglad | SCALONE (#678 `a95990ce`) |
+| DP-48 | koordynator | Awizacja › rejs przed planowanym załadunkiem — linia pod polem (`data-awiz-sailing-before`) | F7 #678 | wyglad | SCALONE (#678 `650b3e0b`) |
 | DP-49 | koordynator | jedna stała `SAILINGS_EMPTY_TEXT` (`p7` / `sail7`) | F7 #678 | wyglad | SCALONE (#678) |
 | DP-52 | koordynator | oxlint: `useDecisions` / `OptionsAccordion` / `AccountMenu` | F7 #678 | wyglad | SCALONE (#678) |
 | DP-63 | Cursor | PL-T obejmuje tylko `I18N_ALL.pl` — dołączyć słowniki PL modułów (`p7`, `sail7` + pozostałe) | F7 #678 | po #667 | w kolejce |
