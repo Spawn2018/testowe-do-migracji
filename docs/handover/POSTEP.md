@@ -7435,6 +7435,19 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (odbiór prod):** SELECT `here_road_legs` — **12** / active 12 / `browser_fetch` 5; core bez zmian (3495/12561/3742/18854/19408); BN7 7× null. `here-roads` **#108803** @ 04:49Z ok (0 prób — core świeże; BN7 poza cronem). Komentarz w #667. **Dalej:** BN3 (#573).
 - Bez push na main.
 
+## 2026-10-31 16:00 — #683 F7 R12 POPRAWKI (B1–B3 + 72a/b/c)
+
+- Skrzynka: #685 w planie (po #683); #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne` do budowy.
+- Scalanie: #683 — F7 r12 **POPRAWKI** @ `fb6f710f` (CI unit/db/visual ✔). Brak „F7: gotowe do scalenia”. Bez push na main.
+- **Krok R12:**
+  - **R12-B1** — luźne atrybuty `["']`; `invalid_date` (brak/zły format/duplikat/`dateEnd<dateStart`/zły `timeStart`); null klucz → wszystkie bez auto;
+  - **R12-B2** — najnowszy globalnie (bez pętli dni; okno 1000–9999 < 100 ms);
+  - **R12-B3** — dedupe po `rawFull` (+ `autoCancelOk = AND`);
+  - **72a** przyszłe bloki; **72b** cudzysłów/kampania/`data-type`/luźny; **72c** ryzyko ze zdegradowanych;
+  - vitest bn3-tallink-alert **44**. PLAN §4/§5/§8.
+- **Dalej:** CI → „gotowe do F7 @ sha”; po F7/scal → #685-a Digitraffic Viking.
+- Bez push na main.
+
 ## 2026-10-31 15:25 — #683 F7 R11 POPRAWKI (decyzja 72 najnowszy + R11-B1)
 
 - Skrzynka: #685 w planie (po #683); #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne` do budowy.

@@ -19,9 +19,15 @@
  *   Dopisane do allowlisty względem F7 r9 (prawdziwy Alert 28.10 / fixture): `CwsSpan`,
  *   `timeStart`, `timeEnd`, `hideSpacing`.
  * R10: po usunięciu tagów brak surowego `<`/`>`; stos zamykających tagów; `-->` w regule 3;
- * Decyzja 72 (właściciel 31.10 14:58): spośród Alertów aktywnych w dniu obowiązuje **najnowszy**
- *   (`dateStart`+`timeStart`, brak `timeStart`=00:00); starsze ignorowane dla statusu; remis /
- *   brak `dateStart` → ryzyko MEDIUM bez auto. Zastępuje regułę „2+ → wszystkie ryzyko”.
+ * Decyzja 72 (właściciel 31.10 14:58): spośród **wszystkich** niekampanijnych Alertów (po złączeniu
+ *   stron) obowiązuje **najnowszy** (`dateStart`+`timeStart`, brak `timeStart`=00:00); bez grupowania
+ *   po dniach okna (R12-B2). Starsze bez auto; remis / zła data / brak `dateStart` → ryzyko bez auto.
+ *   72a: blok z datą+godziną późniejszą niż teraz nie bierze udziału w wyborze.
+ *   72b: `data-analytics-group` w dowolnym cudzysłowie; kampania tylko `type="campaign"`; luźny Alert
+ *   poza Schedulerem → brak auto dla wszystkich.
+ *   72c: zdegradowany Alert zawsze podnosi ryzyko (nawet gdy inny wygrał auto).
+ * F7 R12: atrybuty luźno (`["']…\1`); invalid_date przy złym formacie / braku dateStart / dateEnd<dateStart /
+ *   zdublowanym atrybucie; dedupe po surowym `full` (R12-B3).
  * Decyzja 69: wpis AUTO w operator_notices tylko przy ODWOLANY; przy ryzyku historią jest samo ryzyko.
  * Kampanie pomijane. User-Agent uczciwy; bez obchodzenia.
  */
@@ -57,8 +63,9 @@ const CANCEL_RE = /\b(cancel(?:led|ed)?|call(?:ed)?\s+off|will\s+not\s+(?:sail|o
 const SUSPEND_SAILING_RE = /\bsuspended\b/i;
 const SAILING_CTX_RE = /\b(sailing|departure|departing|voyage|vessel|route|ferry|shuttle)\b/i;
 const RESUME_RE = /\b(?:is\s+not\s+cancel|not\s+cancelled|not\s+canceled|resum(?:e|es|ed|ing)|returns?\s+to|back\s+in\s+service|operates\s+as\s+planned)\b/i;
-/** F7 #683 R11 / decyzja 72: kampania tylko strukturalnie. */
-const CAMPAIGN_STRUCT_RE = /<CwsAlert\b[^>]*\btype\s*=\s*"campaign"/i;
+/** F7 #683 R12 / 72b: kampania tylko jawne `\btype=` na CwsAlert/Scheduler (nie data-type). */
+const CAMPAIGN_TYPE_RE = /\btype\s*=\s*(["'])campaign\1/i;
+const ALERT_GROUP_RE = /data-analytics-group\s*=\s*(["'])Alert\1/i;
 const SHIP_NAME_ALT = String.raw`MyStar|Megastar|Victoria\s+I|Baltic\s*Queen|Silja\s*Europa`;
 const PORT_NAME_ALT = String.raw`Tallinn|Helsinki|Stockholm`;
 const DATE_CAPTURE = String.raw`(\d{1,2})\s+(${MONTH_NAMES})(?:\s+(\d{4}))?`;
@@ -87,6 +94,10 @@ export interface TallinkAlert {
   windowTimeStart: string | null;
   ordinal: number;
   isCampaign: boolean;
+  /** F7 #683 R12 / 72b: luźny Alert poza Schedulerem → brak auto dla całej puli. */
+  fromLoose: boolean;
+  /** Surowy HTML bloku (dedupe HOME/HEL-TLL — R12-B3). */
+  rawFull: string;
   filterReject: 'campaign' | 'empty' | 'expired' | 'invalid_date' | null;
   suppressedByNewer: boolean;
   /** Data z treści Alertu (B2/R3-B1/R4-B1) — wymagana do automatycznego ODWOLANY. */
@@ -292,9 +303,47 @@ export function isValidYmd(s: string | null | undefined): boolean {
 }
 
 function isStructuralCampaign(body: string, attrs: string): boolean {
-  return CAMPAIGN_STRUCT_RE.test(body)
-    || /type\s*=\s*"campaign"/i.test(attrs)
-    || /<CwsAlert\b[^>]*\btype\s*=\s*'campaign'/i.test(body);
+  // 72b: tylko jawne `\btype=`, nie `data-type`.
+  return CAMPAIGN_TYPE_RE.test(attrs)
+    || /<CwsAlert\b[^>]*\btype\s*=\s*(["'])campaign\1/i.test(body)
+    || /<Scheduler\b[^>]*\btype\s*=\s*(["'])campaign\1/i.test(body);
+}
+
+/** Luźny odczyt atrybutu w cudzysłowach `"`/`'`; wykrywa duplikaty (R12-B1). */
+export function readQuotedAttr(
+  attrs: string,
+  name: string,
+): { value: string | null; duplicate: boolean; present: boolean } {
+  const re = new RegExp(`\\b${name}\\s*=\\s*(["'])(.*?)\\1`, 'gi');
+  const matches = [...attrs.matchAll(re)];
+  if (matches.length === 0) return { value: null, duplicate: false, present: false };
+  return {
+    value: matches[0]![2] ?? null,
+    duplicate: matches.length > 1,
+    present: true,
+  };
+}
+
+/** Czas Schedulera: ścisły `HH:MM` 00–23 (R12-B1). Brak atrybutu → null (traktuj jako 00:00). */
+export function normalizeSchedulerHmStrict(
+  raw: string | null,
+  present: boolean,
+): { hm: string | null; invalid: boolean } {
+  if (!present) return { hm: null, invalid: false };
+  if (!raw || !/^([01]\d|2[0-3]):[0-5]\d$/.test(raw.trim())) {
+    return { hm: null, invalid: true };
+  }
+  return { hm: raw.trim(), invalid: false };
+}
+
+function tallinnPublishNowKey(now: Date): string {
+  const p = new Intl.DateTimeFormat('en-CA', {
+    timeZone: 'Europe/Tallinn',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+  }).formatToParts(now);
+  const g = (t: string) => p.find((x) => x.type === t)!.value;
+  return `${g('year')}-${g('month')}-${g('day')}T${g('hour')}:${g('minute')}`;
 }
 
 function tallinnYmd(d: Date): string {
@@ -535,19 +584,42 @@ export function parseTallinkAlerts(
     text: string,
     body: string,
     attrs: string,
-    dateStart: string | null,
-    dateEnd: string | null,
-    timeStart: string | null,
+    rawFull: string,
     allowAutoCancel = true,
+    fromLoose = false,
   ) => {
     const isCampaign = isStructuralCampaign(body, attrs);
     let filterReject: TallinkAlert['filterReject'] = isCampaign ? 'campaign' : null;
-    const startOk = !dateStart || isValidYmd(dateStart);
-    const endOk = !dateEnd || isValidYmd(dateEnd);
-    if (!startOk || !endOk) filterReject = filterReject ?? 'invalid_date';
 
+    const ds = readQuotedAttr(attrs, 'dateStart');
+    const de = readQuotedAttr(attrs, 'dateEnd');
+    const ts = readQuotedAttr(attrs, 'timeStart');
+    const dateStart = ds.value;
+    const dateEnd = de.value;
+    const timeNorm = normalizeSchedulerHmStrict(ts.value, ts.present);
+
+    // R12-B1: brak dateStart / zły format / duplikat / dateEnd<dateStart / zły timeStart.
+    if (!fromLoose && !isCampaign) {
+      if (!ds.present || !dateStart || !isValidYmd(dateStart)) {
+        filterReject = filterReject ?? 'invalid_date';
+      }
+      if (de.present && (!dateEnd || !isValidYmd(dateEnd))) {
+        filterReject = filterReject ?? 'invalid_date';
+      }
+      if (dateStart && isValidYmd(dateStart) && dateEnd && isValidYmd(dateEnd) && dateEnd < dateStart) {
+        filterReject = filterReject ?? 'invalid_date';
+      }
+      if (ds.duplicate || de.duplicate || ts.duplicate || timeNorm.invalid) {
+        filterReject = filterReject ?? 'invalid_date';
+      }
+    }
+    if (fromLoose && !isCampaign) filterReject = filterReject ?? 'invalid_date';
+
+    const startOk = !!(dateStart && isValidYmd(dateStart));
     const kind: TallinkAlertKind = isCampaign ? 'IGNORE' : classify(text);
-    const yearHint = Number((startOk ? dateStart : null)?.slice(0, 4) ?? yearNow);
+    // Rok z okna Schedulera tylko gdy blisko teraz (R12-B2: 1000-01-01 nie może dać treści z roku 1000).
+    const ys = startOk && dateStart ? Number(dateStart.slice(0, 4)) : yearNow;
+    const yearHint = (ys >= yearNow - 1 && ys <= yearNow + 1) ? ys : yearNow;
     const content = text ? parseAlertContentDates(text, yearHint) : null;
     const auto = (allowAutoCancel && !filterReject && kind === 'ODWOLANY')
       ? autoCancelFromCancelSentence(text, yearHint)
@@ -556,14 +628,14 @@ export function parseTallinkAlerts(
     const multiTime = !autoCancelOk && kind === 'ODWOLANY'
       ? true
       : (content?.multiTime ?? false);
-    const endForExpiry = auto?.endYmd || content?.endYmd || (endOk ? dateEnd : null);
+    const endForExpiry = auto?.endYmd || content?.endYmd
+      || (dateEnd && isValidYmd(dateEnd) ? dateEnd : null);
     if (!text) filterReject = filterReject ?? 'empty';
     if (endForExpiry && isValidYmd(endForExpiry) && endForExpiry < today) {
       filterReject = filterReject ?? 'expired';
     }
     if (filterReject) autoCancelOk = false;
 
-    // R11: bloki zostają w puli (także expired/campaign) — wybór najnowszego przed filtrami (w finalize).
     alerts.push({
       kind,
       text: text.slice(0, 800),
@@ -574,9 +646,11 @@ export function parseTallinkAlerts(
       routes: autoCancelOk ? auto!.routes : [],
       windowStartYmd: dateStart,
       windowEndYmd: dateEnd,
-      windowTimeStart: normalizeSchedulerHm(timeStart),
+      windowTimeStart: timeNorm.hm,
       ordinal: ordinal++,
       isCampaign,
+      fromLoose,
+      rawFull: rawFull.replace(/\s+/g, ' ').trim(),
       filterReject,
       suppressedByNewer: false,
       contentStartYmd: autoCancelOk ? (auto?.startYmd ?? null) : null,
@@ -590,24 +664,18 @@ export function parseTallinkAlerts(
   let schedulerAlertBlocks = 0;
   for (const block of blocks) {
     const { attrs, body, full } = block;
-    if (!/data-analytics-group\s*=\s*"Alert"/i.test(body)
-      && !/data-analytics-group\s*=\s*"Alert"/i.test(attrs)
-      && !/data-analytics-group="Alert"/i.test(body)) continue;
-    if (!/data-analytics-group="Alert"/i.test(body)) continue;
+    if (!ALERT_GROUP_RE.test(body) && !ALERT_GROUP_RE.test(attrs)) continue;
     schedulerAlertBlocks += 1;
-    const dateStart = attrs.match(/dateStart\s*=\s*"(\d{4}-\d{2}-\d{2})"/i)?.[1] ?? null;
-    const dateEnd = attrs.match(/dateEnd\s*=\s*"(\d{4}-\d{2}-\d{2})"/i)?.[1] ?? null;
-    const timeStart = attrs.match(/timeStart\s*=\s*"(\d{1,2}:\d{2})"/i)?.[1] ?? null;
     const allowAuto = alertHtmlAllowsAutoCancel(full);
     const text = stripTags(decodeAllowedEntities(body)).trim();
-    pushAlert(text, body, attrs, dateStart, dateEnd, timeStart, allowAuto);
+    pushAlert(text, body, attrs, full, allowAuto, false);
   }
   if (schedulerAlertBlocks === 0) {
-    const loose = [...decoded.matchAll(/data-analytics-group="Alert"[\s\S]{0,2500}/gi)];
+    const loose = [...decoded.matchAll(/data-analytics-group\s*=\s*(["'])Alert\1[\s\S]{0,2500}/gi)];
     for (const m of loose) {
-      const chunk = m[0];
+      const chunk = m[0]!;
       const text = stripTags(chunk).trim();
-      pushAlert(text, chunk, '', null, null, null, false);
+      pushAlert(text, chunk, '', chunk, false, true);
     }
   }
 
@@ -615,35 +683,38 @@ export function parseTallinkAlerts(
   return { alerts, warnings };
 }
 
-function normalizeSchedulerHm(raw: string | null): string | null {
-  if (!raw) return null;
-  const m = /^(\d{1,2}):(\d{2})$/.exec(raw.trim());
-  if (!m) return null;
-  const h = Number(m[1]);
-  const min = Number(m[2]);
-  if (!Number.isFinite(h) || !Number.isFinite(min) || h > 23 || min > 59) return null;
-  return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
-}
-
 /** Klucz chronologiczny: dateStart + timeStart (brak = 00:00). Zła data / kampania → null. */
 export function alertPublishKey(a: TallinkAlert): string | null {
   if (a.isCampaign || a.filterReject === 'campaign') return null;
+  if (a.filterReject === 'invalid_date') return null;
   if (!a.windowStartYmd || !isValidYmd(a.windowStartYmd)) return null;
   if (a.windowEndYmd && !isValidYmd(a.windowEndYmd)) return null;
+  if (a.windowEndYmd && a.windowStartYmd && a.windowEndYmd < a.windowStartYmd) return null;
   return `${a.windowStartYmd}T${a.windowTimeStart ?? '00:00'}`;
 }
 
-/** Odduplikowanie tego samego bloku na HOME i HEL-TLL. */
+/** Odduplikowanie: surowy HTML (R12-B3); przy kolizji `autoCancelOk = AND`. */
 export function dedupeTallinkAlerts(alerts: TallinkAlert[]): TallinkAlert[] {
-  const seen = new Set<string>();
-  const out: TallinkAlert[] = [];
+  const byFull = new Map<string, TallinkAlert>();
   for (const a of alerts) {
-    const k = `${a.windowStartYmd}|${a.windowEndYmd}|${a.windowTimeStart}|${a.text}`;
-    if (seen.has(k)) continue;
-    seen.add(k);
-    out.push(a);
+    const k = a.rawFull || `${a.windowStartYmd}|${a.windowEndYmd}|${a.windowTimeStart}|${a.text}`;
+    const prev = byFull.get(k);
+    if (!prev) {
+      byFull.set(k, a);
+      continue;
+    }
+    prev.autoCancelOk = prev.autoCancelOk && a.autoCancelOk;
+    if (!prev.autoCancelOk) {
+      prev.vessel = null;
+      prev.routes = [];
+      prev.contentStartYmd = null;
+      prev.contentEndYmd = null;
+      prev.contentHm = null;
+      if (prev.kind === 'ODWOLANY') prev.multiTime = true;
+    }
+    if (a.filterReject && !prev.filterReject) prev.filterReject = a.filterReject;
   }
-  return out;
+  return [...byFull.values()];
 }
 
 function demoteAlert(a: TallinkAlert): void {
@@ -658,79 +729,83 @@ function demoteAlert(a: TallinkAlert): void {
 }
 
 /**
- * F7 #683 R11 / decyzja 72: po złączeniu stron — najnowszy Alert wygrywa;
- * starsze bez auto; remis / brak klucza → wszystkie ryzyko.
+ * F7 #683 R12 / decyzja 72: po złączeniu stron — najnowszy klucz globalnie (bez dni okna);
+ * null klucz / remis / przyszły (72a) / trucizna luźna/kampania-serwisowa (72b) → bez auto.
  */
-export function applyNewestAlertWins(alerts: TallinkAlert[]): void {
-  if (alerts.length < 2) return;
-  const byDay = new Map<string, TallinkAlert[]>();
+export function applyNewestAlertWins(alerts: TallinkAlert[], now: Date = new Date()): void {
+  // 72b: luźny Alert albo kampania z treścią serwisową → brak auto dla wszystkich.
+  const poison = alerts.some((a) => a.fromLoose)
+    || alerts.some((a) => a.isCampaign && CANCEL_RE.test(a.text));
+  if (poison) {
+    for (const a of alerts) demoteAlert(a);
+    return;
+  }
+
+  const nowKey = tallinnPublishNowKey(now);
+  const nonCampaign: TallinkAlert[] = [];
   for (const a of alerts) {
     if (a.isCampaign || a.filterReject === 'campaign') continue;
-    const start = a.windowStartYmd;
-    const end = a.windowEndYmd ?? start;
-    if (!start || !isValidYmd(start)) {
-      const bag = byDay.get('_') ?? [];
-      bag.push(a);
-      byDay.set('_', bag);
-      continue;
-    }
-    const endYmd = end && isValidYmd(end) && end >= start ? end : start;
-    for (let ymd = start; ymd <= endYmd; ) {
-      const bag = byDay.get(ymd) ?? [];
-      bag.push(a);
-      byDay.set(ymd, bag);
-      const [ys, ms, ds] = ymd.split('-').map(Number);
-      const d = new Date(Date.UTC(ys!, ms! - 1, ds! + 1));
-      ymd = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}-${String(d.getUTCDate()).padStart(2, '0')}`;
-      if (ymd > endYmd) break;
+    nonCampaign.push(a);
+  }
+  // 72a: blok z kluczem > teraz (jeszcze nieopublikowany) — poza wyborem, gdy istnieje
+  // już opublikowany Alert; gdy są tylko przyszłe (wczesne ogłoszenie) — ranking wśród nich.
+  const isFuture = (a: TallinkAlert): boolean => {
+    const k = alertPublishKey(a);
+    return k != null && k > nowKey;
+  };
+  const published = nonCampaign.filter((a) => !isFuture(a));
+  const future = nonCampaign.filter((a) => isFuture(a));
+  const pool = published.length > 0 ? published : future;
+  if (published.length > 0) {
+    for (const a of future) demoteAlert(a);
+  }
+
+  // R12-B1: jakikolwiek null klucz / filterReject → wszystkie bez auto (także length < 2).
+  if (pool.some((a) => alertPublishKey(a) == null || a.filterReject)) {
+    for (const a of pool) demoteAlert(a);
+    return;
+  }
+  if (pool.length === 0) return;
+  if (pool.length === 1) {
+    // Pojedynczy z ważnym kluczem zostaje (o ile pushAlert nie zabił auto).
+    return;
+  }
+
+  let bestKey = '';
+  const winners: TallinkAlert[] = [];
+  for (const a of pool) {
+    const k = alertPublishKey(a)!;
+    // Mutacja: k < bestKey (najstarszy) albo bez timeStart → testy padają.
+    if (k > bestKey) {
+      bestKey = k;
+      winners.length = 0;
+      winners.push(a);
+    } else if (k === bestKey) {
+      winners.push(a);
     }
   }
-  const demote = new Set<TallinkAlert>();
-  for (const bag of byDay.values()) {
-    const uniq = [...new Set(bag)];
-    if (uniq.length < 2) {
-      for (const a of uniq) {
-        if (alertPublishKey(a) == null || a.filterReject) demoteAlert(a);
-      }
-      continue;
-    }
-    if (uniq.some((a) => alertPublishKey(a) == null)) {
-      for (const a of uniq) demote.add(a);
-      continue;
-    }
-    let bestKey = '';
-    const winners: TallinkAlert[] = [];
-    for (const a of uniq) {
-      const k = alertPublishKey(a)!;
-      // Mutacja: k < bestKey (najstarszy) albo klucz bez timeStart → testy padają.
-      if (k > bestKey) {
-        bestKey = k;
-        winners.length = 0;
-        winners.push(a);
-      } else if (k === bestKey) {
-        winners.push(a);
-      }
-    }
-    if (winners.length !== 1) {
-      for (const a of uniq) demote.add(a);
-      continue;
-    }
-    const winner = winners[0]!;
-    if (winner.filterReject) {
-      for (const a of uniq) demote.add(a);
-      continue;
-    }
-    for (const a of uniq) {
-      if (a !== winner) demote.add(a);
-    }
+  if (winners.length !== 1) {
+    for (const a of pool) demoteAlert(a);
+    return;
   }
-  for (const a of demote) demoteAlert(a);
+  const winner = winners[0]!;
+  // Najnowszy niewzorcowy (Correction / zła allowlista) → bez ODWOLANY ze starszych.
+  if (winner.kind !== 'ODWOLANY' || !winner.autoCancelOk || winner.filterReject) {
+    for (const a of pool) demoteAlert(a);
+    return;
+  }
+  for (const a of pool) {
+    if (a !== winner) demoteAlert(a);
+  }
 }
 
 /** Odduplikuj + wybierz najnowszy na połączonej puli (HOME + HEL-TLL). */
-export function finalizeTallinkAlertsForStatus(alerts: TallinkAlert[]): TallinkAlert[] {
+export function finalizeTallinkAlertsForStatus(
+  alerts: TallinkAlert[],
+  now: Date = new Date(),
+): TallinkAlert[] {
   const deduped = dedupeTallinkAlerts(alerts);
-  applyNewestAlertWins(deduped);
+  applyNewestAlertWins(deduped, now);
   return deduped;
 }
 

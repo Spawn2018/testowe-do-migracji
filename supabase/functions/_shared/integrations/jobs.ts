@@ -1522,12 +1522,11 @@ export async function runFerryStatus(deps: JobDeps): Promise<JobResult> {
         status: row.status,
         source: row.source,
       }));
-      // F7 #683 R11 / decyzja 72: najnowszy po złączeniu HOME + HEL-TLL (nie per strona).
-      const mergedAlerts = finalizeTallinkAlertsForStatus(allAlerts);
-      const hasAutoWinner = mergedAlerts.some((x) => x.autoCancelOk && x.kind === 'ODWOLANY');
+      // F7 #683 R12 / decyzja 72: najnowszy po złączeniu HOME + HEL-TLL; 72c — ryzyko też ze zdegradowanych.
+      const mergedAlerts = finalizeTallinkAlertsForStatus(allAlerts, deps.now());
       for (const alert of mergedAlerts) {
-        if (alert.filterReject || alert.kind === 'IGNORE') continue;
-        if (alert.suppressedByNewer && hasAutoWinner) continue;
+        if (alert.isCampaign || alert.kind === 'IGNORE') continue;
+        if (alert.filterReject === 'expired' || alert.filterReject === 'empty') continue;
         if (alert.kind !== 'ODWOLANY') continue;
         // F7 #683 B1: pełna pula; already_cancelled → nic; manual_only / ambiguous / none → ryzyko.
         const hit = matchTallinkAlertSailings(alert, cands);
