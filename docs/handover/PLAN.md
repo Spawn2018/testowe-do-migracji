@@ -1171,7 +1171,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 4. Diagnostyka: ~~fundament `summary` w `map_display_state` + `checkRoads` (0354)~~; UI Stan systemu → DP-22; `integration_runs` (N1 retry_after +1 h w tym PR).
 5. Słownik legów BN7 (`PL-TLL`…`SE-KPS`) gotowy do rysowania (DP-23).
 6. Testy e2e na buildzie produkcyjnym (nie demo): ≥1 polilinia na mapę; SE-KAA obecny.
-7. ~~**F7 r1** B1–B3 / N1·N4·N7~~; ~~**F7 r2** B4 origin+Luleå (**0354**)~~; ~~**F7 r3** B5 SE_E22 0298 + sparse~~; ~~**F7 r4** dens. Umeå–Skellefteå~~; **F7 r5** — fixture SE-NYN z prod; via haversine=SQL; B7 Uppsala/Gävle/Hudiksvall na E4; in-flight przed `getSession`; bmapa 174 (INLAND null+summary); `runHereRoads` bez monthSpend → SOURCE_DOWN — **czekam F7 „gotowe do scalenia”**.
+7. ~~**F7 r1** B1–B3 / N1·N4·N7~~; ~~**F7 r2** B4 origin+Luleå (**0354**)~~; ~~**F7 r3** B5 SE_E22 0298 + sparse~~; ~~**F7 r4** dens. Umeå–Skellefteå~~; ~~**F7 r5** fixture SE-NYN / B6–B7 / bmapa 174~~; **F7 r6** — bmapa: `jsonb_typeof(points)='null'` (nie `IS NULL` na JSON null); merge main (**#675** SCALONE) — **czekam F7 „gotowe do scalenia”**.
 
 
 ### Rejestr drobnych poprawek (DP) — #671 (zasada 30.10 18:31)
@@ -1183,7 +1183,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-3 | koordynator | `routeUnknown` w UI — „nieznana trasa” w wierszu rejsu | F7 #649 | wyglad | SCALONE (#672 `8ec16105`) |
 | DP-4 | koordynator | `p9cMap.ts` / `p9eGroups.ts` — porty ze słownika | F7 #649 | wyglad | SCALONE (#672) |
 | DP-5 | koordynator | `SailingsPanel` — nieznany kod ≠ GDN-NYN | F7 #649 | wyglad | SCALONE (#672) |
-| DP-6 | koordynator | jedna funkcja skrótu trasy po #668 | F7 #670 | wyglad | w kolejce (z DP-14…19 po #668) |
+| DP-6 | koordynator | jedna funkcja skrótu trasy po #668 | F7 #670 | wyglad | SCALONE (#675 `6660b3c8`) |
 | DP-7 | koordynator | tory promów rysowane dwa razy → jedno | F7 #670 | wyglad | SCALONE (#672) |
 | DP-8 | koordynator | „Dodaj rejs”: statki z `vessels` | F7 #670 | wyglad | SCALONE (#672) |
 | DP-9 | Cursor (#668) | `routeLabelPl` — nazwy tras z bazy (BN9-b pkt 12) | #670 | #668 / BN8 | w PR #668 |
@@ -1201,14 +1201,18 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-22 | Cursor | Stan systemu: ostrzeżenie z `summary` odrzuconego legu z bazy (nie tylko `points not null`); fundament 0354 + `checkRoads` | F7 #673 r1 N5 / r2 | #667 D | fundament w #673; UI w kolejce |
 | DP-23 | Cursor | Słownik legów drogowych w bazie zamiast `IN (…)` / `ROAD_LEGS` w kodzie | F7 #673 r1 N2 | #667 E / BN7 | w kolejce |
 | DP-24 | Cursor | `corridor_fetches.leg` / `corridor_obstacles.leg` + SE-KAA-INLAND gdy przeszkody H3 obejmą inland | F7 #673 r1 N3 | po #667 | w kolejce |
-| DP-25 | koordynator | JSDoc `vesselGroupsVersion` zgodny z użyciem (albo bez eksportu) | F7 #674 | wyglad | w kolejce |
-| DP-26 | koordynator | SailingsPanel przez `useVesselGroups()` zamiast własnego stanu | F7 #674 | wyglad | w kolejce |
-| DP-27 | koordynator | jedno ostrzeżenie po błędzie pobrania listy statków na sesję | F7 #674 | wyglad | w kolejce |
-| DP-28 | koordynator | testy źródłowe (regex) DP-17/N4–N6 → testy zachowania | F7 #674 | wyglad | w kolejce |
+| DP-25 | koordynator | JSDoc `vesselGroupsVersion` zgodny z użyciem (albo bez eksportu) | F7 #674 | wyglad | SCALONE (#675) |
+| DP-26 | koordynator | SailingsPanel przez `useVesselGroups()` zamiast własnego stanu | F7 #674 | wyglad | SCALONE (#675) |
+| DP-27 | koordynator | jedno ostrzeżenie po błędzie pobrania listy statków na sesję | F7 #674 | wyglad | SCALONE (#675) |
+| DP-28 | koordynator | testy źródłowe (regex) DP-17/N4–N6 → testy zachowania | F7 #674 | wyglad | SCALONE (#675) |
 | DP-29 | Cursor | `apiStructureFail`/`structureFail` w DFDS bez wpływu na wynik — usunąć albo użyć w opisie ryzyka z asercją (łapać „nieczytelny rejs”) | F7 #668 r8 | po #673 | w kolejce |
 | DP-30 | Cursor | usunąć nieosiągalne ostrzeżenie zastępcze `jobs.ts` (DFDS) | F7 #668 r8 | po #673 | w kolejce |
 | DP-31 | Cursor | istotność ryzyka źródła aktualizowana w ciągu doby (HIGH → MEDIUM) w `raise_integration_risk` | F7 #668 r8 | po #673 | w kolejce |
 | DP-32 | Cursor | klucz ryzyka DFDS bez daty (jak EMTRACK), żeby wielodniowa praca z PDF nie mnożyła ryzyk | F7 #668 r8 | po #673 | w kolejce |
+| DP-34 | koordynator | test podłączenia panelu Rejsów (`key={vesselSelectKey(`, `setLineSel(plan.lineSel)` — mutacje M7/M8 przeżywają) | F7 #675 | wyglad | w kolejce |
+| DP-35 | koordynator | test DP-27: po `reset()` kolejny błąd → drugie ostrzeżenie | F7 #675 | wyglad | w kolejce |
+| DP-36 | koordynator | test subskrypcji `useVesselGroups` (powiadomienie przy `load()`) | F7 #675 | wyglad | w kolejce |
+| DP-37 | koordynator | komentarz `CorridorMap.tsx:175` („referencja listy”, nie „wersja”) | F7 #675 | wyglad | w kolejce |
 
 ### BN9 — część na produkcji; ekrany zależne od danych (BN9-c*)
 Źródło: #671. BN9-a (#575) i BN9-b (#670) na produkcji. Zostają (koordynator, `wyglad/*`, zaraz po swoim etapie):
@@ -1224,7 +1228,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 1. **BN1** — ~~słowniki / strefy / CASE / F7 MFA~~ **SCALONE** (0338–0346).
 2. **BN2** — ~~LIVE~~ **SCALONE** (**0347**+**0348**, PR #660 `a94645d9`; PR #661 `392a9bc2`; dopisek F7 #665 `799ea18d`): Tallink; Portnet; Viking/Eckerö/DFDS HTML + Terminal A; B1–B3; Decyzja 50 MEDIUM.
 3. ~~**#666** (pilne)~~ — SCALONE (#668 `53890480` / **0351**).
-4. **#667** (pilne) — pomarańczowe drogi / SE-KAA / odświeżanie HERE — W TOKU (ten PR; F7 r3 @ `ee43be3a` + merge main).
+4. **#667** (pilne) — pomarańczowe drogi / SE-KAA / odświeżanie HERE — W TOKU (ten PR; F7 r6 bmapa JSON null + merge main #675).
 5. BN3…BN10 — jak #573 (opóźnienia, AIS, pogoda, drogi LT/LV/EE/FI, HERE, statusy/ETA, ekrany, odbiór 48 h).
 
 ### #662 · PILNE SafeFleet — link tymczasowy (SG-27) — SCALONE (`189688bc` / PR #663 / **0349**); #662-b SCALONE (`1ee855fd` / PR #664 / **0350**, 30.10.2026 12:54Z)
@@ -2161,4 +2165,5 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 31.10.2026 00:45 | #668 SCALONE `53890480`; #673 F7 r4: dens. Umeå–Skellefteå + Katrineholm; bmapa roads=5; loadRoadLines atrapa; monthSpend null | pętla |
 | 31.10.2026 00:25 | #673 merge main (#668); DP-29…32; czekam F7 gotowe do scalenia | pętla |
 | 31.10.2026 01:15 | #673 F7 r5: fixture SE-NYN prod; B7 Uppsala/Gävle/Hudiksvall E4; in-flight przed read; bmapa 174; runHereRoads null spend | pętla |
+| 31.10.2026 01:35 | #675 SCALONE `6660b3c8` (F7 gotowe @ 0698399); #673 F7 r6: bmapa jsonb_typeof null (CI db) | pętla |
 

@@ -232,7 +232,8 @@ if [ "$legs" = "5" ]; then ok=$((ok+1)); echo "  OK    map_display_state().roads
 kaa=$(asu "$HHL_465" "select exists(select 1 from jsonb_array_elements(map_display_state()->'roads') e where e->>'leg'='SE-KAA' and jsonb_array_length(e->'points')>=2)::text")
 [ "$kaa" = "true" ] && { ok=$((ok+1)); echo "  OK    roads zawiera SE-KAA z punktami"; } || { fail=$((fail+1)); echo "  FAIL  SE-KAA w roads → $kaa"; }
 # F7 r5 uwaga 4: SE-KAA-INLAND w roads z points=null + summary (przed store poniżej).
-inland_null=$(asu "$HHL_465" "select exists(select 1 from jsonb_array_elements(map_display_state()->'roads') e where e->>'leg'='SE-KAA-INLAND' and (e->'points') is null and coalesce(e->>'summary','') <> '')::text")
+# jsonb_build_object(…, NULL) → JSON null; (e->'points') IS NULL jest wtedy false — typeof.
+inland_null=$(asu "$HHL_465" "select exists(select 1 from jsonb_array_elements(map_display_state()->'roads') e where e->>'leg'='SE-KAA-INLAND' and jsonb_typeof(e->'points') = 'null' and coalesce(e->>'summary','') <> '')::text")
 [ "$inland_null" = "true" ] && { ok=$((ok+1)); echo "  OK    roads: SE-KAA-INLAND points=null + summary"; } || { fail=$((fail+1)); echo "  FAIL  SE-KAA-INLAND null+summary → $inland_null"; }
 e22_after=$(sys "select st_astext(geom) from corridor_polylines where code='SE_E22'")
 [ "$e22_before" = "$e22_after" ] && { ok=$((ok+1)); echo "  OK    SE_E22 bez zmian (N8)"; } || { fail=$((fail+1)); echo "  FAIL  SE_E22 nadpisane"; }

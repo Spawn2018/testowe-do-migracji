@@ -7357,3 +7357,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: brak „F7: gotowe do scalenia”. CI @ `ff28f980` unit/db/visual ✔; F7 r5 POPRAWKI @ 00:05Z.
 - **Krok (F7 r5 #673):** B4-test (a) fixture SE-NYN północ z `here_road_geometry` (lat≥63.2, ~3 km); (b) `segKm` haversine + lista via SQL po B7. B6 — `hereRoadsInFlight` przed `getSession`; test `vi.waitFor` + 1 POST. B7 — 0354 Uppsala `17.6953/59.8767`, Gävle `17.109/60.6638`, Hudiksvall `17.065/61.7279`. Uwagi: INLAND 16.120/59.279 = OSRM (SELECT po deploy); Norwegia też INLAND; `runHereRoads` bez `hereMonthSpend`; bmapa 174 INLAND null+summary. **Dalej:** CI → gotowe do F7; potem D/E/F.
 - Bez push na main.
+
+## 2026-10-31 01:35 — #675 SCALONE; #667 F7 r6 (bmapa JSON null)
+
+- Skrzynka: **#667** W TOKU (ten PR); #608 w planie; #550 WSTRZYMANE.
+- Scalanie: **#675** SCALONE `6660b3c8` (F7: gotowe do scalenia @ 0698399; DP-6, DP-25…28). #673 bez „gotowe do scalenia”; CI db @ `18be834b` FAIL bmapa `SE-KAA-INLAND null+summary` (173/174).
+- **Krok (F7 r6 #673):** asercja bmapa — `jsonb_typeof(e->'points') = 'null'` zamiast `(e->'points') IS NULL` (Postgres: JSON null ≠ SQL NULL po `jsonb_build_object`). Merge `origin/main` (#675). DP-6/25–28 → SCALONE; rejestr **DP-34…37** (F7 #675 nieblokujące). **Dalej:** CI → gotowe do F7; potem E BN7 (DP-23) / F e2e.
+- Bez push na main.
