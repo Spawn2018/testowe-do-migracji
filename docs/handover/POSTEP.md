@@ -7435,6 +7435,13 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (odbiór prod):** SELECT `here_road_legs` — **12** / active 12 / `browser_fetch` 5; core bez zmian (3495/12561/3742/18854/19408); BN7 7× null. `here-roads` **#108803** @ 04:49Z ok (0 prób — core świeże; BN7 poza cronem). Komentarz w #667. **Dalej:** BN3 (#573).
 - Bez push na main.
 
+## 2026-10-31 11:35 — #683 F7 R4-B1 + #685 w planie
+
+- Skrzynka: **#685** (Spawn2018, `dla-cursora`) — decyzja 63 → PLAN §4 (po #683) / §5 / §8 / POSTEP; podział PR a/b/c + prognoza godzin. #608 w planie; #550 WSTRZYMANE; #499/#537/#538/#500 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: #683 — F7 r4 **POPRAWKI** R4-B1 @ `ced146b5` (CI unit/db/visual ✔). Bez „F7: gotowe do scalenia”. Bez push na main.
+- **Krok R4-B1:** `autoCancelFromCancelSentence` — ODWOLANY tylko przy trio statek+HH:MM+data w zdaniu cancel; `OPAQUE_HINT_RE` (updated/tomorrow/dni tygodnia/Month D/zakresy); fixture +07:30. vitest bn3-tallink-alert **18**. **Dalej:** CI → „gotowe do F7 @ sha”; po F7 → #685-a.
+- Bez push na main.
+
 ## 2026-10-31 11:00 — #683 F7 R3-B1: data tylko z treści
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE; #499/#537/#538/#500 w planie. Bez nowych `pilne`.

@@ -1289,13 +1289,14 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 4. ~~**#667** (pilne)~~ — **NA PRODUKCJI** (#677 `675bb299` / **0355**; SELECT 12/12 bf5; core bez zmian; Edge 200 skip 1380). DP-69 w #679.
 5. ~~**DP-21**~~ przeniesione do #666 (decyzja 63b) — parser pliku właściciela (F7 #680).
 6. **BN3** — W TOKU (`pakiet/bn3-tallink-tsee-auto` / po #682) — poniżej.
-7. BN4…BN10 — jak #573 (AIS, pogoda, drogi LT/LV/EE/FI, HERE, statusy/ETA, ekrany, odbiór 48 h).
+7. **#685** decyzja 63 (rozkład Viking) — zaraz po #683; poniżej.
+8. BN4…BN10 — jak #573 (AIS, pogoda, drogi LT/LV/EE/FI, HERE, statusy/ETA, ekrany, odbiór 48 h).
 
 ### BN3 · Opóźnienia i odwołania nowych armatorów — W TOKU (`pakiet/bn3-tallink-tsee-auto`)
 Źródło: #573 + komentarze BN3 31.10 (spec + decyzje 57–61). Po #667; DP-21 → #666 (63b).
 ~~Wycinek 1~~ SCALONE (#680 `8100f685` / **0356**): decyzja 60 + ręczny komunikat 6 armatorów (`p_operator`, formularz).
 ~~Wycinek 2~~ SCALONE (#682 `a9c396d7` / **0357** + F7 r1–r2): DFDS remark/ETA + Portnet ATA + SOURCE_DOWN MEDIUM (**decyzja 67**).
-**Wycinek 3** (`pakiet/bn3-tallink-tsee-auto` / PR #683): ~~DP-94/95/96~~; **0358** `operator_notices.source` AUTO; Tallink Alert / ts.ee — **F7 R3-B1 w toku** (B1–B5 + R2 + R3-B1: ODWOLANY tylko przy dacie z treści; nie przekreślać do F7 OK); DP-97…103, DP-105…109, DP-111/112 w kolejce.
+**Wycinek 3** (`pakiet/bn3-tallink-tsee-auto` / PR #683): ~~DP-94/95/96~~; **0358** `operator_notices.source` AUTO; Tallink Alert / ts.ee — **F7 R4-B1 w toku** (B1–B5 + R2–R4: auto-ODWOLANY = trio statek+HH:MM+data w zdaniu cancel, bez względnych; nie przekreślać do F7 OK); DP-97…103, DP-105…109, DP-111/112 w kolejce (DP-111 po scaleniu).
 1. ~~**60** Tallink poza PLD–KPS~~ — baza już tylko DFDS; front `ferryCatalog` bez TALLINK; test bn9a.
 2. Źródła → update — ~~**DFDS remark**~~; ~~Portnet ATA~~; ts.ee Lisainfo / Tallink Alert (F7 #683).
 3. ~~Opóźnienie: ATA − arrival; `FERRY_PORT_DELAY_MIN` z `app_parameters` (zapas 15)~~ (**0357** + Portnet + store F7 B1); ~~ATD 13–19 min przed planem bez delayed (DP-94)~~; ATD tylko gdy wiarygodne — dalej.
@@ -1306,6 +1307,14 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 8. MMSI XPRS/Finbo/Finlandia/MyStar/Megastar; DP-1 + DP-11 razem z BN3.
 9. Testy: ~~DFDS remark / Portnet ATA / F7 B5 wycinek 2~~; ts.ee/Alert (F7 #683 B5); Imperva; tolerancja; RECZNIE; ODWOLANY→FERRY_CANCELLED — część dalej.
 10. ~~Role komunikatu: HHL_ADMIN + CARRIER_DISPATCH (SCX); KSH odmowa~~ (F7 #680).
+
+### #685 · Decyzja 63: rozkład Viking Line (Digitraffic + import z pliku) — DO ZROBIENIA (zaraz po #683)
+Źródło: #685 (Spawn2018, `dla-cursora`; decyzja 63 potwierdzona właścicielem 31.10 09:56). Nie przerywa #683. Bez obchodzenia Imperva (cargo/sales 403).
+**Podział PR (prognoza):**
+1. **#685-a (63a)** ~3–4 h — Digitraffic port-calls `FIHEL` (CC BY 4.0; `Digitraffic-User` + gzip), obszar ES / Viking XPRS MMSI 230705000, ETA/ETD ~2–3 dni → `sailings` TLLA-HEL / HELA-TLL armator VIKING + źródło; dopasowanie jak #682; bez nadpisywania RECZNIE; testy na wycinku prawdziwej odpowiedzi.
+2. **#685-b (63b)** ~4–6 h baza/Edge (+ ekran BN9-c1 koordynator) — import HTML właściciela (`D:\Watch Tower\dane\viking_cargo_hel_tll.html`); RPC HHL_ADMIN+2FA: wczytaj → parser (DP-21) → podgląd → zapis z historią; fixture przycięty bez PII.
+3. **#685-c (63c)** ~1 h (z b) — `SOURCE_DOWN:VIKING_SCHEDULE` MEDIUM zamykane, gdy rozkład z pliku ≥ 30 dni.
+Kolejność: po F7/scal #683 → a → b(+c). DP-21 pozostaje w #666/63b.
 
 ### #662 · PILNE SafeFleet — link tymczasowy (SG-27) — SCALONE (`189688bc` / PR #663 / **0349**); #662-b SCALONE (`1ee855fd` / PR #664 / **0350**, 30.10.2026 12:54Z)
 Źródło: #662 (Spawn2018, `pilne`; właściciel 30.10 11:51). Przed poprawkami F7 #661.
@@ -1651,6 +1660,7 @@ Bez ekranów Opcji (te w P10b, po P3).
 | **57** | Komunikaty automatyczne także do `operator_notices` (`source` AUTO/RECZNIE, `source_url`, `created_by` null dla AUTO). | **przyjęta** 31.10 (#573); kod **0358** / BN3 wycinek 3 |
 | **58** | `FERRY_PORT_DELAY_MIN` = 15 min od ATA; ATD tylko gdy wiarygodne. | **przyjęta** 31.10; kod **0357** |
 | **59** | Tallink Alert z jawnym odwołaniem + jednoznaczne dopasowanie rejsu → `ODWOLANY`; inaczej FERRY MEDIUM (bez statusu). | **przyjęta** 31.10 (zmiana względem rekomendacji); kod wycinek 3 |
+| **63** | Rozkład Viking Line TLLA⇄HEL: **63a** Digitraffic port-calls (najbliższe dni); **63b** import HTML z pliku właściciela (HHL_ADMIN+2FA; ekran BN9-c1); **63c** `SOURCE_DOWN:VIKING_SCHEDULE` MEDIUM zamykane przy rozkładzie z pliku ≥ 30 dni. Bez obchodzenia 403. | **przyjęta** 31.10 (#685; potw. właściciel 09:56); kod po #683 |
 | **67** | `SOURCE_DOWN` dla `TALLINK_SCHEDULE`, `ECKERO_SCHEDULE`, `DFDS_SCHEDULE` = **MEDIUM** także przy **całkowitej** awarii źródła (nie tylko częściowej). Uzasadnienie: rozkłady pobierane raz na dobę; wcześniejsze rejsy zostają w bazie, więc brak świeżego pobrania nie jest awarią krytyczną dla operacji. **Polferries / Stena** bez zmian = **HIGH**. Zakres kodu: `sync.ts` `sourceDownRisk` (F7 #682 r1; DP-96). | **przyjęta** 31.10.2026 F7 #682 |
 
 ## §6. Czeka na dane albo decyzję, przeniesione do paczek, PO 1.0 (rezerwa usunięta 17.10)
@@ -2276,4 +2286,5 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 31.10.2026 10:15 | #683 CI db FAIL: ferry-status 0358 asercja `true/AUTO` (nie `t`); czekam CI → gotowe do F7 | pętla |
 | 31.10.2026 10:30 | #683 F7 R2-B2: >1 HH:MM/data w Tallink Alert → multiTime/ambiguous; DP-105…109; CI @ f42ce3a0 zielone | pętla |
 | 31.10.2026 11:05 | #683 F7 R3-B1: ODWOLANY tylko przy dacie z treści; Scheduler = wygaśnięcie; DP-111/112; potem #685 | pętla |
+| 31.10.2026 11:35 | #685 decyzja 63 wpisana §4/§5/§8; #683 F7 R4-B1: auto-ODWOLANY = trio w zdaniu cancel (bez względnych) | pętla |
 
