@@ -1,6 +1,6 @@
 /**
  * BN3 — Tallink Alert + Lisainfo ts.ee (decyzje 57, 59).
- * F7 #683 B1–B5 + R2-B2: pełna pula, data/HH:MM, >1 godzina/data → ambiguous, negacja, job AUTO.
+ * F7 #683 B1–B5 + R2-B2 + R3-B1: pełna pula, data/HH:MM, multiTime, bez daty w treści → ryzyko.
  *
  * Fixture `tallink-alert-cancel-mystar.html` — treść odwołania **syntetyczna**
  * (przeróbka pod test; nie jest żywym Alertem z produkcji).
@@ -108,9 +108,10 @@ describe('BN3 Tallink Alert', () => {
     expect(d).toMatchObject({ startYmd: '2026-11-02', endYmd: '2026-11-02', hm: '00:30' });
     const alert = {
       kind: 'ODWOLANY' as const,
-      text: 'x', vessel: 'M/F MyStar', multiVessel: false, routes: ['TLL-HEL' as const],
+      text: 'x', vessel: 'M/F MyStar', multiVessel: false, multiTime: false,
+      routes: ['TLL-HEL' as const],
       contentStartYmd: '2026-11-02', contentEndYmd: '2026-11-02', contentHm: '00:30',
-      windowStartYmd: '2026-10-26', windowEndYmd: '2026-10-28', // Scheduler = okno wyświetlania
+      windowStartYmd: '2026-10-26', windowEndYmd: '2026-10-28', // Scheduler = tylko wygaśnięcie
       sourceUrl: 'https://www.tallink.com/',
     };
     // 00:30 EET 2.11 ≈ 22:30Z 1.11 (zimowy EET=UTC+2) — slice UTC 1.11 NIE w oknie Scheduler.
@@ -201,6 +202,41 @@ describe('BN3 Tallink Alert', () => {
     }]);
     expect(hit.kind).toBe('ambiguous');
   });
+
+  it('F7 R3-B1: nierozpoznana data w treści → ambiguous (nie ODWOLANY na dacie okna Schedulera)', () => {
+    // Probe F7 r3: okno wyświetlania 1.11; treść z datą w formacie, którego parser nie zna.
+    const windowYmd = '2026-11-01';
+    const sailings = [
+      {
+        id: 's-1030', vesselName: 'M/F MyStar', route: 'TLL-HEL',
+        departureAt: '2026-11-01T08:30:00.000Z', status: 'ZAPLANOWANY', source: 'TALLINK',
+      },
+      {
+        id: 's-1630', vesselName: 'M/F MyStar', route: 'TLL-HEL',
+        departureAt: '2026-11-01T14:30:00.000Z', status: 'ZAPLANOWANY', source: 'TALLINK',
+      },
+      {
+        id: 's-2230', vesselName: 'M/F MyStar', route: 'TLL-HEL',
+        departureAt: '2026-11-01T20:30:00.000Z', status: 'ZAPLANOWANY', source: 'TALLINK',
+      },
+    ];
+    for (const text of [
+      'MyStar 16:30 departure from Tallinn to Helsinki is cancelled tomorrow',
+      'MyStar 16:30 departure from Tallinn to Helsinki is cancelled on Monday',
+      'MyStar 16:30 departure from Tallinn to Helsinki is cancelled from 2 to 3 November',
+      'MyStar 16:30 departure from Tallinn to Helsinki is cancelled on November 2',
+      'MyStar 16:30 departure from Tallinn to Helsinki is cancelled on 2nd November',
+    ]) {
+      const alert = parseTallinkAlerts(wrapAlert(text, windowYmd), TALLINK_HOME(), NOW).alerts[0]!;
+      expect(alert.kind).toBe('ODWOLANY');
+      expect(alert.contentStartYmd).toBeNull();
+      expect(alert.windowStartYmd).toBe(windowYmd);
+      // Mutacja: contentStartYmd ?? windowStartYmd → match na 1.11 16:30 — ten test pada.
+      expect(departureMatchesAlert('2026-11-01T14:30:00.000Z', alert)).toBe(false);
+      const hit = matchTallinkAlertSailings(alert, sailings);
+      expect(hit.kind).toBe('ambiguous');
+    }
+  });
 });
 
 describe('BN3 Tallink Alert — runFerryStatus (F7 B5)', () => {
@@ -276,6 +312,38 @@ describe('BN3 Tallink Alert — runFerryStatus (F7 B5)', () => {
     });
     await runFerryStatus(deps(st, { 'tallink.com': html, 'ts.ee': 503, portsofstockholm: 503 }, NOW));
     expect(st.sailings[0]!.status).toBe('ZAPLANOWANY');
+    expect(st.notices).toHaveLength(0);
+    expect(st.risks.some((r) => r.titleKey === 'rk_tallink_alert_ambiguous')).toBe(true);
+  });
+
+  it('F7 R3-B1: okno 1.11 + nierozpoznana data → ryzyko, status bez zmian', async () => {
+    const html = wrapAlert(
+      'MyStar 16:30 departure from Tallinn to Helsinki is cancelled on November 2',
+      '2026-11-01',
+    );
+    const st = new MemStore();
+    st.sailings.push(
+      {
+        id: 's-1030', vessel_id: MYST, route: 'TLL-HEL',
+        departure_at: '2026-11-01T08:30:00.000Z', arrival_at: '2026-11-01T10:30:00.000Z',
+        delayed_departure_at: null, delayed_arrival_at: null,
+        status: 'ZAPLANOWANY', source: 'TALLINK',
+      },
+      {
+        id: 's-1630', vessel_id: MYST, route: 'TLL-HEL',
+        departure_at: '2026-11-01T14:30:00.000Z', arrival_at: '2026-11-01T16:30:00.000Z',
+        delayed_departure_at: null, delayed_arrival_at: null,
+        status: 'ZAPLANOWANY', source: 'TALLINK',
+      },
+      {
+        id: 's-2230', vessel_id: MYST, route: 'TLL-HEL',
+        departure_at: '2026-11-01T20:30:00.000Z', arrival_at: '2026-11-01T22:30:00.000Z',
+        delayed_departure_at: null, delayed_arrival_at: null,
+        status: 'ZAPLANOWANY', source: 'TALLINK',
+      },
+    );
+    await runFerryStatus(deps(st, { 'tallink.com': html, 'ts.ee': 503, portsofstockholm: 503 }, NOW));
+    expect(st.sailings.every((s) => s.status === 'ZAPLANOWANY')).toBe(true);
     expect(st.notices).toHaveLength(0);
     expect(st.risks.some((r) => r.titleKey === 'rk_tallink_alert_ambiguous')).toBe(true);
   });

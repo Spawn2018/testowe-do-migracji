@@ -4,6 +4,7 @@
  * Decyzja 59: jawne odwołanie + jednoznaczne dopasowanie (pełna pula statek/trasa/okno;
  * data+HH:MM z treści, Europe/Tallinn, ±30 min) → ODWOLANY; inaczej FERRY MEDIUM.
  * F7 #683 B1–B4; R2-B2: >1 HH:MM lub >1 data w treści → niejednoznaczne.
+ * R3-B1: ODWOLANY tylko przy dacie sparsowanej z treści; Scheduler = wyłącznie wygaśnięcie.
  * Kampanie pomijane. User-Agent uczciwy; bez obchodzenia.
  */
 import type { FerryRoute } from './polferries.ts';
@@ -47,10 +48,10 @@ export interface TallinkAlert {
   /** F7 #683 R2-B2: >1 różna HH:MM lub >1 data w treści. */
   multiTime: boolean;
   routes: FerryRoute[];
-  /** Okno Scheduler (wyświetlanie CMS) — zapas, gdy brak daty w treści. */
+  /** Okno Scheduler (wyświetlanie CMS) — tylko do odrzucania wygasłych (R3-B1). */
   windowStartYmd: string | null;
   windowEndYmd: string | null;
-  /** Data z treści Alertu (B2) — ma pierwszeństwo przed Scheduler. */
+  /** Data z treści Alertu (B2/R3-B1) — wymagana do automatycznego ODWOLANY. */
   contentStartYmd: string | null;
   contentEndYmd: string | null;
   /** Godzina lokalna Tallinn HH:MM z treści (±30 min). */
@@ -192,12 +193,14 @@ export function parseAlertContentDates(
   };
 }
 
-/** Czy odejście pasuje do Alertu — Europe/Tallinn; content* > Scheduler; ±30 min przy HH:MM. */
+/** Czy odejście pasuje do Alertu — Europe/Tallinn; tylko data z treści (R3-B1); ±30 min przy HH:MM. */
 export function departureMatchesAlert(departureIso: string, alert: TallinkAlert): boolean {
   const { ymd, hm } = tallinnYmdHm(departureIso);
-  const start = alert.contentStartYmd ?? alert.windowStartYmd;
-  const end = alert.contentEndYmd ?? alert.windowEndYmd;
-  if (start && ymd < start) return false;
+  // F7 #683 R3-B1: bez contentStartYmd → brak dopasowania (nie używaj okna Schedulera).
+  const start = alert.contentStartYmd;
+  const end = alert.contentEndYmd;
+  if (!start) return false;
+  if (ymd < start) return false;
   if (end && ymd > end) return false;
   if (alert.contentHm) {
     if (Math.abs(hmToMin(hm) - hmToMin(alert.contentHm)) > 30) return false;
@@ -310,9 +313,11 @@ export function matchTallinkAlertSailings(
   sailings: TallinkAlertMatchCandidate[],
 ): TallinkAlertMatch {
   if (alert.multiVessel || alert.multiTime) return { kind: 'ambiguous', candidates: [] };
+  // F7 #683 R3-B1: bez daty w treści → ryzyko MEDIUM (nie dopasowuj do daty okna Schedulera).
+  if (!alert.contentStartYmd) return { kind: 'ambiguous', candidates: [] };
 
-  const start = alert.contentStartYmd ?? alert.windowStartYmd;
-  if (alert.vessel && start) {
+  const start = alert.contentStartYmd;
+  if (alert.vessel) {
     const vesselSails = sailings.filter((s) => s.vesselName === alert.vessel);
     if (vesselSails.length > 0) {
       const lastMs = Math.max(...vesselSails.map((s) => Date.parse(s.departureAt)));

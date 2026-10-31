@@ -1227,6 +1227,8 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-107 | Cursor | rok z `dateStart` Schedulera — data styczniowa w komunikacie grudniowym → zły rok | F7 #683 r2 | BN3 | w kolejce |
 | DP-108 | Cursor | test DB łańcucha AUTO bez asercji `FERRY_CANCELLED` | F7 #683 r2 | BN3 | w kolejce |
 | DP-109 | Cursor | `RESUME_RE` `returns? to` może wyciszyć prawdziwe odwołanie („passengers return to Tallinn by bus”) — zawęzić do statku/trasy; redundantny warunek w `classify` | F7 #683 r2 | BN3 | w kolejce |
+| DP-111 | Cursor | rozpoznawanie częstych form dat Tallink Alert („November 2”, „2nd November”, „2–4 November”, „from 2 to 4 November”, „tomorrow”, dni tygodnia) | F7 #683 r3 | BN3 | w kolejce |
+| DP-112 | Cursor | godziny w nawiasie z „UTC/local/Finnish/Swedish time” odfiltrować przed liczeniem multiTime (zakres „HH:MM–HH:MM” zostaje ambiguous) | F7 #683 r3 | BN3 | w kolejce |
 | DP-22 | Cursor | Stan systemu: ostrzeżenie z `summary` odrzuconego legu z bazy (nie tylko `points not null`); fundament 0354 + `checkRoads` | F7 #673 r1 N5 / r2 | #667 D | fundament w #673; UI w kolejce |
 | DP-23 | Cursor | Słownik legów drogowych w bazie zamiast `IN (…)` / `ROAD_LEGS` w kodzie | F7 #673 r1 N2 | #667 E / BN7 | SCALONE (#677 `675bb299` / 0355) |
 | DP-24 | Cursor | `corridor_fetches.leg` / `corridor_obstacles.leg` + SE-KAA-INLAND gdy przeszkody H3 obejmą inland | F7 #673 r1 N3 | po #667 | w kolejce |
@@ -1293,7 +1295,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 Źródło: #573 + komentarze BN3 31.10 (spec + decyzje 57–61). Po #667; DP-21 → #666 (63b).
 ~~Wycinek 1~~ SCALONE (#680 `8100f685` / **0356**): decyzja 60 + ręczny komunikat 6 armatorów (`p_operator`, formularz).
 ~~Wycinek 2~~ SCALONE (#682 `a9c396d7` / **0357** + F7 r1–r2): DFDS remark/ETA + Portnet ATA + SOURCE_DOWN MEDIUM (**decyzja 67**).
-**Wycinek 3** (`pakiet/bn3-tallink-tsee-auto` / PR #683): ~~DP-94/95/96~~; **0358** `operator_notices.source` AUTO; Tallink Alert / ts.ee — **F7 R2-B2 w toku** (B1–B5 + asercja 0358 zrobione; >1 HH:MM/data → ambiguous; nie przekreślać do F7 OK); DP-97…103, DP-105…109 w kolejce.
+**Wycinek 3** (`pakiet/bn3-tallink-tsee-auto` / PR #683): ~~DP-94/95/96~~; **0358** `operator_notices.source` AUTO; Tallink Alert / ts.ee — **F7 R3-B1 w toku** (B1–B5 + R2 + R3-B1: ODWOLANY tylko przy dacie z treści; nie przekreślać do F7 OK); DP-97…103, DP-105…109, DP-111/112 w kolejce.
 1. ~~**60** Tallink poza PLD–KPS~~ — baza już tylko DFDS; front `ferryCatalog` bez TALLINK; test bn9a.
 2. Źródła → update — ~~**DFDS remark**~~; ~~Portnet ATA~~; ts.ee Lisainfo / Tallink Alert (F7 #683).
 3. ~~Opóźnienie: ATA − arrival; `FERRY_PORT_DELAY_MIN` z `app_parameters` (zapas 15)~~ (**0357** + Portnet + store F7 B1); ~~ATD 13–19 min przed planem bez delayed (DP-94)~~; ATD tylko gdy wiarygodne — dalej.
@@ -2273,4 +2275,5 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 31.10.2026 09:45 | #683 F7 POPRAWKI B1–B5 Tallink Alert (pełna pula, data/HH:MM z treści, negacja, multi-statek, testy+0358 DB); DP-98…103 | pętla |
 | 31.10.2026 10:15 | #683 CI db FAIL: ferry-status 0358 asercja `true/AUTO` (nie `t`); czekam CI → gotowe do F7 | pętla |
 | 31.10.2026 10:30 | #683 F7 R2-B2: >1 HH:MM/data w Tallink Alert → multiTime/ambiguous; DP-105…109; CI @ f42ce3a0 zielone | pętla |
+| 31.10.2026 11:05 | #683 F7 R3-B1: ODWOLANY tylko przy dacie z treści; Scheduler = wygaśnięcie; DP-111/112; potem #685 | pętla |
 

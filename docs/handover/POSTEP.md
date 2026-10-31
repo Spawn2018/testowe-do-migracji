@@ -7435,6 +7435,13 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (odbiór prod):** SELECT `here_road_legs` — **12** / active 12 / `browser_fetch` 5; core bez zmian (3495/12561/3742/18854/19408); BN7 7× null. `here-roads` **#108803** @ 04:49Z ok (0 prób — core świeże; BN7 poza cronem). Komentarz w #667. **Dalej:** BN3 (#573).
 - Bez push na main.
 
+## 2026-10-31 11:00 — #683 F7 R3-B1: data tylko z treści
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE; #499/#537/#538/#500 w planie. Bez nowych `pilne`.
+- Scalanie: #683 — F7 r3 **POPRAWKI** R3-B1 @ `18b7b7ef` (CI unit/db/visual ✔). Bez „F7: gotowe do scalenia”. #684 wygląd bez F7. Bez push na main.
+- **Krok R3-B1:** `departureMatchesAlert` / `matchTallinkAlertSailings` — automatyczne ODWOLANY tylko przy `contentStartYmd`; okno Schedulera wyłącznie do wygaśnięcia; bez daty w treści → `ambiguous` (ryzyko MEDIUM). Testy: tomorrow / Monday / November 2 / 2nd / from–to + job. PLAN: DP-111/112. **Dalej:** CI → „gotowe do F7 @ sha”; po F7 → #685 (rozkład Vikinga). DP-97 osobno (nie na #683).
+- Bez push na main.
+
 ## 2026-10-31 10:35 — #683 F7 R2-B2: multiTime (>1 HH:MM/data)
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE; #499/#537/#538/#500 w planie. Bez nowych `pilne`.
