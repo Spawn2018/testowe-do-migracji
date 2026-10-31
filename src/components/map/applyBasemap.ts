@@ -4,12 +4,14 @@ import {
   ROAD_PL,
   ROAD_SE,
   ROAD_KAA,
+  ROAD_KAA_E22,
   basemapFor,
   looseRoadOk,
   roadGeometryOk,
   warsawMonth,
   type BasemapChoice,
   type LatLng,
+  type RoadSpec,
   type ThemeName,
 } from '../../lib/map/draw';
 import { HERE_BROWSER_KEY, directTileTemplate, servedFromCache, sharedTileMeter } from './hereTileMeter';
@@ -219,22 +221,44 @@ export async function applyBasemap(
   return layer;
 }
 
-const SPEC: Record<string, typeof ROAD_PL | typeof ROAD_SE | typeof ROAD_KAA | 'loose'> = {
+/** #667 F7 r1 B1: SE-KAA = E22 (bez Västerås); SE-KAA-INLAND = śródlądowa z Västerås. */
+const SPEC: Record<string, RoadSpec | 'loose'> = {
   'PL-GDN': ROAD_PL,
   'SE-NYN': ROAD_SE,
   'PL-GDY': 'loose',
-  'SE-KAA': ROAD_KAA,
+  'SE-KAA': ROAD_KAA_E22,
+  'SE-KAA-INLAND': ROAD_KAA,
 };
 
-export function acceptedRoads(rows: unknown): LatLng[][] {
-  if (!Array.isArray(rows)) return [];
+function roadLineWhy(leg: string, spec: RoadSpec | 'loose', line: LatLng[]): string | null {
+  if (line.length < 2) return 'brak punktów';
+  if (spec === 'loose') return looseRoadOk(line) ? null : 'geometria (luźna)';
+  return roadGeometryOk(line, spec) ? null : 'geometria (via/długość)';
+}
+
+/**
+ * #667 F7 r1 N5/N7: przyjęte linie + powody odrzuceń (jak checkFerries).
+ * #667 F7 r2 / DP-22: przy braku punktów — `summary` z bazy (odchyłka / HTTP / oczekuje).
+ * Pełne ostrzeżenie w Stanie systemu → DP-22 (UI).
+ */
+export function checkRoads(rows: unknown): {
+  accepted: LatLng[][];
+  rejected: { leg: string; why: string }[];
+} {
+  const rejected: { leg: string; why: string }[] = [];
+  if (!Array.isArray(rows)) return { accepted: [], rejected };
   const out: LatLng[][] = [];
   for (const row of rows) {
     if (!row || typeof row !== 'object') continue;
     const leg = String((row as { leg?: string }).leg ?? '');
     const spec = SPEC[leg];
     const points = (row as { points?: unknown }).points;
-    if (!spec || !Array.isArray(points)) continue;
+    const summary = String((row as { summary?: string }).summary ?? '').trim();
+    if (!spec) continue;
+    if (!Array.isArray(points) || points.length < 2) {
+      rejected.push({ leg, why: summary || 'brak punktów' });
+      continue;
+    }
     const line: LatLng[] = [];
     for (const p of points) {
       if (!Array.isArray(p) || p.length < 2) continue;
@@ -242,60 +266,101 @@ export function acceptedRoads(rows: unknown): LatLng[][] {
       const lng = Number(p[1]);
       if (Number.isFinite(lat) && Number.isFinite(lng)) line.push([lat, lng]);
     }
-    const ok = spec === 'loose' ? looseRoadOk(line) : roadGeometryOk(line, spec);
-    if (ok) out.push(line);
+    if (line.length < 2) {
+      rejected.push({ leg, why: summary || 'brak punktów' });
+      continue;
+    }
+    const why = roadLineWhy(leg, spec, line);
+    if (why) rejected.push({ leg, why: summary && /odchyłka|odrzucon|HTTP/i.test(summary) ? summary : why });
+    else out.push(line);
   }
-  return out;
+  return { accepted: out, rejected };
 }
 
-const ROAD_LEGS = 4; // PL-GDN, SE-NYN, PL-GDY, SE-KAA (#572 BN0)
+export function acceptedRoads(rows: unknown): LatLng[][] {
+  return checkRoads(rows).accepted;
+}
+
+/** Skrót odrzuceń do `data-roads` (TEST) — pełny Stan systemu = DP-22. */
+export function roadsRejectSummary(rejected: { leg: string; why: string }[]): string {
+  if (rejected.length === 0) return '';
+  return rejected.map((r) => `${r.leg}: ${r.why}`).join(' · ');
+}
+
+const ROAD_LEGS = 5; // PL-GDN, SE-NYN, PL-GDY, SE-KAA, SE-KAA-INLAND (#667 B)
+
+/** #667: re-export — helper bez auth w `orangeRoads.ts` (paczka demo nie ciągnie applyBasemap). */
+export { ORANGE_ROAD_STYLE, paintOrangeRoads } from './orangeRoads';
 
 /** F7 #585: jedno wołanie here-roads na sesję + limit czasu (brakujący leg nie spamuje Edge). */
 let hereRoadsSessionAt = 0;
-const HERE_ROADS_SESSION_MS = 5 * 60_000;
+/** #667 F7 r2: równoległe mapPool+CorridorMap dzielą jedną obietnicę POST (bez dwóch płatnych tras). */
+let hereRoadsInFlight: Promise<LatLng[][]> | null = null;
+let HERE_ROADS_SESSION_MS = 5 * 60_000;
 const HERE_ROADS_TIMEOUT_MS = 15_000;
 
+/** #667 F7 r4: reset cache/in-flight w testach jednostkowych `loadRoadLines`. */
+export function __resetRoadLinesCacheForTests(): void {
+  displayState = null;
+  hereRoadsSessionAt = 0;
+  hereRoadsInFlight = null;
+}
+
+/** #667 F7 r6 B6: okno sesji 0 w teście in-flight (żeby drugi call nie odpadał po finally). */
+export function __setHereRoadsSessionMsForTests(ms: number): void {
+  HERE_ROADS_SESSION_MS = ms;
+}
+
+/** #667 F7 r1 N4: loadRoadLines + loadFerryLines dzielą cache `readMapDisplayState` (TTL 60 s). */
 export async function loadRoadLines(): Promise<LatLng[][]> {
   if (!SUPABASE_AUTH_ENABLED) return [];
-  try {
-    const { getSupabase } = await import('../../auth/client');
-    const sb = await getSupabase();
-    const read = async (force = false) => acceptedRoads((await readMapDisplayState(force))?.roads);
-    let lines = await read();
-    // #572: nie kończ przy 2 legach — SE-KAA musi się dociągnąć (via SE_KAA_TRACK).
-    if (lines.length >= ROAD_LEGS) return lines;
-    if (hereRoadsSessionAt > 0 && Date.now() - hereRoadsSessionAt < HERE_ROADS_SESSION_MS) return lines;
-    const { data } = await sb.auth.getSession();
-    const token = data.session?.access_token;
-    if (!token) return lines;
-    const ac = new AbortController();
-    const timer = setTimeout(() => ac.abort(), HERE_ROADS_TIMEOUT_MS);
+  // F7 r5 B6: in-flight synchronicznie przed pierwszym await (read/getSession),
+  // żeby równoległe wołania dzieliły jedną obietnicę / 1× POST.
+  if (hereRoadsInFlight) return hereRoadsInFlight;
+  hereRoadsInFlight = (async () => {
     try {
-      await fetch(`${SUPABASE_URL}/functions/v1/here-roads?forceFunctionRegion=${FUNCTION_REGION}`, {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${token}`,
-          apikey: SUPABASE_ANON_KEY,
-          'Content-Type': 'application/json',
-        },
-        body: '{}',
-        signal: ac.signal,
-      });
+      const { getSupabase } = await import('../../auth/client');
+      const sb = await getSupabase();
+      const read = async (force = false) => acceptedRoads((await readMapDisplayState(force))?.roads);
+      let lines = await read();
+      // #572 / #667: nie kończ przy 2 legach — SE-KAA z SE_E22 + INLAND.
+      if (lines.length >= ROAD_LEGS) return lines;
+      if (hereRoadsSessionAt > 0 && Date.now() - hereRoadsSessionAt < HERE_ROADS_SESSION_MS) return lines;
+      const started = lines;
+      const { data } = await sb.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) return started;
+      const ac = new AbortController();
+      const timer = setTimeout(() => ac.abort(), HERE_ROADS_TIMEOUT_MS);
+      try {
+        await fetch(`${SUPABASE_URL}/functions/v1/here-roads?forceFunctionRegion=${FUNCTION_REGION}`, {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${token}`,
+            apikey: SUPABASE_ANON_KEY,
+            'Content-Type': 'application/json',
+          },
+          body: '{}',
+          signal: ac.signal,
+        });
+      } catch {
+        // F7 N6: timeout/sieć — zostaw już wczytane legi (nie [] z zewnętrznego catch).
+      } finally {
+        clearTimeout(timer);
+        hereRoadsSessionAt = Date.now();
+      }
+      try {
+        return await read(true);
+      } catch {
+        return started;
+      }
     } catch {
-      // F7 N6: timeout/sieć — zostaw już wczytane legi (nie [] z zewnętrznego catch).
+      return [];
     } finally {
-      clearTimeout(timer);
-      hereRoadsSessionAt = Date.now();
+      hereRoadsInFlight = null;
     }
-    try {
-      lines = await read(true);
-    } catch {
-      /* zostaw lines */
-    }
-    return lines;
-  } catch {
-    return [];
-  }
+  })();
+  return hereRoadsInFlight;
 }
 
 

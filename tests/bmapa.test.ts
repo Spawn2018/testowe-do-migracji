@@ -177,17 +177,25 @@ describe('B-MAPA geometria', () => {
     expect(kaaDeviationOk(chord, dense)).toBe(false);
     const apply = readFileSync('src/components/map/applyBasemap.ts', 'utf8');
     expect(apply).toMatch(/ROAD_KAA/);
-    expect(apply).toMatch(/ROAD_LEGS = 4/);
+    expect(apply).toMatch(/ROAD_LEGS = 5/); // #667 B: + SE-KAA-INLAND
+    expect(apply).toMatch(/SE-KAA-INLAND/);
     expect(apply).toMatch(/AbortController/);
     expect(apply).toMatch(/timeout\/sieć/);
     const edge = readFileSync('supabase/functions/here-roads/index.ts', 'utf8');
-    expect(edge).toMatch(/passThrough=true/);
-    expect(edge).toMatch(/here_corridor_via_points/);
-    expect(edge).toMatch(/kaaDeviationOk/);
-    expect(edge).toMatch(/shouldFetch/);
-    expect(edge).toMatch(/roadKaaSpecFromVia/);
-    expect(edge).toMatch(/SE_KAA_TRACK/);
-    expect(edge).not.toMatch(/SE_E22/);
+    const refresh = readFileSync('supabase/functions/_shared/here/refreshRoadLegs.ts', 'utf8');
+    // #667 C: logika w refreshRoadLegs; Edge woła wspólny helper (+ cron service role).
+    expect(edge).toMatch(/refreshRoadLegs/);
+    expect(edge).toMatch(/isServiceRequest/);
+    expect(refresh).toMatch(/passThrough=true/);
+    expect(refresh).toMatch(/kaaDeviationOk/);
+    expect(refresh).toMatch(/shouldFetch/);
+    expect(refresh).toMatch(/roadKaaSpecFromVia/);
+    expect(refresh).toMatch(/loadCorridor/);
+    // #667 B / F7 r1 B3: E22 + jawne SE_KAA_INLAND
+    expect(refresh).toMatch(/SE_E22/);
+    expect(refresh).toMatch(/corridorCode: 'SE_KAA_INLAND'/);
+    expect(refresh).not.toMatch(/corridorInland:\s*true/);
+    expect(refresh).not.toMatch(/CORRIDOR_KAA = 'SE_KAA_TRACK'/);
     const mig = readFileSync('supabase/migrations/0316_572_bn0_se_kaa_via.sql', 'utf8');
     expect(mig).toMatch(/SE_KAA_TRACK/);
     expect(mig).toMatch(/retry_after/);

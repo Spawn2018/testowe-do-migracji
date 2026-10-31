@@ -144,7 +144,7 @@ export type SourceId =
   | 'DIGITRAFFIC' | 'DIGITRAFFIC_PORTCALL' | 'PORT_TALLINN' | 'PORTS_STOCKHOLM'
   | 'STENA_IRM' | 'TRAFIKVERKET' | 'KPD_GDDKIA' | 'TOMTOM'
   | 'FMI' | 'DMI' | 'SMHI' | 'MARINE_WEATHER'
-  | 'HERE_TRAFFIC_PL' | 'EMTRACK_WEB' | 'RIO' | 'KSH_SHAREPOINT';
+  | 'HERE_TRAFFIC_PL' | 'HERE_ROADS' | 'EMTRACK_WEB' | 'RIO' | 'KSH_SHAREPOINT';
 const SOURCE_LABEL: Record<SourceId, string> = {
   POLFERRIES_STATUS: 'status promów (Polferries)', POLFERRIES_SCHEDULE: 'rozkład promów (Polferries)',
   STENA_STATUS: 'status promów (Stena Line)', STENA_SCHEDULE: 'rozkład promów (Stena Line)',
@@ -157,6 +157,7 @@ const SOURCE_LABEL: Record<SourceId, string> = {
   FMI: 'pogoda morska (FMI)', DMI: 'pogoda morska (DMI)', SMHI: 'pogoda morska (SMHI)',
   MARINE_WEATHER: 'pogoda morska (FMI+DMI+SMHI)',
   HERE_TRAFFIC_PL: 'utrudnienia drogowe PL (HERE)',
+  HERE_ROADS: 'geometria tras drogowych (HERE)',
   EMTRACK_WEB: 'telematyka naczep (emtrack web)',
   RIO: 'RIO',
   KSH_SHAREPOINT: 'Plik KSH (SharePoint)',
@@ -168,7 +169,8 @@ const SOURCE_KIND: Record<SourceId, RiskKind> = {
   DIGITRAFFIC: 'FERRY', DIGITRAFFIC_PORTCALL: 'FERRY', PORT_TALLINN: 'FERRY', PORTS_STOCKHOLM: 'FERRY',
   STENA_IRM: 'FERRY', TRAFIKVERKET: 'ROAD_SE', KPD_GDDKIA: 'ROAD_PL', TOMTOM: 'ROAD_SE',
   FMI: 'FERRY', DMI: 'FERRY', SMHI: 'FERRY', MARINE_WEATHER: 'FERRY',
-  HERE_TRAFFIC_PL: 'ROAD_PL', EMTRACK_WEB: 'JOB_FAILURE', RIO: 'JOB_FAILURE',
+  HERE_TRAFFIC_PL: 'ROAD_PL', HERE_ROADS: 'JOB_FAILURE',
+  EMTRACK_WEB: 'JOB_FAILURE', RIO: 'JOB_FAILURE',
   KSH_SHAREPOINT: 'JOB_FAILURE',
 };
 
@@ -181,7 +183,7 @@ const warsawStamp = (utc: string) => new Intl.DateTimeFormat('pl-PL', {
  *  Emtrack (A8) i RIO (E44): jeden klucz bez daty, w tytule „od kiedy”. Reszta: jeden klucz na dzień.
  *  F7 #661 Decyzja 50: VIKING_SCHEDULE = MEDIUM (Imperva 403 — bez obchodzenia; HHL, bez push/e-mail). */
 export function sourceDownRisk(src: SourceId, warnings: string[], nowIso: string, url?: string): RiskInput {
-  const sticky = src === 'EMTRACK_WEB' || src === 'RIO' || src === 'KSH_SHAREPOINT';
+  const sticky = src === 'EMTRACK_WEB' || src === 'RIO' || src === 'KSH_SHAREPOINT' || src === 'HERE_ROADS';
   const when = warsawStamp(nowIso);
   return {
     kind: SOURCE_KIND[src],

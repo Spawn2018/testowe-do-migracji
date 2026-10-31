@@ -47,7 +47,7 @@ describe('A6-T1 klucze ryzyk', () => {
       'DIGITRAFFIC', 'DIGITRAFFIC_PORTCALL', 'PORT_TALLINN', 'PORTS_STOCKHOLM',
       'STENA_IRM', 'TRAFIKVERKET', 'KPD_GDDKIA', 'TOMTOM',
       'FMI', 'DMI', 'SMHI', 'MARINE_WEATHER',
-      'HERE_TRAFFIC_PL', 'EMTRACK_WEB', 'RIO', 'KSH_SHAREPOINT',
+      'HERE_TRAFFIC_PL', 'HERE_ROADS', 'EMTRACK_WEB', 'RIO', 'KSH_SHAREPOINT',
     ];
     expect(metrics.length).toBe(4); expect(jobs.length).toBe(4); expect(srcs).toEqual(SOURCE_IDS);
     const need = [...metrics.map((m) => `usage_metric_${m}`), ...jobs.map((j) => `job_label_${j.replace(/-/g, '_')}`), ...srcs.map((x) => `rk_src_${x}`)];

@@ -7294,4 +7294,80 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Skrzynka: #666 ten PR (F7 r7); #667 F7 r3 POPRAWKI (SE_E22=0298 + kaaDeviationOk) — po #668; #550 WSTRZYMANE.
 - Scalanie: brak „F7: gotowe do scalenia”. CI r6 @ 0430f292 było zielone; nowy commit unieważnia.
 - **Krok (F7 r7):** decyzja 50 — `apiSailingsCount`; resolveRisks tylko gdy API dało rejsy; sam PDF/HTML → SOURCE_DOWN MEDIUM („główne źródło… zapas PDF”). B1 — tydz.1 PLD `{}`/junk/nieczytelne + reszta OK → PDF + „częściowa awaria API (19/20)”; deterministyczne `{}`+PDF / `{}` bez PDF. B2 — h4: HEL–TLL, potem TLL–HEL. Unit bn2-ferry-* 66/66. **Dalej:** CI → gotowe do F7 → #667.
+
+## 2026-10-30 20:10 — #667 krok A (mapPool PROD) przy F7 #668
+
+- Skrzynka: #666/#667/#608 w planie; #550 WSTRZYMANE; #671 zamknięte (rejestr DP).
+- Scalanie: PR #668 CI zielone @ `5aaa0544` — brak „F7: gotowe do scalenia”; PR #672 wygląd DP — visual w toku / bez F7. Bez scalenia.
+- **Krok (#667 A):** wspólny `paintOrangeRoads` / `ORANGE_ROAD_STYLE`; `mapPool` ładuje drogi w PROD przez `loadRoadLines`; GeofenceEditorMap + ZonesMap + CorridorMap; test `i667-orange-roads`. PLAN §4 #666+#667+DP + ZASADY DP. **Dalej w #667:** SE-KAA + obie drogi Karlskrona; cron HERE przed purge; diagnostyka rejected legs; słownik BN7; e2e prod.
+- Bez push na main.
+
+## 2026-10-30 20:55 — #667 B SE-KAA dual (E22 + inland)
+
+- Skrzynka: #666 W TOKU (PR #668 F7 r2 @ `084b5f77` — czekam „gotowe do scalenia”; CI db/visual w toku G-15); #667 ten PR; #608 w planie; #550 WSTRZYMANE. #674 wygląd DP-front-2 bez F7.
+- Scalanie: brak „F7: gotowe do scalenia” na #668/#673/#674. Bez scalenia. Bez push na main.
+- **Krok (#667 B):** migracja **0352** — leg `SE-KAA-INLAND`; `here_store_road` / `here_road_corridor_dev_m`. Edge `here-roads`: `SE-KAA` ← via `SE_E22`; `SE-KAA-INLAND` ← `stena_se_inland_corridor_code()` (bez pustego TRACK). Front `ROAD_LEGS=5` + SPEC. Testy unit i667/bmapa; bmapa EXPECTED 168→173. **Dalej:** C cron HERE przed purge; D diagnostyka; E słownik BN7; F e2e prod.
+- Bez push na main.
+
+## 2026-10-30 21:30 — #667 C cron HERE (przed purge)
+
+- Skrzynka: #666 W TOKU (PR #668 F7 r3 @ `3ae700fc` — czekam „gotowe do scalenia”; CI db/visual w toku → G-15 bez push na #668); #667 ten PR; #608 w planie; #550 WSTRZYMANE. #674 bez F7.
+- Scalanie: brak „F7: gotowe do scalenia”. Kolejność: #668 (0351) przed #673 (0352/0353). Bez push na main.
+- **Krok (#667 C):** wspólny `refreshRoadLegs` (próg cron 21 d); Edge `here-roads` dual (JWT przeglądarka / service cron); job `here-roads` + SOURCE_DOWN `HERE_ROADS` sticky; migracja **0353** `tower-here-roads` (04:15 UTC). Testy i667/bmapa/risk-keys/refresh. **Dalej:** D diagnostyka; E BN7; F e2e prod.
+- Bez push na main.
+
+## 2026-10-30 22:25 — #667 F7 r1 POPRAWKI (B1–B3, N1/N4/N7); #674 SCALONE
+
+- Skrzynka: #666 W TOKU (PR #668 F7 r4 @ 86e27298 — CI unit/db/visual ✔; czekam „F7: gotowe do scalenia”); #667 ten PR; #608 w planie; #550 WSTRZYMANE.
+- Scalanie: **#674 SCALONE** `8f916302` (F7 gotowe @ 511567b; DP-14…20). #668/#673 bez F7 gotowe. Kolejność: #668 (0351) → #673 (0352/0353). Bez push na main.
+- **Krok (F7 r1 #673):** B1 — SPEC SE-KAA = ROAD_KAA_E22 (bez Västerås); B2 — ZonesMap osobna warstwa roads (także mode=one); B3 — corridorCode SE_KAA_INLAND jawnie; N1 — HTTP → retry_after +1 h; N4 — cache map_display_state; N5 → DP-22; N2/N3 → DP-23/24; DP-25…28 z F7 #674. Testy i667-f7-r1 + i667/bmapa/refresh. C termin ≤ 04.11. **Dalej:** CI → gotowe do F7; potem D/E/F.
+- Bez push na main.
+
+## 2026-10-30 23:05 — #667 F7 r2 POPRAWKI (B4 korytarze + uwagi)
+
+- Skrzynka: #666 W TOKU (PR #668 @ `ac8471fa` — F7 r5; CI db/visual w toku / czekam „F7: gotowe do scalenia”); #667 ten PR; #608 w planie; #550 WSTRZYMANE.
+- Scalanie: brak „F7: gotowe do scalenia”. Kolejność: #668 (0351) → #673 (0352–0354). Bez push na main.
+- **Krok (F7 r2 #673):** B4 — migracja **0354** SE_E22/SE_KAA_INLAND (origin 56.1646,15.6308; Luleå E4/97 65.606,22.053); `map_display_state` + summary (fundament DP-22); `checkRoads` czyta summary; `hereRoadsInFlight`; MIN_INTERVAL 1380; usunięty martwy `inlandCorridorCode`; testy B1 21+ wierzch. + B2 jsdom (`jsdom` + projekt vitest). Unit fokus i667/bmapa ✔. **Dalej:** CI → gotowe do F7; potem UI DP-22 / E / F.
+- Bez push na main.
+
+
+## 2026-10-31 00:10 — #667 F7 r3 POPRAWKI (B5 SE_E22 0298 + B4 sparse)
+
+- Skrzynka: #666 W TOKU (PR #668 @ `f0dfbc61` — F7 r7; CI db/visual w toku; czekam „F7: gotowe do scalenia”); #667 ten PR; #608 w planie; #550 WSTRZYMANE.
+- Scalanie: brak „F7: gotowe do scalenia” na #668/#673. Kolejność: #668 (0351) → #673 (0352–0354). Bez push na main.
+- **Krok (F7 r3 #673):** B5 — 0354 SE_E22 = 30 pkt z 0298 (Vagnhärad 17.50/58.95; Brömsebro 15.99); tylko origin HERE + Luleå E4/97. B4 — `kaaDeviationOk` sparse dla SE_E22/INLAND (controlPts ≤2 km; linia→korytarz 15 km); TRACK bez zmian. Uwagi: B2 render ZonesMap; usunięty `environmentMatchGlob` i martwy `stenaSeInlandCorridorCode`; test `hereRoadsInFlight`. Unit fokus i667 ✔. **Dalej:** CI → gotowe do F7; potem D/E/F.
+
+## 2026-10-31 00:25 — #668 SCALONE; #673 merge main + DP-29…32
+
+- Skrzynka: **#666** SCALONE; **#667** W TOKU (ten PR); #608 w planie; #550 WSTRZYMANE.
+- Scalanie: **#668 SCALONE** `53890480` (F7 gotowe @ `f0dfbc61` / **0351**, 23:17Z). #673 — merge main; F7 r3 @ `ee43be3a` wcześniej; **czekam F7 „gotowe do scalenia”**.
+- **Krok:** konflikty PLAN/POSTEP po merge main; #666 → SCALONE; rejestr **DP-29…32** (F7 #668 r8 nieblokujące). Dalej: CI → F7 → deploy → DP-21 / ręczny ferry-schedule.
+- Bez push na main.
+
+## 2026-10-31 00:45 — #667 F7 r4 POPRAWKI (dens. Umeå–Skellefteå + CI bmapa)
+
+- Skrzynka: **#667** W TOKU (ten PR); #666 SCALONE; #608 w planie; #550 WSTRZYMANE.
+- Scalanie: brak „F7: gotowe do scalenia” na #673. CI @ `e386b06c`: unit/visual ✔, **db FAIL** bmapa roads 5≠4. F7 r4 POPRAWKI.
+- **Krok (F7 r4 #673):** B4 — 0354: wierzchołek `21.2932/64.3511` (E22+INLAND); INLAND `16.120/59.279`; Rockneby/Västervik na E22. B4-test — fixture `se-nyn-north-here.json` + via jak `here_corridor_via_points`; pada na korytarzu sprzed dens., przechodzi po r4. CI — bmapa `roads=5` (legi z `points=null`). Uwaga 1 — prawdziwe `loadRoadLines` + atrapa fetch/Supabase. Uwaga 3 — `monthSpend` null → bez HERE. Unit fokus i667 ✔ (16). **Dalej:** CI → gotowe do F7; potem D/E/F.
+- Bez push na main.
+
+## 2026-10-31 01:15 — #667 F7 r5 POPRAWKI (fixture prod + B6/B7)
+
+- Skrzynka: **#667** W TOKU (ten PR); #608 w planie; #550 WSTRZYMANE; #675 wygląd bez F7.
+- Scalanie: brak „F7: gotowe do scalenia”. CI @ `ff28f980` unit/db/visual ✔; F7 r5 POPRAWKI @ 00:05Z.
+- **Krok (F7 r5 #673):** B4-test (a) fixture SE-NYN północ z `here_road_geometry` (lat≥63.2, ~3 km); (b) `segKm` haversine + lista via SQL po B7. B6 — `hereRoadsInFlight` przed `getSession`; test `vi.waitFor` + 1 POST. B7 — 0354 Uppsala `17.6953/59.8767`, Gävle `17.109/60.6638`, Hudiksvall `17.065/61.7279`. Uwagi: INLAND 16.120/59.279 = OSRM (SELECT po deploy); Norwegia też INLAND; `runHereRoads` bez `hereMonthSpend`; bmapa 174 INLAND null+summary. **Dalej:** CI → gotowe do F7; potem D/E/F.
+- Bez push na main.
+
+## 2026-10-31 01:35 — #675 SCALONE; #667 F7 r6 (bmapa JSON null)
+
+- Skrzynka: **#667** W TOKU (ten PR); #608 w planie; #550 WSTRZYMANE.
+- Scalanie: **#675** SCALONE `6660b3c8` (F7: gotowe do scalenia @ 0698399; DP-6, DP-25…28). #673 bez „gotowe do scalenia”; CI db @ `18be834b` FAIL bmapa `SE-KAA-INLAND null+summary` (173/174).
+- **Krok (F7 r6 #673):** asercja bmapa — `jsonb_typeof(e->'points') = 'null'` zamiast `(e->'points') IS NULL` (Postgres: JSON null ≠ SQL NULL po `jsonb_build_object`). Merge `origin/main` (#675). DP-6/25–28 → SCALONE; rejestr **DP-34…37** (F7 #675 nieblokujące). **Dalej:** CI → gotowe do F7; potem E BN7 (DP-23) / F e2e.
+- Bez push na main.
+
+## 2026-10-31 01:55 — #667 F7 r6 POPRAWKI (B6 + E4 snap)
+
+- Skrzynka: **#667** W TOKU (ten PR / #673); #608 w planie; #550 WSTRZYMANE. CI @ `247b531c` unit/db/visual ✔.
+- Scalanie: brak „F7: gotowe do scalenia” (F7 r6 @ 00:42 — B6 + uwagi 1–3).
+- **Krok (F7 r6 POPRAWKI #673):** B6 — `vi.mock('@supabase/supabase-js')` + `__setHereRoadsSessionMsForTests(0)`; po `Promise.all` 1× POST (bez strażnika → 2). Uwaga 1/3 — 0354: Umeå `20.3263/63.8127`, Piteå `21.4319/65.3232`, `17.340/62.391` na E4. Uwaga 2 — test (a) czyta korytarze z pliku 0354 (`st_makepoint`). **Dalej:** CI → gotowe do F7; potem E BN7 / F e2e.
 - Bez push na main.

@@ -82,6 +82,8 @@ export default function ZonesMap({ mode, zones = NO_ZONES, zone, prev, draft, ne
   const mapRef = useRef<L.Map | null>(null);
   const groupRef = useRef<L.LayerGroup | null>(null);
   const routeRef = useRef<L.LayerGroup | null>(null);
+  /** #667 F7 r1 B2: osobna warstwa dróg — paintOrangeRoads nie kasuje torów promów. */
+  const roadsRef = useRef<L.LayerGroup | null>(null);
   const tilesRef = useRef<L.Layer | null>(null);
   const onMoveRef = useRef(onMove);
   const fitKey = useRef('');
@@ -95,21 +97,36 @@ export default function ZonesMap({ mode, zones = NO_ZONES, zone, prev, draft, ne
     map.on('click', (e) => onMoveRef.current?.(e.latlng.lat, e.latlng.lng));
     /* P11 (e34): mapa wszystkich stref z trasą — droga (demo: stałe odcinki lądowe; produkcja: trasy HERE z serwera)
        i przerywane przeprawy promowe między miejscami, pod strefami */
+    const roads = L.layerGroup().addTo(map);
+    roadsRef.current = roads;
     const route = L.layerGroup().addTo(map);
     routeRef.current = route;
-    const roadStyle = { color: tok('--amber', '#C97E12'), weight: 3, opacity: 0.8, interactive: false };
-    const drawRoads = (lines: readonly (readonly (readonly [number, number])[])[]) => {
-      for (const line of lines) L.polyline(line.map(([lat, lng]) => L.latLng(lat, lng)), roadStyle).addTo(route);
-    };
-    if (import.meta.env.VITE_AUTH_MODE !== 'supabase') drawRoads(DEMO_ROAD_LINES.map((l) => l));
-    else void import('../map/applyBasemap').then(({ loadRoadLines }) => loadRoadLines()).then((lines) => { if (routeRef.current === route) drawRoads(lines); }).catch(() => undefined);
+    /* #667 F7 r1 B2: drogi na osobnej warstwie (także mode=one); tory w `route`. */
+    if (import.meta.env.VITE_AUTH_MODE !== 'supabase') {
+      void import('../map/orangeRoads').then(({ paintOrangeRoads }) => {
+        if (roadsRef.current === roads) paintOrangeRoads(roads, DEMO_ROAD_LINES.map((l) => [...l]));
+      }).catch(() => undefined);
+    } else {
+      void Promise.all([import('../map/applyBasemap'), import('../map/orangeRoads')]).then(async ([{ loadRoadLines }, { paintOrangeRoads }]) => {
+        const lines = await loadRoadLines();
+        if (roadsRef.current === roads) paintOrangeRoads(roads, lines);
+      }).catch(() => undefined);
+    }
     for (const lane of [WATER_GDN_NYN, WATER_GDY_KAA]) {
       L.polyline(lane.map(([lng, lat]) => L.latLng(lat, lng)), { color: tok('--sea', '#245C87'), weight: 2, opacity: 0.8, dashArray: '6 6', interactive: false }).addTo(route);
     }
     groupRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
     const t = window.setTimeout(() => map.invalidateSize(), 200);
-    return () => { window.clearTimeout(t); map.remove(); mapRef.current = null; groupRef.current = null; routeRef.current = null; tilesRef.current = null; };
+    return () => {
+      window.clearTimeout(t);
+      map.remove();
+      mapRef.current = null;
+      groupRef.current = null;
+      routeRef.current = null;
+      roadsRef.current = null;
+      tilesRef.current = null;
+    };
   }, []);
 
   useEffect(() => {
@@ -149,7 +166,13 @@ export default function ZonesMap({ mode, zones = NO_ZONES, zone, prev, draft, ne
     const slim = (box.current?.clientWidth ?? 1000) < 520;
     const padEnd: [number, number] = [28, slim ? 96 : 28];
     const route = routeRef.current;
-    if (route) { if (mode === 'all') { if (!map.hasLayer(route)) route.addTo(map); } else if (map.hasLayer(route)) map.removeLayer(route); }
+    const roads = roadsRef.current;
+    /* #667 F7 r1 B2: drogi zawsze (all + one); tory promów tylko w mode=all (jak wcześniej). */
+    if (roads && !map.hasLayer(roads)) roads.addTo(map);
+    if (route) {
+      if (mode === 'all') { if (!map.hasLayer(route)) route.addTo(map); }
+      else if (map.hasLayer(route)) map.removeLayer(route);
+    }
     if (mode === 'all') {
       for (const z of zones) {
         if (z.radiusM >= 10_000) continue;

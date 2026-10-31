@@ -45,7 +45,7 @@ export const EXPECTED_LOCAL = {
   h3: 20,
   smsksh: 16,
   'ferry-status': 8,
-  bmapa: 168, // #572 F7 r6b: +2 asercje load istnieje (hhl/carrier_order_no); było 166
+  bmapa: 174, // #667 F7 r5: +1 SE-KAA-INLAND points=null+summary w roads; było 173 (#667 B)
   h4: 19,
   p4k: 111, // #630 F7 r1: +rola PORT_CHECKIN; CROSSING mismatch w medianie; undo 7d
   aud03: 32, // D-0005 F7: +OPS, by=HHL_ADMIN, P2 bez sprawy, ASK_FIX/DECISION_HOLD

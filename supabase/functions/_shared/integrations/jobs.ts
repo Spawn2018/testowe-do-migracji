@@ -60,6 +60,9 @@ import {
 import { buildTrafficIncidentsUrl, parseHereTrafficIncidents } from '../here/trafficIncidents.ts';
 import { HERE_BILLING_DEFAULTS } from '../here/billing.ts';
 import {
+  refreshRoadLegs, ROAD_CRON_REFRESH_MS, type RoadRefreshStore,
+} from '../here/refreshRoadLegs.ts';
+import {
   EMTRACK_EXPECTED_VERSION, EMTRACK_UA, fetchTrackingObjectsReadOnly, pollIntervalSec,
 } from '../telematics/emtrackWeb.ts';
 import { ambiguousMatchCount, loadInTrackingWindow, matchFixToLoad } from '../telematics/matchTrailer.ts';
@@ -233,6 +236,10 @@ export interface SyncStore {
   noteHereUsage?(service: 'tiles' | 'routing' | 'matching' | 'attributes' | 'traffic', n: number): Promise<void>;
   /** Koszt ponad pule w bieżącym miesiącu (Europe/Warsaw). */
   hereMonthSpend?(): Promise<number>;
+  /** #667 C: geometria pomarańczowych dróg (cron here-roads). */
+  listHereRoadGeometry?(): Promise<{ leg: string; fetched_at: string; points: unknown; retry_after: string | null }[]>;
+  storeHereRoad?(leg: string, points: unknown, summary: string, nowIso?: string): Promise<void>;
+  hereCorridorBundle?(code: string): Promise<{ code: string; pts: [number, number][]; via: [number, number][]; updatedAt: number }>;
   /** TELM: aktywne transporty do dopasowania naczepy. */
   listActiveLoadsForTelematics?(): Promise<{ id: string; trailer_plate: string | null; telematics_vehicle_id: string | null; status: string | null; plannedLoadDate?: string | null; plannedDeliverDate?: string | null; trackingOpenedAt?: string | null }[]>;
   /** TELM: zapis pozycji (process_position). */
@@ -1939,6 +1946,83 @@ async function runRoadPlKpd(deps: JobDeps, now: string, url: string): Promise<Jo
   return { job: 'road-pl', mode: 'LIVE', ok: true, risks, warnings: [], observations: { source: 'kpd' } };
 }
 
+/**
+ * #667 C — odświeżanie geometrii pomarańczowych dróg HERE przed purge 30 d.
+ * Próg 21 d; brak punktów → SOURCE_DOWN HERE_ROADS (JOB_FAILURE, sticky).
+ */
+export async function runHereRoads(deps: JobDeps): Promise<JobResult> {
+  const now = deps.now();
+  const nowIso = now.toISOString();
+  const key = deps.env.HERE_API_KEY?.trim();
+  if (!key) {
+    return {
+      job: 'here-roads', mode: 'DEMO', ok: true,
+      reason: 'Brak HERE_API_KEY — cron nie odświeża geometrii (przeglądarka też nie)',
+    };
+  }
+  if (!deps.store.listHereRoadGeometry || !deps.store.storeHereRoad) {
+    return { job: 'here-roads', mode: 'DEMO', ok: false, reason: 'Magazyn bez geometrii HERE' };
+  }
+  const storeAdapter: RoadRefreshStore = {
+    listGeometry: () => deps.store.listHereRoadGeometry!(),
+    async storeRoad(leg, points, summary, nowIsoArg) {
+      await deps.store.storeHereRoad!(leg, points, summary, nowIsoArg);
+      return true;
+    },
+    async loadCorridor(code) {
+      if (!deps.store.hereCorridorBundle) return { code, pts: [], via: [], updatedAt: 0 };
+      return deps.store.hereCorridorBundle(code);
+    },
+    // F7 #673 r4 uwaga 3: brak hereMonthSpend → null (nie zakładaj 0 / nie wołaj HERE).
+    monthSpend: () => (deps.store.hereMonthSpend ? deps.store.hereMonthSpend() : Promise.resolve(null)),
+    async noteRouting() {
+      if (deps.store.noteHereUsage) await deps.store.noteHereUsage('routing', 1);
+    },
+  };
+  const result = await refreshRoadLegs(storeAdapter, {
+    fetch: deps.fetch,
+    hereApiKey: key,
+    nowMs: now.getTime(),
+    maxAgeMs: ROAD_CRON_REFRESH_MS,
+  });
+  let risks = 0;
+  if (result.missingLegs.length > 0) {
+    if (await deps.store.raiseRisk(sourceDownRisk(
+      'HERE_ROADS',
+      [
+        `Brak geometrii: ${result.missingLegs.join(', ')}`,
+        ...result.warnings.slice(0, 5),
+      ],
+      nowIso,
+      'https://router.hereapi.com/v8/routes',
+    ))) risks = 1;
+    return {
+      job: 'here-roads', mode: 'LIVE', ok: false, risks,
+      warnings: result.warnings,
+      reason: `Brak linii: ${result.missingLegs.join(', ')}`,
+      observations: {
+        stored: String(result.stored),
+        attempted: String(result.attempted),
+        missing: result.missingLegs.join(','),
+        budget: result.skippedBudget ? 'stop' : 'ok',
+      },
+    };
+  }
+  await deps.store.resolveRisks('SOURCE_DOWN:HERE_ROADS');
+  return {
+    job: 'here-roads', mode: 'LIVE', ok: true, risks: 0,
+    warnings: result.warnings,
+    reason: result.skippedBudget
+      ? 'Budżet HERE — legi świeże, bez odświeżenia'
+      : `Odświeżono ${result.stored} legów (próby ${result.attempted})`,
+    observations: {
+      stored: String(result.stored),
+      attempted: String(result.attempted),
+      budget: result.skippedBudget ? 'stop' : 'ok',
+    },
+  };
+}
+
 /** traffic-flow — TomTom wycofany (CLEAN-TT-HERE / D-28). Cron może wołać; zawsze DEMO. ETA = II-7 OSM. */
 export async function runTrafficFlow(_deps: JobDeps): Promise<JobResult> {
   return {
@@ -3028,6 +3112,7 @@ export const JOBS = {
   'ferry-portnet': runFerryPortnet,
   'ferry-weather': runFerryWeather,
   'road-se': runRoadSe, 'road-pl': runRoadPl, 'traffic-flow': runTrafficFlow,
+  'here-roads': runHereRoads,
   'emtrack-web': runEmtrackWeb,
   'rio-links': runRioLinks,
   'safefleet-poll': runSafefleetPoll,
@@ -3040,7 +3125,9 @@ export type JobName = keyof typeof JOBS;
 export const MIN_INTERVAL_MIN: Record<JobName, number> = {
   'ferry-schedule': 60, 'ferry-status': 10, 'ferry-ais': 3, 'ferry-ais-listen': 0,
   'ferry-portnet': 15, 'ferry-weather': 60,
-  'road-se': 15, 'road-pl': 10, 'traffic-flow': 15, 'emtrack-web': 2, 'rio-links': 2,
+  // #667 F7 r2: 1380 min — dzienny cron (ran_at po zakończeniu) nie pomija kolejnego dnia.
+  'road-se': 15, 'road-pl': 10, 'traffic-flow': 15, 'here-roads': 1380,
+  'emtrack-web': 2, 'rio-links': 2,
   'safefleet-poll': 2, 'route-hazards': 60,
   'translate-retry': 5,
 };
