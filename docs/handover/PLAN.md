@@ -1163,15 +1163,17 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 5. **E Stena ≥ 60 dni** — ~~równolegle limit 4; SOURCE_DOWN tylko przy totalnej awarii~~; N9 budżet 90 s; N8 Freight dziś+3; ~~**DFDS Dynamic**~~; r6–r7: tylko `[]` = pusty tydzień; `apiSailingsCount`; sam PDF → SOURCE_DOWN MEDIUM (decyzja 50).
 6. ~~Testy unit F7 r1–r7~~; ~~odbiór F7~~. Bloker 2 SailingsPanel → DP-20 (SCALONE #674). DP-21: po deploy.
 
-### #667 · PILNE: pomarańczowa linia trasy na mapach (30a / SE-KAA / HERE) — W TOKU (`pakiet/667-orange-roads`; PR #673; po #666)
-Źródło: #667 (Spawn2018, `pilne`+`dla-cursora`; właściciel 30.10 15:54). Zaraz po #666, przed BN3. Kolejność scalania: ~~#668 (0351)~~ SCALONE → #673 (0352–0354).
+### #667 · PILNE: pomarańczowa linia trasy na mapach (30a / SE-KAA / HERE) — W TOKU (~~PR #673 A–D / 0352–0354~~ SCALONE `5e8eb1ba`; E+F: `pakiet/667-e-bn7-road-dict` / PR #677)
+Źródło: #667 (Spawn2018, `pilne`+`dla-cursora`; właściciel 30.10 15:54). Zaraz po #666, przed BN3. ~~#668 (0351)~~ → ~~#673 (0352–0354)~~ SCALONE 31.10 ~01:28Z.
 1. **A mapPool PROD + wspólny helper** — ~~`paintOrangeRoads` / `ORANGE_ROAD_STYLE`; `mapPool` ładuje `loadRoadLines` w PROD; GeofenceEditorMap + ZonesMap + CorridorMap~~; TrackReplay dziedziczy z CorridorMap; Ryzyka — brak osobnego `L.map`.
 2. **B SE-KAA dual** — ~~`SE-KAA` ← `SE_E22`; `SE-KAA-INLAND` ← jawnie `SE_KAA_INLAND`; migracja **0352**; `ROAD_LEGS=5`~~.
 3. **C cron HERE** — ~~`refreshRoadLegs` (próg 21 d); job + **0353** `tower-here-roads`; SOURCE_DOWN sticky; Edge dual~~. **Termin ≤ 04.11** (purge 05.11).
-4. Diagnostyka: ~~fundament `summary` w `map_display_state` + `checkRoads` (0354)~~; UI Stan systemu → DP-22; `integration_runs` (N1 retry_after +1 h w tym PR).
-5. Słownik legów BN7 (`PL-TLL`…`SE-KPS`) gotowy do rysowania (DP-23).
-6. Testy e2e na buildzie produkcyjnym (nie demo): ≥1 polilinia na mapę; SE-KAA obecny.
-7. ~~**F7 r1** B1–B3 / N1·N4·N7~~; ~~**F7 r2** B4 origin+Luleå (**0354**)~~; ~~**F7 r3** B5 SE_E22 0298 + sparse~~; ~~**F7 r4** dens. Umeå–Skellefteå~~; ~~**F7 r5** fixture SE-NYN / B6–B7 / bmapa 174~~; ~~**F7 r6** bmapa `jsonb_typeof` + merge **#675**~~; **F7 r6 POPRAWKI** — B6 mock `@supabase/supabase-js` + sesja 0; Umeå/Piteå/62.391 na E4; test (a) czyta 0354 — **czekam F7**.
+4. Diagnostyka: ~~fundament `summary` w `map_display_state` + `checkRoads` (0354)~~; UI Stan systemu → DP-22; ~~`integration_runs` / SE-KAA `retry_after` (PILNE 01:34Z)~~ — 5 legów z punktami po `here-roads` 01:49Z (`#108023`); przyczyna: stara Edge JWT ~01:15 (+24 h) przed v117 01:30Z.
+5. ~~Słownik legów BN7 (`PL-TLL`…`SE-KPS`) gotowy do rysowania (DP-23)~~ — migracja **0355** `here_road_legs`; FK zamiast `IN (…)`; przeglądarka `browser_fetch` (core); BN7 bez auto-fetch do kalibracji.
+   - **Kolejność wdrożenia:** najpierw migracja **0355**, potem Edge `here-roads` (F7 #677 r1 B1 — bez fail-open na pusty słownik).
+6. ~~Testy e2e: ≥1 polilinia; SE-KAA; PROD `loadRoadLines`~~ — jsdom CI z `vi.stubEnv('VITE_AUTH_MODE','supabase')` + mock RPC (F7 r3 B1 / r4 M4–M6); Playwright lokalnie na prawdziwym buildzie supabase (`i667-f-orange-maps.local.spec.ts`, DP-58).
+7. ~~**F7 r1–r6** (+ POPRAWKI) w #673~~ SCALONE; **E+F (0355)** — F7 #677 r1–r3 + **F7 r4** (M4 BN7 `browser_fetch:true`; M5b Geofence tylko `L.Polyline`; M6 CorridorMap+TrackReplay) — **czekam F7**.
+8. Wyłączanie legu: `active=false` (FK bez `ON DELETE` — DP-45).
 
 
 ### Rejestr drobnych poprawek (DP) — #671 (zasada 30.10 18:31)
@@ -1190,6 +1192,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-10 | Cursor | test: PoT nie nadpisuje RECZNIE / nie dubluje Viking/Eckerö | F7 #661 | DFDS/#666 | w PR #668 (schedule + job) |
 | DP-11 | Cursor | `operatorsForRoute` — baza przed seedem (TLL-HEL Tallink) | F7 #649 | BN3/BN8 | w kolejce |
 | DP-12 | Cursor | SafeFleet: wszystkie punkty `presences` bez duplikatów | F7 #663 | po #667 | w kolejce |
+| DP-13 | koordynator | ZonesMap: tory promów z `ferryLaneLines` (PL–SE + bałtyckie); tryb „one” bez torów | F7 #676 | wyglad | SCALONE (#676 `4ec47bd2`) |
 | DP-14 | koordynator | jawna trasa Polferries/Stena w `routeOfVessel` | F7 #672 | wyglad | SCALONE (#674 `8f916302`) |
 | DP-15 | koordynator | test U4 z inną kolejnością wejścia | F7 #672 | wyglad | SCALONE (#674) |
 | DP-16 | koordynator | test cache listy statków | F7 #672 | wyglad | SCALONE (#674) |
@@ -1199,7 +1202,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-20 | koordynator | Rejsy: armator bez rejsów nadal w filtrze | F7 #668 r2 | wyglad | SCALONE (#674) |
 | DP-21 | Cursor | po wdrożeniu: Viking Cargo 403 z DC — sprawdź TLLA-HEL (decyzja 50) | F7 #668 r2 N7 | po deploy #668 | w kolejce |
 | DP-22 | Cursor | Stan systemu: ostrzeżenie z `summary` odrzuconego legu z bazy (nie tylko `points not null`); fundament 0354 + `checkRoads` | F7 #673 r1 N5 / r2 | #667 D | fundament w #673; UI w kolejce |
-| DP-23 | Cursor | Słownik legów drogowych w bazie zamiast `IN (…)` / `ROAD_LEGS` w kodzie | F7 #673 r1 N2 | #667 E / BN7 | w kolejce |
+| DP-23 | Cursor | Słownik legów drogowych w bazie zamiast `IN (…)` / `ROAD_LEGS` w kodzie | F7 #673 r1 N2 | #667 E / BN7 | w PR (0355) |
 | DP-24 | Cursor | `corridor_fetches.leg` / `corridor_obstacles.leg` + SE-KAA-INLAND gdy przeszkody H3 obejmą inland | F7 #673 r1 N3 | po #667 | w kolejce |
 | DP-25 | koordynator | JSDoc `vesselGroupsVersion` zgodny z użyciem (albo bez eksportu) | F7 #674 | wyglad | SCALONE (#675) |
 | DP-26 | koordynator | SailingsPanel przez `useVesselGroups()` zamiast własnego stanu | F7 #674 | wyglad | SCALONE (#675) |
@@ -1209,10 +1212,36 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-30 | Cursor | usunąć nieosiągalne ostrzeżenie zastępcze `jobs.ts` (DFDS) | F7 #668 r8 | po #673 | w kolejce |
 | DP-31 | Cursor | istotność ryzyka źródła aktualizowana w ciągu doby (HIGH → MEDIUM) w `raise_integration_risk` | F7 #668 r8 | po #673 | w kolejce |
 | DP-32 | Cursor | klucz ryzyka DFDS bez daty (jak EMTRACK), żeby wielodniowa praca z PDF nie mnożyła ryzyk | F7 #668 r8 | po #673 | w kolejce |
-| DP-34 | koordynator | test podłączenia panelu Rejsów (`key={vesselSelectKey(`, `setLineSel(plan.lineSel)` — mutacje M7/M8 przeżywają) | F7 #675 | wyglad | w kolejce |
-| DP-35 | koordynator | test DP-27: po `reset()` kolejny błąd → drugie ostrzeżenie | F7 #675 | wyglad | w kolejce |
-| DP-36 | koordynator | test subskrypcji `useVesselGroups` (powiadomienie przy `load()`) | F7 #675 | wyglad | w kolejce |
-| DP-37 | koordynator | komentarz `CorridorMap.tsx:175` („referencja listy”, nie „wersja”) | F7 #675 | wyglad | w kolejce |
+| DP-33 | koordynator | testy DP-3/5/7/8 oparte na regexach → testy zachowania (jsdom) | F7 #676 | wyglad | SCALONE (#676) |
+| DP-34 | koordynator | test podłączenia panelu Rejsów (`key={vesselSelectKey(`, `setLineSel(plan.lineSel)` — mutacje M7/M8 przeżywają) | F7 #676 | wyglad | SCALONE (#676) |
+| DP-35 | koordynator | test DP-27: po `reset()` kolejny błąd → drugie ostrzeżenie | F7 #676 | wyglad | SCALONE (#676) |
+| DP-36 | koordynator | test subskrypcji `useVesselGroups` (powiadomienie przy `load()`) | F7 #676 | wyglad | SCALONE (#676) |
+| DP-37 | koordynator | komentarz `CorridorMap.tsx:175` („referencja listy”, nie „wersja”) | F7 #676 | wyglad | SCALONE (#676) |
+| DP-38 | Cursor | test INLAND: lista via jak SQL (albo długości geodezyjne; dziś 9. via ~307 m vs prod) | F7 #673 r7 | po #667 E | w kolejce |
+| DP-39 | Cursor | przywróć test okna sesji 5 min (`__setHereRoadsSessionMsForTests(5*60_000)` → 2. wołanie bez POST) | F7 #673 r7 | po #667 E | w kolejce |
+| DP-40 | Cursor | wierzchołki INLAND 59.133/16.337 i 59.279/16.120 — SELECT na realnej linii HERE po wdrożeniu #673, ewent. przesunąć | F7 #673 r7 | po deploy #673 | w kolejce |
+| DP-42 | koordynator | test pisowni PL-T: lokalnie skip z powodem; w CI wymagany; hunspell-pl + `-i utf-8` | F7 #678 | wyglad | SCALONE (#678 `650b3e0b`) |
+| DP-43 | Cursor | `loadRoadLines`: próg = przyjęte spośród `browser_fetch` (dziś `lines.length` ze wszystkich) | F7 #677 r1 N1 | po #667 E | w kolejce |
+| DP-44 | Cursor | wspólny `legDefFromRow` (store + Edge) zamiast zdublowanego mapowania | F7 #677 r1 N2 | #667 E | w PR (#677) |
+| DP-45 | Cursor | FK bez ON DELETE — wyłączanie legu przez `active=false` (odnotować w PLAN) | F7 #677 r1 N3 | #667 E | odnotowane (§4 pkt 8) |
+| DP-46 | Cursor | `map_display_state` sortuje po `sort_order` zamiast `leg` — zmiana zachowania RPC | F7 #677 r1 N4 | #667 E | odnotowane |
+| DP-47 | Cursor | `here_store_road` przyjmuje legi nieaktywne — akceptowalne | F7 #677 r1 N5 | #667 E | odnotowane |
+| DP-53 | Cursor | bramka na zbudowanej paczce demo: brak `vesselsServer` i klienta Supabase w `dist` (warunek `VITE_AUTH_MODE === 'supabase'` tylko w buildzie) | F7 #676 r2 | po #667 | w kolejce |
+| DP-54 | Cursor | test: leg core z `browserFetch:false` — w trybie przeglądarki brak fetch (mutacja M1b: usunięcie całej linii filtra `browserOnly`) | F7 #677 r2 | po #667 E | w kolejce |
+| DP-55 | Cursor | cron: BN7 z `browserFetch:true` bez punktów jest pobierany i liczony do `missingLegs` (mutacja M4b `return legs`) | F7 #677 r2 | po #667 E | w kolejce |
+| DP-56 | Cursor | test z fałszywym `sb` (`{error}` → rejects) dla `store` listHereRoadLegs i Edge `listLegs` (dziś testy tekstowe) | F7 #677 r2 | po #667 E | w kolejce |
+| DP-57 | Cursor | Edge `here-roads`: wyjątek z `listLegs` → try/catch `{ok:false, reason}` + `corsHeaders()` zamiast 500 bez CORS | F7 #677 r2 | po #667 E | w kolejce |
+| DP-58 | Cursor | `.local.spec.ts`: asercje bez `if (count())` / `.catch` z zapasowym `data-view`; dodać mapę telefonu i TrackReplay | F7 #677 r3 | po #667 E | w kolejce |
+| DP-59 | Cursor | PLAN pkt 6: doprecyzować — CI jsdom = PROD mock (`stubEnv`+RPC); Playwright local = prawdziwy build supabase (nie demo) | F7 #677 r3 | #667 F | w PR (#677) |
+| DP-48 | koordynator | Awizacja › rejs przed planowanym załadunkiem — linia pod polem (`data-awiz-sailing-before`) | F7 #678 | wyglad | SCALONE (#678 `650b3e0b`) |
+| DP-49 | koordynator | jedna stała `SAILINGS_EMPTY_TEXT` (`p7` / `sail7`) | F7 #678 | wyglad | SCALONE (#678) |
+| DP-52 | koordynator | oxlint: `useDecisions` / `OptionsAccordion` / `AccountMenu` | F7 #678 | wyglad | SCALONE (#678) |
+| DP-63 | Cursor | PL-T obejmuje tylko `I18N_ALL.pl` — dołączyć słowniki PL modułów (`p7`, `sail7` + pozostałe) | F7 #678 | po #667 | w kolejce |
+| DP-64 | Cursor | asercja: `p7.ts` i `sail7.ts` importują `SAILINGS_EMPTY_TEXT` | F7 #678 | po #667 | w kolejce |
+| DP-65 | Cursor | test oxlint w `dp-front-5.jsdom.test.ts` ma padać, gdy oxlint się nie uruchomi | F7 #678 | po #667 | w kolejce |
+| DP-66 | Cursor | `unit.yml`: przypiąć wersję hunspell-pl, `--no-install-recommends` | F7 #678 | po #667 | w kolejce |
+| DP-67 | koordynator | DP-48 zrzutem visual 1440/390 px | F7 #678 | wyglad | w kolejce |
+| DP-68 | Cursor | ostrzeżenie oxlint `react(globals)` w `dp-front-5.jsdom.test.ts:193` | F7 #678 | po #667 | w kolejce |
 
 ### BN9 — część na produkcji; ekrany zależne od danych (BN9-c*)
 Źródło: #671. BN9-a (#575) i BN9-b (#670) na produkcji. Zostają (koordynator, `wyglad/*`, zaraz po swoim etapie):
@@ -1228,7 +1257,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 1. **BN1** — ~~słowniki / strefy / CASE / F7 MFA~~ **SCALONE** (0338–0346).
 2. **BN2** — ~~LIVE~~ **SCALONE** (**0347**+**0348**, PR #660 `a94645d9`; PR #661 `392a9bc2`; dopisek F7 #665 `799ea18d`): Tallink; Portnet; Viking/Eckerö/DFDS HTML + Terminal A; B1–B3; Decyzja 50 MEDIUM.
 3. ~~**#666** (pilne)~~ — SCALONE (#668 `53890480` / **0351**).
-4. **#667** (pilne) — pomarańczowe drogi / SE-KAA / odświeżanie HERE — W TOKU (ten PR; F7 r6 POPRAWKI: B6 + E4 snap Umeå/Piteå).
+4. **#667** (pilne) — ~~A–D (#673)~~ SCALONE; ~~SE-KAA punkty (01:49Z)~~; ~~E słownik BN7 (PR #677 / 0355)~~ + ~~F e2e~~ — F7 r3 + **r4** (M4/M5b/M6); kolejność 0355→Edge; DP-43…47; DP-54…59; ~~#678~~ SCALONE (`650b3e0b` DP-42/48/49/52); DP-63…68; czekam F7.
 5. BN3…BN10 — jak #573 (opóźnienia, AIS, pogoda, drogi LT/LV/EE/FI, HERE, statusy/ETA, ekrany, odbiór 48 h).
 
 ### #662 · PILNE SafeFleet — link tymczasowy (SG-27) — SCALONE (`189688bc` / PR #663 / **0349**); #662-b SCALONE (`1ee855fd` / PR #664 / **0350**, 30.10.2026 12:54Z)
@@ -2167,4 +2196,14 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 31.10.2026 01:15 | #673 F7 r5: fixture SE-NYN prod; B7 Uppsala/Gävle/Hudiksvall E4; in-flight przed read; bmapa 174; runHereRoads null spend | pętla |
 | 31.10.2026 01:35 | #675 SCALONE `6660b3c8` (F7 gotowe @ 0698399); #673 F7 r6: bmapa jsonb_typeof null (CI db) | pętla |
 | 31.10.2026 01:55 | #673 F7 r6 POPRAWKI: B6 mock supabase-js + sesja 0; Umeå/Piteå/62.391 na E4; test czyta 0354 | pętla |
+| 31.10.2026 02:40 | #667 E (PR #677 / 0355 DP-23) @ `0cd8f720`; CI ✔; czekam F7 | pętla |
+| 31.10.2026 02:49 | #667 PILNE: clear `retry_after` SE-KAA + job here-roads 5/5 (KAA 18854, INLAND 19408); 0355 OK do F7 | pętla |
+| 31.10.2026 03:00 | #667 PILNE SE-KAA: 5 legów z punktami po here-roads 01:49Z; przyczyna retry=stara Edge JWT; #677 CI ✔ czekam F7 | pętla |
+| 31.10.2026 03:25 | #677 F7 r1 B1+B2: listLegs throw/ROAD_LEGS; testy BN7/spec/count; DP-43…47; 0355→Edge | pętla |
+| 31.10.2026 03:55 | #676 SCALONE `4ec47bd2` (DP-13/33…37); #667 F e2e jsdom+local; DP-53; czekam F7 #677 | pętla |
+| 31.10.2026 03:55 | #667 F e2e: jsdom ≥1 #E5A544 + SE-KAA w RPC + cron 21d przed purge 30d; local.spec Playwright; #677 czekam F7 | pętla |
+| 31.10.2026 04:15 | #677 CI unit/db/visual ✔ @ `fbe7b06d`; rejestr DP-54…57 (F7 r2); czekam F7 gotowe do scalenia | pętla |
+| 31.10.2026 04:45 | #677 F7 r3 B1–B3: stubEnv PROD + SE-KAA E22/INLAND + brak POST; DP-58/59; czekam F7 | pętla |
+| 31.10.2026 05:00 | #678 SCALONE `650b3e0b` (DP-42/48/49/52); DP-63…68 w rejestrze | pętla |
+| 31.10.2026 05:15 | #677 F7 r4: M4 BN7 browser_fetch; Geofence polilinia; CorridorMap/TrackReplay PROD; czekam F7 | pętla |
 

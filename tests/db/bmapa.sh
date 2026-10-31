@@ -226,9 +226,9 @@ retry_set=$(sys "select (retry_after is not null and retry_after > now())::text 
 sys "select here_store_road('SE-KAA', here_corridor_points('SE_KAA_TRACK'), 'trasa Karlskrona–Boden (test #572)', now())" >/dev/null
 retry_clr=$(sys "select (retry_after is null)::text from here_road_geometry where leg='SE-KAA'")
 [ "$retry_clr" = "true" ] && { ok=$((ok+1)); echo "  OK    sukces czyści retry_after"; } || { fail=$((fail+1)); echo "  FAIL  retry_after po sukcesie → $retry_clr"; }
-# #667 F7 r4/r5: po 0354 RPC zwraca wszystkie legi (także SE-KAA-INLAND z points=null) → 5, nie 4.
+# #667 E / DP-23: po 0355 roads = core(5)+BN7(7) = 12 (także points=null).
 legs=$(asu "$HHL_465" "select jsonb_array_length(map_display_state()->'roads')")
-if [ "$legs" = "5" ]; then ok=$((ok+1)); echo "  OK    map_display_state().roads = 5 (wszystkie legi, także bez punktów)"; else fail=$((fail+1)); echo "  FAIL  roads length → $legs"; fi
+if [ "$legs" = "12" ]; then ok=$((ok+1)); echo "  OK    map_display_state().roads = 12 (core+BN7, także bez punktów)"; else fail=$((fail+1)); echo "  FAIL  roads length → $legs"; fi
 kaa=$(asu "$HHL_465" "select exists(select 1 from jsonb_array_elements(map_display_state()->'roads') e where e->>'leg'='SE-KAA' and jsonb_array_length(e->'points')>=2)::text")
 [ "$kaa" = "true" ] && { ok=$((ok+1)); echo "  OK    roads zawiera SE-KAA z punktami"; } || { fail=$((fail+1)); echo "  FAIL  SE-KAA w roads → $kaa"; }
 # F7 r5 uwaga 4: SE-KAA-INLAND w roads z points=null + summary (przed store poniżej).
@@ -249,9 +249,21 @@ sys "select here_store_road('SE-KAA', here_corridor_points('SE_E22'), 'trasa Kar
 dev_e22=$(sys "select coalesce(here_road_corridor_dev_m('SE-KAA','SE_E22')::text,'null')")
 awk "BEGIN{exit !($dev_e22+0 <= 2000)}" 2>/dev/null && { ok=$((ok+1)); echo "  OK    SE-KAA odchyłka ↔ SE_E22 ≤ 2 km ($dev_e22 m)"; } || { fail=$((fail+1)); echo "  FAIL  E22 odchyłka → $dev_e22"; }
 legs5=$(asu "$HHL_465" "select jsonb_array_length(map_display_state()->'roads')")
-if [ "$legs5" = "5" ]; then ok=$((ok+1)); echo "  OK    map_display_state().roads = 5"; else fail=$((fail+1)); echo "  FAIL  roads length → $legs5"; fi
+if [ "$legs5" = "12" ]; then ok=$((ok+1)); echo "  OK    map_display_state().roads = 12"; else fail=$((fail+1)); echo "  FAIL  roads length → $legs5"; fi
 kaa_in=$(asu "$HHL_465" "select exists(select 1 from jsonb_array_elements(map_display_state()->'roads') e where e->>'leg'='SE-KAA-INLAND' and jsonb_array_length(e->'points')>=2)::text")
 [ "$kaa_in" = "true" ] && { ok=$((ok+1)); echo "  OK    roads zawiera SE-KAA-INLAND"; } || { fail=$((fail+1)); echo "  FAIL  SE-KAA-INLAND w roads → $kaa_in"; }
+
+# #667 E / DP-23: słownik + BN7
+echo; echo "[#667] E słownik here_road_legs + BN7"
+val "słownik = 12 legów" "select count(*)::text from here_road_legs where active" "12"
+val "BN7 = 7" "select count(*)::text from here_road_legs where map_group='bn7' and active" "7"
+val "core browser_fetch = 5" "select count(*)::text from here_road_legs where map_group='core' and browser_fetch and active" "5"
+bn7_null=$(asu "$HHL_465" "select count(*)::text from jsonb_array_elements(map_display_state()->'roads') e where e->>'map_group'='bn7' and jsonb_typeof(e->'points')='null'")
+[ "$bn7_null" = "7" ] && { ok=$((ok+1)); echo "  OK    roads: 7× BN7 points=null + spec"; } || { fail=$((fail+1)); echo "  FAIL  BN7 null → $bn7_null"; }
+fk=$(sys "select count(*)::text from pg_constraint where conname='here_road_geometry_leg_fkey'")
+[ "$fk" = "1" ] && { ok=$((ok+1)); echo "  OK    FK here_road_geometry → here_road_legs"; } || { fail=$((fail+1)); echo "  FAIL  FK → $fk"; }
+no_in=$(sys "select count(*)::text from pg_constraint where conname='here_road_geometry_leg_check'")
+[ "$no_in" = "0" ] && { ok=$((ok+1)); echo "  OK    brak CHECK IN (…) na leg"; } || { fail=$((fail+1)); echo "  FAIL  CHECK IN nadal → $no_in"; }
 
 # N3: fikcyjny ładunek PL + Verkö + inland SE → start po Verkö (nie w PL)
 # F7 r4 P3: odstępy SE 12 min (nie 1 min ≈ 810 km/h → filtr >150 km/h).

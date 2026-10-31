@@ -7371,3 +7371,52 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: brak „F7: gotowe do scalenia” (F7 r6 @ 00:42 — B6 + uwagi 1–3).
 - **Krok (F7 r6 POPRAWKI #673):** B6 — `vi.mock('@supabase/supabase-js')` + `__setHereRoadsSessionMsForTests(0)`; po `Promise.all` 1× POST (bez strażnika → 2). Uwaga 1/3 — 0354: Umeå `20.3263/63.8127`, Piteå `21.4319/65.3232`, `17.340/62.391` na E4. Uwaga 2 — test (a) czyta korytarze z pliku 0354 (`st_makepoint`). **Dalej:** CI → gotowe do F7; potem E BN7 / F e2e.
 - Bez push na main.
+
+## 2026-10-31 02:40 — #667 E słownik legów BN7 (DP-23 / 0355); #673 SCALONE
+
+- Skrzynka: **#667** W TOKU (E); #608 w planie; #550 WSTRZYMANE. Starsze #537/#538/#499/#500 — w planie.
+- Scalanie: **#673 SCALONE** `5e8eb1ba` (A–D / 0352–0354, 01:28Z). Nowy PR `pakiet/667-e-bn7-road-dict` (0355). Bez push na main.
+- **Krok (#667 E / DP-23):** migracja **0355** — `here_road_legs` (12: 5 core + 7 BN7); FK zamiast `CHECK IN (…)`; store/dev/map_display_state ze słownika; BN7 `points=null`, `browser_fetch=false` (bez auto-fetch do kalibracji). Edge: `listLegs` + `browserOnly` w przeglądarce. Front: `roadSpecFromRow` + `browserFetchLegCount`. bmapa 174→180. DP-38…40 z F7 #673 r7. Unit fokus i667/bmapa ✔ (38). **Dalej:** push → CI → gotowe do F7; potem F e2e.
+- Bez push na main.
+
+## 2026-10-31 03:00 — #667 PILNE SE-KAA: diagnostyka + 5 legów z punktami
+
+- Skrzynka: **#667** pilne (odbiór 01:34Z) zrobione w komentarzu; #608 w planie; #550 WSTRZYMANE. #676 wygląd bez „F7: gotowe do scalenia”.
+- Scalanie: brak „F7: gotowe do scalenia” na #677/#676. CI #677 unit/db/visual ✔ @ `0cd8f720`. Bez push na main.
+- **Krok (PILNE diagnostyka PROD):** `retry_after` SE-KAA = 01.11 01:15Z = odrzucenie geometrii (+24 h) ścieżką JWT na **starej** Edge (v117 dopiero 01:30:13Z); brak `integration_runs` do 01:49. Po jobie `here-roads` 01:49:00Z (#108023): PL-GDN 3495, PL-GDY 3742, SE-NYN 12561, SE-KAA 18854, SE-KAA-INLAND 19408 — wszystkie `retry_after` null. SELECT + wniosek w #667. 0355 wolne do F7. **Dalej:** F7 #677 → F e2e prod.
+- Bez push na main.
+
+## 2026-10-31 03:25 — #677 F7 r1 POPRAWKI B1+B2 (DP-43…47)
+
+- Skrzynka: **#667** W TOKU (PR #677); #608 w planie; #550 WSTRZYMANE. #676 bez „F7: gotowe do scalenia”.
+- Scalanie: brak F7 na #677 (POPRAWKI @ 02:00Z / 02:07Z — B1+B2). CI docs @ `11b50241` unit/db/visual ✔ (G-15: czekaliśmy). Bez push na main.
+- **Krok (F7 #677 r1 B1+B2):** B1 — `listLegs`/`listHereRoadLegs`: `if (r.error) throw`; pusty słownik → `[...ROAD_LEGS]`; `resolveLegs` ten sam zapas; kolejność wdrożenia **0355 → Edge** w PLAN. B2 — testy zachowania: BN7 poza fetch/missing (browserOnly+cron); `roadSpecFromRow`/`checkRoads` kaa+SE_E22 vs INLAND; `browserFetchLegCount` 12→5; eksport funkcji. DP-44 `legDefFromRow` wspólne. Rejestr **DP-43…47**. Unit fokus i667/bmapa ✔ (43). **Dalej:** CI → gotowe do F7; potem F e2e.
+- Bez push na main.
+
+## 2026-10-31 03:55 — #676 SCALONE; #667 F e2e; DP-53
+
+- Skrzynka: **#667** pilne W TOKU (PR #677 E+F); #608 w planie; #550 WSTRZYMANE. Starsze #537/#538/#499/#500 — w planie.
+- Scalanie: **#676 SCALONE** `4ec47bd2` (F7 gotowe @ 2c6452ec; DP-13, DP-33…37). #677 bez „F7: gotowe do scalenia” — czekam F7 po F e2e. Bez push na main.
+- **Krok (#667 F):** `tests/i667-f-e2e-orange-roads.jsdom.test.ts` — ≥1 polilinia #E5A544 (paintOrangeRoads / ZonesMap / Geofence); SE-KAA w payloadzie `map_display_state`; PROD mapy z `loadRoadLines`+`paintOrangeRoads`; cron 21 d przed purge 30 d (`attempted=5`, SE-KAA w missing po HTTP 500). Playwright lokalnie: `tests/i667-f-orange-maps.local.spec.ts` (build supabase + lokalny SB). Merge `main` (#676). Rejestr: DP-13/33…37 SCALONE; **DP-53** (Cursor, bramka dist demo). Unit i667 F+E+orange ✔ (22). **Dalej:** CI → gotowe do F7 #677.
+- Bez push na main.
+
+## 2026-10-31 04:15 — #677 CI ✔; rejestr DP-54…57 (F7 r2)
+
+- Skrzynka: **#667** pilne W TOKU (PR #677 E+F); #608 w planie; #550 WSTRZYMANE. Starsze #537/#538/#499/#500 — w planie.
+- Scalanie: „F7: gotowe do scalenia” było @ `70df5d96` (przed F e2e) — **nie scalać**; po F e2e czekam ponowne „gotowe do scalenia”. CI unit/db/visual ✔ @ `fbe7b06d`. Bez push na main.
+- **Krok (docs):** rejestr **DP-54…57** z F7 #677 r2 (nieblokujące, mały PR po #677): M1b browserOnly; M4b missingLegs BN7; test `{error}` store/Edge; CORS przy fail `listLegs`. PLAN §4/§8. **Dalej:** gotowe do F7 → scalenie → wdrożenie 0355→Edge → SELECT 12 legów + `here-roads` w #667.
+- Bez push na main.
+
+## 2026-10-31 04:45 — #677 F7 r3 POPRAWKI B1–B3
+
+- Skrzynka: **#667** pilne W TOKU (PR #677); #608 w planie; #550 WSTRZYMANE. #678 wygląd (DP-front-5) otwarte — nie scalać bez F7.
+- Scalanie: brak „F7: gotowe do scalenia” po F e2e / F7 r3. Bez push na main.
+- **Krok (F7 r3 B1–B3):** `i667-f-e2e-orange-roads.jsdom.test.ts` — `vi.stubEnv('VITE_AUTH_MODE','supabase')` + mock `map_display_state` (ZonesMap/Geofence/mapPool ≠ DEMO); SE-KAA jako E22 + przypadek INLAND; komplet 5 core → brak POST, BN7 `points:null` nie podnosi progu; cron attempted zawiera SE-KAA. Rejestr **DP-58** (local.spec warunkowe), **DP-59** (pkt 6 = stubEnv vs prawdziwy build). Unit i667-f ✔ (8). **Dalej:** CI → gotowe do F7.
+- Bez push na main.
+
+## 2026-10-31 05:15 — #678 SCALONE; #677 F7 r4 POPRAWKI (M4/M5b/M6)
+
+- Skrzynka: **#667** pilne W TOKU (PR #677); #608 w planie; #550 WSTRZYMANE. Starsze #537/#538/#499/#500 — w planie.
+- Scalanie: **#678 SCALONE** `650b3e0b` (F7: gotowe do scalenia @ `a95990ce`; DP-42/48/49/52). #677 bez „F7: gotowe do scalenia” — F7 r4 POPRAWKI @ 04:06Z. Bez push na main.
+- **Krok (F7 r4 #677):** `i667-f-e2e-orange-roads.jsdom.test.ts` — M4: BN7 `browser_fetch:true` + filtr `map_group`; M5b: Geofence tylko polilinie (nie okrąg #E5A544); M6: render CorridorMap PROD + TrackReplay dziedziczy mapę. Merge `main` (#678). Rejestr DP-42/48/49/52 SCALONE; **DP-63…68**. Unit i667-f ✔ (9). **Dalej:** CI → gotowe do F7.
+- Bez push na main.

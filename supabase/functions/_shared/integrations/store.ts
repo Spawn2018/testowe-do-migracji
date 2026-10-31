@@ -5,6 +5,8 @@
 import type { SyncStore, VehiclePos } from './jobs.ts';
 import type { VesselFix } from '../ferry/digitraffic.ts';
 import type { DbSailing, RiskInput, SailingInsert, SailingPatch, VesselRow } from './sync.ts';
+import { ROAD_LEGS } from '../here/refreshRoadLegs.ts';
+import { legDefFromRow } from '../here/legDefFromRow.ts';
 
 // deno-lint-ignore no-explicit-any
 type Client = any;
@@ -279,6 +281,19 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
         points: row.points,
         retry_after: row.retry_after != null ? String(row.retry_after) : null,
       }));
+    },
+    /** #667 E / DP-23 — słownik legów; DP-44 legDefFromRow; F7 #677 B1 pusty → ROAD_LEGS. */
+    async listHereRoadLegs() {
+      const r = await sb
+        .from('here_road_legs')
+        .select('leg,origin_lat,origin_lng,dest_lat,dest_lng,spec,summary,corridor_code,browser_fetch,map_group')
+        .eq('active', true)
+        .order('sort_order');
+      if (r.error) throw new Error(`here_road_legs: ${r.error.message}`);
+      const rows = r.data ?? [];
+      // Kolejność wdrożenia: 0355 → Edge; przed 0355 / pusty słownik = zapas core.
+      if (rows.length === 0) return [...ROAD_LEGS];
+      return rows.map((row) => legDefFromRow(row));
     },
     async storeHereRoad(leg: string, points: unknown, summary: string, nowIso?: string) {
       const args: Record<string, unknown> = { p_leg: leg, p_points: points, p_summary: summary };

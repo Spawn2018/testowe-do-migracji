@@ -1,6 +1,7 @@
 /**
- * #667 C — wspólne odświeżanie geometrii pomarańczowych dróg HERE.
+ * #667 C / E — wspólne odświeżanie geometrii pomarańczowych dróg HERE.
  * Używane przez Edge `here-roads` (przeglądarka) i job cron `here-roads` (przed purge 30 d).
+ * #667 E / DP-23: lista legów ze słownika w bazie (`listLegs`); ROAD_LEGS = zapas core w testach.
  */
 import { decodeFlexiblePolyline } from './routeCheck.ts';
 import { HERE_BILLING_DEFAULTS } from './billing.ts';
@@ -20,22 +21,29 @@ export const ROAD_CRON_REFRESH_MS = 21 * 864e5;
 
 const RETRY_REJECT_MS = 24 * 3600e3;
 
-type LegSpec = typeof ROAD_PL | typeof ROAD_SE | 'loose' | 'kaa';
+/** Spec ze słownika `here_road_legs` (DP-23). */
+export type RoadLegSpecKind = 'pl' | 'se' | 'loose' | 'kaa';
 
 export type RoadLegDef = {
   leg: string;
   origin: string;
   destination: string;
-  spec: LegSpec;
+  spec: RoadLegSpecKind;
   summary: string;
   corridorCode?: string;
+  /** false = tylko cron (#667 E BN7); brak = true. */
+  browserFetch?: boolean;
+  mapGroup?: 'core' | 'bn7';
 };
 
-/** Legi #667 B: PL-GDN, SE-NYN, PL-GDY, SE-KAA (E22), SE-KAA-INLAND. */
+/**
+ * Zapas core (#667 B) gdy store bez `listLegs` (testy jednostkowe).
+ * Produkcja: `here_road_legs` przez `listLegs`.
+ */
 export const ROAD_LEGS: readonly RoadLegDef[] = [
-  { leg: 'PL-GDN', origin: '52.07391,17.0246', destination: '54.40372,18.6813', spec: ROAD_PL, summary: 'Trasa drogowa Śrem–Gdańsk' },
-  { leg: 'SE-NYN', origin: '58.90453,17.95621', destination: '65.80539,21.75914', spec: ROAD_SE, summary: 'Trasa drogowa Nynäshamn–Boden' },
-  { leg: 'PL-GDY', origin: '52.07391,17.0246', destination: '54.53321,18.54425', spec: 'loose', summary: 'Trasa drogowa Śrem–Gdynia' },
+  { leg: 'PL-GDN', origin: '52.07391,17.0246', destination: '54.40372,18.6813', spec: 'pl', summary: 'Trasa drogowa Śrem–Gdańsk', browserFetch: true, mapGroup: 'core' },
+  { leg: 'SE-NYN', origin: '58.90453,17.95621', destination: '65.80539,21.75914', spec: 'se', summary: 'Trasa drogowa Nynäshamn–Boden', browserFetch: true, mapGroup: 'core' },
+  { leg: 'PL-GDY', origin: '52.07391,17.0246', destination: '54.53321,18.54425', spec: 'loose', summary: 'Trasa drogowa Śrem–Gdynia', browserFetch: true, mapGroup: 'core' },
   {
     leg: 'SE-KAA',
     origin: '56.1646,15.6308',
@@ -43,6 +51,8 @@ export const ROAD_LEGS: readonly RoadLegDef[] = [
     spec: 'kaa',
     summary: 'Trasa drogowa Karlskrona–Boden (E22 / wybrzeże)',
     corridorCode: 'SE_E22',
+    browserFetch: true,
+    mapGroup: 'core',
   },
   {
     leg: 'SE-KAA-INLAND',
@@ -50,9 +60,9 @@ export const ROAD_LEGS: readonly RoadLegDef[] = [
     destination: '65.80539,21.75914',
     spec: 'kaa',
     summary: 'Trasa drogowa Karlskrona–Boden (śródlądowa)',
-    // #667 F7 r1 B3: jawnie SE_KAA_INLAND — stena_se_inland_corridor_code() na prod
-    // zwraca SE_KAA_TRACK (ta sama odchyłka co stary SE-KAA).
     corridorCode: 'SE_KAA_INLAND',
+    browserFetch: true,
+    mapGroup: 'core',
   },
 ] as const;
 
@@ -66,6 +76,8 @@ export type RoadGeomRow = {
 };
 
 export type RoadRefreshStore = {
+  /** #667 E / DP-23: aktywne legi ze słownika; brak → ROAD_LEGS (testy). */
+  listLegs?(): Promise<RoadLegDef[]>;
   listGeometry(): Promise<RoadGeomRow[]>;
   storeRoad(leg: string, points: unknown, summary: string, nowIso?: string): Promise<boolean>;
   loadCorridor(code: string): Promise<CorridorBundle>;
@@ -80,6 +92,8 @@ export type RefreshRoadOpts = {
   nowMs?: number;
   /** Domyślnie 30 d (przeglądarka); cron podaje ROAD_CRON_REFRESH_MS (21 d). */
   maxAgeMs?: number;
+  /** true = tylko browser_fetch (Edge JWT); false/undefined = wszystkie (cron). */
+  browserOnly?: boolean;
 };
 
 export type RefreshRoadResult = {
@@ -95,6 +109,25 @@ function hasPoints(points: unknown): boolean {
   return Array.isArray(points) && points.length >= 2;
 }
 
+/**
+ * #677 F7 r1 B1: pusty słownik → zapas ROAD_LEGS (nie {ok:true, stored:0}).
+ * browserOnly = tylko browser_fetch; cron = core + BN7 dopiero po browser_fetch=true.
+ */
+export async function resolveLegs(
+  store: RoadRefreshStore,
+  browserOnly: boolean | undefined,
+): Promise<RoadLegDef[]> {
+  const raw = store.listLegs ? await store.listLegs() : [...ROAD_LEGS];
+  const all = raw.length > 0 ? raw : [...ROAD_LEGS];
+  if (browserOnly) return all.filter((l) => l.browserFetch !== false);
+  return all.filter((l) => l.mapGroup !== 'bn7' || l.browserFetch === true);
+}
+
+/** SOURCE_DOWN tylko dla legów core (BN7 bez punktów nie blokuje). */
+function requiredForSourceDown(legs: RoadLegDef[]): RoadLegDef[] {
+  return legs.filter((l) => l.mapGroup !== 'bn7');
+}
+
 export async function refreshRoadLegs(
   store: RoadRefreshStore,
   opts: RefreshRoadOpts,
@@ -102,11 +135,13 @@ export async function refreshRoadLegs(
   const nowMs = opts.nowMs ?? Date.now();
   const maxAgeMs = opts.maxAgeMs ?? ROAD_FETCH_DAY_MS;
   const warnings: string[] = [];
+  const legs = await resolveLegs(store, opts.browserOnly);
+  const requiredLegs = requiredForSourceDown(legs);
   const spend = await store.monthSpend();
   if (spend == null) {
     const rows = await store.listGeometry();
     const byLeg = new Map(rows.map((r) => [r.leg, r]));
-    const missing = ROAD_LEGS.filter((l) => !hasPoints(byLeg.get(l.leg)?.points)).map((l) => l.leg);
+    const missing = requiredLegs.filter((l) => !hasPoints(byLeg.get(l.leg)?.points)).map((l) => l.leg);
     return {
       stored: 0,
       attempted: 0,
@@ -118,7 +153,7 @@ export async function refreshRoadLegs(
   if (spend >= HERE_BILLING_DEFAULTS.budgetUsd) {
     const rows = await store.listGeometry();
     const byLeg = new Map(rows.map((r) => [r.leg, r]));
-    const missing = ROAD_LEGS.filter((l) => !hasPoints(byLeg.get(l.leg)?.points)).map((l) => l.leg);
+    const missing = requiredLegs.filter((l) => !hasPoints(byLeg.get(l.leg)?.points)).map((l) => l.leg);
     return {
       stored: 0,
       attempted: 0,
@@ -147,7 +182,7 @@ export async function refreshRoadLegs(
 
   let stored = 0;
   let attempted = 0;
-  for (const leg of ROAD_LEGS) {
+  for (const leg of legs) {
     const prev = have.get(leg.leg);
     const isKaa = leg.spec === 'kaa';
     const corridor = isKaa ? await corridorFor(leg) : null;
@@ -207,8 +242,12 @@ export async function refreshRoadLegs(
         /* zła polilinia */
       }
     }
-    const spec = leg.spec === 'kaa' ? roadKaaSpecFromVia(viaPts) : leg.spec;
-    const okGeom = spec === 'loose' ? looseRoadOk(line) : roadGeometryOk(line, spec);
+    const geomSpec =
+      leg.spec === 'kaa' ? roadKaaSpecFromVia(viaPts)
+        : leg.spec === 'pl' ? ROAD_PL
+          : leg.spec === 'se' ? ROAD_SE
+            : 'loose';
+    const okGeom = geomSpec === 'loose' ? looseRoadOk(line) : roadGeometryOk(line, geomSpec);
     // #667 F7 r3 B4: SE_E22 / SE_KAA_INLAND = rzadki korytarz (controlPts + 15 km);
     // SE_KAA_TRACK (gdyby wrócił) = stara reguła śladu GPS.
     const sparse =
@@ -256,6 +295,6 @@ export async function refreshRoadLegs(
     });
   }
 
-  const missingLegs = ROAD_LEGS.filter((l) => !hasPoints(have.get(l.leg)?.points)).map((l) => l.leg);
+  const missingLegs = requiredLegs.filter((l) => !hasPoints(have.get(l.leg)?.points)).map((l) => l.leg);
   return { stored, attempted, skippedBudget: false, warnings, missingLegs };
 }

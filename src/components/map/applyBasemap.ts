@@ -221,14 +221,33 @@ export async function applyBasemap(
   return layer;
 }
 
-/** #667 F7 r1 B1: SE-KAA = E22 (bez Västerås); SE-KAA-INLAND = śródlądowa z Västerås. */
-const SPEC: Record<string, RoadSpec | 'loose'> = {
+/**
+ * #667 E / DP-23: spec ze słownika w `map_display_state` (nie hardcodowany SPEC).
+ * Zapas po leg — tylko gdy wiersz bez `spec` (stary cache).
+ */
+const SPEC_FALLBACK: Record<string, RoadSpec | 'loose'> = {
   'PL-GDN': ROAD_PL,
   'SE-NYN': ROAD_SE,
   'PL-GDY': 'loose',
   'SE-KAA': ROAD_KAA_E22,
   'SE-KAA-INLAND': ROAD_KAA,
 };
+
+/** #677 F7 B2: eksport pod testy zachowania (kaa+SE_E22 vs SE_KAA_INLAND). */
+export function roadSpecFromRow(row: {
+  leg?: string;
+  spec?: string;
+  corridor_code?: string | null;
+}): RoadSpec | 'loose' | null {
+  const kind = String(row.spec ?? '');
+  const corridor = String(row.corridor_code ?? '');
+  if (kind === 'pl') return ROAD_PL;
+  if (kind === 'se') return ROAD_SE;
+  if (kind === 'loose') return 'loose';
+  if (kind === 'kaa') return corridor === 'SE_E22' ? ROAD_KAA_E22 : ROAD_KAA;
+  const leg = String(row.leg ?? '');
+  return SPEC_FALLBACK[leg] ?? null;
+}
 
 function roadLineWhy(leg: string, spec: RoadSpec | 'loose', line: LatLng[]): string | null {
   if (line.length < 2) return 'brak punktów';
@@ -239,6 +258,7 @@ function roadLineWhy(leg: string, spec: RoadSpec | 'loose', line: LatLng[]): str
 /**
  * #667 F7 r1 N5/N7: przyjęte linie + powody odrzuceń (jak checkFerries).
  * #667 F7 r2 / DP-22: przy braku punktów — `summary` z bazy (odchyłka / HTTP / oczekuje).
+ * #667 E / DP-23: spec z wiersza (słownik), nie SPEC w kodzie.
  * Pełne ostrzeżenie w Stanie systemu → DP-22 (UI).
  */
 export function checkRoads(rows: unknown): {
@@ -250,10 +270,19 @@ export function checkRoads(rows: unknown): {
   const out: LatLng[][] = [];
   for (const row of rows) {
     if (!row || typeof row !== 'object') continue;
-    const leg = String((row as { leg?: string }).leg ?? '');
-    const spec = SPEC[leg];
-    const points = (row as { points?: unknown }).points;
-    const summary = String((row as { summary?: string }).summary ?? '').trim();
+    const r = row as {
+      leg?: string;
+      points?: unknown;
+      summary?: string;
+      spec?: string;
+      corridor_code?: string | null;
+      map_group?: string;
+      browser_fetch?: boolean;
+    };
+    const leg = String(r.leg ?? '');
+    const spec = roadSpecFromRow(r);
+    const points = r.points;
+    const summary = String(r.summary ?? '').trim();
     if (!spec) continue;
     if (!Array.isArray(points) || points.length < 2) {
       rejected.push({ leg, why: summary || 'brak punktów' });
@@ -287,7 +316,22 @@ export function roadsRejectSummary(rejected: { leg: string; why: string }[]): st
   return rejected.map((r) => `${r.leg}: ${r.why}`).join(' · ');
 }
 
-const ROAD_LEGS = 5; // PL-GDN, SE-NYN, PL-GDY, SE-KAA, SE-KAA-INLAND (#667 B)
+/**
+ * #667 E / #677 F7 B2: ile legów z browser_fetch (core) — BN7 nie wymusza POST.
+ * Eksport pod testy (12 wierszy → 5).
+ */
+export function browserFetchLegCount(roads: unknown): number {
+  if (!Array.isArray(roads)) return 5;
+  let n = 0;
+  for (const row of roads) {
+    if (!row || typeof row !== 'object') continue;
+    const r = row as { browser_fetch?: boolean; map_group?: string };
+    if (r.browser_fetch === false) continue;
+    if (r.map_group === 'bn7') continue;
+    n += 1;
+  }
+  return n > 0 ? n : 5;
+}
 
 /** #667: re-export — helper bez auth w `orangeRoads.ts` (paczka demo nie ciągnie applyBasemap). */
 export { ORANGE_ROAD_STYLE, paintOrangeRoads } from './orangeRoads';
@@ -321,10 +365,13 @@ export async function loadRoadLines(): Promise<LatLng[][]> {
     try {
       const { getSupabase } = await import('../../auth/client');
       const sb = await getSupabase();
-      const read = async (force = false) => acceptedRoads((await readMapDisplayState(force))?.roads);
-      let lines = await read();
-      // #572 / #667: nie kończ przy 2 legach — SE-KAA z SE_E22 + INLAND.
-      if (lines.length >= ROAD_LEGS) return lines;
+      const read = async (force = false) => {
+        const state = await readMapDisplayState(force);
+        return { lines: acceptedRoads(state?.roads), roads: state?.roads };
+      };
+      let { lines, roads } = await read();
+      // #667 E: próg = legi browser_fetch (core), nie wszystkie BN7.
+      if (lines.length >= browserFetchLegCount(roads)) return lines;
       if (hereRoadsSessionAt > 0 && Date.now() - hereRoadsSessionAt < HERE_ROADS_SESSION_MS) return lines;
       const started = lines;
       const { data } = await sb.auth.getSession();
@@ -350,7 +397,7 @@ export async function loadRoadLines(): Promise<LatLng[][]> {
         hereRoadsSessionAt = Date.now();
       }
       try {
-        return await read(true);
+        return (await read(true)).lines;
       } catch {
         return started;
       }
