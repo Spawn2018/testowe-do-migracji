@@ -7457,6 +7457,15 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (odbiór prod):** SELECT `here_road_legs` — **12** / active 12 / `browser_fetch` 5; core bez zmian (3495/12561/3742/18854/19408); BN7 7× null. `here-roads` **#108803** @ 04:49Z ok (0 prób — core świeże; BN7 poza cronem). Komentarz w #667. **Dalej:** BN3 (#573).
 - Bez push na main.
 
+## 2026-10-31 23:15 — #685-b CI db: UTF-8 null-guard + EXPECTED 905; odbiór ferry-schedule
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE; #685 W TOKU (b / PR #690). Bez nowych `pilne`.
+- Scalanie: brak „F7: gotowe do scalenia” na #690. Bez push na main.
+- **Odbiór #688:** jednorazowy Edge `ferry-schedule` prod @ 22:03Z → `integration_runs` **113222** ok; inserted **1296**; Digitraffic Viking **14** (TLLA-HEL 7 + HELA-TLL 7; 150/160 min; `source_ref` digitraffic); 403 cargo/sales oczekiwane.
+- **Krok CI #690:** unit/visual ✔; db FAIL — `9e508d9f` zepsuł UTF-8 w `null-guard-calls.txt` (212 FAIL regex). Przywrócono pliki z `d4dd3d52`; `EXPECTED_LOCAL.nullguard` **895→905** (+2 GUARD ×5).
+- **Dalej:** push → CI → gotowe do F7; ekran BN9-c1 (koordynator).
+- Bez push na main.
+
 ## 2026-10-31 22:45 — #688 SCALONE; #685-b (0360 + Edge + apply)
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE; #685 W TOKU (b). Bez nowych `pilne`.
