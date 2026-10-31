@@ -7385,3 +7385,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: brak „F7: gotowe do scalenia” na #677/#676. CI #677 unit/db/visual ✔ @ `0cd8f720`. Bez push na main.
 - **Krok (PILNE diagnostyka PROD):** `retry_after` SE-KAA = 01.11 01:15Z = odrzucenie geometrii (+24 h) ścieżką JWT na **starej** Edge (v117 dopiero 01:30:13Z); brak `integration_runs` do 01:49. Po jobie `here-roads` 01:49:00Z (#108023): PL-GDN 3495, PL-GDY 3742, SE-NYN 12561, SE-KAA 18854, SE-KAA-INLAND 19408 — wszystkie `retry_after` null. SELECT + wniosek w #667. 0355 wolne do F7. **Dalej:** F7 #677 → F e2e prod.
 - Bez push na main.
+
+## 2026-10-31 03:25 — #677 F7 r1 POPRAWKI B1+B2 (DP-43…47)
+
+- Skrzynka: **#667** W TOKU (PR #677); #608 w planie; #550 WSTRZYMANE. #676 bez „F7: gotowe do scalenia”.
+- Scalanie: brak F7 na #677 (POPRAWKI @ 02:00Z / 02:07Z — B1+B2). CI docs @ `11b50241` unit/db/visual ✔ (G-15: czekaliśmy). Bez push na main.
+- **Krok (F7 #677 r1 B1+B2):** B1 — `listLegs`/`listHereRoadLegs`: `if (r.error) throw`; pusty słownik → `[...ROAD_LEGS]`; `resolveLegs` ten sam zapas; kolejność wdrożenia **0355 → Edge** w PLAN. B2 — testy zachowania: BN7 poza fetch/missing (browserOnly+cron); `roadSpecFromRow`/`checkRoads` kaa+SE_E22 vs INLAND; `browserFetchLegCount` 12→5; eksport funkcji. DP-44 `legDefFromRow` wspólne. Rejestr **DP-43…47**. Unit fokus i667/bmapa ✔ (43). **Dalej:** CI → gotowe do F7; potem F e2e.
+- Bez push na main.

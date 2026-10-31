@@ -233,7 +233,8 @@ const SPEC_FALLBACK: Record<string, RoadSpec | 'loose'> = {
   'SE-KAA-INLAND': ROAD_KAA,
 };
 
-function roadSpecFromRow(row: {
+/** #677 F7 B2: eksport pod testy zachowania (kaa+SE_E22 vs SE_KAA_INLAND). */
+export function roadSpecFromRow(row: {
   leg?: string;
   spec?: string;
   corridor_code?: string | null;
@@ -315,8 +316,11 @@ export function roadsRejectSummary(rejected: { leg: string; why: string }[]): st
   return rejected.map((r) => `${r.leg}: ${r.why}`).join(' · ');
 }
 
-/** #667 E: ile legów z browser_fetch (core) — BN7 nie wymusza POST z przeglądarki. */
-function browserFetchLegCount(roads: unknown): number {
+/**
+ * #667 E / #677 F7 B2: ile legów z browser_fetch (core) — BN7 nie wymusza POST.
+ * Eksport pod testy (12 wierszy → 5).
+ */
+export function browserFetchLegCount(roads: unknown): number {
   if (!Array.isArray(roads)) return 5;
   let n = 0;
   for (const row of roads) {

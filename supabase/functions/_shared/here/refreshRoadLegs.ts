@@ -109,13 +109,17 @@ function hasPoints(points: unknown): boolean {
   return Array.isArray(points) && points.length >= 2;
 }
 
-async function resolveLegs(
+/**
+ * #677 F7 r1 B1: pusty słownik → zapas ROAD_LEGS (nie {ok:true, stored:0}).
+ * browserOnly = tylko browser_fetch; cron = core + BN7 dopiero po browser_fetch=true.
+ */
+export async function resolveLegs(
   store: RoadRefreshStore,
   browserOnly: boolean | undefined,
 ): Promise<RoadLegDef[]> {
-  const all = store.listLegs ? await store.listLegs() : [...ROAD_LEGS];
+  const raw = store.listLegs ? await store.listLegs() : [...ROAD_LEGS];
+  const all = raw.length > 0 ? raw : [...ROAD_LEGS];
   if (browserOnly) return all.filter((l) => l.browserFetch !== false);
-  // Cron: core zawsze; BN7 dopiero po włączeniu browser_fetch (kalibracja korytarza).
   return all.filter((l) => l.mapGroup !== 'bn7' || l.browserFetch === true);
 }
 

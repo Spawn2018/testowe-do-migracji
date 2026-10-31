@@ -1170,8 +1170,10 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 3. **C cron HERE** — ~~`refreshRoadLegs` (próg 21 d); job + **0353** `tower-here-roads`; SOURCE_DOWN sticky; Edge dual~~. **Termin ≤ 04.11** (purge 05.11).
 4. Diagnostyka: ~~fundament `summary` w `map_display_state` + `checkRoads` (0354)~~; UI Stan systemu → DP-22; ~~`integration_runs` / SE-KAA `retry_after` (PILNE 01:34Z)~~ — 5 legów z punktami po `here-roads` 01:49Z (`#108023`); przyczyna: stara Edge JWT ~01:15 (+24 h) przed v117 01:30Z.
 5. ~~Słownik legów BN7 (`PL-TLL`…`SE-KPS`) gotowy do rysowania (DP-23)~~ — migracja **0355** `here_road_legs`; FK zamiast `IN (…)`; przeglądarka `browser_fetch` (core); BN7 bez auto-fetch do kalibracji.
+   - **Kolejność wdrożenia:** najpierw migracja **0355**, potem Edge `here-roads` (F7 #677 r1 B1 — bez fail-open na pusty słownik).
 6. Testy e2e na buildzie produkcyjnym (nie demo): ≥1 polilinia na mapę; SE-KAA obecny.
-7. ~~**F7 r1–r6** (+ POPRAWKI) w #673~~ SCALONE; **E (0355)** — **czekam F7** (PR #677; CI unit/db/visual ✔ @ `0cd8f720`).
+7. ~~**F7 r1–r6** (+ POPRAWKI) w #673~~ SCALONE; **E (0355)** — F7 #677 r1 POPRAWKI B1+B2 (listLegs throw/ROAD_LEGS; testy zachowania M1–M4) — **czekam F7**.
+8. Wyłączanie legu: `active=false` (FK bez `ON DELETE` — DP-45).
 
 
 ### Rejestr drobnych poprawek (DP) — #671 (zasada 30.10 18:31)
@@ -1216,6 +1218,11 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-38 | Cursor | test INLAND: lista via jak SQL (albo długości geodezyjne; dziś 9. via ~307 m vs prod) | F7 #673 r7 | po #667 E | w kolejce |
 | DP-39 | Cursor | przywróć test okna sesji 5 min (`__setHereRoadsSessionMsForTests(5*60_000)` → 2. wołanie bez POST) | F7 #673 r7 | po #667 E | w kolejce |
 | DP-40 | Cursor | wierzchołki INLAND 59.133/16.337 i 59.279/16.120 — SELECT na realnej linii HERE po wdrożeniu #673, ewent. przesunąć | F7 #673 r7 | po deploy #673 | w kolejce |
+| DP-43 | Cursor | `loadRoadLines`: próg = przyjęte spośród `browser_fetch` (dziś `lines.length` ze wszystkich) | F7 #677 r1 N1 | po #667 E | w kolejce |
+| DP-44 | Cursor | wspólny `legDefFromRow` (store + Edge) zamiast zdublowanego mapowania | F7 #677 r1 N2 | #667 E | w PR (#677) |
+| DP-45 | Cursor | FK bez ON DELETE — wyłączanie legu przez `active=false` (odnotować w PLAN) | F7 #677 r1 N3 | #667 E | odnotowane (§4 pkt 8) |
+| DP-46 | Cursor | `map_display_state` sortuje po `sort_order` zamiast `leg` — zmiana zachowania RPC | F7 #677 r1 N4 | #667 E | odnotowane |
+| DP-47 | Cursor | `here_store_road` przyjmuje legi nieaktywne — akceptowalne | F7 #677 r1 N5 | #667 E | odnotowane |
 
 ### BN9 — część na produkcji; ekrany zależne od danych (BN9-c*)
 Źródło: #671. BN9-a (#575) i BN9-b (#670) na produkcji. Zostają (koordynator, `wyglad/*`, zaraz po swoim etapie):
@@ -1231,7 +1238,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 1. **BN1** — ~~słowniki / strefy / CASE / F7 MFA~~ **SCALONE** (0338–0346).
 2. **BN2** — ~~LIVE~~ **SCALONE** (**0347**+**0348**, PR #660 `a94645d9`; PR #661 `392a9bc2`; dopisek F7 #665 `799ea18d`): Tallink; Portnet; Viking/Eckerö/DFDS HTML + Terminal A; B1–B3; Decyzja 50 MEDIUM.
 3. ~~**#666** (pilne)~~ — SCALONE (#668 `53890480` / **0351**).
-4. **#667** (pilne) — ~~A–D (#673)~~ SCALONE; ~~SE-KAA punkty (01:49Z)~~; E słownik BN7 (PR #677 / 0355) — czekam F7; potem F e2e.
+4. **#667** (pilne) — ~~A–D (#673)~~ SCALONE; ~~SE-KAA punkty (01:49Z)~~; E słownik BN7 (PR #677 / 0355) — F7 r1 B1+B2; kolejność 0355→Edge; DP-43…47; czekam F7; potem F e2e.
 5. BN3…BN10 — jak #573 (opóźnienia, AIS, pogoda, drogi LT/LV/EE/FI, HERE, statusy/ETA, ekrany, odbiór 48 h).
 
 ### #662 · PILNE SafeFleet — link tymczasowy (SG-27) — SCALONE (`189688bc` / PR #663 / **0349**); #662-b SCALONE (`1ee855fd` / PR #664 / **0350**, 30.10.2026 12:54Z)
@@ -2173,4 +2180,5 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 31.10.2026 02:40 | #667 E (PR #677 / 0355 DP-23) @ `0cd8f720`; CI ✔; czekam F7 | pętla |
 | 31.10.2026 02:49 | #667 PILNE: clear `retry_after` SE-KAA + job here-roads 5/5 (KAA 18854, INLAND 19408); 0355 OK do F7 | pętla |
 | 31.10.2026 03:00 | #667 PILNE SE-KAA: 5 legów z punktami po here-roads 01:49Z; przyczyna retry=stara Edge JWT; #677 CI ✔ czekam F7 | pętla |
+| 31.10.2026 03:25 | #677 F7 r1 B1+B2: listLegs throw/ROAD_LEGS; testy BN7/spec/count; DP-43…47; 0355→Edge | pętla |
 

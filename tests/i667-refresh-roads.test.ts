@@ -114,4 +114,61 @@ describe('#667 C refreshRoadLegs', () => {
     expect(r.warnings.some((w) => /hereMonthSpend|wydatku HERE/i.test(w))).toBe(true);
     expect(r.missingLegs).toEqual(ROAD_LEGS.map((l) => l.leg));
   });
+
+  /** #677 F7 r1 B1/B2 — BN7 poza browserOnly/cron; pusty słownik → ROAD_LEGS. */
+  const BN7_OFF = {
+    leg: 'PL-TLL',
+    origin: '52.07,17.02',
+    destination: '59.44,24.75',
+    spec: 'loose' as const,
+    summary: 'BN7 placeholder',
+    browserFetch: false,
+    mapGroup: 'bn7' as const,
+  };
+
+  it('F7 #677 B2: BN7 browserFetch:false — brak fetch w browserOnly i cronie; poza missingLegs', async () => {
+    const legs = [...ROAD_LEGS, BN7_OFF];
+    const stale = [
+      ...ROAD_LEGS.map((l) => geom(l.leg, 40 * 864e5, null)),
+      geom('PL-TLL', 40 * 864e5, null),
+    ];
+
+    const fetchBrowser = vi.fn(async () => new Response('nope', { status: 500 }));
+    const sBrowser = store(stale);
+    sBrowser.listLegs = async () => legs;
+    const browser = await refreshRoadLegs(sBrowser, {
+      fetch: fetchBrowser as unknown as typeof fetch,
+      hereApiKey: 'k',
+      maxAgeMs: ROAD_CRON_REFRESH_MS,
+      browserOnly: true,
+    });
+    expect(browser.attempted).toBe(5);
+    expect(browser.missingLegs).toEqual(ROAD_LEGS.map((l) => l.leg));
+    expect(browser.missingLegs).not.toContain('PL-TLL');
+
+    const fetchCron = vi.fn(async () => new Response('nope', { status: 500 }));
+    const sCron = store(stale);
+    sCron.listLegs = async () => legs;
+    const cron = await refreshRoadLegs(sCron, {
+      fetch: fetchCron as unknown as typeof fetch,
+      hereApiKey: 'k',
+      maxAgeMs: ROAD_CRON_REFRESH_MS,
+    });
+    expect(cron.attempted).toBe(5);
+    expect(cron.missingLegs).toEqual(ROAD_LEGS.map((l) => l.leg));
+    expect(cron.missingLegs).not.toContain('PL-TLL');
+  });
+
+  it('F7 #677 B1: pusty listLegs → zapas ROAD_LEGS (nie stored:0 w ciszy)', async () => {
+    const fetchFn = vi.fn(async () => new Response('nope', { status: 500 }));
+    const s = store(ROAD_LEGS.map((l) => geom(l.leg, 40 * 864e5, null)));
+    s.listLegs = async () => [];
+    const r = await refreshRoadLegs(s, {
+      fetch: fetchFn as unknown as typeof fetch,
+      hereApiKey: 'k',
+      maxAgeMs: ROAD_CRON_REFRESH_MS,
+    });
+    expect(r.attempted).toBe(5);
+    expect(r.missingLegs).toEqual(ROAD_LEGS.map((l) => l.leg));
+  });
 });

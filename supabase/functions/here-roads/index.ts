@@ -10,9 +10,11 @@ import { createClient } from 'npm:@supabase/supabase-js@2';
 import { HERE_BILLING_DEFAULTS } from '../_shared/here/billing.ts';
 import {
   refreshRoadLegs,
+  ROAD_LEGS,
   type CorridorBundle,
   type RoadRefreshStore,
 } from '../_shared/here/refreshRoadLegs.ts';
+import { legDefFromRow } from '../_shared/here/legDefFromRow.ts';
 import { type LatLng } from '../_shared/map/draw.ts';
 import { corsHeaders, corsPreflight } from '../_shared/cors.ts';
 import { isServiceRequest } from '../_shared/serviceAuth.ts';
@@ -33,30 +35,18 @@ function parseCorridorPoints(raw: unknown): LatLng[] {
 
 function roadStore(sb: ReturnType<typeof createClient>): RoadRefreshStore {
   return {
-    // #667 E / DP-23: legi ze słownika (nie ROAD_LEGS w kodzie).
+    // #667 E / DP-23 + #677 F7 B1: legi ze słownika; błąd/pustka → throw / ROAD_LEGS.
+    // Kolejność wdrożenia: migracja 0355, potem Edge (bez fail-open na []).
     async listLegs() {
       const r = await sb
         .from('here_road_legs')
         .select('leg,origin_lat,origin_lng,dest_lat,dest_lng,spec,summary,corridor_code,browser_fetch,map_group')
         .eq('active', true)
         .order('sort_order');
-      return (r.data ?? []).map((row) => {
-        const specRaw = String(row.spec ?? 'loose');
-        const spec =
-          specRaw === 'pl' || specRaw === 'se' || specRaw === 'kaa' || specRaw === 'loose'
-            ? specRaw
-            : 'loose';
-        return {
-          leg: String(row.leg),
-          origin: `${Number(row.origin_lat)},${Number(row.origin_lng)}`,
-          destination: `${Number(row.dest_lat)},${Number(row.dest_lng)}`,
-          spec,
-          summary: String(row.summary ?? ''),
-          corridorCode: row.corridor_code != null ? String(row.corridor_code) : undefined,
-          browserFetch: row.browser_fetch !== false,
-          mapGroup: row.map_group === 'bn7' ? 'bn7' as const : 'core' as const,
-        };
-      });
+      if (r.error) throw new Error(`here_road_legs: ${r.error.message}`);
+      const rows = r.data ?? [];
+      if (rows.length === 0) return [...ROAD_LEGS];
+      return rows.map((row) => legDefFromRow(row));
     },
     async listGeometry() {
       const fresh = await sb.from('here_road_geometry').select('leg,fetched_at,points,retry_after');
