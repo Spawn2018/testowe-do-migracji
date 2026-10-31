@@ -8,6 +8,7 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import {
+  autoCancelFromCancelSentence,
   decodeTallinkCmsHtml,
   departureMatchesAlert,
   matchTallinkAlertSailings,
@@ -100,7 +101,7 @@ describe('BN3 Tallink Alert', () => {
     expect(d).toMatchObject({ startYmd: '2026-11-02', endYmd: '2026-11-02', hm: '00:30' });
     const alert = {
       kind: 'ODWOLANY' as const,
-      text: 'x', vessel: 'M/F MyStar', multiVessel: false, multiTime: false,
+      text: 'x', vessel: 'M/F MyStar', multiVessel: false, multiTime: false, autoCancelOk: true,
       routes: ['TLL-HEL' as const],
       contentStartYmd: '2026-11-02', contentEndYmd: '2026-11-02', contentHm: '00:30',
       windowStartYmd: '2026-10-26', windowEndYmd: '2026-10-28', // Scheduler = tylko wygaśnięcie
@@ -365,22 +366,34 @@ describe('BN3 Tallink Alert — runFerryStatus (F7 B5)', () => {
     expect(st.risks.some((r) => r.titleKey === 'rk_tallink_alert_ambiguous')).toBe(true);
   });
 
-  it('F7 R4-B1: Updated/tomorrow → ryzyko, bez ODWOLANY na 1.11 16:30', async () => {
-    const html = wrapAlert(
+  it('F7 R4-B1: Updated/tomorrow + Today/Monday + data w innym zdaniu → ryzyko; mutacja same-sentence', async () => {
+    for (const text of [
       'Updated on 1 November: the MyStar 16:30 departure from Tallinn to Helsinki tomorrow is cancelled.',
-      '2026-11-01',
-    );
-    const st = new MemStore();
-    st.sailings.push({
-      id: 's-1630', vessel_id: MYST, route: 'TLL-HEL',
-      departure_at: '2026-11-01T14:30:00.000Z', arrival_at: '2026-11-01T16:30:00.000Z',
-      delayed_departure_at: null, delayed_arrival_at: null,
-      status: 'ZAPLANOWANY', source: 'TALLINK',
+      'Today, 1 November, we inform that the MyStar 16:30 departure from Tallinn to Helsinki on Monday is cancelled.',
+      'On 2 November at 07:30 the weather looks fine. MyStar sailing from Tallinn to Helsinki is cancelled.',
+    ]) {
+      const st = new MemStore();
+      st.sailings.push({
+        id: 's-1630', vessel_id: MYST, route: 'TLL-HEL',
+        departure_at: '2026-11-01T14:30:00.000Z', arrival_at: '2026-11-01T16:30:00.000Z',
+        delayed_departure_at: null, delayed_arrival_at: null,
+        status: 'ZAPLANOWANY', source: 'TALLINK',
+      });
+      await runFerryStatus(deps(st, {
+        'tallink.com': wrapAlert(text, '2026-11-01'),
+        'ts.ee': 503, portsofstockholm: 503,
+      }, NOW));
+      expect(st.sailings[0]!.status).toBe('ZAPLANOWANY');
+      expect(st.notices).toHaveLength(0);
+      expect(st.risks.some((r) => r.titleKey === 'rk_tallink_alert_ambiguous')).toBe(true);
+    }
+    // Mutacja: bez „to samo zdanie” całe treści dają datę+HH:MM (test padałby przy match).
+    const other =
+      'On 2 November at 07:30 the weather looks fine. MyStar sailing from Tallinn to Helsinki is cancelled.';
+    expect(autoCancelFromCancelSentence(other, 2026)).toBeNull();
+    expect(parseAlertContentDates(other, 2026)).toMatchObject({
+      startYmd: '2026-11-02', hm: '07:30',
     });
-    await runFerryStatus(deps(st, { 'tallink.com': html, 'ts.ee': 503, portsofstockholm: 503 }, NOW));
-    expect(st.sailings[0]!.status).toBe('ZAPLANOWANY');
-    expect(st.notices).toHaveLength(0);
-    expect(st.risks.some((r) => r.titleKey === 'rk_tallink_alert_ambiguous')).toBe(true);
   });
 });
 
