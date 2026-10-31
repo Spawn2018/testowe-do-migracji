@@ -151,6 +151,8 @@ export function parseDigitrafficPortCalls(json: unknown): PortCallParseResult {
 
 export function digitrafficPortCallsUrl(opts: {
   vesselName?: string;
+  /** UN/LOCODE, np. FIHEL (#685-a). */
+  locode?: string;
   fromIso: string;
   toIso: string;
 }): string {
@@ -159,5 +161,95 @@ export function digitrafficPortCallsUrl(opts: {
     to: opts.toIso,
   });
   if (opts.vesselName) q.set('vesselName', opts.vesselName);
+  if (opts.locode) q.set('locode', opts.locode);
   return `${DIGITRAFFIC_PORT_CALLS_URL}?${q}`;
+}
+
+/** #685-a / decyzja 63a — Viking XPRS (MMSI) w Eteläsatama (ES / Katajanokka). */
+export const VIKING_XPRS_MMSI = 230705000;
+export const VIKING_HEL_AREA_ES = 'ES';
+/** Typowy czas przejścia HEL⇄TLL XPRS (jak Port of Tallinn CROSSING_MIN TLLA-HEL = 120). */
+export const VIKING_XPRS_CROSSING_MS = 120 * 60_000;
+/** Horyzont ETA/ETD z Portnetu → rozkład (najbliższe dni). */
+export const VIKING_DIGITRAFFIC_HORIZON_DAYS = 3;
+
+export interface DigitrafficVikingSailing {
+  route: FerryRoute;
+  vessel: string;
+  departureUtc: string;
+  arrivalUtc: string;
+}
+
+/**
+ * #685-a — z Portnet FIHEL (obszar ES, Viking XPRS) buduje rejsy TLLA-HEL / HELA-TLL
+ * z ETA/ETD w horyzoncie. Bez ATA/ATD (to actual_* w applyDigitrafficPortCallActuals).
+ * Atrybucja: DIGITRAFFIC_PORTCALL_ATTRIBUTION (CC BY 4.0).
+ */
+export function vikingScheduleFromDigitrafficPortCalls(
+  json: unknown,
+  opts: { now: Date; horizonDays?: number; crossingMs?: number },
+): { sailings: DigitrafficVikingSailing[]; warnings: string[] } {
+  const warnings: string[] = [];
+  const sailings: DigitrafficVikingSailing[] = [];
+  if (!json || typeof json !== 'object' || !('portCalls' in json)) {
+    warnings.push('Struktura Portnet zmieniona: brak portCalls. Parser wymaga aktualizacji.');
+    return { sailings, warnings };
+  }
+  const list = (json as { portCalls?: unknown }).portCalls;
+  if (!Array.isArray(list)) {
+    warnings.push('Struktura Portnet zmieniona: portCalls nie jest tablicą.');
+    return { sailings, warnings };
+  }
+  const horizonDays = opts.horizonDays ?? VIKING_DIGITRAFFIC_HORIZON_DAYS;
+  const crossingMs = opts.crossingMs ?? VIKING_XPRS_CROSSING_MS;
+  const nowMs = opts.now.getTime();
+  const horizonEnd = nowMs + horizonDays * 864e5;
+  const vessel = 'M/F Viking XPRS';
+  for (let i = 0; i < list.length; i++) {
+    const row = list[i];
+    if (!row || typeof row !== 'object') {
+      warnings.push(`Portnet: nieczytelny wpis nr ${i + 1}.`);
+      continue;
+    }
+    const r = row as Record<string, unknown>;
+    if (String(r.portToVisit ?? '').toUpperCase() !== 'FIHEL') continue;
+    const mmsi = r.mmsi != null ? Number(r.mmsi) : NaN;
+    const name = String(r.vesselName ?? '').trim().toLowerCase();
+    const isXprs = mmsi === VIKING_XPRS_MMSI || /viking\s*xprs/.test(name) || name === 'xprs';
+    if (!isXprs) continue;
+    const areas = Array.isArray(r.portAreaDetails) ? r.portAreaDetails : [];
+    const area = (areas[0] && typeof areas[0] === 'object')
+      ? areas[0] as Record<string, unknown>
+      : {};
+    if (String(area.portAreaCode ?? '').toUpperCase() !== VIKING_HEL_AREA_ES) continue;
+    const prevPort = r.prevPort != null ? String(r.prevPort) : null;
+    const nextPort = r.nextPort != null ? String(r.nextPort) : null;
+    const eta = area.eta ? new Date(String(area.eta)).toISOString() : null;
+    const etd = area.etd ? new Date(String(area.etd)).toISOString() : null;
+    if (eta && eePartner(prevPort)) {
+      const arrMs = Date.parse(eta);
+      const depMs = arrMs - crossingMs;
+      if (depMs >= nowMs - 3600_000 && depMs <= horizonEnd) {
+        sailings.push({
+          route: 'TLLA-HEL',
+          vessel,
+          departureUtc: new Date(depMs).toISOString(),
+          arrivalUtc: eta,
+        });
+      }
+    }
+    if (etd && eePartner(nextPort)) {
+      const depMs = Date.parse(etd);
+      const arrMs = depMs + crossingMs;
+      if (depMs >= nowMs - 3600_000 && depMs <= horizonEnd) {
+        sailings.push({
+          route: 'HELA-TLL',
+          vessel,
+          departureUtc: etd,
+          arrivalUtc: new Date(arrMs).toISOString(),
+        });
+      }
+    }
+  }
+  return { sailings, warnings };
 }

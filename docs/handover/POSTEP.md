@@ -7435,6 +7435,26 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (odbiór prod):** SELECT `here_road_legs` — **12** / active 12 / `browser_fetch` 5; core bez zmian (3495/12561/3742/18854/19408); BN7 7× null. `here-roads` **#108803** @ 04:49Z ok (0 prób — core świeże; BN7 poza cronem). Komentarz w #667. **Dalej:** BN3 (#573).
 - Bez push na main.
 
+## 2026-10-31 17:55 — #685-a CI ✔; korekta docs (crossing 120 min)
+
+- Skrzynka: #685 W TOKU (a); #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne` do budowy.
+- Scalanie: **#688** — brak „F7: gotowe do scalenia” (tylko „gotowe do F7” @ `693a926d`). CI unit/db/visual ✔. Bez push na main.
+- **Krok:** poprawka opisu — przejście HEL⇄TLL = **120 min** (`VIKING_XPRS_CROSSING_MS`), nie „2h15” (błąd w POSTEP 17:35 / komentarzu PR). PLAN §4 #685-a: PR #688 @ `693a926d`, CI ✔, czekam F7. Plik HTML na dysku: `D:\Watch Tower\dane\viking-cargo-hel-tll.html` (pod #685-b; nazwa z myślnikami).
+- **Dalej:** F7 → scalenie #688 → #685-b.
+- Bez push na main.
+
+## 2026-10-31 17:35 — #685-a Digitraffic Viking near schedule (63a)
+
+- Skrzynka: #685 W TOKU (a); #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne` do budowy.
+- Scalanie: **#683 SCALONE** `63088803` (F7: gotowe do scalenia @ `993e42fe`; CI ✔). Bez push na main.
+- **Krok #685-a (63a):**
+  - `vikingScheduleFromDigitrafficPortCalls` — FIHEL / ES / MMSI 230705000 → TLLA-HEL (ETA−120 min) / HELA-TLL (ETD+120 min), horyzont 3 d;
+  - `applyDigitrafficVikingNearSchedule` w `ferry-schedule` — source=VIKING; ±30 min jak #682; RECZNIE bez zmian; ambiguous → ryzyko MEDIUM; SOURCE_DOWN zostaje (63c);
+  - `Digitraffic-User: LOGMAR/WatchTower`; atrybucja CC BY 4.0 (Portnet);
+  - testy bn2-ferry-schedule + bn2-ferry-jobs **77** OK (w tym #685-a: parser + job HTML403/RECZNIE/ambiguous); fixture wycinek XPRS ES.
+- **Dalej:** push PR → CI → gotowe do F7; potem #685-b.
+- Bez push na main.
+
 ## 2026-10-31 17:00 — #683 F7 R14 (tylko testy mutacji)
 
 - Skrzynka: #685 w planie (po #683); #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne` do budowy.
