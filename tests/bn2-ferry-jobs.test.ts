@@ -53,6 +53,28 @@ class MemStore implements SyncStore {
   async sailingsSince(from: string) {
     return this.sailings.filter((s) => s.departure_at >= from).map((s) => ({ ...s }));
   }
+  /** F7 #690 R2-B4 / 63c */
+  async maxVikingFileDepartureAt(nowIso: string) {
+    let max: string | null = null;
+    for (const s of this.sailings) {
+      if (s.source !== 'VIKING') continue;
+      if (s.source_ref != null && s.source_ref !== '') continue;
+      if (s.departure_at <= nowIso) continue;
+      if (!max || s.departure_at > max) max = s.departure_at;
+    }
+    return max;
+  }
+  /** F7 #690 R2-B4 / 63c — max bez limitu 1000. */
+  async maxVikingFileDepartureAt(nowIso: string) {
+    let max: string | null = null;
+    for (const s of this.sailings) {
+      if (s.source !== 'VIKING') continue;
+      if (s.source_ref != null && s.source_ref !== '') continue;
+      if (s.departure_at <= nowIso) continue;
+      if (!max || s.departure_at > max) max = s.departure_at;
+    }
+    return max;
+  }
   async insertSailings(rows: SailingInsert[]) {
     for (const r of rows) {
       /* F7 #688 r3: unikalny source_ref (wiersz poza sinceIso) → konflikt jak w bazie. */
@@ -1163,6 +1185,54 @@ describe('F7 #661 B3 Tallink oba kierunki + Viking/Eckerö joby', () => {
     expect(st.risks.some((x) => String(x.dedup).startsWith('SOURCE_DOWN:TALLINK_SCHEDULE:'))).toBe(false);
   });
 
+  it('F7 #690 R2-B4/63c: Cargo 403 + pokrycie 29 d → SOURCE_DOWN; 30 d → resolve', async () => {
+    const pages: Record<string, string | number> = {
+      ...tallinkPages,
+      'viking-line-cargo': 403,
+      'sales.vikingline.com': 403,
+      'eckeroline.com': 503,
+      'dfds.com': 503,
+      'ctfassets.net': 503,
+    };
+    const st29 = new MemStore();
+    st29.sailings.push({
+      id: 'vk-29',
+      vessel_id: 'v-xprs',
+      route: 'TLLA-HEL',
+      departure_at: '2026-11-28T12:00:00.000Z',
+      arrival_at: '2026-11-28T14:30:00.000Z',
+      delayed_departure_at: null,
+      delayed_arrival_at: null,
+      status: 'ZAPLANOWANY',
+      source: 'VIKING',
+      source_ref: null,
+    });
+    await runFerrySchedule(deps(st29, pages));
+    expect(st29.risks.some((x) => String(x.dedup).startsWith('SOURCE_DOWN:VIKING_SCHEDULE:'))).toBe(true);
+
+    const st30 = new MemStore();
+    st30.sailings.push({
+      id: 'vk-30',
+      vessel_id: 'v-xprs',
+      route: 'TLLA-HEL',
+      departure_at: '2026-11-29T12:00:00.000Z',
+      arrival_at: '2026-11-29T14:30:00.000Z',
+      delayed_departure_at: null,
+      delayed_arrival_at: null,
+      status: 'ZAPLANOWANY',
+      source: 'VIKING',
+      source_ref: null,
+    });
+    st30.risks.push({
+      kind: 'FERRY',
+      severity: 'MEDIUM',
+      title: 'Źródło niedostępne',
+      dedup: 'SOURCE_DOWN:VIKING_SCHEDULE:x',
+    });
+    await runFerrySchedule(deps(st30, pages));
+    expect(st30.risks.some((x) => String(x.dedup).startsWith('SOURCE_DOWN:VIKING_SCHEDULE:'))).toBe(false);
+  });
+
   it('#666 A: Cargo OK → rejsy VIKING mimo sales 403; Eckerö SOURCE_DOWN', async () => {
     const st = new MemStore();
     const pages: Record<string, string | number> = {
@@ -1390,6 +1460,45 @@ describe('#685-a Digitraffic Viking near schedule (decyzja 63a)', () => {
     expect(vk.some((s) => s.route === 'HELA-TLL')).toBe(true);
     expect(vk.length).toBeGreaterThanOrEqual(4);
     expect(st.risks.some((x) => String(x.dedup).startsWith('SOURCE_DOWN:VIKING_SCHEDULE:'))).toBe(true);
+  });
+
+  it('F7 #690 R2-B4/63c: 403 Viking — pokrycie 29 d → SOURCE_DOWN; 30 d → resolve', async () => {
+    const pages403: Record<string, string | number> = {
+      ...tallinkPages,
+      'viking-line-cargo': 403,
+      'sales.vikingline.com': 403,
+      'port-calls': 503,
+      'eckeroline.com': 503,
+      'dfds.com': 503,
+      'ctfassets.net': 503,
+    };
+    const st29 = new MemStore();
+    st29.sailings.push({
+      id: 'cov-29', vessel_id: 'v-xprs', route: 'TLLA-HEL',
+      departure_at: new Date(NOW.getTime() + 29 * 864e5).toISOString(),
+      arrival_at: new Date(NOW.getTime() + 29 * 864e5 + 2.5 * 3600e3).toISOString(),
+      delayed_departure_at: null, delayed_arrival_at: null,
+      actual_departure_at: null, actual_arrival_at: null,
+      status: 'ZAPLANOWANY', source: 'VIKING', source_ref: null,
+    });
+    await runFerrySchedule(deps(st29, pages403));
+    expect(st29.risks.some((x) => String(x.dedup).startsWith('SOURCE_DOWN:VIKING_SCHEDULE:'))).toBe(true);
+
+    const st30 = new MemStore();
+    st30.sailings.push({
+      id: 'cov-30', vessel_id: 'v-xprs', route: 'TLLA-HEL',
+      departure_at: new Date(NOW.getTime() + 30 * 864e5).toISOString(),
+      arrival_at: new Date(NOW.getTime() + 30 * 864e5 + 2.5 * 3600e3).toISOString(),
+      delayed_departure_at: null, delayed_arrival_at: null,
+      actual_departure_at: null, actual_arrival_at: null,
+      status: 'ZAPLANOWANY', source: 'VIKING', source_ref: null,
+    });
+    st30.risks.push({
+      kind: 'FERRY', severity: 'MEDIUM', title: 'x', titleKey: 'x', params: {},
+      detail: {}, dedup: `SOURCE_DOWN:VIKING_SCHEDULE:${NOW.toISOString().slice(0, 10)}`,
+    });
+    await runFerrySchedule(deps(st30, pages403));
+    expect(st30.risks.some((x) => String(x.dedup).startsWith('SOURCE_DOWN:VIKING_SCHEDULE:'))).toBe(false);
   });
 
   it('RECZNIE w oknie ±30 min — bez nadpisania; manualKept ≥ 1', async () => {

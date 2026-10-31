@@ -1,14 +1,18 @@
 /**
- * #685-b / decyzja 63b+74 + #685-c + F7 #690 r1 — applyVikingFileSchedule (≠ applySailings).
+ * #685-b / decyzja 63b+74 + #685-c + F7 #690 r1/r2 — applyVikingFileSchedule (≠ applySailings).
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { parseVikingTimetableHtml } from '../supabase/functions/_shared/ferry/vikingline.ts';
 import {
   applyVikingFileSchedule,
+  parseVikingImportFromYmd,
+  planningVikingFileStore,
   previewVikingFileSailings,
   isDigitrafficSourceRef,
   isVikingFileTouchCandidate,
+  vikingCoverageDaysFromMaxDeparture,
+  vikingImportAssertError,
   vikingScheduleCoverageDaysFromNow,
   VIKING_FILE_COVERAGE_DAYS_CLOSE,
   VIKING_FILE_SCHEDULE_WIN_MS,
@@ -62,7 +66,18 @@ function memStore(seed: DbSailing[] = []): Mem {
     setLoads(id, n) { loadCounts.set(id, n); },
     async projectId() { return 'proj'; },
     async vessels() { return vessels; },
-    async sailingsSince() { return sailings; },
+    /* F7 #690 R2-B3: structuredClone — mutacje lokalne apply nie psują asercji source_ref. */
+    async sailingsSince() { return sailings.map((s) => structuredClone(s)); },
+    async maxVikingFileDepartureAt(nowIso) {
+      let max: string | null = null;
+      for (const s of sailings) {
+        if (s.source !== 'VIKING') continue;
+        if (s.source_ref != null && s.source_ref !== '') continue;
+        if (s.departure_at <= nowIso) continue;
+        if (!max || s.departure_at > max) max = s.departure_at;
+      }
+      return max;
+    },
     async insertSailings(rows) {
       for (const r of rows) {
         sailings.push({
@@ -288,7 +303,7 @@ describe('#685-b applyVikingFileSchedule', () => {
       }),
     ]);
     st.setLoads('old-load', 1);
-    /* Nowy plik: tylko 12:00 — stare 10:00 i 14:00 poza ±30 min. */
+    /* Nowy plik: tylko 12:00 — stare 10:00 i 14:00 poza ±1 min; ten sam dzień → próg OK (1/2). */
     const r = await applyVikingFileSchedule(deps(st, now), [{
       route: 'TLLA-HEL',
       vessel: 'M/F Viking XPRS',
@@ -410,5 +425,206 @@ describe('#685-b applyVikingFileSchedule', () => {
     });
     expect(r2.inserted).toBe(0);
     expect(st.sailings).toHaveLength(n);
+  });
+});
+
+describe('#685-b F7 #690 r2', () => {
+  it('R2-B1: plik tylko HELA-TLL nie kasuje TLLA-HEL', async () => {
+    const now = new Date('2026-10-31T12:00:00.000Z');
+    const existing = Array.from({ length: 10 }, (_, i) => sailing({
+      id: `tlla-${i}`,
+      route: 'TLLA-HEL',
+      departure_at: `2026-11-${String(i + 1).padStart(2, '0')}T10:00:00.000Z`,
+      arrival_at: `2026-11-${String(i + 1).padStart(2, '0')}T12:30:00.000Z`,
+    }));
+    const st = memStore(existing);
+    const file = Array.from({ length: 10 }, (_, i) => ({
+      route: 'HELA-TLL' as const,
+      vessel: 'M/F Viking XPRS',
+      departureUtc: `2026-11-${String(i + 1).padStart(2, '0')}T08:00:00.000Z`,
+      arrivalUtc: `2026-11-${String(i + 1).padStart(2, '0')}T10:30:00.000Z`,
+    }));
+    const r = await applyVikingFileSchedule(deps(st, now), file, {
+      sinceIso: '2026-10-31T00:00:00.000Z', now,
+    });
+    expect(st.sailings.filter((s) => s.route === 'TLLA-HEL')).toHaveLength(10);
+    expect(r.removed).toBe(0);
+    expect(r.cleanThresholdPassed).toBe(true);
+  });
+
+  it('R2-B1: 2 rejsy w zakresie 265 → próg <50%, bez kasowania + ryzyko', async () => {
+    const now = new Date('2026-10-31T12:00:00.000Z');
+    const existing = Array.from({ length: 20 }, (_, i) => {
+      const d = 1 + (i % 20);
+      return sailing({
+        id: `old-${i}`,
+        departure_at: `2026-11-${String(d).padStart(2, '0')}T10:00:00.000Z`,
+        arrival_at: `2026-11-${String(d).padStart(2, '0')}T12:30:00.000Z`,
+      });
+    });
+    const st = memStore(existing);
+    const r = await applyVikingFileSchedule(deps(st, now), [
+      {
+        route: 'TLLA-HEL',
+        vessel: 'M/F Viking XPRS',
+        departureUtc: '2026-11-01T12:00:00.000Z',
+        arrivalUtc: '2026-11-01T14:30:00.000Z',
+      },
+      {
+        route: 'TLLA-HEL',
+        vessel: 'M/F Viking XPRS',
+        departureUtc: '2026-11-20T12:00:00.000Z',
+        arrivalUtc: '2026-11-20T14:30:00.000Z',
+      },
+    ], { sinceIso: '2026-10-31T00:00:00.000Z', now });
+    expect(r.cleanThresholdPassed).toBe(false);
+    expect(r.sourceDownClosed).toBe(false);
+    expect(st.sailings.filter((s) => s.id.startsWith('old-')).length).toBe(20);
+    expect(st.risks.some((d) => d.startsWith('VIKING_FILE_INCOMPLETE:'))).toBe(true);
+    expect(r.warnings.some((w) => /niepełny/i.test(w))).toBe(true);
+  });
+
+  it('R2-B2: podgląd (planning store) nic nie zapisuje i zwraca plan', async () => {
+    const now = new Date('2026-10-31T12:00:00.000Z');
+    const st = memStore([
+      sailing({
+        id: 'dt-p',
+        departure_at: '2026-11-01T10:00:00.000Z',
+        arrival_at: '2026-11-01T12:00:00.000Z',
+        source_ref: 'digitraffic:portcall:p:TLLA-HEL',
+      }),
+    ]);
+    const before = st.sailings.length;
+    const { store: planStore, plan } = planningVikingFileStore(st);
+    const dry = await applyVikingFileSchedule(
+      { store: planStore, now: () => now },
+      [{
+        route: 'TLLA-HEL',
+        vessel: 'M/F Viking XPRS',
+        departureUtc: '2026-11-01T10:15:00.000Z',
+        arrivalUtc: '2026-11-01T12:15:00.000Z',
+      }],
+      { sinceIso: '2026-10-31T00:00:00.000Z', now, collectPlan: true },
+    );
+    expect(st.sailings).toHaveLength(before);
+    expect(st.sailings[0]!.source_ref).toBe('digitraffic:portcall:p:TLLA-HEL');
+    expect(dry.plan!.to_remove.length + dry.plan!.to_insert.length).toBeGreaterThan(0);
+    expect(plan.to_remove.length + plan.to_insert.length).toBeGreaterThan(0);
+
+    const committed = await applyVikingFileSchedule(deps(st, now), [{
+      route: 'TLLA-HEL',
+      vessel: 'M/F Viking XPRS',
+      departureUtc: '2026-11-01T10:15:00.000Z',
+      arrivalUtc: '2026-11-01T12:15:00.000Z',
+    }], { sinceIso: '2026-10-31T00:00:00.000Z', now });
+    expect(committed.removed).toBe(dry.removed);
+    expect(committed.inserted).toBe(dry.inserted);
+  });
+
+  it('R2-B3: coverage apply >30 d zamyka; +30/+29 nie; Digitraffic nie daje pokrycia', async () => {
+    const now = new Date('2026-10-31T12:00:00.000Z');
+    const st30 = memStore();
+    const r30 = await applyVikingFileSchedule(deps(st30, now), [{
+      route: 'TLLA-HEL',
+      vessel: 'M/F Viking XPRS',
+      departureUtc: '2026-11-30T12:00:00.000Z',
+      arrivalUtc: '2026-11-30T14:00:00.000Z',
+    }], { sinceIso: '2026-10-31T00:00:00.000Z', now });
+    expect(r30.sourceDownClosed).toBe(false);
+
+    const st29 = memStore();
+    const r29 = await applyVikingFileSchedule(deps(st29, now), [{
+      route: 'TLLA-HEL',
+      vessel: 'M/F Viking XPRS',
+      departureUtc: '2026-11-29T12:00:00.000Z',
+      arrivalUtc: '2026-11-29T14:00:00.000Z',
+    }], { sinceIso: '2026-10-31T00:00:00.000Z', now });
+    expect(r29.sourceDownClosed).toBe(false);
+
+    const st31 = memStore();
+    const r31 = await applyVikingFileSchedule(deps(st31, now), [{
+      route: 'TLLA-HEL',
+      vessel: 'M/F Viking XPRS',
+      departureUtc: '2026-12-01T12:00:00.000Z',
+      arrivalUtc: '2026-12-01T14:00:00.000Z',
+    }], { sinceIso: '2026-10-31T00:00:00.000Z', now });
+    expect(r31.sourceDownClosed).toBe(true);
+
+    const covDt = vikingScheduleCoverageDaysFromNow([
+      sailing({
+        id: 'dt-far',
+        departure_at: '2026-12-15T12:00:00.000Z',
+        arrival_at: '2026-12-15T14:00:00.000Z',
+        source_ref: 'digitraffic:portcall:far:TLLA-HEL',
+      }),
+    ], now.getTime());
+    expect(covDt).toBe(0);
+    expect(vikingCoverageDaysFromMaxDeparture('2026-12-15T12:00:00.000Z', now.getTime()))
+      .toBeGreaterThanOrEqual(30);
+  });
+
+  it('R2-B3: RECZNIE +45 min → insert (okno 30 min, nie 3 h)', async () => {
+    const now = new Date('2026-10-31T12:00:00.000Z');
+    const st = memStore([
+      sailing({
+        id: 'man-45',
+        departure_at: '2026-11-01T10:00:00.000Z',
+        arrival_at: '2026-11-01T12:00:00.000Z',
+        source: 'RECZNIE',
+      }),
+    ]);
+    const r = await applyVikingFileSchedule(deps(st, now), [{
+      route: 'TLLA-HEL',
+      vessel: 'M/F Viking XPRS',
+      departureUtc: '2026-11-01T10:45:00.000Z',
+      arrivalUtc: '2026-11-01T12:45:00.000Z',
+    }], { sinceIso: '2026-10-31T00:00:00.000Z', now });
+    expect(r.manualKept).toBe(0);
+    expect(r.inserted).toBe(1);
+    expect(st.sailings.some((s) => s.source === 'RECZNIE')).toBe(true);
+  });
+
+  it('R2-B3: czyszczenie nie rusza poza zakresem dat ani ODWOLANY/OPOZNIONY', async () => {
+    const now = new Date('2026-10-31T12:00:00.000Z');
+    const st = memStore([
+      sailing({
+        id: 'out-range',
+        departure_at: '2026-12-01T10:00:00.000Z',
+        arrival_at: '2026-12-01T12:00:00.000Z',
+      }),
+      sailing({
+        id: 'odw-ok',
+        departure_at: '2026-11-01T10:00:00.000Z',
+        arrival_at: '2026-11-01T12:00:00.000Z',
+        status: 'ODWOLANY',
+      }),
+      sailing({
+        id: 'opoz',
+        departure_at: '2026-11-01T14:00:00.000Z',
+        arrival_at: '2026-11-01T16:00:00.000Z',
+        status: 'OPOZNIONY',
+      }),
+    ]);
+    await applyVikingFileSchedule(deps(st, now), [{
+      route: 'TLLA-HEL',
+      vessel: 'M/F Viking XPRS',
+      departureUtc: '2026-11-01T12:00:00.000Z',
+      arrivalUtc: '2026-11-01T14:00:00.000Z',
+    }], { sinceIso: '2026-10-31T00:00:00.000Z', now });
+    expect(st.sailings.some((s) => s.id === 'out-range')).toBe(true);
+    expect(st.sailings.some((s) => s.id === 'odw-ok')).toBe(true);
+    expect(st.sailings.some((s) => s.id === 'opoz')).toBe(true);
+  });
+
+  it('R2-B3: from_ymd walidacja; assert error bez surowego RPC', () => {
+    expect(parseVikingImportFromYmd('2026-11-01')).toBe('2026-11-01');
+    expect(parseVikingImportFromYmd('xx')).toBeNull();
+    expect(parseVikingImportFromYmd('2026-13-40')).toBeNull();
+    expect(vikingImportAssertError('Tylko Administrator HHL z włączonym 2FA')).toBe(
+      'Tylko Administrator HHL z 2FA',
+    );
+    expect(vikingImportAssertError('permission denied for function')).toBe(
+      'Brak uprawnień do importu',
+    );
   });
 });

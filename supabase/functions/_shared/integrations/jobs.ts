@@ -42,7 +42,9 @@ import {
   VIKING_CARGO_HEL_TLL_PAGE, VIKING_SCHEDULE_PAGE, VIKING_UA, parseVikingTimetableHtml,
 } from '../ferry/vikingline.ts';
 import {
-  VIKING_FILE_COVERAGE_DAYS_CLOSE, vikingScheduleCoverageDaysFromNow,
+  VIKING_FILE_COVERAGE_DAYS_CLOSE,
+  vikingCoverageDaysFromMaxDeparture,
+  vikingScheduleCoverageDaysFromNow,
 } from '../ferry/vikingFileImport.ts';
 import {
   ECKERO_SCHEDULE_PAGE, ECKERO_UA, parseEckeroTimetableHtml,
@@ -214,6 +216,13 @@ export interface SyncStore {
   projectId(): Promise<string>;
   vessels(): Promise<VesselRow[]>;
   sailingsSince(fromIso: string): Promise<DbSailing[]>;
+  /**
+   * F7 #690 R2-B4 / 63c: max(departure_at) VIKING source_ref null > now
+   * (+ max viking_schedule_imports.to_at) — bez limitu max_rows sailingsSince.
+   */
+  maxVikingFileDepartureAt?(nowIso: string): Promise<string | null>;
+  /** F7 #690 R2-B4: VIKING+RECZNIE ze stronicowaniem (import pliku). */
+  sailingsForVikingFileImport?(fromIso: string): Promise<DbSailing[]>;
   insertSailings(rows: SailingInsert[]): Promise<void>;
   /** aktualizacja z warunkiem source <> 'RECZNIE' (wyścig ze zmianą ręczną HHL) — zwraca, czy zapisano */
   updateSailing(id: string, patch: SailingPatch): Promise<boolean>;
@@ -1508,10 +1517,16 @@ export async function runFerrySchedule(deps: JobDeps): Promise<JobResult> {
     await deps.store.resolveRisks('SOURCE_DOWN:DIGITRAFFIC_VIKING:');
   }
   if (vkFail) {
-    /* F7 #690 R1-B5 / 63c: nie wystawiaj SOURCE_DOWN, gdy zapisany rozkład z pliku
-       pokrywa ≥ 30 d od teraz (VIKING, source_ref null). */
-    const covRows = await deps.store.sailingsSince(now);
-    const covDays = vikingScheduleCoverageDaysFromNow(covRows, Date.parse(now));
+    /* F7 #690 R2-B4 / 63c: max(departure_at) bez limitu 1000 wierszy sailingsSince.
+       Cron: pokrycie ≥ 30 d → nie wystawiaj / zamknij. */
+    let covDays = 0;
+    if (deps.store.maxVikingFileDepartureAt) {
+      const maxDep = await deps.store.maxVikingFileDepartureAt(now);
+      covDays = vikingCoverageDaysFromMaxDeparture(maxDep, Date.parse(now));
+    } else {
+      const covRows = await deps.store.sailingsSince(now);
+      covDays = vikingScheduleCoverageDaysFromNow(covRows, Date.parse(now));
+    }
     if (covDays >= VIKING_FILE_COVERAGE_DAYS_CLOSE) {
       await deps.store.resolveRisks('SOURCE_DOWN:VIKING_SCHEDULE:');
     } else {

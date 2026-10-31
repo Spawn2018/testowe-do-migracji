@@ -7457,6 +7457,20 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (odbiór prod):** SELECT `here_road_legs` — **12** / active 12 / `browser_fetch` 5; core bez zmian (3495/12561/3742/18854/19408); BN7 7× null. `here-roads` **#108803** @ 04:49Z ok (0 prób — core świeże; BN7 poza cronem). Komentarz w #667. **Dalej:** BN3 (#573).
 - Bez push na main.
 
+## 2026-11-01 00:35 — #685-b F7 r2 POPRAWKI B1–B4 (PR #690)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE; #685 W TOKU (b / PR #690). Bez nowych `pilne`.
+- Scalanie: F7 r2 **POPRAWKI** @ `0adcc886` (CI unit/db/visual ✔). Brak „F7: gotowe do scalenia”. Bez push na main.
+- **Krok F7 #690 r2:**
+  - **B1** — czyszczenie tylko (trasa, statek) + dni z pliku; próg ≥50% rejsów trasy (inaczej ryzyko MEDIUM, bez kasowania, bez zamykania SOURCE_DOWN);
+  - **B2** — podgląd: `planningVikingFileStore` + plan `to_insert`/`to_remove`/`to_take_over`/`risks`/`blocked`;
+  - **B3** — structuredClone; coverage apply `>` 30 d; RECZNIE 30 min (+45 → insert); Digitraffic nie liczy pokrycia; ODWOLANY/OPOZNIONY/poza zakresem nietykalne;
+  - **B4** — `maxVikingFileDepartureAt` + stronicowanie VIKING+RECZNIE; cron 29 d → SOURCE_DOWN, 30 d → resolve;
+  - decyzja **75** (±1 min obecności); DP-116 (`max_rows` w innych jobach → #691);
+  - vitest 685b **18**.
+- **Dalej:** push → CI → gotowe do F7 @ sha. Ekran BN9-c1 — koordynator.
+- Bez push na main.
+
 ## 2026-10-31 23:55 — #685-b F7 r1 POPRAWKI B2–B7 (PR #690)
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE; #685 W TOKU (b). Bez nowych `pilne`.
