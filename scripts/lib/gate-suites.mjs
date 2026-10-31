@@ -44,7 +44,7 @@ export const EXPECTED_LOCAL = {
   h1: 14,
   h3: 20,
   smsksh: 16,
-  'ferry-status': 14, // BN3 #680 F7: +5 (POLFERRIES, Viking TLLA-HEL, STENA, zły p_operator, Podgląd); było 9
+  'ferry-status': 18, // BN3 #683 F7 B5 / 0358: +4 (AUTO null, CHECK, apply RECZNIE, łańcuch AUTO); było 14
   bmapa: 180, // #667 E / DP-23: +6 (słownik 12, roads=12, BN7, FK, browser_fetch, bez IN); było 174
   h4: 19,
   p4k: 111, // #630 F7 r1: +rola PORT_CHECKIN; CROSSING mismatch w medianie; undo 7d

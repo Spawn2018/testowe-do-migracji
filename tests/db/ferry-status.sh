@@ -97,4 +97,38 @@ prev=$(asuser "$HHL" "select operator_notice_apply('$SID3','ODWOLANY',null,'podg
 asuser "$HHL" "select admin_preview_stop()" >/dev/null
 if echo "$prev" | grep -qi 'Podgląd'; then ok=$((ok+1)); echo "  OK    Podgląd → odmowa komunikatu armatora"; else fail=$((fail+1)); echo "  FAIL  Podgląd ($prev)"; fi
 
+# BN3 F7 #683 B5 / 0358: source AUTO|RECZNIE, created_by null dla AUTO, apply → RECZNIE.
+SID5=66666666-0000-0000-0000-00000000f164
+sys "delete from operator_notices where sailing_id='$SID5'; delete from sailings where id='$SID5';
+insert into sailings (id, project_id, vessel_id, route, departure_at, arrival_at, status, source) values
+  ('$SID5','22222222-0000-0000-0000-000000000001','55555555-0000-0000-0000-0000000000f3','TLL-HEL',
+   now() + interval '8 days', now() + interval '8 days 3 hours', 'ZAPLANOWANY', 'TALLINK');" >/dev/null
+
+auto=$(sys "
+insert into operator_notices (sailing_id, operator, kind, note, created_by, source, source_url)
+values ('$SID5','TALLINK','ODWOLANY','AUTO test 0358', null, 'AUTO', 'https://www.tallink.com/')
+returning (created_by is null)::text||'/'||source")
+if [ "$auto" = "t/AUTO" ]; then ok=$((ok+1)); echo "  OK    0358 AUTO: created_by null + source=AUTO"; else fail=$((fail+1)); echo "  FAIL  0358 AUTO ($auto)"; fi
+
+badsrc=$(sys "
+insert into operator_notices (sailing_id, operator, kind, note, created_by, source)
+values ('$SID5','TALLINK','OPOZNIONY','zly', null, 'XYZ') returning id" 2>&1 || true)
+if echo "$badsrc" | grep -qiE 'operator_notices_source_check|check constraint|violates'; then
+  ok=$((ok+1)); echo "  OK    0358 CHECK source odrzuca wartość spoza AUTO/RECZNIE"
+else fail=$((fail+1)); echo "  FAIL  0358 CHECK ($badsrc)"; fi
+
+# SID3 już ODWOLANY z wcześniejszego apply — source RECZNIE.
+rec=$(sys "select source from operator_notices where sailing_id='$SID3' and created_by is not null order by created_at desc limit 1")
+if [ "$rec" = "RECZNIE" ]; then ok=$((ok+1)); echo "  OK    0358 apply → source=RECZNIE"; else fail=$((fail+1)); echo "  FAIL  0358 RECZNIE ($rec)"; fi
+
+# ODWOLANY (ręczny) otworzył FERRY_CANCELLED — już sprawdzone wyżej (dec); tu potwierdzenie łańcucha AUTO→status.
+sys "update sailings set status='ZAPLANOWANY', source='TALLINK' where id='$SID5'" >/dev/null
+sys "delete from operator_notices where sailing_id='$SID5' and source='AUTO'" >/dev/null
+sys "
+insert into operator_notices (sailing_id, operator, kind, note, created_by, source, source_url)
+values ('$SID5','TALLINK','ODWOLANY','symulacja job AUTO', null, 'AUTO', 'https://www.ts.ee/en/departures/');
+update sailings set status='ODWOLANY' where id='$SID5';" >/dev/null
+autost=$(sys "select status||'/'||(select count(*)::text from operator_notices where sailing_id='$SID5' and source='AUTO') from sailings where id='$SID5'")
+if [ "$autost" = "ODWOLANY/1" ]; then ok=$((ok+1)); echo "  OK    0358 AUTO notice + ODWOLANY (łańcuch jak job)"; else fail=$((fail+1)); echo "  FAIL  0358 łańcuch ($autost)"; fi
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"

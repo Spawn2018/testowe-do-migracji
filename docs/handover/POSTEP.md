@@ -7435,6 +7435,20 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (odbiór prod):** SELECT `here_road_legs` — **12** / active 12 / `browser_fetch` 5; core bez zmian (3495/12561/3742/18854/19408); BN7 7× null. `here-roads` **#108803** @ 04:49Z ok (0 prób — core świeże; BN7 poza cronem). Komentarz w #667. **Dalej:** BN3 (#573).
 - Bez push na main.
 
+## 2026-10-31 09:45 — #683 F7 POPRAWKI B1–B5 (Tallink Alert)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE; #499/#537/#538/#500 w planie. Bez nowych `pilne`.
+- Scalanie: #683 — F7 **POPRAWKI** @ `5a4ef4fd` (CI unit/db/visual ✔). Bez push na main.
+- **Krok F7 #683:**
+  - **B1** — jednoznaczność na pełnej puli (ODWOLANY/RECZNIE w puli); already_cancelled / manual_only / beyond_horizon;
+  - **B2** — data i HH:MM z treści (`Europe/Tallinn`, ±30 min); Scheduler tylko zapas; wygasłe okna pomijane; `from … to …`;
+  - **B3** — negacja/wznowienie → INFO; `suspended` tylko z kontekstem rejsu;
+  - **B4** — >1 statek → multiVessel/ambiguous; usunięte samo `queen`;
+  - **B5** — testy job `runFerryStatus` (AUTO+dedup, negacja, niejednoznaczność); DB 0358 (+4 OK, EXPECTED 18); fixture oznaczona jako syntetyczna;
+  - PLAN: Tallink/ts.ee bez przedwczesnego przekreślenia; **DP-98…103** w rejestrze.
+- **Dalej:** CI → „gotowe do F7 @ sha”; potem DP-97 / pkt 7–8 albo kolejne F7.
+- Bez push na main.
+
 ## 2026-10-31 09:05 — BN3 wycinek 3: Tallink Alert / ts.ee Lisainfo / source AUTO (0358)
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE; #499/#537/#538/#500 w planie. Bez nowych `pilne`.

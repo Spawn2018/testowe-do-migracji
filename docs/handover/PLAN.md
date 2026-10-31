@@ -1216,6 +1216,12 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-95 | Cursor | test tolerancji ±3 h w `runFerryPortnet`: dwa Megastar TLL-HEL (10:30/16:30) → ATA tylko do drugiego; wariant po północy (mutacja M3a) | F7 #682 r2 | BN3 wycinek 3 | DONE (bn3-tallink-tsee-auto) |
 | DP-96 | Cursor | decyzja 67 w PLAN §5 z uzasadnieniem (`TALLINK`/`ECKERO`/`DFDS_SCHEDULE` = MEDIUM przy całkowitej awarii; Polferries/Stena HIGH) | F7 #682 r2 | BN3 wycinek 3 | DONE (bn3-tallink-tsee-auto) |
 | DP-97 | Cursor | ryzyka `FERRY_UNKNOWN:PORTNET_ATA/ATD:…` bez auto-zamknięcia; `params.dep` w UTC zamiast czasu warszawskiego | F7 #682 r2 | BN3 | w kolejce |
+| DP-98 | Cursor | `TALLINK_HEL_TLL_URL` zwraca 404 → ostrzeżenie co 10 min — poprawić/usunąć | F7 #683 | BN3 | w kolejce |
+| DP-99 | Cursor | `operatorFromSailingSource` fallback MUU-VUO → VIKING (prod tylko ECKERO), domyślnie TALLINK → z `data-company` ts.ee albo `ferry_route_operators` (DP-1) | F7 #683 | BN3 | w kolejce |
+| DP-100 | Cursor | dedup AUTO tylko aplikacyjny → partial unique index `(sailing_id, kind) where source='AUTO'` albo `.neq('status','ODWOLANY')` w update | F7 #683 | BN3 | w kolejce |
+| DP-101 | Cursor | `insertOperatorNotice` z `must()` po zmianie statusu — przy błędzie wpis nie powstanie nigdy (kolejność / transakcja) | F7 #683 | BN3 | w kolejce |
+| DP-102 | Cursor | ts.ee dopasowanie `existing.find` ±3 h (BN2) → reguła jednego kandydata, ±30 min dla komunikatu z godziną; prefiks „Lisainfo” w nocie | F7 #683 | BN3 | w kolejce |
+| DP-103 | Cursor | dedup ryzyka Tallink Alert „ambiguous/unmatched” po `text.slice(0,40)` — drobna zmiana treści = nowe ryzyko | F7 #683 | BN3 | w kolejce |
 | DP-22 | Cursor | Stan systemu: ostrzeżenie z `summary` odrzuconego legu z bazy (nie tylko `points not null`); fundament 0354 + `checkRoads` | F7 #673 r1 N5 / r2 | #667 D | fundament w #673; UI w kolejce |
 | DP-23 | Cursor | Słownik legów drogowych w bazie zamiast `IN (…)` / `ROAD_LEGS` w kodzie | F7 #673 r1 N2 | #667 E / BN7 | SCALONE (#677 `675bb299` / 0355) |
 | DP-24 | Cursor | `corridor_fetches.leg` / `corridor_obstacles.leg` + SE-KAA-INLAND gdy przeszkody H3 obejmą inland | F7 #673 r1 N3 | po #667 | w kolejce |
@@ -1282,16 +1288,16 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 Źródło: #573 + komentarze BN3 31.10 (spec + decyzje 57–61). Po #667; DP-21 → #666 (63b).
 ~~Wycinek 1~~ SCALONE (#680 `8100f685` / **0356**): decyzja 60 + ręczny komunikat 6 armatorów (`p_operator`, formularz).
 ~~Wycinek 2~~ SCALONE (#682 `a9c396d7` / **0357** + F7 r1–r2): DFDS remark/ETA + Portnet ATA + SOURCE_DOWN MEDIUM (**decyzja 67**).
-**Wycinek 3** (`pakiet/bn3-tallink-tsee-auto`): ~~DP-94/95/96~~; ~~Tallink Alert / ts.ee Lisainfo / `operator_notices.source` AUTO (**0358**)~~; DP-97 w kolejce.
+**Wycinek 3** (`pakiet/bn3-tallink-tsee-auto` / PR #683): ~~DP-94/95/96~~; **0358** `operator_notices.source` AUTO; Tallink Alert / ts.ee — **F7 POPRAWKI B1–B5 w toku** (nie przekreślać do F7 OK); DP-97…103 w kolejce.
 1. ~~**60** Tallink poza PLD–KPS~~ — baza już tylko DFDS; front `ferryCatalog` bez TALLINK; test bn9a.
-2. Źródła → update — ~~**DFDS remark**~~; ~~Portnet ATA~~; ~~ts.ee Lisainfo / Tallink Alert~~.
+2. Źródła → update — ~~**DFDS remark**~~; ~~Portnet ATA~~; ts.ee Lisainfo / Tallink Alert (F7 #683).
 3. ~~Opóźnienie: ATA − arrival; `FERRY_PORT_DELAY_MIN` z `app_parameters` (zapas 15)~~ (**0357** + Portnet + store F7 B1); ~~ATD 13–19 min przed planem bez delayed (DP-94)~~; ATD tylko gdy wiarygodne — dalej.
-4. Odwołanie: ~~ts.ee / Tallink Alert (decyzja 59)~~; ~~DFDS cancel → NIEZNANY (F7 B3)~~; podejrzenie 45 min+AIS → FERRY MEDIUM — dalej.
+4. Odwołanie: ts.ee / Tallink Alert (decyzja 59, F7 #683 B1–B4); ~~DFDS cancel → NIEZNANY (F7 B3)~~; podejrzenie 45 min+AIS → FERRY MEDIUM — dalej.
 5. `operator_notices`: ~~ręczny 6 armatorów (0356)~~; ~~`source` AUTO/RECZNIE + URL (**0358**)~~; front BN9-c1 (koordynator).
 6. ~~SOURCE_DOWN: TALLINK/DFDS/ECKERO/DIGITRAFFIC (+ *_SCHEDULE) = MEDIUM~~ (wycinek 2 + **decyzja 67** F7 #682, uzasadnienie §5); Viking bez SourceId statusu.
 7. Digitraffic winter-navigation; Urząd Morski Gdynia (zapas Stena); port-call v2 cancelled (obserwacja).
 8. MMSI XPRS/Finbo/Finlandia/MyStar/Megastar; DP-1 + DP-11 razem z BN3.
-9. Testy: ~~DFDS remark / Portnet ATA / F7 B5~~; ~~ts.ee/Alert~~; Imperva; tolerancja; RECZNIE; ODWOLANY→FERRY_CANCELLED — część dalej.
+9. Testy: ~~DFDS remark / Portnet ATA / F7 B5 wycinek 2~~; ts.ee/Alert (F7 #683 B5); Imperva; tolerancja; RECZNIE; ODWOLANY→FERRY_CANCELLED — część dalej.
 10. ~~Role komunikatu: HHL_ADMIN + CARRIER_DISPATCH (SCX); KSH odmowa~~ (F7 #680).
 
 ### #662 · PILNE SafeFleet — link tymczasowy (SG-27) — SCALONE (`189688bc` / PR #663 / **0349**); #662-b SCALONE (`1ee855fd` / PR #664 / **0350**, 30.10.2026 12:54Z)
@@ -2259,4 +2265,5 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 31.10.2026 08:00 | #682 F7 r1 POPRAWKI B1–B5 (próg z app_parameters, ETA, NIEZNANY cancel, Portnet ±3 h, testy); DP-89 DONE; DP-90…93; decyzja 67 MEDIUM | pętla |
 | 31.10.2026 08:36 | #682 SCALONE `a9c396d7` (F7: gotowe do scalenia @ 085dc5e6); start BN3 wycinek 3 `pakiet/bn3-tallink-tsee-auto` — DP-94/95/96 | pętla |
 | 31.10.2026 09:05 | BN3 wycinek 3: Tallink Alert + ts.ee Lisainfo + **0358** `operator_notices.source` AUTO; PR #683 | pętla |
+| 31.10.2026 09:45 | #683 F7 POPRAWKI B1–B5 Tallink Alert (pełna pula, data/HH:MM z treści, negacja, multi-statek, testy+0358 DB); DP-98…103 | pętla |
 

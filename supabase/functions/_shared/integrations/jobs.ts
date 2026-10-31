@@ -1497,7 +1497,7 @@ export async function runFerryStatus(deps: JobDeps): Promise<JobResult> {
         alertFail += 1;
         continue;
       }
-      const parsed = parseTallinkAlerts(page.text, url);
+      const parsed = parseTallinkAlerts(page.text, url, deps.now());
       warnings.push(...parsed.warnings);
       allAlerts.push(...parsed.alerts);
     }
@@ -1524,13 +1524,16 @@ export async function runFerryStatus(deps: JobDeps): Promise<JobResult> {
       }));
       for (const alert of allAlerts) {
         if (alert.kind !== 'ODWOLANY') continue;
-        const { match, ambiguous } = matchTallinkAlertSailings(alert, cands);
-        if (match) {
+        // F7 #683 B1: pełna pula; already_cancelled → nic; manual_only / ambiguous / none → ryzyko.
+        const hit = matchTallinkAlertSailings(alert, cands);
+        if (hit.kind === 'already_cancelled') continue;
+        if (hit.kind === 'match') {
+          const match = hit.sailing;
           if (await deps.store.updateSailing(match.id, { status: 'ODWOLANY' })) {
             updated += 1;
             match.status = 'ODWOLANY';
-            const hit = existing.find((x) => x.id === match.id);
-            if (hit) hit.status = 'ODWOLANY';
+            const row = existing.find((x) => x.id === match.id);
+            if (row) row.status = 'ODWOLANY';
             if (deps.store.insertOperatorNotice) {
               await deps.store.insertOperatorNotice({
                 sailingId: match.id,
@@ -1541,28 +1544,35 @@ export async function runFerryStatus(deps: JobDeps): Promise<JobResult> {
               });
             }
           }
-        } else {
-          const ok = await deps.store.raiseRisk({
-            kind: 'FERRY',
-            severity: 'MEDIUM',
-            title: ambiguous
-              ? 'Tallink Alert: odwołanie — wiele rejsów, weryfikacja HHL'
-              : 'Tallink Alert: odwołanie bez jednoznacznego rejsu — weryfikacja HHL',
-            titleKey: ambiguous ? 'rk_tallink_alert_ambiguous' : 'rk_tallink_alert_unmatched',
-            params: { vessel: alert.vessel ?? '' },
-            detail: {
-              tekst: alert.text.slice(0, 400),
-              statek: alert.vessel,
-              trasy: alert.routes,
-              okno: [alert.windowStartYmd, alert.windowEndYmd],
-              niejednoznaczne: ambiguous,
-              atrybucja: 'Komunikat: Tallink (tallink.com)',
-            },
-            dedup: `TALLINK_ALERT:${alert.vessel ?? 'any'}:${alert.windowStartYmd ?? 'x'}:${alert.text.slice(0, 40)}`,
-            sourceUrl: alert.sourceUrl,
-          });
-          if (ok) risks += 1;
+          continue;
         }
+        const ambiguous = hit.kind === 'ambiguous' || hit.kind === 'manual_only';
+        const beyond = hit.kind === 'beyond_horizon';
+        const ok = await deps.store.raiseRisk({
+          kind: 'FERRY',
+          severity: 'MEDIUM',
+          title: ambiguous
+            ? 'Tallink Alert: odwołanie — wiele rejsów, weryfikacja HHL'
+            : beyond
+              ? 'Tallink Alert: odwołanie poza horyzontem rozkładu — weryfikacja HHL'
+              : 'Tallink Alert: odwołanie bez jednoznacznego rejsu — weryfikacja HHL',
+          titleKey: ambiguous ? 'rk_tallink_alert_ambiguous' : 'rk_tallink_alert_unmatched',
+          params: { vessel: alert.vessel ?? '' },
+          detail: {
+            tekst: alert.text.slice(0, 400),
+            statek: alert.vessel,
+            trasy: alert.routes,
+            okno: [alert.contentStartYmd ?? alert.windowStartYmd, alert.contentEndYmd ?? alert.windowEndYmd],
+            godzina: alert.contentHm,
+            niejednoznaczne: ambiguous,
+            poza_horyzontem: beyond,
+            recznie: hit.kind === 'manual_only',
+            atrybucja: 'Komunikat: Tallink (tallink.com)',
+          },
+          dedup: `TALLINK_ALERT:${alert.vessel ?? 'any'}:${alert.contentStartYmd ?? alert.windowStartYmd ?? 'x'}:${alert.text.slice(0, 40)}`,
+          sourceUrl: alert.sourceUrl,
+        });
+        if (ok) risks += 1;
       }
     }
   }
