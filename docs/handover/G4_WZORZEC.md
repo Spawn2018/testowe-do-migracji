@@ -268,3 +268,10 @@ gałąź `wyglad/DP-76`, przebieg 41187141430, commit `7c44f9d`, artefakt `visua
 Przyczyna: decyzja właściciela 31.10.2026, tory promów na wszystkich mapach są jasnoniebieskie przerywane (`FERRY_LANE_STYLE.dashArray = '6 6'`).
 Różnice tylko w obszarze torów (Gdańsk/Gdynia–Nynäshamn/Karlskrona, Sztokholm–Tallinn–Helsinki): 1827 px (jasny) i 1851 px (ciemny), prostokąt x 583–846, y 569–845.
 Kadrowanie, linie drogowe i markery bez zmian. Zmiana zamierzona, **regresji 0**. Wzorca `shots-baseline` nie zmieniano.
+
+## DP-76 r2 (31.10.2026) — jasny motyw: tory promów `#3A82BA` (kontrast)
+`visual.yml` z `update=true` (gałąź `wyglad/DP-76`, przebieg 41191028969, commit `50bbee8`, artefakt `visual-artifacts`): wszystkie 15 migawek jest identycznych co do bajtu z `tests/__screenshots__/`, więc nic nie podmieniono.
+Przyczyna: w jasnym motywie tor ma teraz `#3A82BA` z kryciem 1 (wcześniej `#6BA8D6` z kryciem 0,9), w ciemnym bez zmian.
+Różnica koloru w mierze pixelmatch (YIQ) wynosi ok. 1242 przy progu 2761 (`threshold: 0.28`), więc piksele toru mieszczą się w tolerancji.
+`--update-snapshots` (tryb „changed”) przepisuje tylko migawki niezgodne, więc wzorzec zostaje. Kształt i przerywanie torów są bez zmian (DP-76 r1).
+Styl jasny sprawdza test zachowania `tests/dp-76-ferry-style.jsdom.test.ts`. Wzorca `shots-baseline` nie zmieniano.
