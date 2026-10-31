@@ -1,5 +1,5 @@
 /**
- * FERRY-STATUS — ręczny komunikat armatora (POLSCA bez obchodzenia 403/503).
+ * FERRY-STATUS / BN3 — ręczny komunikat armatora (Polferries, Stena, Tallink, Viking, Eckerö, DFDS).
  * Zapis przez operator_notice_apply: te same skutki co status automatyczny.
  */
 import { useEffect, useMemo, useState } from 'react';
@@ -93,7 +93,7 @@ export function OperatorNoticeForm() {
     <div data-panel="operator-notice" style={{ marginTop: 16 }}>
       <h4 className="sec">Komunikat armatora</h4>
       <p className="note" style={{ border: 0 }}>
-        Dla rejsów Polferries, gdy komunikat nie wchodzi automatycznie. Zapisuje kto i kiedy.
+        Dla rejsów Polferries, Stena, Tallink, Viking, Eckerö i DFDS, gdy komunikat nie wchodzi automatycznie. Zapisuje kto i kiedy.
       </p>
       <div style={{ display: 'grid', gap: 8, maxWidth: 520 }}>
         <label>
@@ -102,7 +102,7 @@ export function OperatorNoticeForm() {
             <option value="">—</option>
             {upcoming.map((s) => (
               <option key={s.id} value={s.id}>
-                {ferryPortPl(s.route)} · {s.vessel} · {fmtLocal(effDeparture(s))}
+                {ferryPortPl(s.route)} · {isFerryOperator(s.source) ? operatorName(s.source) : (s.operator ?? '—')} · {s.vessel} · {fmtLocal(effDeparture(s))}
               </option>
             ))}
           </select>
@@ -132,7 +132,7 @@ export function OperatorNoticeForm() {
             {history.map((h) => (
               <tr key={h.id}>
                 <td>{noticeKindPl(h.kind)}</td>
-                <td>{isFerryOperator(h.operator) ? operatorName(h.operator) : 'Polferries'}</td>
+                <td>{isFerryOperator(h.operator) ? operatorName(h.operator) : h.operator}</td>
                 <td>{h.note ?? '—'}</td>
                 <td className="num">{fmtDateTime(h.created_at)}</td>
               </tr>

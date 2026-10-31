@@ -1269,7 +1269,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 2. Źródła → `IncomingSailing` → `applySailings` / `planSailingSync` (tolerancja portowa).
 3. Opóźnienie: ATA − arrival; `FERRY_PORT_DELAY_MIN`=15; ATD tylko gdy wiarygodne.
 4. Odwołanie: jawna treść (ts.ee, DFDS, Tallink Alert z dopasowaniem); podejrzenie 45 min+AIS → FERRY MEDIUM.
-5. `operator_notices`: `source` AUTO/RECZNIE + URL; ręczny 6 armatorów; front BN9-c1 (koordynator).
+5. `operator_notices`: ~~ręczny 6 armatorów (0356 FK + `operator_notice_apply` ze źródła/vessels/`ferry_route_primary_operator`)~~; `source` AUTO/RECZNIE + URL (kolejne); front BN9-c1 (koordynator).
 6. SOURCE_DOWN: TALLINK/DFDS/ECKERO/DIGITRAFFIC = MEDIUM; Viking bez SourceId statusu.
 7. Digitraffic winter-navigation; Urząd Morski Gdynia (zapas Stena); port-call v2 cancelled (obserwacja).
 8. MMSI XPRS/Finbo/Finlandia/MyStar/Megastar; DP-1 + DP-11 razem z BN3.
