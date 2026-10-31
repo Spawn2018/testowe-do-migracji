@@ -104,11 +104,12 @@ export const FERRY_ROUTES: readonly FerryRouteDef[] = [
   { code: 'TLL-HEL', from: 'TLL', to: 'HEL', operators: ['TALLINK', 'VIKING', 'ECKERO'], waterTrack: 'TLL-HEL', outbound: true },
   { code: 'MUU-VUO', from: 'MUU', to: 'VUO', operators: ['ECKERO'], waterTrack: 'MUU-VUO', outbound: true },
   { code: 'TLL-STO', from: 'TLL', to: 'STO', operators: ['TALLINK'], waterTrack: 'TLL-STO', outbound: true, via: 'Mariehamn' },
-  { code: 'PLD-KPS', from: 'PLD', to: 'KPS', operators: ['DFDS', 'TALLINK'], waterTrack: 'PLD-KPS', outbound: true },
+  // BN3 decyzja 60: Tallink zszedł z PLD–KPS (od 05.2026) — tylko DFDS.
+  { code: 'PLD-KPS', from: 'PLD', to: 'KPS', operators: ['DFDS'], waterTrack: 'PLD-KPS', outbound: true },
   { code: 'HEL-TLL', from: 'HEL', to: 'TLL', operators: ['TALLINK', 'VIKING', 'ECKERO'], waterTrack: 'TLL-HEL', outbound: false },
   { code: 'VUO-MUU', from: 'VUO', to: 'MUU', operators: ['ECKERO'], waterTrack: 'MUU-VUO', outbound: false },
   { code: 'STO-TLL', from: 'STO', to: 'TLL', operators: ['TALLINK'], waterTrack: 'TLL-STO', outbound: false, via: 'Mariehamn' },
-  { code: 'KPS-PLD', from: 'KPS', to: 'PLD', operators: ['DFDS', 'TALLINK'], waterTrack: 'PLD-KPS', outbound: false },
+  { code: 'KPS-PLD', from: 'KPS', to: 'PLD', operators: ['DFDS'], waterTrack: 'PLD-KPS', outbound: false },
 ];
 
 /**
@@ -271,7 +272,7 @@ export function routePorts(code: string | null | undefined): [FerryPortDef, Ferr
   return a && b ? [a, b] : null;
 }
 
-/** Trasy wyjazdowe armatora (Polferries: GDN-NYN; Stena: GDY-KAA; Tallink: TLL-HEL, TLL-STO, PLD-KPS; Viking: +TLLA-HEL). */
+/** Trasy wyjazdowe armatora (Polferries: GDN-NYN; Stena: GDY-KAA; Tallink: TLL-HEL, TLL-STO; Viking: +TLLA-HEL). */
 export function outboundRoutesOf(operator: FerryOperator): readonly string[] {
   // string[] — aliasy Terminal A / RPC to kody spoza wąskiego FERRY_ROUTES (TS: includes).
   const fromSeed: string[] = FERRY_ROUTES

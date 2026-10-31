@@ -71,12 +71,15 @@ describe('BN9-a — katalog promów jest spójny', () => {
 
   it('pomocnicze: armatorzy, porty trasy, trasy wyjazdowe armatora', () => {
     expect(operatorsForRoute('TLL-HEL')).toEqual(['TALLINK', 'VIKING', 'ECKERO']);
-    expect(operatorsForRoute('PLD-KPS')).toEqual(['DFDS', 'TALLINK']);
+    // BN3 decyzja 60: PLD-KPS tylko DFDS (Tallink zszedł 05.2026).
+    expect(operatorsForRoute('PLD-KPS')).toEqual(['DFDS']);
+    expect(operatorsForRoute('KPS-PLD')).toEqual(['DFDS']);
     expect(operatorsForRoute('nope')).toEqual([]);
     expect(routePorts('MUU-VUO')!.map((p) => p.country)).toEqual(['EE', 'FI']);
     expect(outboundRoutesOf('POLFERRIES')).toEqual(['GDN-NYN']);
     expect(outboundRoutesOf('STENA')).toEqual(['GDY-KAA']);
-    expect(outboundRoutesOf('TALLINK')).toEqual(['TLL-HEL', 'TLL-STO', 'PLD-KPS']);
+    expect(outboundRoutesOf('TALLINK')).toEqual(['TLL-HEL', 'TLL-STO']);
+    expect(outboundRoutesOf('DFDS')).toEqual(['PLD-KPS']);
     expect(isKnownRoute('TLL-STO')).toBe(true);
     expect(isKnownRoute('GDN-KAA')).toBe(false);
   });
