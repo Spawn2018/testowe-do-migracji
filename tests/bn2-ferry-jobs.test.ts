@@ -5,10 +5,11 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import {
-  fetchStenaDays, runFerryPortnet, runFerrySchedule,
+  fetchStenaDays, pickUniqueInWindow, runFerryPortnet, runFerrySchedule, runFerryStatus,
   type JobDeps, type JobResult, type SyncStore,
 } from '../supabase/functions/_shared/integrations/jobs';
 import type { DbSailing, RiskInput, SailingInsert, SailingPatch } from '../supabase/functions/_shared/integrations/sync';
+import { sourceDownRisk } from '../supabase/functions/_shared/integrations/sync';
 
 const fx = (n: string) => readFileSync(new URL(`./fixtures/${n}`, import.meta.url), 'utf8');
 const CARGO = fx('polferries-cargo-rozklad-2026-09-26.html');
@@ -85,6 +86,9 @@ class MemStore implements SyncStore {
     this.runs.push({ job, at: NOW.toISOString(), ok, result });
   }
   async saveVesselPosition() { /* no-op */ }
+  /** F7 #682 B1 — domyślnie 15; testy mogą nadpisać. */
+  delayMin = 15;
+  async ferryPortDelayMin() { return this.delayMin; }
 }
 
 function deps(store: MemStore, pages: Record<string, string | number>, now = NOW): JobDeps {
@@ -376,6 +380,105 @@ describe('F7 #660 ferry-portnet', () => {
       actual_arrival_at: '2026-10-29T16:30:00.000Z',
       delayed_arrival_at: null,
     });
+  });
+
+  it('F7 #682 B1/B4/B5: próg z parametru; ATA +10 bez delayed; dwa rejsy w oknie', async () => {
+    // B5: ATA +10 min < 15 → actual bez delayed_arrival.
+    const mild = new MemStore();
+    mild.sailings.push({
+      id: 'mild', vessel_id: MEGA, route: 'TLL-HEL',
+      departure_at: '2026-10-29T14:20:00.000Z', arrival_at: '2026-10-29T16:20:00.000Z',
+      delayed_departure_at: null, delayed_arrival_at: null,
+      actual_departure_at: null, actual_arrival_at: null,
+      status: 'W_REJSIE', source: 'TALLINK',
+    });
+    // Fixture ATA 16:30 → +10 względem 16:20.
+    await runFerryPortnet(deps(mild, { 'port-calls': PORTNET }, new Date('2026-10-29T20:00:00Z')));
+    expect(mild.sailings.find((s) => s.id === 'mild')).toMatchObject({
+      actual_arrival_at: '2026-10-29T16:30:00.000Z',
+      delayed_arrival_at: null,
+      status: 'DOPLYNAL',
+    });
+    // B1: próg 0 → +10 min daje delayed.
+    const thr0 = new MemStore();
+    thr0.delayMin = 0;
+    thr0.sailings.push({
+      id: 'thr0', vessel_id: MEGA, route: 'TLL-HEL',
+      departure_at: '2026-10-29T14:20:00.000Z', arrival_at: '2026-10-29T16:20:00.000Z',
+      delayed_departure_at: null, delayed_arrival_at: null,
+      actual_departure_at: null, actual_arrival_at: null,
+      status: 'W_REJSIE', source: 'TALLINK',
+    });
+    await runFerryPortnet(deps(thr0, { 'port-calls': PORTNET }, new Date('2026-10-29T20:00:00Z')));
+    expect(thr0.sailings.find((s) => s.id === 'thr0')!.delayed_arrival_at).toBe('2026-10-29T16:30:00.000Z');
+    // B4: dwa rejsy Megastar w ±3 h od ATA 16:30 → pominąć + ryzyko.
+    const amb = new MemStore();
+    amb.sailings.push(
+      {
+        id: 'a1', vessel_id: MEGA, route: 'TLL-HEL',
+        departure_at: '2026-10-29T14:00:00.000Z', arrival_at: '2026-10-29T16:00:00.000Z',
+        delayed_departure_at: null, delayed_arrival_at: null,
+        actual_departure_at: null, actual_arrival_at: null,
+        status: 'W_REJSIE', source: 'TALLINK',
+      },
+      {
+        id: 'a2', vessel_id: MEGA, route: 'TLL-HEL',
+        departure_at: '2026-10-29T15:00:00.000Z', arrival_at: '2026-10-29T17:00:00.000Z',
+        delayed_departure_at: null, delayed_arrival_at: null,
+        actual_departure_at: null, actual_arrival_at: null,
+        status: 'W_REJSIE', source: 'TALLINK',
+      },
+    );
+    await runFerryPortnet(deps(amb, { 'port-calls': PORTNET }, new Date('2026-10-29T20:00:00Z')));
+    expect(amb.sailings.every((s) => s.actual_arrival_at == null)).toBe(true);
+    expect(amb.risks.some((r) => String(r.dedup).startsWith('FERRY_UNKNOWN:PORTNET_ATA:'))).toBe(true);
+    // pickUniqueInWindow: północ / jeden kandydat.
+    const one = pickUniqueInWindow(
+      [{ id: 'n', t: Date.parse('2026-10-30T00:30:00.000Z') }],
+      Date.parse('2026-10-30T01:00:00.000Z'),
+      (x) => x.t,
+      3 * 3600_000,
+    );
+    expect(one).toMatchObject({ kind: 'hit', item: { id: 'n' } });
+  });
+
+  it('F7 #682 B5: sourceDownRisk Polferries/Stena HIGH; DFDS/Tallink MEDIUM; ferry-status DFDS', async () => {
+    expect(sourceDownRisk('POLFERRIES_STATUS', ['x'], '2026-10-31T12:00:00.000Z').severity).toBe('HIGH');
+    expect(sourceDownRisk('STENA_SCHEDULE', ['x'], '2026-10-31T12:00:00.000Z').severity).toBe('HIGH');
+    expect(sourceDownRisk('DFDS_STATUS', ['x'], '2026-10-31T12:00:00.000Z').severity).toBe('MEDIUM');
+    expect(sourceDownRisk('TALLINK_SCHEDULE', ['x'], '2026-10-31T12:00:00.000Z').severity).toBe('MEDIUM');
+    const both = JSON.parse(DFDS_API) as { pld_kps_week44: unknown[]; kps_pld_week44: unknown[] };
+    const st = new MemStore();
+    st.sailings.push({
+      id: 'dfds1', vessel_id: SIRENA, route: 'PLD-KPS',
+      departure_at: '2026-10-27T21:59:00.000Z', arrival_at: '2026-10-28T07:30:00.000Z',
+      delayed_departure_at: null, delayed_arrival_at: null,
+      status: 'ZAPLANOWANY', source: 'DFDS',
+    });
+    const f = (async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('portOfLoading=EEPLN')) {
+        return new Response(JSON.stringify(both.pld_kps_week44), { status: 200 });
+      }
+      if (url.includes('portOfLoading=SEKPS')) {
+        return new Response(JSON.stringify(both.kps_pld_week44), { status: 200 });
+      }
+      if (url.includes('komunikaty') || url.includes('stena')) {
+        return new Response('err', { status: 503 });
+      }
+      throw new Error(`nieoczekiwane: ${url}`);
+    }) as typeof fetch;
+    const r = await runFerryStatus({
+      store: st, fetch: f, env: {}, now: () => new Date('2026-10-28T10:00:00Z'),
+    });
+    expect(r.ok).toBe(true);
+    const s = st.sailings.find((x) => x.id === 'dfds1');
+    expect(s).toMatchObject({
+      status: 'OPOZNIONY',
+      delayed_departure_at: '2026-10-27T23:00:00.000Z',
+      delayed_arrival_at: '2026-10-28T08:31:00.000Z',
+    });
+    expect(st.risks.some((x) => String(x.dedup).startsWith('SOURCE_DOWN:DFDS_STATUS:'))).toBe(false);
   });
 
   it('HEL-TLL / STO-TLL / KPS-PLD po arrival_at+2h bez ATA → DOPLYNAL', async () => {

@@ -144,6 +144,13 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
       const n = Number(r.data.value);
       return Number.isFinite(n) && n >= 0 && n <= 100 ? n : 15;
     },
+    /** BN3 F7 #682 B1: próg ATA/ETD z app_parameters (decyzja 58); zapas 15. */
+    async ferryPortDelayMin() {
+      const r = await sb.from('app_parameters').select('value').eq('key', 'FERRY_PORT_DELAY_MIN').maybeSingle();
+      if (r.error || r.data?.value == null) return 15;
+      const n = Number(r.data.value);
+      return Number.isFinite(n) && n >= 0 && n <= 24 * 60 ? n : 15;
+    },
     async saveCorridorCondition(row: {
       corridor: 'SE_E4' | 'SE_E22'; slowdownMult: number; reason: string | null; detail: unknown; observedAt: string;
     }) {

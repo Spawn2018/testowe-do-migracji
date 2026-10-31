@@ -191,7 +191,8 @@ export function sourceDownRisk(src: SourceId, warnings: string[], nowIso: string
   const when = warsawStamp(nowIso);
   return {
     kind: SOURCE_KIND[src],
-    // BN3 decyzja 50/61: TALLINK/DFDS/ECKERO/DIGITRAFFIC/VIKING_SCHEDULE = MEDIUM; Polferries/Stena = HIGH.
+    // BN3 decyzja 50/61 + F7 #682 decyzja 67: Polferries/Stena = HIGH;
+    // TALLINK/DFDS/ECKERO/DIGITRAFFIC/VIKING (+ *_SCHEDULE) = MEDIUM (rozkład raz/dzień, rejsy zostają).
     severity: /^(POLFERRIES|STENA)_/.test(src) ? 'HIGH' : 'MEDIUM',
     title: sticky
       ? `Źródło niedostępne: ${SOURCE_LABEL[src]} od ${when} — HHL weryfikuje ręcznie`

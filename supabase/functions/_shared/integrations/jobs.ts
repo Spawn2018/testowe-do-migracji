@@ -229,6 +229,8 @@ export interface SyncStore {
   }): Promise<void>;
   /** II-6: parametr % spowolnienia (domyślnie 15) — opcjonalne */
   seSlowdownPct?(): Promise<number>;
+  /** BN3 F7 #682 B1: FERRY_PORT_DELAY_MIN z app_parameters (domyślnie 15) */
+  ferryPortDelayMin?(): Promise<number>;
   /** II-8: progi WAVE_M / GUST_KN z ops_thresholds (domyślnie 3.8 / 40) */
   opsThresholds?(): Promise<{ waveM: number; gustKn: number }>;
 
@@ -583,7 +585,11 @@ async function fetchEckeroDays(deps: JobDeps, days: number): Promise<{
  * #666 E / BN2 — DFDS Dynamic `/api/timetable` (oba kierunki, tygodnie do horyzontu);
  * zapas: PDF sezonowy ze strony, potem HTML/PDF tygodniówki. Bez stałej HTML w jobie.
  */
-async function fetchDfdsDays(deps: JobDeps, days: number): Promise<{
+async function fetchDfdsDays(
+  deps: JobDeps,
+  days: number,
+  delayMin: number = FERRY_PORT_DELAY_MIN_DEFAULT,
+): Promise<{
   sailings: ReturnType<typeof parseDfdsWeeklyHtml>['sailings'];
   warnings: string[];
   fetchedOk: number;
@@ -627,7 +633,7 @@ async function fetchDfdsDays(deps: JobDeps, days: number): Promise<{
     } catch {
       return { sailings: [], warn: ['DFDS Dynamic: odpowiedź nie-JSON'], job, ok: false };
     }
-    const parsed = parseDfdsTimetableApi(json);
+    const parsed = parseDfdsTimetableApi(json, delayMin);
     /* F7 #668 r6 B1: tylko prawdziwa pusta tablica [] = pusty tydzień (dok).
        JSON nie-tablica albo niepusta tablica z 0 sparsowanymi → struktura / failedWindow + PDF. */
     const emptyOk = Array.isArray(json) && json.length === 0;
@@ -752,6 +758,25 @@ async function fetchDfdsDays(deps: JobDeps, days: number): Promise<{
   };
 }
 
+/**
+ * F7 #682 B4: w oknie ±windowMs — 0 brak; 1 hit; ≥2 ambiguous (pomiń + ryzyko).
+ * Eksport pod testy (dwa rejsy / północ).
+ */
+export function pickUniqueInWindow<T>(
+  items: T[],
+  tMs: number,
+  timeOf: (x: T) => number,
+  windowMs: number,
+): { kind: 'hit'; item: T } | { kind: 'ambiguous'; items: T[] } | { kind: 'none' } {
+  const inWin = items.filter((x) => Math.abs(timeOf(x) - tMs) <= windowMs);
+  if (inWin.length === 0) return { kind: 'none' };
+  if (inWin.length >= 2) {
+    // Najbliższy nie wystarczy — dwa w oknie = niejednoznaczność.
+    return { kind: 'ambiguous', items: inWin };
+  }
+  return { kind: 'hit', item: inWin[0]! };
+}
+
 /** BN2/BN3 — Portnet Digitraffic: ATA/ATD → actual_*; ATA spóźnione ≥ FERRY_PORT_DELAY_MIN → delayed_arrival. */
 async function applyDigitrafficPortCallActuals(deps: JobDeps, sinceIso: string): Promise<{
   updated: number; warnings: string[]; fail: boolean;
@@ -783,22 +808,40 @@ async function applyDigitrafficPortCallActuals(deps: JobDeps, sinceIso: string):
     deps.store.vessels(), deps.store.sailingsSince(sinceIso),
   ]);
   const byName = new Map(vessels.map((v) => [v.name, v.id]));
+  const byId = new Map(vessels.map((v) => [v.id, v.name]));
   let updated = 0;
+  const warnings = [...parsed.warnings];
   const WINDOW_MS = 3 * 3600_000;
-  const delayMinMs = FERRY_PORT_DELAY_MIN_DEFAULT * 60_000;
+  const delayMin = deps.store.ferryPortDelayMin
+    ? await deps.store.ferryPortDelayMin()
+    : FERRY_PORT_DELAY_MIN_DEFAULT;
+  const delayMinMs = Math.max(0, delayMin) * 60_000;
   for (const c of parsed.calls) {
     const vesselId = byName.get(c.vessel);
     if (!vesselId) continue;
     if (c.actualArrivalUtc && c.arrivalRoute) {
       const t = Date.parse(c.actualArrivalUtc);
-      const hit = existing.find((s) =>
+      const pool = existing.filter((s) =>
         s.vessel_id === vesselId
         && s.route === c.arrivalRoute
-        && Math.abs(Date.parse(s.arrival_at) - t) <= WINDOW_MS
         && s.actual_arrival_at == null);
+      const pick = pickUniqueInWindow(pool, t, (s) => Date.parse(s.arrival_at), WINDOW_MS);
+      if (pick.kind === 'ambiguous') {
+        warnings.push(`Portnet ATA niejednoznaczna: ${c.vessel} ${c.arrivalRoute} (±3 h, ${pick.items.length} rejsy)`);
+        await deps.store.raiseRisk({
+          kind: 'FERRY', severity: 'MEDIUM',
+          title: `Portnet: niejednoznaczne dopasowanie ATA ${c.vessel} — bez zmiany, do weryfikacji HHL`,
+          titleKey: 'rk_ferry_status_unknown',
+          params: { vessel: c.vessel, dep: c.actualArrivalUtc.slice(0, 16) },
+          detail: { zrodlo: 'DIGITRAFFIC_PORTCALL', statek: c.vessel, ata: c.actualArrivalUtc, rejsy: pick.items.length },
+          dedup: `FERRY_UNKNOWN:PORTNET_ATA:${vesselId}:${c.actualArrivalUtc}`,
+        });
+        continue;
+      }
       // F7 #660: RECZNIE → tylko actual_*; ODWOLANY bez zmiany statusu (jak AIS).
-      // BN3 decyzja 58: ATA − arrival ≥ 15 min → delayed_arrival_at (ATD bez opóźnienia wypłynięcia).
-      if (hit) {
+      // BN3 decyzja 58: ATA − arrival ≥ FERRY_PORT_DELAY_MIN → delayed_arrival_at (ATD bez opóźnienia wypłynięcia).
+      if (pick.kind === 'hit') {
+        const hit = pick.item;
         const lateArr = t - Date.parse(hit.arrival_at) >= delayMinMs;
         const patch = sailingActualPatch(
           hit,
@@ -818,21 +861,33 @@ async function applyDigitrafficPortCallActuals(deps: JobDeps, sinceIso: string):
     }
     if (c.actualDepartureUtc && c.departureRoute) {
       const t = Date.parse(c.actualDepartureUtc);
-      const hit = existing.find((s) =>
+      const pool = existing.filter((s) =>
         s.vessel_id === vesselId
         && s.route === c.departureRoute
-        && Math.abs(Date.parse(s.departure_at) - t) <= WINDOW_MS
         && s.actual_departure_at == null);
-      if (hit && await deps.store.updateSailing(
-        hit.id, sailingActualPatch(hit, { actual_departure_at: c.actualDepartureUtc }, 'W_REJSIE'),
+      const pick = pickUniqueInWindow(pool, t, (s) => Date.parse(s.departure_at), WINDOW_MS);
+      if (pick.kind === 'ambiguous') {
+        warnings.push(`Portnet ATD niejednoznaczna: ${c.vessel} ${c.departureRoute} (±3 h, ${pick.items.length} rejsy)`);
+        await deps.store.raiseRisk({
+          kind: 'FERRY', severity: 'MEDIUM',
+          title: `Portnet: niejednoznaczne dopasowanie ATD ${byId.get(vesselId) ?? c.vessel} — bez zmiany, do weryfikacji HHL`,
+          titleKey: 'rk_ferry_status_unknown',
+          params: { vessel: c.vessel, dep: c.actualDepartureUtc.slice(0, 16) },
+          detail: { zrodlo: 'DIGITRAFFIC_PORTCALL', statek: c.vessel, atd: c.actualDepartureUtc, rejsy: pick.items.length },
+          dedup: `FERRY_UNKNOWN:PORTNET_ATD:${vesselId}:${c.actualDepartureUtc}`,
+        });
+        continue;
+      }
+      if (pick.kind === 'hit' && await deps.store.updateSailing(
+        pick.item.id, sailingActualPatch(pick.item, { actual_departure_at: c.actualDepartureUtc }, 'W_REJSIE'),
       )) {
         updated += 1;
-        hit.actual_departure_at = c.actualDepartureUtc;
-        if (hit.source !== 'RECZNIE' && hit.status !== 'ODWOLANY') hit.status = 'W_REJSIE';
+        pick.item.actual_departure_at = c.actualDepartureUtc;
+        if (pick.item.source !== 'RECZNIE' && pick.item.status !== 'ODWOLANY') pick.item.status = 'W_REJSIE';
       }
     }
   }
-  return { updated, warnings: parsed.warnings, fail: false };
+  return { updated, warnings, fail: false };
 }
 
 /**
@@ -1360,7 +1415,11 @@ export async function runFerryStatus(deps: JobDeps): Promise<JobResult> {
   }
 
   // BN3: DFDS Dynamic — remark „New ETD…” / actualDeparture → OPOZNIONY (ferry-status, nie rozkład).
-  const dfdsStatus = await fetchDfdsDays(deps, 7);
+  // F7 #682 B1: próg z app_parameters.FERRY_PORT_DELAY_MIN.
+  const delayMin = deps.store.ferryPortDelayMin
+    ? await deps.store.ferryPortDelayMin()
+    : FERRY_PORT_DELAY_MIN_DEFAULT;
+  const dfdsStatus = await fetchDfdsDays(deps, 7, delayMin);
   warnings.push(...dfdsStatus.warnings.filter((w) => !warnings.includes(w)));
   const dfStatusFail = dfdsStatus.apiSailingsCount === 0;
   if (dfStatusFail) {
