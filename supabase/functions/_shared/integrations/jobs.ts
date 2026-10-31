@@ -42,6 +42,9 @@ import {
   VIKING_CARGO_HEL_TLL_PAGE, VIKING_SCHEDULE_PAGE, VIKING_UA, parseVikingTimetableHtml,
 } from '../ferry/vikingline.ts';
 import {
+  VIKING_FILE_COVERAGE_DAYS_CLOSE, vikingScheduleCoverageDaysFromNow,
+} from '../ferry/vikingFileImport.ts';
+import {
   ECKERO_SCHEDULE_PAGE, ECKERO_UA, parseEckeroTimetableHtml,
 } from '../ferry/eckero.ts';
 import {
@@ -1505,13 +1508,21 @@ export async function runFerrySchedule(deps: JobDeps): Promise<JobResult> {
     await deps.store.resolveRisks('SOURCE_DOWN:DIGITRAFFIC_VIKING:');
   }
   if (vkFail) {
-    await deps.store.raiseRisk(sourceDownRisk(
-      'VIKING_SCHEDULE',
-      viking.warnings.length ? viking.warnings : ['Brak odpowiedzi Viking'],
-      now,
-      VIKING_CARGO_HEL_TLL_PAGE,
-    ));
-    risks += 1;
+    /* F7 #690 R1-B5 / 63c: nie wystawiaj SOURCE_DOWN, gdy zapisany rozkład z pliku
+       pokrywa ≥ 30 d od teraz (VIKING, source_ref null). */
+    const covRows = await deps.store.sailingsSince(now);
+    const covDays = vikingScheduleCoverageDaysFromNow(covRows, Date.parse(now));
+    if (covDays >= VIKING_FILE_COVERAGE_DAYS_CLOSE) {
+      await deps.store.resolveRisks('SOURCE_DOWN:VIKING_SCHEDULE:');
+    } else {
+      await deps.store.raiseRisk(sourceDownRisk(
+        'VIKING_SCHEDULE',
+        viking.warnings.length ? viking.warnings : ['Brak odpowiedzi Viking'],
+        now,
+        VIKING_CARGO_HEL_TLL_PAGE,
+      ));
+      risks += 1;
+    }
   } else {
     await deps.store.resolveRisks('SOURCE_DOWN:VIKING_SCHEDULE:');
   }

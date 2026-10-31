@@ -110,6 +110,8 @@ const pl: Dict = {
   /* F7 #688 r3: osobne klucze Digitraffic Viking (DUP / wycofane) */
   rk_ferry_digitraffic_dup: 'Zdublowany rejs Vikinga — sprawdź ({vessel}, {dep})',
   rk_ferry_digitraffic_withdrawn: 'Digitraffic: zgłoszenie portowe wycofane — sprawdź {vessel} {dep}',
+  /* F7 #690 R1-B4: zmiana sezonu — rejs z pliku zniknął */
+  rk_ferry_viking_schedule_missing: 'Rejs Vikinga zniknął z rozkładu — sprawdź ({vessel}, {dep})',
   /* BN3 decyzja 59: Tallink Alert bez jednoznacznego rejsu → tylko ryzyko MEDIUM */
   rk_tallink_alert_ambiguous: 'Tallink Alert: odwołanie — wiele rejsów, weryfikacja HHL',
   rk_tallink_alert_unmatched: 'Tallink Alert: odwołanie bez jednoznacznego rejsu — weryfikacja HHL',

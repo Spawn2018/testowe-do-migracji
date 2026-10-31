@@ -36,6 +36,13 @@ Deno.serve(async (req) => {
     return corsJson({ ok: false, error: 'Brak autoryzacji' }, 401);
   }
 
+  /* F7 #690 R1-B7: limit 3 MB. */
+  const MAX_HTML_BYTES = 3 * 1024 * 1024;
+  const contentLength = Number(req.headers.get('Content-Length') ?? '');
+  if (Number.isFinite(contentLength) && contentLength > MAX_HTML_BYTES) {
+    return corsJson({ ok: false, error: 'Plik zbyt duży (max 3 MB)' }, 413);
+  }
+
   let body: { html?: string; file_name?: string; commit?: boolean; from_ymd?: string; days?: number };
   try {
     body = await req.json();
@@ -47,6 +54,9 @@ Deno.serve(async (req) => {
   const commit = body.commit === true;
   if (!html.trim()) {
     return corsJson({ ok: false, error: 'Pusty plik HTML' }, 400);
+  }
+  if (html.length > MAX_HTML_BYTES) {
+    return corsJson({ ok: false, error: 'Plik zbyt duży (max 3 MB)' }, 413);
   }
 
   const userSb = createClient(url, anon, {
@@ -67,7 +77,10 @@ Deno.serve(async (req) => {
   }
 
   const fromYmd = body.from_ymd ?? new Date().toISOString().slice(0, 10);
-  const days = typeof body.days === 'number' && body.days > 0 ? Math.min(body.days, 90) : 60;
+  /* F7 #690: min 30 d (inaczej 63c nie domyka SOURCE_DOWN). */
+  const days = typeof body.days === 'number' && body.days > 0
+    ? Math.min(Math.max(Math.floor(body.days), 30), 90)
+    : 60;
   const parsed = parseVikingTimetableHtml(html, { fromYmd, days });
   const preview = previewVikingFileSailings(parsed.sailings);
   const fileHash = await sha256Hex(html);
@@ -89,12 +102,33 @@ Deno.serve(async (req) => {
 
   const admin = createClient(url, service, { auth: { persistSession: false } });
   const store = supabaseStore(admin);
+  const now = new Date();
   const deps: VikingFileImportDeps = {
     store,
-    now: () => new Date(),
+    now: () => now,
   };
-  const sinceIso = new Date(Date.now() - 6 * 3600_000).toISOString();
-  const stats = await applyVikingFileSchedule(deps, parsed.sailings, { sinceIso });
+  /* Od początku zakresu pliku − okno ±3 h (nie now−6 h — B3/B4). */
+  const sinceIso = preview.fromAt
+    ? new Date(Date.parse(preview.fromAt) - 3 * 3600_000).toISOString()
+    : new Date(now.getTime() - 6 * 3600_000).toISOString();
+  let stats;
+  let applyErr: string | null = null;
+  try {
+    stats = await applyVikingFileSchedule(deps, parsed.sailings, { sinceIso, now });
+  } catch (e) {
+    applyErr = e instanceof Error ? e.message : 'błąd zapisu';
+    stats = {
+      ...preview,
+      inserted: 0,
+      updated: 0,
+      removed: 0,
+      takenOver: 0,
+      manualKept: 0,
+      risks: 0,
+      sourceDownClosed: false,
+      warnings: [...parsed.warnings, applyErr],
+    };
+  }
 
   const { data: importId, error: recErr } = await userSb.rpc('viking_schedule_import_record', {
     p_file_name: fileName,
@@ -111,11 +145,15 @@ Deno.serve(async (req) => {
       risks: stats.risks,
       horizon_days: stats.horizonDays,
       source_down_closed: stats.sourceDownClosed,
+      interrupted: applyErr != null,
       warnings: [...parsed.warnings, ...stats.warnings].slice(0, 40),
     },
   });
+  if (applyErr) {
+    return corsJson({ ok: false, error: 'Import przerwany', import_id: importId ?? null }, 500);
+  }
   if (recErr) {
-    return corsJson({ ok: false, error: recErr.message, apply: stats }, 500);
+    return corsJson({ ok: false, error: 'Nie zapisano historii importu' }, 500);
   }
 
   return corsJson({
