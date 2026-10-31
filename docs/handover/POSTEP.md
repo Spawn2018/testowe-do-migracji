@@ -7435,6 +7435,13 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (odbiór prod):** SELECT `here_road_legs` — **12** / active 12 / `browser_fetch` 5; core bez zmian (3495/12561/3742/18854/19408); BN7 7× null. `here-roads` **#108803** @ 04:49Z ok (0 prób — core świeże; BN7 poza cronem). Komentarz w #667. **Dalej:** BN3 (#573).
 - Bez push na main.
 
+## 2026-10-31 06:50 — #680 F7 B2+B4+B5 (p_operator + formularz + testy)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE; #499 w planie. Bez nowych `pilne`.
+- Scalanie: #680 — F7 r1 POPRAWKI (B2/B4/B5); CI poprzedni: security FAIL (komentarz przed assert), visual ✔. Bez push na main.
+- **Krok F7 #680:** 0356 — `assert_not_preview()` bez komentarza przed (strażnik B5); sygnatura + `p_operator` (walidacja `ferry_route_operators`, drop 4-arg); formularz: wybór armatora → lista 40 rejsów, `p_operator`; tekst „wszystkich armatorów…”. Testy ferry-status **14** (POLFERRIES/VIKING/STENA/zły op/Podgląd). PLAN: DP-21 → #666 (63b); DP-83/84/85. **Dalej:** CI + „gotowe do F7” → źródła statusów.
+- Bez push na main.
+
 ## 2026-10-31 06:20 — #680 CI db FAIL → assert B5 + ferry-status 9
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE; #538/#537/#500/#499 w planie. Bez nowych `pilne`.

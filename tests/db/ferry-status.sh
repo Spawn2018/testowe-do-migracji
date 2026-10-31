@@ -7,6 +7,7 @@ KSH=11111111-0000-0000-0000-000000000002
 SID=66666666-0000-0000-0000-00000000f160
 SID2=66666666-0000-0000-0000-00000000f161
 SID3=66666666-0000-0000-0000-00000000f162
+SID4=66666666-0000-0000-0000-00000000f163
 LID=33333333-0000-0000-0000-00000000f160
 ok=0; fail=0
 sys() { $PSQL -v ON_ERROR_STOP=1 -c "$1" 2>&1; }
@@ -43,18 +44,20 @@ setup=$(sys "
 insert into vessels (id, name, operator) values
   ('55555555-0000-0000-0000-0000000000f1','FS Wawel','Polferries'),
   ('55555555-0000-0000-0000-0000000000f2','FS Ebba','Stena Line'),
-  ('55555555-0000-0000-0000-0000000000f3','Megastar BN3','Tallink')
+  ('55555555-0000-0000-0000-0000000000f3','Megastar BN3','Tallink'),
+  ('55555555-0000-0000-0000-0000000000f4','Viking XPRS BN3','Viking Line')
   on conflict (id) do nothing;
 delete from decisions where load_id = '$LID';
 delete from risk_signals where load_id = '$LID';
-delete from operator_notices where sailing_id in ('$SID','$SID2','$SID3');
+delete from operator_notices where sailing_id in ('$SID','$SID2','$SID3','$SID4');
 delete from positions where load_id = '$LID';
 delete from loads where id = '$LID';
-delete from sailings where id in ('$SID','$SID2','$SID3');
+delete from sailings where id in ('$SID','$SID2','$SID3','$SID4');
 insert into sailings (id, project_id, vessel_id, route, departure_at, arrival_at, status, source) values
   ('$SID','22222222-0000-0000-0000-000000000001','55555555-0000-0000-0000-0000000000f1','GDN-NYN', now() + interval '2 days', now() + interval '3 days', 'ZAPLANOWANY', 'POLFERRIES'),
   ('$SID2','22222222-0000-0000-0000-000000000001','55555555-0000-0000-0000-0000000000f2','GDY-KAA', now() + interval '6 days', now() + interval '7 days', 'ZAPLANOWANY', 'STENA'),
-  ('$SID3','22222222-0000-0000-0000-000000000001','55555555-0000-0000-0000-0000000000f3','TLL-HEL', now() + interval '4 days', now() + interval '4 days 3 hours', 'ZAPLANOWANY', 'TALLINK');
+  ('$SID3','22222222-0000-0000-0000-000000000001','55555555-0000-0000-0000-0000000000f3','TLL-HEL', now() + interval '4 days', now() + interval '4 days 3 hours', 'ZAPLANOWANY', 'TALLINK'),
+  ('$SID4','22222222-0000-0000-0000-000000000001','55555555-0000-0000-0000-0000000000f4','TLLA-HEL', now() + interval '5 days', now() + interval '5 days 3 hours', 'ZAPLANOWANY', 'DANE_STARTOWE');
 insert into loads (id, project_id, carrier_org_id, order_no, hhl_order_no, carrier_order_no, sailing_id, status) values
   ('$LID','22222222-0000-0000-0000-000000000001','00000000-0000-0000-0000-00000000a003','FS-160','HHL/FS-160','SCX/FS-160','$SID','IN_TRANSIT_PL');
 insert into positions (load_id, ts, geom_raw, source)
@@ -66,9 +69,32 @@ hhl=$(asuser "$HHL" "select operator_notice_apply('$SID','ODWOLANY',null,'komuni
 dec=$(sys "select coalesce((select type_code from decisions where load_id='$LID' and type_code='FERRY_CANCELLED' limit 1),'brak')||'/'||(select status from sailings where id='$SID')||'/'||(select count(*) from operator_notices where sailing_id='$SID')")
 if [ "$dec" = "FERRY_CANCELLED/ODWOLANY/1" ]; then ok=$((ok+1)); echo "  OK    komunikat ręczny odwołuje rejs i otwiera FERRY_CANCELLED"; else fail=$((fail+1)); echo "  FAIL  komunikat ręczny ($dec) rpc:$hhl"; fi
 
-# BN3 (#573): Tallink TLL-HEL — operator z sailings.source, nie CASE GDY→STENA.
+# BN3 (#573 / F7 #680 B5): operator z notice, nie CASE GDY→STENA.
+pf=$(sys "select operator from operator_notices where sailing_id='$SID' order by created_at desc limit 1")
+if [ "$pf" = "POLFERRIES" ]; then ok=$((ok+1)); echo "  OK    komunikat GDN-NYN zapisuje operator=POLFERRIES"; else fail=$((fail+1)); echo "  FAIL  POLFERRIES ($pf) rpc:$hhl"; fi
+
+stena=$(asuser "$HHL" "select operator_notice_apply('$SID2','ODWOLANY',null,'BN3 Stena')")
+stenaop=$(sys "select operator||'/'||status from sailings s join operator_notices n on n.sailing_id=s.id where s.id='$SID2' order by n.created_at desc limit 1")
+if [ "$stenaop" = "STENA/ODWOLANY" ]; then ok=$((ok+1)); echo "  OK    komunikat Stena GDY-KAA zapisuje operator=STENA"; else fail=$((fail+1)); echo "  FAIL  Stena ($stenaop) rpc:$stena"; fi
+
 bn3=$(asuser "$HHL" "select operator_notice_apply('$SID3','ODWOLANY',null,'BN3 Tallink')")
 bn3op=$(sys "select operator||'/'||status from sailings s join operator_notices n on n.sailing_id=s.id where s.id='$SID3' order by n.created_at desc limit 1")
 if [ "$bn3op" = "TALLINK/ODWOLANY" ]; then ok=$((ok+1)); echo "  OK    BN3 komunikat Tallink TLL-HEL zapisuje operator=TALLINK"; else fail=$((fail+1)); echo "  FAIL  BN3 Tallink ($bn3op) rpc:$bn3"; fi
+
+# TLLA-HEL: główny armator VIKING (ferry_route_operators); vessel=Viking Line.
+vik=$(asuser "$HHL" "select operator_notice_apply('$SID4','ODWOLANY',null,'BN3 Viking TLLA')")
+vikop=$(sys "select operator||'/'||status from sailings s join operator_notices n on n.sailing_id=s.id where s.id='$SID4' order by n.created_at desc limit 1")
+if [ "$vikop" = "VIKING/ODWOLANY" ]; then ok=$((ok+1)); echo "  OK    BN3 TLLA-HEL z Vikingiem → operator=VIKING"; else fail=$((fail+1)); echo "  FAIL  BN3 Viking TLLA ($vikop) rpc:$vik"; fi
+
+# Zły p_operator (DFDS na GDN-NYN) → 22023.
+# SID już ODWOLANY — używamy SID3 po resecie statusu albo nowego wywołania na SID2 z DFDS.
+bad=$(asuser "$HHL" "select operator_notice_apply('$SID2','OPOZNIONY', now() + interval '6 days 2 hours','zly', 'DFDS')")
+if echo "$bad" | grep -qiE 'Armator nie obsługuje|22023'; then ok=$((ok+1)); echo "  OK    zły p_operator → odmowa"; else fail=$((fail+1)); echo "  FAIL  zły p_operator ($bad)"; fi
+
+# Podgląd blokuje zapis (assert_not_preview).
+asuser "$HHL" "select admin_preview_start('KSH')" >/dev/null
+prev=$(asuser "$HHL" "select operator_notice_apply('$SID3','ODWOLANY',null,'podglad')")
+asuser "$HHL" "select admin_preview_stop()" >/dev/null
+if echo "$prev" | grep -qi 'Podgląd'; then ok=$((ok+1)); echo "  OK    Podgląd → odmowa komunikatu armatora"; else fail=$((fail+1)); echo "  FAIL  Podgląd ($prev)"; fi
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"

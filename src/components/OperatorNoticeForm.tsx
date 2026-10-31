@@ -1,12 +1,19 @@
 /**
  * FERRY-STATUS / BN3 — ręczny komunikat armatora (Polferries, Stena, Tallink, Viking, Eckerö, DFDS).
  * Zapis przez operator_notice_apply: te same skutki co status automatyczny.
+ * F7 #680 B4: wybór armatora → lista rejsów tylko tego armatora + p_operator.
  */
 import { useEffect, useMemo, useState } from 'react';
 import { getSupabase } from '../auth/client';
 import { canFileOperatorNotice, ferryPortPl, noticeKindPl } from '../lib/ferryStatusPl';
 import { effDeparture, fmtLocal } from '../lib/sailings';
-import { isFerryOperator, operatorName } from '../lib/ferryCatalog';
+import {
+  FERRY_OPERATOR_CODES,
+  isFerryOperator,
+  operatorName,
+  sailingOfOperator,
+  type FerryOperator,
+} from '../lib/ferryCatalog';
 import { fmtDateTime } from '../lib/time';
 import { useTowerStore } from '../store/useTowerStore';
 
@@ -26,6 +33,7 @@ interface NoticeRow {
 export function OperatorNoticeForm() {
   const sailings = useTowerStore((s) => s.sailings);
   const [role, setRole] = useState<string | null>(null);
+  const [operator, setOperator] = useState<FerryOperator | ''>('');
   const [sailingId, setSailingId] = useState('');
   const [kind, setKind] = useState<Kind>('ODWOLANY');
   const [when, setWhen] = useState('');
@@ -34,10 +42,20 @@ export function OperatorNoticeForm() {
   const [busy, setBusy] = useState(false);
   const [history, setHistory] = useState<NoticeRow[]>([]);
 
-  const upcoming = useMemo(
-    () => [...sailings].sort((a, b) => Date.parse(effDeparture(a)) - Date.parse(effDeparture(b))).slice(0, 40),
-    [sailings],
-  );
+  const upcoming = useMemo(() => {
+    if (!operator) return [];
+    return [...sailings]
+      .filter((s) => {
+        const named = isFerryOperator(s.source) ? s.source : s.operator;
+        return sailingOfOperator({ route: s.route, operator: named }, operator);
+      })
+      .sort((a, b) => Date.parse(effDeparture(a)) - Date.parse(effDeparture(b)))
+      .slice(0, 40);
+  }, [sailings, operator]);
+
+  useEffect(() => {
+    if (sailingId && !upcoming.some((s) => s.id === sailingId)) setSailingId('');
+  }, [upcoming, sailingId]);
 
   async function loadHistory() {
     const sb = await getSupabase();
@@ -68,6 +86,7 @@ export function OperatorNoticeForm() {
 
   async function submit() {
     setMsg(null);
+    if (!operator) { setMsg('Wybierz armatora.'); return; }
     if (!sailingId) { setMsg('Wybierz rejs.'); return; }
     if (kind !== 'ODWOLANY' && !when) { setMsg('Podaj nową godzinę.'); return; }
     setBusy(true);
@@ -79,6 +98,7 @@ export function OperatorNoticeForm() {
         p_kind: kind,
         p_new_departure: kind === 'ODWOLANY' ? null : new Date(when).toISOString(),
         p_note: note.trim() || null,
+        p_operator: operator,
       });
       if (error) { setMsg(error.message); return; }
       setMsg('Zapisane. ETA i decyzja idą tak jak przy statusie automatycznym.');
@@ -93,12 +113,33 @@ export function OperatorNoticeForm() {
     <div data-panel="operator-notice" style={{ marginTop: 16 }}>
       <h4 className="sec">Komunikat armatora</h4>
       <p className="note" style={{ border: 0 }}>
-        Dla rejsów Polferries, Stena, Tallink, Viking, Eckerö i DFDS, gdy komunikat nie wchodzi automatycznie. Zapisuje kto i kiedy.
+        Dla rejsów wszystkich armatorów, gdy komunikat nie wchodzi automatycznie. Zapisuje kto i kiedy.
       </p>
       <div style={{ display: 'grid', gap: 8, maxWidth: 520 }}>
         <label>
+          Armator
+          <select
+            value={operator}
+            onChange={(e) => {
+              setOperator((e.target.value || '') as FerryOperator | '');
+              setSailingId('');
+            }}
+            style={{ width: '100%' }}
+          >
+            <option value="">—</option>
+            {FERRY_OPERATOR_CODES.map((op) => (
+              <option key={op} value={op}>{operatorName(op)}</option>
+            ))}
+          </select>
+        </label>
+        <label>
           Rejs
-          <select value={sailingId} onChange={(e) => setSailingId(e.target.value)} style={{ width: '100%' }}>
+          <select
+            value={sailingId}
+            onChange={(e) => setSailingId(e.target.value)}
+            style={{ width: '100%' }}
+            disabled={!operator}
+          >
             <option value="">—</option>
             {upcoming.map((s) => (
               <option key={s.id} value={s.id}>
@@ -123,7 +164,7 @@ export function OperatorNoticeForm() {
           Treść
           <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} />
         </label>
-        <button type="button" disabled={busy} onClick={() => void submit()}>Zapisz komunikat</button>
+        <button type="button" disabled={busy || !operator} onClick={() => void submit()}>Zapisz komunikat</button>
         {msg ? <div className="note" data-notice-msg>{msg}</div> : null}
       </div>
       {history.length > 0 ? (

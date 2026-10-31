@@ -1,6 +1,8 @@
 -- BN3 (#573): operator_notices — armatorzy bałtyccy (TALLINK/VIKING/ECKERO/DFDS)
--- + operator_notice_apply bez CASE GDY-KAA→STENA.
+-- + operator_notice_apply bez CASE GDY-KAA→STENA; opcjonalny p_operator (F7 #680 B2).
 -- Pierwszy wycinek: ręczny komunikat; scrapery service-updates w kolejnych.
+-- B5: pierwsza instrukcja po begin = perform assert_not_preview (CREATE OR REPLACE
+-- zdejmuje wstrzyknięcie z 0300; komentarz przed perform łamie strażnik security).
 
 alter table public.operator_notices
   drop constraint if exists operator_notices_operator_check;
@@ -9,12 +11,22 @@ alter table public.operator_notices
   add constraint operator_notices_operator_fkey
   foreign key (operator) references public.ferry_operators (code);
 
+comment on constraint operator_notices_operator_fkey on public.operator_notices is
+  'BN3: operator tylko ze słownika ferry_operators (POLFERRIES/STENA/TALLINK/VIKING/ECKERO/DFDS).';
+
 comment on table public.operator_notices is
   'FERRY-STATUS / BN3: ręczny komunikat armatora (POLFERRIES, STENA, TALLINK, VIKING, ECKERO, DFDS). '
   'Skutki jak status automatyczny (ETA, FERRY_CANCELLED). Historia: kto i kiedy.';
 
+-- Jedna sygnatura dla PostgREST (drop 4-arg z 0160 / wcześniejszego 0356).
+drop function if exists public.operator_notice_apply(uuid, text, timestamptz, text);
+
 create or replace function public.operator_notice_apply(
-  p_sailing uuid, p_kind text, p_new_departure timestamptz, p_note text
+  p_sailing uuid,
+  p_kind text,
+  p_new_departure timestamptz,
+  p_note text,
+  p_operator text default null
 ) returns uuid
 language plpgsql
 security definer
@@ -31,7 +43,6 @@ declare
   v_id uuid;
   v_delta interval;
 begin
-  -- B5 (0300): assert musi być pierwszą instrukcją po BEGIN (security.sh strażnik RPC).
   perform public.assert_not_preview();
   if (current_app_role() in ('HHL_ADMIN', 'CARRIER_DISPATCH')) is not true then
     raise exception 'Komunikat armatora — wyłącznie administrator albo dyspozytor przewoźnika'
@@ -61,8 +72,20 @@ begin
     raise exception 'Brak rejsu' using errcode = '22023';
   end if;
 
+  -- Jawny armator z formularza (F7 B2) — musi być na liście armatorów trasy.
+  if p_operator is not null and btrim(p_operator) <> '' then
+    v_op := upper(btrim(p_operator));
+    if not exists (
+      select 1 from ferry_route_operators fro
+       where fro.route_code = v_route and fro.operator_code = v_op
+    ) then
+      raise exception 'Armator nie obsługuje tej trasy' using errcode = '22023';
+    end if;
+  end if;
+
   -- 1) źródło rejsu, jeśli to kod armatora ze słownika (nie RECZNIE / DANE_STARTOWE)
-  if v_source is not null
+  if v_op is null
+     and v_source is not null
      and upper(btrim(v_source)) not in ('RECZNIE', 'DANE_STARTOWE')
      and exists (
        select 1 from ferry_operators fo where fo.code = upper(btrim(v_source))
@@ -70,18 +93,15 @@ begin
     v_op := upper(btrim(v_source));
   end if;
 
-  -- 2) nazwa / kod z vessels.operator
+  -- 2) kod lub dokładna nazwa z vessels.operator (bez LIKE — DP-84)
   if v_op is null and v_vessel_op is not null and btrim(v_vessel_op) <> '' then
     select fo.code into v_op
       from ferry_operators fo
      where fo.code = upper(btrim(v_vessel_op))
         or lower(fo.name) = lower(btrim(v_vessel_op))
-        or lower(fo.name) like '%' || lower(btrim(v_vessel_op)) || '%'
-        or lower(btrim(v_vessel_op)) like '%' || lower(fo.code) || '%'
      order by case
        when fo.code = upper(btrim(v_vessel_op)) then 0
-       when lower(fo.name) = lower(btrim(v_vessel_op)) then 1
-       else 2
+       else 1
      end
      limit 1;
   end if;
@@ -118,11 +138,11 @@ begin
 end
 $fn$;
 
-comment on function public.operator_notice_apply(uuid, text, timestamptz, text) is
-  'BN3: komunikat armatora — operator ze źródła rejsu / vessels / ferry_route_primary_operator; '
-  'rodzaje ODWOLANY/OPOZNIONY/ZMIANA_GODZINY bez zmian.';
+comment on function public.operator_notice_apply(uuid, text, timestamptz, text, text) is
+  'BN3: komunikat armatora — p_operator (opcjonalny, ferry_route_operators) albo '
+  'źródło rejsu / vessels / ferry_route_primary_operator; ODWOLANY/OPOZNIONY/ZMIANA_GODZINY.';
 
-revoke all on function public.operator_notice_apply(uuid, text, timestamptz, text)
+revoke all on function public.operator_notice_apply(uuid, text, timestamptz, text, text)
   from public, anon;
-grant execute on function public.operator_notice_apply(uuid, text, timestamptz, text)
+grant execute on function public.operator_notice_apply(uuid, text, timestamptz, text, text)
   to authenticated;
