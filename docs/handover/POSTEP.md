@@ -7435,6 +7435,18 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (odbiór prod):** SELECT `here_road_legs` — **12** / active 12 / `browser_fetch` 5; core bez zmian (3495/12561/3742/18854/19408); BN7 7× null. `here-roads` **#108803** @ 04:49Z ok (0 prób — core świeże; BN7 poza cronem). Komentarz w #667. **Dalej:** BN3 (#573).
 - Bez push na main.
 
+## 2026-10-31 08:40 — #682 SCALONE; BN3 wycinek 3 start (DP-94/95/96)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE; #499/#537/#538/#500 w planie. Bez nowych `pilne`.
+- Scalanie: **#682 SCALONE** `a9c396d7` (F7: gotowe do scalenia @ `085dc5e6`; CI unit/db/visual ✔). Bez push na main.
+- **Krok** (`pakiet/bn3-tallink-tsee-auto`, pierwsze pozycje F7 #682 r2 przed Tallink/ts.ee):
+  - **DP-94 DONE** — test ATD 13/15/19 min przed planem → `actual_departure_at`, bez `delayed_departure_at`, W_REJSIE;
+  - **DP-95 DONE** — test ±3 h: Megastar 10:30/16:30 → ATA tylko do 16:30; wariant po północy 23:50/00:20/06:00;
+  - **DP-96 DONE** — decyzja 67 w PLAN §5 (MEDIUM dla `*_SCHEDULE` Tallink/Eckerö/DFDS; Polferries/Stena HIGH);
+  - **DP-97** w rejestrze (nieblokujące).
+- **Dalej:** Tallink Alert / ts.ee Lisainfo / `operator_notices.source` AUTO.
+- Bez push na main.
+
 ## 2026-10-31 08:00 — #682 F7 r1 POPRAWKI B1–B5 (BN3 wycinek 2)
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE; #499/#537/#538/#500 w planie. Bez nowych `pilne`.
