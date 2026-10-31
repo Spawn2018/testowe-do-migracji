@@ -175,9 +175,8 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
      B1 (F7 #674): wersja listy jest zależnością efektu rysowania — po pobraniu dymki się przerysowują (także w PROD). */
   const vessels = useVesselGroups();
   useEffect(() => {
-    vesselsLoader?.load().catch(() => {
-      console.warn('[Mapa] lista statków z bazy niedostępna — lista zapasowa');
-    });
+    /* DP-27: ostrzeżenie raz na sesję w loaderze */
+    vesselsLoader?.load().catch(() => {});
   }, []);
   const theme = useTowerStore((s) => s.theme);
   /* E41: podpis znacznika i przebieg — nazwa transportu według firmy, która patrzy */

@@ -131,7 +131,7 @@ const SEED_ROUTE_ALIASES: ReadonlyMap<string, {
   }],
   ['HELA-TLL', {
     operators: ['VIKING', 'ECKERO'], outbound: false, waterTrack: 'TLL-HEL',
-    from: 'HEL', to: 'TLL', short: 'HELA → TLL', pl: 'Helsinki–Tallinn A',
+    from: 'HEL', to: 'TLL', short: 'HEL → TLLA', pl: 'Helsinki–Tallinn A',
   }],
 ]);
 

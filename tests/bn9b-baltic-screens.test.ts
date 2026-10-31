@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { isOperatorOutboundRoute, routeEnds, waterTrackOf } from '../src/lib/ferryCatalog';
-import { ferryRouteLabel, ferryRouteShort } from '../src/lib/portName';
+import { isOperatorOutboundRoute, routeEnds, routeShortLabel, waterTrackOf } from '../src/lib/ferryCatalog';
+import { ferryRouteLabel } from '../src/lib/portName';
 import { crossingLine, nearestCrossingByOperator } from '../src/lib/sailings';
 import { routeStatusLabel, statusLabel } from '../src/lib/statusLabel';
 import { extraWaterTracksFor } from '../src/lib/map/ferryLines';
@@ -17,7 +17,8 @@ describe('BN9-b — ekrany Korytarza bałtyckiego', () => {
   it('etykieta trasy z Terminalem A i z każdego kodu katalogu', () => {
     expect(routeEnds('TLLA-HEL')).toEqual({ from: 'TLL', to: 'HEL', fromTerminal: 'A' });
     expect(routeEnds('HELA-TLL')).toEqual({ from: 'HEL', to: 'TLL', toTerminal: 'A' });
-    expect(ferryRouteShort('TLLA-HEL')).toBe('TLLA → HEL');
+    expect(routeShortLabel('TLLA-HEL')).toBe('TLLA → HEL');
+    expect(routeShortLabel('HELA-TLL')).toBe('HEL → TLLA');
     expect(ferryRouteLabel('pl', 'TLLA-HEL')).toBe('Tallinn A → Helsinki');
     expect(ferryRouteLabel('pl', 'GDN-NYN')).toBe('Gdańsk → Nynäshamn');
     expect(ferryRouteLabel('pl', 'NIEZNANA')).toBe('NIEZNANA');
