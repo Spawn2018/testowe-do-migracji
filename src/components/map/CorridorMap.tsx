@@ -19,11 +19,12 @@ import { isServerId } from '../../data/registry';
 import { transportLabel } from '../../lib/transportName';
 import { SUPABASE_AUTH_ENABLED } from '../../auth/config';
 import { h6Requests } from '../../lib/map/draw';
+import { ferryLaneOptions } from '../../lib/map/ferryLanes';
 import { routeOfVessel, vesselKeyOf } from '../../lib/vesselGroups';
 import { vesselsLoader } from '../../lib/vesselsLoad';
 import { useVesselGroups } from '../../lib/useVesselGroups';
 import {
-  acquireMap, attributionOf, drawFerryLanes, ensureBasemap, FERRY_LANE_STYLE, fitCorridor, releaseMap, retryBasemap, subscribeBasemapHealth,
+  acquireMap, attributionOf, drawFerryLanes, ensureBasemap, fitCorridor, releaseMap, retryBasemap, subscribeBasemapHealth,
   type BasemapHealth, type LayerBag, type MapSlot, type PoolEntry,
 } from './mapPool';
 import { BasemapFailCard } from './BasemapFailCard';
@@ -460,7 +461,9 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
       if (!cancelled && summary && entryRef.current) entryRef.current.el.dataset.ferries = summary;
       if (cancelled || !layers || ferries.length === 0) return;
       layers.ferryLeg.clearLayers();
-      for (const f of ferries) L.polyline(f.line.map(([lat, lng]) => L.latLng(lat, lng)), FERRY_LANE_STYLE).addTo(layers.ferryLeg);
+      /* DP-76: styl torów z motywu (`ferryLaneOptions`); zmianę motywu na żywo przerysowuje `ensureBasemap` */
+      const laneOpts = ferryLaneOptions(useTowerStore.getState().theme);
+      for (const f of ferries) L.polyline(f.line.map(([lat, lng]) => L.latLng(lat, lng)), laneOpts).addTo(layers.ferryLeg);
       /* DP-7: przeprawa bez odcinka z HERE i tory Korytarza bałtyckiego — to samo rysowanie co przy tworzeniu mapy */
       drawFerryLanes(layers.ferryLeg, new Set(ferries.map((f) => f.leg)));
     });

@@ -13,7 +13,7 @@ import { CORRIDOR_REF_COORDS } from '../../lib/corridor';
 import { SITES } from '../../lib/status';
 import { DEMO_ROAD_LINES } from '../../data/roadLinesDemo';
 import { WATER_GDN_NYN, WATER_GDY_KAA, type ThemeName } from '../../lib/map/draw';
-import { FERRY_LANE_STYLE, ferryLaneLines } from '../../lib/map/ferryLanes';
+import { ferryLaneLines, ferryLaneOptions, restyleFerryLanes } from '../../lib/map/ferryLanes';
 import { useTowerStore } from '../../store/useTowerStore';
 import { reportBasemapFailure } from '../../lib/p9aSource';
 import { TILE_RETRY_MS, TILE_TRIES, tileVia, watchTiles, type TileHealth, type TileVia } from './tileHealth';
@@ -311,6 +311,9 @@ export function releaseMap(e: PoolEntry, slot: MapSlot): void {
  */
 export function ensureBasemap(e: PoolEntry, theme: ThemeName): Promise<L.Layer> {
   if (e.tilesTheme === theme) return Promise.resolve(e.layers.tiles);
+  /* DP-76: zmiana motywu na żywo — tory promów (stałe i z HERE) w stylu nowego motywu, jak podkład
+     (pierwszy podkład: tory już narysowane w bieżącym motywie) */
+  if (e.tilesTheme !== null) restyleFerryLanes(e.layers.ferryLeg, theme);
   e.tilesTheme = theme;
   e.tilesLoaded = false;
   const seq = ++e.basemapSeq;
@@ -389,8 +392,15 @@ if (typeof window !== 'undefined') {
   w.__wtMapPool = Object.assign(poolStats, { listeners: poolListeners });
 }
 
-/** DP-7: stałe tory wodne do warstwy promu — linie z `ferryLaneLines` (jedno źródło dla mapPool i CorridorMap). */
-export function drawFerryLanes(layer: L.LayerGroup, skipLegs: ReadonlySet<string> = new Set()): void {
-  for (const line of ferryLaneLines(skipLegs)) L.polyline(line.map(([lat, lng]) => L.latLng(lat, lng)), FERRY_LANE_STYLE).addTo(layer);
+/**
+ * DP-7: stałe tory wodne do warstwy promu — linie z `ferryLaneLines` (jedno źródło dla mapPool i CorridorMap).
+ * DP-76: styl z `ferryLaneOptions(theme)` (domyślnie bieżący motyw aplikacji).
+ */
+export function drawFerryLanes(
+  layer: L.LayerGroup,
+  skipLegs: ReadonlySet<string> = new Set(),
+  theme: ThemeName = useTowerStore.getState().theme,
+): void {
+  const opts = ferryLaneOptions(theme);
+  for (const line of ferryLaneLines(skipLegs)) L.polyline(line.map(([lat, lng]) => L.latLng(lat, lng)), opts).addTo(layer);
 }
-export { FERRY_LANE_STYLE };
