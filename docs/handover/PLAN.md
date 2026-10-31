@@ -1311,7 +1311,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 ### #685 · Decyzja 63: rozkład Viking Line (Digitraffic + import z pliku) — W TOKU (po #683 SCALONE `63088803`)
 Źródło: #685 (Spawn2018, `dla-cursora`; decyzja 63 potwierdzona właścicielem 31.10 09:56). Bez obchodzenia Imperva (cargo/sales 403).
 **Podział PR (prognoza):**
-1. **#685-a (63a)** — W TOKU (`pakiet/685a-digitraffic-viking-schedule`): Digitraffic port-calls `FIHEL` (CC BY 4.0; `Digitraffic-User` jak AIS/Portnet + gzip), obszar ES / Viking XPRS MMSI 230705000, ETA/ETD ~2–3 dni → `sailings` TLLA-HEL / HELA-TLL source=VIKING; dopasowanie ±30 min jak #682; RECZNIE bez zmian; SOURCE_DOWN zostaje (zamyka 63c); testy na wycinku odpowiedzi.
+1. **#685-a (63a)** — W TOKU (`pakiet/685a-digitraffic-viking-schedule`): Digitraffic port-calls `FIHEL` (CC BY 4.0; `Digitraffic-User: LOGMAR/WatchTower` + gzip), obszar ES / Viking XPRS MMSI 230705000, ETA/ETD ~2–3 dni → `sailings` TLLA-HEL / HELA-TLL source=VIKING; dopasowanie ±30 min jak #682; RECZNIE bez zmian; SOURCE_DOWN zostaje (zamyka 63c); testy na wycinku odpowiedzi.
 2. **#685-b (63b)** ~4–6 h baza/Edge (+ ekran BN9-c1 koordynator) — import HTML właściciela (`D:\Watch Tower\dane\viking_cargo_hel_tll.html`); RPC HHL_ADMIN+2FA: wczytaj → parser (DP-21) → podgląd → zapis z historią; fixture przycięty bez PII.
 3. **#685-c (63c)** ~1 h (z b) — `SOURCE_DOWN:VIKING_SCHEDULE` MEDIUM zamykane, gdy rozkład z pliku ≥ 30 dni.
 Kolejność: a → b(+c). DP-21 pozostaje w #666/63b.
