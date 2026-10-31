@@ -1,6 +1,6 @@
 /**
- * BN3 — Tallink Alert + Lisainfo ts.ee (decyzje 57, 59, 68, 69, 71, 72).
- * F7 #683 B1–B5 + R2–R10: allowlista zdań (68) + allowlista HTML (71) + najnowszy Alert (72).
+ * BN3 — Tallink Alert + Lisainfo ts.ee (decyzje 57, 59, 68, 69, 71, 72 + 72a/b/c).
+ * F7 #683 B1–B5 + R2–R12: allowlista zdań (68) + HTML (71) + najnowszy Alert globalnie (72).
  *
  * Fixture `tallink-alert-cancel-mystar.html` — forma jak prawdziwy Alert
  * („due to a technical fault”; CwsSpan / hideSpacing / timeStart); treść pod test.

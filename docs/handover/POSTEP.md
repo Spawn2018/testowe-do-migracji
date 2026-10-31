@@ -7441,7 +7441,7 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: #683 — F7 r12 **POPRAWKI** @ `fb6f710f` (CI unit/db/visual ✔). Brak „F7: gotowe do scalenia”. Bez push na main.
 - **Krok R12:**
   - **R12-B1** — luźne atrybuty `["']`; `invalid_date` (brak/zły format/duplikat/`dateEnd<dateStart`/zły `timeStart`); null klucz → wszystkie bez auto;
-  - **R12-B2** — najnowszy globalnie (bez pętli dni; okno 1000–9999 < 100 ms);
+  - **R12-B2** — najnowszy globalnie (bez pętli dni; ogromne `dateEnd` < 100 ms);
   - **R12-B3** — dedupe po `rawFull` (+ `autoCancelOk = AND`);
   - **72a** przyszłe bloki; **72b** cudzysłów/kampania/`data-type`/luźny; **72c** ryzyko ze zdegradowanych;
   - vitest bn3-tallink-alert **44**. PLAN §4/§5/§8.
