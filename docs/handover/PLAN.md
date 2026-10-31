@@ -1163,14 +1163,14 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 5. **E Stena ≥ 60 dni** — ~~równolegle limit 4; SOURCE_DOWN tylko przy totalnej awarii~~; N9 budżet 90 s; N8 Freight dziś+3; ~~**DFDS Dynamic**~~; r6–r7: tylko `[]` = pusty tydzień; `apiSailingsCount`; sam PDF → SOURCE_DOWN MEDIUM (decyzja 50).
 6. ~~Testy unit F7 r1–r7~~; ~~odbiór F7~~. Bloker 2 SailingsPanel → DP-20 (SCALONE #674). DP-21: po deploy.
 
-### #667 · PILNE: pomarańczowa linia trasy na mapach (30a / SE-KAA / HERE) — SCALONE (~~PR #673 A–D / 0352–0354~~ `5e8eb1ba`; ~~E+F PR #677 / 0355~~ merge `675bb299`, F7 gotowe @ `b5b4304a`)
-Źródło: #667 (Spawn2018, `pilne`+`dla-cursora`; właściciel 30.10 15:54). Zaraz po #666, przed BN3. ~~#668 (0351)~~ → ~~#673 (0352–0354)~~ SCALONE 31.10 ~01:28Z. ~~#677~~ SCALONE 31.10 ~04:40Z.
+### #667 · PILNE: pomarańczowa linia trasy na mapach (30a / SE-KAA / HERE) — NA PRODUKCJI (~~PR #673 A–D / 0352–0354~~ `5e8eb1ba`; ~~E+F PR #677 / 0355~~ merge `675bb299`, F7 gotowe @ `b5b4304a`; `deploy-main` 0355→Edge `41169546639`)
+Źródło: #667 (Spawn2018, `pilne`+`dla-cursora`; właściciel 30.10 15:54). Zaraz po #666, przed BN3. ~~#668 (0351)~~ → ~~#673 (0352–0354)~~ SCALONE 31.10 ~01:28Z. ~~#677~~ SCALONE 31.10 ~04:40Z. SELECT po deploy 31.10 ~05:45Z OK.
 1. **A mapPool PROD + wspólny helper** — ~~`paintOrangeRoads` / `ORANGE_ROAD_STYLE`; `mapPool` ładuje `loadRoadLines` w PROD; GeofenceEditorMap + ZonesMap + CorridorMap~~; TrackReplay dziedziczy z CorridorMap; Ryzyka — brak osobnego `L.map`.
 2. **B SE-KAA dual** — ~~`SE-KAA` ← `SE_E22`; `SE-KAA-INLAND` ← jawnie `SE_KAA_INLAND`; migracja **0352**; `ROAD_LEGS=5`~~.
 3. **C cron HERE** — ~~`refreshRoadLegs` (próg 21 d); job + **0353** `tower-here-roads`; SOURCE_DOWN sticky; Edge dual~~. **Termin ≤ 04.11** (purge 05.11).
 4. Diagnostyka: ~~fundament `summary` w `map_display_state` + `checkRoads` (0354)~~; UI Stan systemu → DP-22; ~~`integration_runs` / SE-KAA `retry_after` (PILNE 01:34Z)~~ — 5 legów z punktami po `here-roads` 01:49Z (`#108023`); przyczyna: stara Edge JWT ~01:15 (+24 h) przed v117 01:30Z.
 5. ~~Słownik legów BN7 (`PL-TLL`…`SE-KPS`) gotowy do rysowania (DP-23)~~ — migracja **0355** `here_road_legs`; FK zamiast `IN (…)`; przeglądarka `browser_fetch` (core); BN7 bez auto-fetch do kalibracji.
-   - **Kolejność wdrożenia:** najpierw migracja **0355**, potem Edge `here-roads` (F7 #677 r1 B1 — bez fail-open na pusty słownik). Po `deploy-main`: SELECT 12 legów + `here-roads` w #667.
+   - **Kolejność wdrożenia:** najpierw migracja **0355**, potem Edge `here-roads` (F7 #677 r1 B1 — bez fail-open na pusty słownik). ~~Po `deploy-main`: SELECT 12 legów + `here-roads`~~ — **DONE** 31.10: `here_road_legs` 12/12 active, `browser_fetch` 5; core bez zmian (3495/3742/12561/18854/19408, `retry_after` null); BN7 `points` null; Edge LIVE 200 (skip limitu 1380 min po `#108023`).
 6. ~~Testy e2e: ≥1 polilinia; SE-KAA; PROD `loadRoadLines`~~ — jsdom CI z `vi.stubEnv('VITE_AUTH_MODE','supabase')` + mock RPC (F7 r3 B1 / r4 M4–M6); Playwright lokalnie na prawdziwym buildzie supabase (`i667-f-orange-maps.local.spec.ts`, DP-58).
 7. ~~**F7 r1–r6** (+ POPRAWKI) w #673~~ SCALONE; ~~**E+F (0355)** — F7 #677 r1–r5~~ SCALONE (`675bb299`; F7: gotowe do scalenia @ `b5b4304a`).
 8. Wyłączanie legu: `active=false` (FK bez `ON DELETE` — DP-45).
@@ -1258,8 +1258,8 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 1. **BN1** — ~~słowniki / strefy / CASE / F7 MFA~~ **SCALONE** (0338–0346).
 2. **BN2** — ~~LIVE~~ **SCALONE** (**0347**+**0348**, PR #660 `a94645d9`; PR #661 `392a9bc2`; dopisek F7 #665 `799ea18d`): Tallink; Portnet; Viking/Eckerö/DFDS HTML + Terminal A; B1–B3; Decyzja 50 MEDIUM.
 3. ~~**#666** (pilne)~~ — SCALONE (#668 `53890480` / **0351**).
-4. ~~**#667** (pilne)~~ — SCALONE (#677 `675bb299` / **0355**; F7 gotowe @ `b5b4304a`); A–D #673; SE-KAA 01:49Z; E+F; DP-43…47/54…59/63…68; **DP-69** (CorridorMap odświeżenie); po deploy: SELECT 12 + Edge.
-5. BN3…BN10 — jak #573 (opóźnienia, AIS, pogoda, drogi LT/LV/EE/FI, HERE, statusy/ETA, ekrany, odbiór 48 h).
+4. ~~**#667** (pilne)~~ — **NA PRODUKCJI** (#677 `675bb299` / **0355**; SELECT 12/12 bf5; core bez zmian; Edge 200 skip 1380). DP-69 w kolejce (mały PR).
+5. **BN3**…BN10 — jak #573 (opóźnienia, AIS, pogoda, drogi LT/LV/EE/FI, HERE, statusy/ETA, ekrany, odbiór 48 h) — **następna**.
 
 ### #662 · PILNE SafeFleet — link tymczasowy (SG-27) — SCALONE (`189688bc` / PR #663 / **0349**); #662-b SCALONE (`1ee855fd` / PR #664 / **0350**, 30.10.2026 12:54Z)
 Źródło: #662 (Spawn2018, `pilne`; właściciel 30.10 11:51). Przed poprawkami F7 #661.
@@ -2208,4 +2208,5 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 31.10.2026 05:00 | #678 SCALONE `650b3e0b` (DP-42/48/49/52); DP-63…68 w rejestrze | pętla |
 | 31.10.2026 05:15 | #677 F7 r4: M4 BN7 browser_fetch; Geofence polilinia; CorridorMap/TrackReplay PROD; czekam F7 | pętla |
 | 31.10.2026 05:40 | #677 SCALONE `675bb299` (F7: gotowe do scalenia @ b5b4304a); CI ✔; DP-69; dalej SELECT 12 po deploy → BN3 | pętla |
+| 31.10.2026 05:50 | #667 NA PRODUKCJI: SELECT 12 legów + here-roads #108803; #667 zamknięte → BN3 | pętla |
 

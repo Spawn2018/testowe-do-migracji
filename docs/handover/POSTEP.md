@@ -7427,3 +7427,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: **#677 SCALONE** `675bb299` (F7: gotowe do scalenia @ `b5b4304a`, 04:35Z; CI unit/db/visual ✔). Bez push na main.
 - **Krok:** merge #677 (E+F / 0355). Rejestr **DP-69** (F7 r5: CorridorMap odświeżenie `paintOrangeRoads` + komentarz M6). DP-23/44/59 → SCALONE. `deploy-main` na `675bb299` w toku. **Dalej po deploy:** SELECT `here_road_legs` (12; aktywne; `browser_fetch` 5) + przebieg `here-roads` w #667 → BN3.
 - Bez push na main.
+
+## 2026-10-31 05:50 — #667 NA PRODUKCJI (0355→Edge); SELECT 12 + here-roads
+
+- Skrzynka: **#667** zamknięte po odbiorze; #608 w planie; #550 WSTRZYMANE. PR docs #679 (DP-69 / SCALONE).
+- Scalanie: #677 już na `main` `675bb299`. `deploy-main` ✔ (0355 + Edge `here-roads`). Bez push na main.
+- **Krok (odbiór prod):** SELECT `here_road_legs` — **12** / active 12 / `browser_fetch` 5; core bez zmian (3495/12561/3742/18854/19408); BN7 7× null. `here-roads` **#108803** @ 04:49Z ok (0 prób — core świeże; BN7 poza cronem). Komentarz w #667. **Dalej:** BN3 (#573).
+- Bez push na main.
