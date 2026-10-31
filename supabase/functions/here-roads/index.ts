@@ -33,6 +33,31 @@ function parseCorridorPoints(raw: unknown): LatLng[] {
 
 function roadStore(sb: ReturnType<typeof createClient>): RoadRefreshStore {
   return {
+    // #667 E / DP-23: legi ze słownika (nie ROAD_LEGS w kodzie).
+    async listLegs() {
+      const r = await sb
+        .from('here_road_legs')
+        .select('leg,origin_lat,origin_lng,dest_lat,dest_lng,spec,summary,corridor_code,browser_fetch,map_group')
+        .eq('active', true)
+        .order('sort_order');
+      return (r.data ?? []).map((row) => {
+        const specRaw = String(row.spec ?? 'loose');
+        const spec =
+          specRaw === 'pl' || specRaw === 'se' || specRaw === 'kaa' || specRaw === 'loose'
+            ? specRaw
+            : 'loose';
+        return {
+          leg: String(row.leg),
+          origin: `${Number(row.origin_lat)},${Number(row.origin_lng)}`,
+          destination: `${Number(row.dest_lat)},${Number(row.dest_lng)}`,
+          spec,
+          summary: String(row.summary ?? ''),
+          corridorCode: row.corridor_code != null ? String(row.corridor_code) : undefined,
+          browserFetch: row.browser_fetch !== false,
+          mapGroup: row.map_group === 'bn7' ? 'bn7' as const : 'core' as const,
+        };
+      });
+    },
     async listGeometry() {
       const fresh = await sb.from('here_road_geometry').select('leg,fetched_at,points,retry_after');
       return (fresh.data ?? []).map((row) => ({
@@ -103,7 +128,10 @@ Deno.serve(async (req) => {
 
   const key = Deno.env.get('HERE_API_KEY') ?? '';
   if (!key) return Response.json({ ok: false, reason: 'brak' }, { headers: corsHeaders() });
-  const result = await refreshRoadLegs(roadStore(sb), { fetch, hereApiKey: key });
+  // browserOnly: BN7 bez browser_fetch — nie pali HERE z każdej sesji mapy (#667 E).
+  const result = await refreshRoadLegs(roadStore(sb), {
+    fetch, hereApiKey: key, browserOnly: true,
+  });
   if (result.skippedBudget) {
     return Response.json({ ok: false, reason: 'budzet' }, { headers: corsHeaders() });
   }

@@ -55,11 +55,45 @@ describe('#667 pomarańczowe drogi (krok B SE-KAA dual)', () => {
     expect(edge).toMatch(/refreshRoadLegs/);
   });
 
-  it('front: ROAD_LEGS=5; SE-KAA=E22; SE-KAA-INLAND=ROAD_KAA (F7 r1 B1)', () => {
-    expect(apply).toMatch(/ROAD_LEGS = 5/);
+  it('front: spec ze słownika (DP-23); SE-KAA=E22; SE-KAA-INLAND=ROAD_KAA (F7 r1 B1)', () => {
+    expect(apply).toMatch(/roadSpecFromRow|browserFetchLegCount/);
     expect(apply).toMatch(/'SE-KAA': ROAD_KAA_E22/);
     expect(apply).toMatch(/'SE-KAA-INLAND': ROAD_KAA/);
     expect(apply).toMatch(/checkRoads/);
+  });
+});
+
+/** #667 E / DP-23 — słownik legów + BN7 w bazie. */
+describe('#667 pomarańczowe drogi (krok E BN7 / DP-23)', () => {
+  const mig = 'supabase/migrations/0355_667_here_road_legs_dict.sql';
+  const refresh = readFileSync('supabase/functions/_shared/here/refreshRoadLegs.ts', 'utf8');
+  const edge = readFileSync('supabase/functions/here-roads/index.ts', 'utf8');
+  const apply = readFileSync('src/components/map/applyBasemap.ts', 'utf8');
+
+  it('migracja 0355: here_road_legs + BN7 + FK zamiast IN', () => {
+    expect(existsSync(mig)).toBe(true);
+    const sql = readFileSync(mig, 'utf8');
+    expect(sql).toMatch(/create table if not exists public\.here_road_legs/);
+    expect(sql).toMatch(/here_road_geometry_leg_fkey/);
+    expect(sql).toMatch(/drop constraint if exists here_road_geometry_leg_check/);
+    for (const leg of ['PL-TLL', 'PL-MUU', 'PL-PLD', 'FI-HEL', 'FI-VUO', 'SE-STO', 'SE-KPS']) {
+      expect(sql).toMatch(new RegExp(`'${leg}'`));
+    }
+    expect(sql).toMatch(/browser_fetch/);
+    expect(sql).toMatch(/map_group/);
+  });
+
+  it('refresh/Edge: listLegs ze słownika; przeglądarka browserOnly', () => {
+    expect(refresh).toMatch(/listLegs/);
+    expect(refresh).toMatch(/browserOnly/);
+    expect(edge).toMatch(/listLegs/);
+    expect(edge).toMatch(/browserOnly:\s*true/);
+  });
+
+  it('front: roadSpecFromRow + próg browser_fetch (nie hardcodowany ROAD_LEGS=5)', () => {
+    expect(apply).toMatch(/function roadSpecFromRow/);
+    expect(apply).toMatch(/browserFetchLegCount/);
+    expect(apply).not.toMatch(/const ROAD_LEGS = 5/);
   });
 });
 

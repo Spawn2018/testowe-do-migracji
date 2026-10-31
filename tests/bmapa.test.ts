@@ -177,7 +177,8 @@ describe('B-MAPA geometria', () => {
     expect(kaaDeviationOk(chord, dense)).toBe(false);
     const apply = readFileSync('src/components/map/applyBasemap.ts', 'utf8');
     expect(apply).toMatch(/ROAD_KAA/);
-    expect(apply).toMatch(/ROAD_LEGS = 5/); // #667 B: + SE-KAA-INLAND
+    // #667 E / DP-23: próg z browser_fetch (nie const ROAD_LEGS = 5)
+    expect(apply).toMatch(/browserFetchLegCount|roadSpecFromRow/);
     expect(apply).toMatch(/SE-KAA-INLAND/);
     expect(apply).toMatch(/AbortController/);
     expect(apply).toMatch(/timeout\/sieć/);

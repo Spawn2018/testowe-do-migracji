@@ -7371,3 +7371,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: brak „F7: gotowe do scalenia” (F7 r6 @ 00:42 — B6 + uwagi 1–3).
 - **Krok (F7 r6 POPRAWKI #673):** B6 — `vi.mock('@supabase/supabase-js')` + `__setHereRoadsSessionMsForTests(0)`; po `Promise.all` 1× POST (bez strażnika → 2). Uwaga 1/3 — 0354: Umeå `20.3263/63.8127`, Piteå `21.4319/65.3232`, `17.340/62.391` na E4. Uwaga 2 — test (a) czyta korytarze z pliku 0354 (`st_makepoint`). **Dalej:** CI → gotowe do F7; potem E BN7 / F e2e.
 - Bez push na main.
+
+## 2026-10-31 02:40 — #667 E słownik legów BN7 (DP-23 / 0355); #673 SCALONE
+
+- Skrzynka: **#667** W TOKU (E); #608 w planie; #550 WSTRZYMANE. Starsze #537/#538/#499/#500 — w planie.
+- Scalanie: **#673 SCALONE** `5e8eb1ba` (A–D / 0352–0354, 01:28Z). Nowy PR `pakiet/667-e-bn7-road-dict` (0355). Bez push na main.
+- **Krok (#667 E / DP-23):** migracja **0355** — tabela `here_road_legs` (12 legów: 5 core + 7 BN7); FK zamiast `CHECK IN (…)`; `here_store_road` / `here_road_corridor_dev_m` / `map_display_state` ze słownika (`spec`/`corridor_code`/`map_group`/`browser_fetch`); placeholdery BN7 `points=null`. Edge/cron: `listLegs` z bazy; przeglądarka `browserOnly` (BN7 tylko cron). Front: `roadSpecFromRow` + próg `browserFetchLegCount`. bmapa EXPECTED 174→180. Unit fokus i667/bmapa ✔ (48). **Dalej:** CI → gotowe do F7; potem F e2e prod.
+- Bez push na main.

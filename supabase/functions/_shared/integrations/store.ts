@@ -280,6 +280,33 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
         retry_after: row.retry_after != null ? String(row.retry_after) : null,
       }));
     },
+    /** #667 E / DP-23 — słownik legów (zamiast ROAD_LEGS w kodzie). */
+    async listHereRoadLegs() {
+      const r = await sb
+        .from('here_road_legs')
+        .select('leg,origin_lat,origin_lng,dest_lat,dest_lng,spec,summary,corridor_code,browser_fetch,map_group')
+        .eq('active', true)
+        .order('sort_order');
+      if (r.error) throw new Error(`here_road_legs: ${r.error.message}`);
+      return (r.data ?? []).map((row) => {
+        const specRaw = String(row.spec ?? 'loose');
+        const spec =
+          specRaw === 'pl' || specRaw === 'se' || specRaw === 'kaa' || specRaw === 'loose'
+            ? specRaw
+            : 'loose';
+        const mapGroup = row.map_group === 'bn7' ? 'bn7' as const : 'core' as const;
+        return {
+          leg: String(row.leg),
+          origin: `${Number(row.origin_lat)},${Number(row.origin_lng)}`,
+          destination: `${Number(row.dest_lat)},${Number(row.dest_lng)}`,
+          spec,
+          summary: String(row.summary ?? ''),
+          corridorCode: row.corridor_code != null ? String(row.corridor_code) : undefined,
+          browserFetch: row.browser_fetch !== false,
+          mapGroup,
+        };
+      });
+    },
     async storeHereRoad(leg: string, points: unknown, summary: string, nowIso?: string) {
       const args: Record<string, unknown> = { p_leg: leg, p_points: points, p_summary: summary };
       if (nowIso) args.p_now = nowIso;

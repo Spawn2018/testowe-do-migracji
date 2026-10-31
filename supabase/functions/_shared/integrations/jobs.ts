@@ -238,6 +238,8 @@ export interface SyncStore {
   hereMonthSpend?(): Promise<number>;
   /** #667 C: geometria pomarańczowych dróg (cron here-roads). */
   listHereRoadGeometry?(): Promise<{ leg: string; fetched_at: string; points: unknown; retry_after: string | null }[]>;
+  /** #667 E / DP-23 */
+  listHereRoadLegs?(): Promise<import('../here/refreshRoadLegs.ts').RoadLegDef[]>;
   storeHereRoad?(leg: string, points: unknown, summary: string, nowIso?: string): Promise<void>;
   hereCorridorBundle?(code: string): Promise<{ code: string; pts: [number, number][]; via: [number, number][]; updatedAt: number }>;
   /** TELM: aktywne transporty do dopasowania naczepy. */
@@ -1964,6 +1966,9 @@ export async function runHereRoads(deps: JobDeps): Promise<JobResult> {
     return { job: 'here-roads', mode: 'DEMO', ok: false, reason: 'Magazyn bez geometrii HERE' };
   }
   const storeAdapter: RoadRefreshStore = {
+    listLegs: deps.store.listHereRoadLegs
+      ? () => deps.store.listHereRoadLegs!()
+      : undefined,
     listGeometry: () => deps.store.listHereRoadGeometry!(),
     async storeRoad(leg, points, summary, nowIsoArg) {
       await deps.store.storeHereRoad!(leg, points, summary, nowIsoArg);
