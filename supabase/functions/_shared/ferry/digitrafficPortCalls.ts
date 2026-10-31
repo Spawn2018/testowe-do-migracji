@@ -153,23 +153,60 @@ export function digitrafficPortCallsUrl(opts: {
   vesselName?: string;
   /** UN/LOCODE, np. FIHEL (#685-a). */
   locode?: string;
-  fromIso: string;
-  toIso: string;
+  mmsi?: number;
+  /** Filtr po dacie otrzymania zgłoszenia (portCallTimestamp) — ATA/ATD / historia. */
+  fromIso?: string;
+  toIso?: string;
+  /**
+   * F7 #688 r1 B1: filtr po ETA/ETD (nie po porcieCallTimestamp).
+   * `from`/`to` nie pobierają przyszłych rejsów zgłoszonych wcześniej.
+   */
+  etaFrom?: string;
+  etaTo?: string;
+  etdFrom?: string;
+  etdTo?: string;
 }): string {
-  const q = new URLSearchParams({
-    from: opts.fromIso,
-    to: opts.toIso,
-  });
+  const q = new URLSearchParams();
+  if (opts.fromIso) q.set('from', opts.fromIso);
+  if (opts.toIso) q.set('to', opts.toIso);
+  if (opts.etaFrom) q.set('etaFrom', opts.etaFrom);
+  if (opts.etaTo) q.set('etaTo', opts.etaTo);
+  if (opts.etdFrom) q.set('etdFrom', opts.etdFrom);
+  if (opts.etdTo) q.set('etdTo', opts.etdTo);
   if (opts.vesselName) q.set('vesselName', opts.vesselName);
   if (opts.locode) q.set('locode', opts.locode);
+  if (opts.mmsi != null) q.set('mmsi', String(opts.mmsi));
   return `${DIGITRAFFIC_PORT_CALLS_URL}?${q}`;
+}
+
+/** Prefiks `sailings.source_ref` dla Portnet (#685-a / decyzja 74). */
+export const DIGITRAFFIC_PORTCALL_SOURCE_REF_PREFIX = 'digitraffic:portcall:';
+/**
+ * Jeden Portnet `portCallId` → dwa rejsy (ETA=TLLA-HEL, ETD=HELA-TLL), więc ref ma też trasę
+ * (unikalny indeks częściowy na `source_ref`). Prefiks `digitraffic:` — do zastąpienia w #685-b.
+ */
+export function digitrafficPortCallSourceRef(
+  portCallId: number | string,
+  route: FerryRoute,
+): string {
+  return `${DIGITRAFFIC_PORTCALL_SOURCE_REF_PREFIX}${portCallId}:${route}`;
 }
 
 /** #685-a / decyzja 63a — Viking XPRS (MMSI) w Eteläsatama (ES / Katajanokka). */
 export const VIKING_XPRS_MMSI = 230705000;
 export const VIKING_HEL_AREA_ES = 'ES';
-/** Typowy czas przejścia HEL⇄TLL XPRS (jak Port of Tallinn CROSSING_MIN TLLA-HEL = 120). */
-export const VIKING_XPRS_CROSSING_MS = 120 * 60_000;
+/**
+ * TLLA-HEL: `arrival_at` = ETA Helsinek (fakt Portnet), `departure_at` = ETA − 150 min.
+ * Źródło: rozkład Viking Line Cargo (fixture `viking-cargo-helsinki-tallinn-sample.html`:
+ * 07.00→09.30, 17.00→19.30). Nocny 04.00→06.45 (165 min) → odchylenie 15 min — akceptowalne (PLAN §8).
+ * Decyzja koordynatora 73 / F7 #688 r1.
+ */
+export const VIKING_XPRS_TLLA_HEL_CROSSING_MS = 150 * 60_000;
+/**
+ * HELA-TLL: `departure_at` = ETD Helsinek (fakt), `arrival_at` = ETD + 160 min.
+ * Źródło: ten sam fixture (10.30→13.10, 20.30→23.10). Decyzja 73 / F7 #688 r1.
+ */
+export const VIKING_XPRS_HELA_TLL_CROSSING_MS = 160 * 60_000;
 /** Horyzont ETA/ETD z Portnetu → rozkład (najbliższe dni). */
 export const VIKING_DIGITRAFFIC_HORIZON_DAYS = 3;
 
@@ -178,16 +215,19 @@ export interface DigitrafficVikingSailing {
   vessel: string;
   departureUtc: string;
   arrivalUtc: string;
+  /** Portnet `portCallId` → `sailings.source_ref` (decyzja 74). */
+  portCallId: number;
 }
 
 /**
  * #685-a — z Portnet FIHEL (obszar ES, Viking XPRS) buduje rejsy TLLA-HEL / HELA-TLL
  * z ETA/ETD w horyzoncie. Bez ATA/ATD (to actual_* w applyDigitrafficPortCallActuals).
  * Atrybucja: DIGITRAFFIC_PORTCALL_ATTRIBUTION (CC BY 4.0).
+ * Decyzja 73: TLLA-HEL −150 min / HELA-TLL +160 min (nie symetryczne 120).
  */
 export function vikingScheduleFromDigitrafficPortCalls(
   json: unknown,
-  opts: { now: Date; horizonDays?: number; crossingMs?: number },
+  opts: { now: Date; horizonDays?: number },
 ): { sailings: DigitrafficVikingSailing[]; warnings: string[] } {
   const warnings: string[] = [];
   const sailings: DigitrafficVikingSailing[] = [];
@@ -201,7 +241,6 @@ export function vikingScheduleFromDigitrafficPortCalls(
     return { sailings, warnings };
   }
   const horizonDays = opts.horizonDays ?? VIKING_DIGITRAFFIC_HORIZON_DAYS;
-  const crossingMs = opts.crossingMs ?? VIKING_XPRS_CROSSING_MS;
   const nowMs = opts.now.getTime();
   const horizonEnd = nowMs + horizonDays * 864e5;
   const vessel = 'M/F Viking XPRS';
@@ -217,6 +256,11 @@ export function vikingScheduleFromDigitrafficPortCalls(
     const name = String(r.vesselName ?? '').trim().toLowerCase();
     const isXprs = mmsi === VIKING_XPRS_MMSI || /viking\s*xprs/.test(name) || name === 'xprs';
     if (!isXprs) continue;
+    const portCallId = r.portCallId != null ? Number(r.portCallId) : NaN;
+    if (!Number.isFinite(portCallId)) {
+      warnings.push(`Portnet: brak portCallId (wpis nr ${i + 1}).`);
+      continue;
+    }
     const areas = Array.isArray(r.portAreaDetails) ? r.portAreaDetails : [];
     const area = (areas[0] && typeof areas[0] === 'object')
       ? areas[0] as Record<string, unknown>
@@ -228,25 +272,27 @@ export function vikingScheduleFromDigitrafficPortCalls(
     const etd = area.etd ? new Date(String(area.etd)).toISOString() : null;
     if (eta && eePartner(prevPort)) {
       const arrMs = Date.parse(eta);
-      const depMs = arrMs - crossingMs;
+      const depMs = arrMs - VIKING_XPRS_TLLA_HEL_CROSSING_MS;
       if (depMs >= nowMs - 3600_000 && depMs <= horizonEnd) {
         sailings.push({
           route: 'TLLA-HEL',
           vessel,
           departureUtc: new Date(depMs).toISOString(),
           arrivalUtc: eta,
+          portCallId,
         });
       }
     }
     if (etd && eePartner(nextPort)) {
       const depMs = Date.parse(etd);
-      const arrMs = depMs + crossingMs;
+      const arrMs = depMs + VIKING_XPRS_HELA_TLL_CROSSING_MS;
       if (depMs >= nowMs - 3600_000 && depMs <= horizonEnd) {
         sailings.push({
           route: 'HELA-TLL',
           vessel,
           departureUtc: etd,
           arrivalUtc: new Date(arrMs).toISOString(),
+          portCallId,
         });
       }
     }

@@ -29,16 +29,19 @@ export interface DbSailing {
   /** #421 F7: rzeczywiste wypłynięcie/dopłynięcie z AIS — ferry-status nie nadpisuje. */
   actual_departure_at?: string | null; actual_arrival_at?: string | null;
   status: DbSailingStatus; source: SailingSource;
+  /** #685-a / decyzja 74 (0359): np. digitraffic:portcall:<id>:<route> */
+  source_ref?: string | null;
 }
 export interface IncomingSailing {
   route: FerryRoute; vessel: string; departureUtc: string; arrivalUtc: string;
   /** tylko odczyt komunikatów (ferry-status); rozkład (ferry-schedule) nie zmienia statusu */
   status?: FerryStatus; expectedDepartureUtc?: string; expectedArrivalUtc?: string;
 }
-export type SailingPatch = Partial<Pick<DbSailing, 'vessel_id' | 'arrival_at' | 'delayed_departure_at' | 'delayed_arrival_at' | 'actual_departure_at' | 'actual_arrival_at' | 'status' | 'source'>>;
+export type SailingPatch = Partial<Pick<DbSailing, 'vessel_id' | 'departure_at' | 'arrival_at' | 'delayed_departure_at' | 'delayed_arrival_at' | 'actual_departure_at' | 'actual_arrival_at' | 'status' | 'source' | 'source_ref'>>;
 export interface SailingInsert {
   project_id: string; vessel_id: string; route: FerryRoute; departure_at: string; arrival_at: string;
   delayed_departure_at: string | null; delayed_arrival_at: string | null; status: DbSailingStatus; source: AutoSailingSource;
+  source_ref?: string | null;
 }
 export type RiskKind = 'FERRY' | 'ROAD_SE' | 'ROAD_PL' | 'WEATHER' | 'JOB_FAILURE' | 'SILENT_VEHICLE' | 'RESOURCE_MISSING';
 export type RiskSeverity = 'INFO' | 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';

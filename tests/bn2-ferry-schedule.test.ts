@@ -9,7 +9,7 @@ import { readFileSync } from 'node:fs';
 import { parseTallinkTimetable, tallinkTimetableUrl } from '../src/lib/ferry/tallink';
 import {
   parseDigitrafficPortCalls, vikingScheduleFromDigitrafficPortCalls, digitrafficPortCallsUrl,
-  VIKING_XPRS_CROSSING_MS,
+  VIKING_XPRS_MMSI,
 } from '../src/lib/ferry/digitrafficPortCalls';
 import {
   parseVikingSchedule, parseVikingTimetableHtml, parseVikingPlannedChanges,
@@ -153,25 +153,32 @@ describe('BN2 Digitraffic Portnet', () => {
     expect(r.sailings).toHaveLength(4);
     expect(r.sailings.every((s) => s.vessel === 'M/F Viking XPRS')).toBe(true);
     const morningArr = r.sailings.find((s) => s.route === 'TLLA-HEL' && s.arrivalUtc === '2026-10-31T07:30:00.000Z');
+    /* F7 #688 r1 decyzja 73: 150/160 min — dosłownie 05:00→07:30 / 08:30→11:10 */
     expect(morningArr).toMatchObject({
-      departureUtc: new Date(Date.parse('2026-10-31T07:30:00.000Z') - VIKING_XPRS_CROSSING_MS).toISOString(),
+      departureUtc: '2026-10-31T05:00:00.000Z',
+      portCallId: 9101,
     });
     const morningDep = r.sailings.find((s) => s.route === 'HELA-TLL' && s.departureUtc === '2026-10-31T08:30:00.000Z');
     expect(morningDep).toMatchObject({
-      arrivalUtc: new Date(Date.parse('2026-10-31T08:30:00.000Z') + VIKING_XPRS_CROSSING_MS).toISOString(),
+      arrivalUtc: '2026-10-31T11:10:00.000Z',
+      portCallId: 9101,
     });
     expect(r.sailings.some((s) => s.departureUtc.startsWith('2026-10-31T20:'))).toBe(false);
   });
 
-  it('#685-a: digitrafficPortCallsUrl z locode=FIHEL', () => {
+  it('F7 #688 r1 B1: digitrafficPortCallsUrl etaFrom/etaTo/mmsi bez from=', () => {
     const u = digitrafficPortCallsUrl({
       locode: 'FIHEL',
-      fromIso: '2026-10-30T12:00:00.000Z',
-      toIso: '2026-11-02T12:00:00.000Z',
+      mmsi: VIKING_XPRS_MMSI,
+      etaFrom: '2026-10-30T09:00:00.000Z',
+      etaTo: '2026-11-02T12:00:00.000Z',
     });
     expect(u).toContain('locode=FIHEL');
-    expect(u).toContain('from=');
-    expect(u).toContain('to=');
+    expect(u).toContain(`mmsi=${VIKING_XPRS_MMSI}`);
+    expect(u).toContain('etaFrom=');
+    expect(u).toContain('etaTo=');
+    expect(u).not.toContain('from=');
+    expect(u).not.toContain('to=');
   });
 });
 
