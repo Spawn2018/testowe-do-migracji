@@ -354,10 +354,21 @@ describe('BN3 Tallink Alert — runFerryStatus (F7 B5)', () => {
   it('F7 #689 R1-B1: 200 + Imperva / krótki HTML → brak auto, ryzyko MEDIUM', async () => {
     const imperva = `${'x'.repeat(2100)} _Incapsula_Resource Request unsuccessful`;
     const short = '<html><CwsP>tiny</CwsP></html>';
+    // F7 #689 R2-B1: ≥2 KB bez znacznika Footer/Cws → nieOK (mutacja `if (false)` na markerze).
+    const noMarker =
+      '<!DOCTYPE html><html><body><h1>Service temporarily unavailable</h1><p>' +
+      'x'.repeat(3000) +
+      '</p></body></html>';
+    // Nieblokujące: stopka + Incapsula → ok:false (mutacja „bez regexu blokady”).
+    const footerIncapsula =
+      '<footer data-analytics-group="Footer"><CwsP>pad</CwsP></footer>' +
+      `${'x'.repeat(2100)}_Incapsula_Resource`;
     expect(isTallinkAlertHtmlUsable(imperva).ok).toBe(false);
     expect(isTallinkAlertHtmlUsable(short).ok).toBe(false);
+    expect(isTallinkAlertHtmlUsable(noMarker).ok).toBe(false);
+    expect(isTallinkAlertHtmlUsable(footerIncapsula).ok).toBe(false);
 
-    for (const junk of [imperva, short]) {
+    for (const junk of [imperva, short, noMarker]) {
       const st = new MemStore();
       st.sailings.push({
         id: 's-ok', vessel_id: MYST, route: 'TLL-HEL',
@@ -374,6 +385,82 @@ describe('BN3 Tallink Alert — runFerryStatus (F7 B5)', () => {
       expect(st.sailings[0]!.status).toBe('ZAPLANOWANY');
       expect(st.notices).toHaveLength(0);
       const inc = st.risks.filter((r) => String(r.dedup).startsWith('TALLINK_ALERT_INCOMPLETE:'));
+      expect(inc).toHaveLength(1);
+      expect(inc[0]!.severity).toBe('MEDIUM');
+    }
+  });
+
+  it('F7 #689 R2 nieblokujące: resolve INCOMPLETE po pełnej puli; skip already_cancelled; throw jednej strony', async () => {
+    // 1) niepełna → INCOMPLETE; potem obie strony OK → resolve
+    const st = new MemStore();
+    st.sailings.push({
+      id: 's-ok', vessel_id: MYST, route: 'TLL-HEL',
+      departure_at: '2026-11-02T05:30:00.000Z', arrival_at: '2026-11-02T07:30:00.000Z',
+      delayed_departure_at: null, delayed_arrival_at: null,
+      status: 'ZAPLANOWANY', source: 'TALLINK',
+    });
+    await runAndRecord(st, {
+      'helsinki-tallinn-ferry': 404,
+      'tallink.com': FIX,
+      'ts.ee': 503,
+      portsofstockholm: 503,
+    });
+    expect(st.risks.some((r) => String(r.dedup).startsWith('TALLINK_ALERT_INCOMPLETE:'))).toBe(true);
+    await runAndRecord(st, {
+      'tallink.com': FIX,
+      'ts.ee': 503,
+      portsofstockholm: 503,
+    });
+    expect(st.risks.some((r) => String(r.dedup).startsWith('TALLINK_ALERT_INCOMPLETE:'))).toBe(false);
+
+    // 2) already_cancelled + niepełna pula → bez INCOMPLETE
+    const stCancel = new MemStore();
+    stCancel.sailings.push({
+      id: 's-od', vessel_id: MYST, route: 'TLL-HEL',
+      departure_at: '2026-11-02T05:30:00.000Z', arrival_at: '2026-11-02T07:30:00.000Z',
+      delayed_departure_at: null, delayed_arrival_at: null,
+      status: 'ODWOLANY', source: 'TALLINK',
+    });
+    await runAndRecord(stCancel, {
+      'helsinki-tallinn-ferry': 404,
+      'tallink.com': FIX,
+      'ts.ee': 503,
+      portsofstockholm: 503,
+    });
+    expect(stCancel.sailings[0]!.status).toBe('ODWOLANY');
+    expect(stCancel.notices).toHaveLength(0);
+    expect(stCancel.risks.some((r) => String(r.dedup).startsWith('TALLINK_ALERT_INCOMPLETE:'))).toBe(false);
+
+    // 3) wyjątek tylko po jednej stronie (HOME rzuca / HEL OK i odwrotnie)
+    for (const throwSide of ['home', 'hel'] as const) {
+      const stThrow = new MemStore();
+      stThrow.sailings.push({
+        id: 's-ok', vessel_id: MYST, route: 'TLL-HEL',
+        departure_at: '2026-11-02T05:30:00.000Z', arrival_at: '2026-11-02T07:30:00.000Z',
+        delayed_departure_at: null, delayed_arrival_at: null,
+        status: 'ZAPLANOWANY', source: 'TALLINK',
+      });
+      const f = (async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.includes('ts.ee') || url.includes('portsofstockholm') || url.includes('port-calls') ||
+          url.includes('komunikaty') || url.includes('stena') || url.includes('dfds')) {
+          return new Response('err', { status: 503 });
+        }
+        const isHel = url.includes('helsinki-tallinn-ferry');
+        const isHome = url.includes('tallink.com') && !isHel;
+        if ((throwSide === 'home' && isHome) || (throwSide === 'hel' && isHel)) {
+          throw new Error('timeout one side');
+        }
+        if (isHome || isHel) return new Response(FIX, { status: 200 });
+        throw new Error(`nieoczekiwane: ${url}`);
+      }) as typeof fetch;
+      const res = await runFerryStatus({
+        store: stThrow, fetch: f, env: {}, now: () => NOW,
+      });
+      expect(stThrow.sailings[0]!.status).toBe('ZAPLANOWANY');
+      expect(stThrow.notices).toHaveLength(0);
+      expect(res.tallink_alert_incomplete).toBe(true);
+      const inc = stThrow.risks.filter((r) => String(r.dedup).startsWith('TALLINK_ALERT_INCOMPLETE:'));
       expect(inc).toHaveLength(1);
       expect(inc[0]!.severity).toBe('MEDIUM');
     }

@@ -7331,6 +7331,16 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Bez push na main.
 
 
+## 2026-10-31 19:45 — #689 F7 r2 (R2-B1 test markera + nieblokujące)
+
+- Skrzynka: #687 / PR #689 F7 r2; #688 czeka po scaleniu #689; #608 w planie; #550 WSTRZYMANE.
+- Scalanie: brak «F7: gotowe do scalenia» (po r2 — czekam). Bez push na main.
+- **Krok F7 #689 r2 (tylko testy):**
+  - **R2-B1** — strona ≥2 KB bez Footer/Cws (`Service temporarily unavailable`) → `isTallinkAlertHtmlUsable` false + INCOMPLETE MEDIUM;
+  - nieblokujące: footer+`_Incapsula_Resource` → ok:false; resolve `TALLINK_ALERT_INCOMPLETE:` po pełnej puli; skip INCOMPLETE przy already_cancelled; throw tylko HOME albo tylko HEL.
+- vitest bn3-tallink-alert **59**. **Dalej:** CI → gotowe do F7 → scal #689 → F7 r1 #688 (decyzje 73/74).
+- Bez push na main.
+
 ## 2026-10-31 19:10 — #689 F7 r1 POPRAWKI (DP-114 usable HTML + streak z runs)
 
 - Skrzynka: #689 F7 r1 POPRAWKI; #688 czeka po scaleniu #689; #608 w planie; #550 WSTRZYMANE.
