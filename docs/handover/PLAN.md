@@ -2225,4 +2225,5 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 31.10.2026 05:50 | #667 NA PRODUKCJI: SELECT 12 legów + here-roads #108803; #667 zamknięte → BN3 | pętla |
 | 31.10.2026 06:00 | #679 SCALONE; BN3 wycinek 1: 0356 operator_notices + apply ze słownika + formularz | pętla |
 | 31.10.2026 06:00 | DP-21 DONE (Viking cargo+sales 403; TLLA-HEL ECKERO); BN3 start — decyzja 60 front PLD-KPS tylko DFDS | pętla |
+| 31.10.2026 06:20 | #680 db FAIL: assert_not_preview w 0356 + ferry-status EXPECTED 9; czekam CI+F7 | pętla |
 

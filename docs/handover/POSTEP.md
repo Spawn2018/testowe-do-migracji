@@ -7435,6 +7435,13 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (odbiór prod):** SELECT `here_road_legs` — **12** / active 12 / `browser_fetch` 5; core bez zmian (3495/12561/3742/18854/19408); BN7 7× null. `here-roads` **#108803** @ 04:49Z ok (0 prób — core świeże; BN7 poza cronem). Komentarz w #667. **Dalej:** BN3 (#573).
 - Bez push na main.
 
+## 2026-10-31 06:20 — #680 CI db FAIL → assert B5 + ferry-status 9
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE; #538/#537/#500/#499 w planie. Bez nowych `pilne`.
+- Scalanie: #680 — brak „F7: gotowe do scalenia” (tylko „gotowe do F7”); CI db FAIL (security 494/1 + ferry-status 9≠8). Bez push na main.
+- **Krok:** 0356 — `perform public.assert_not_preview()` jako pierwsza instrukcja po BEGIN (B5 strażnik RPC); `EXPECTED_LOCAL['ferry-status']=9` (test Tallink). **Dalej:** CI + F7 #680 → BN3 źródła statusów (DFDS remark / Portnet ATA / PoT).
+- Bez push na main.
+
 ## 2026-10-31 06:00 — BN3 wycinek 1: operator_notices bałtyckie (0356)
 
 - Skrzynka: **#667** NA PRODUKCJI / zamknięte; #608 w planie; #550 WSTRZYMANE. #679 SCALONE (`c20b7c95`).

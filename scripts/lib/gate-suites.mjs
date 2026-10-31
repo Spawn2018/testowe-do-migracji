@@ -44,7 +44,7 @@ export const EXPECTED_LOCAL = {
   h1: 14,
   h3: 20,
   smsksh: 16,
-  'ferry-status': 8,
+  'ferry-status': 9, // BN3 #680: +1 Tallink TLL-HEL operator=TALLINK
   bmapa: 180, // #667 E / DP-23: +6 (słownik 12, roads=12, BN7, FK, browser_fetch, bez IN); było 174
   h4: 19,
   p4k: 111, // #630 F7 r1: +rola PORT_CHECKIN; CROSSING mismatch w medianie; undo 7d

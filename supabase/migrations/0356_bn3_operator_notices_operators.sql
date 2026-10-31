@@ -31,6 +31,8 @@ declare
   v_id uuid;
   v_delta interval;
 begin
+  -- B5 (0300): assert musi być pierwszą instrukcją po BEGIN (security.sh strażnik RPC).
+  perform public.assert_not_preview();
   if (current_app_role() in ('HHL_ADMIN', 'CARRIER_DISPATCH')) is not true then
     raise exception 'Komunikat armatora — wyłącznie administrator albo dyspozytor przewoźnika'
       using errcode = '42501';
