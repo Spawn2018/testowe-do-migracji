@@ -7392,3 +7392,17 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: brak F7 na #677 (POPRAWKI @ 02:00Z / 02:07Z — B1+B2). CI docs @ `11b50241` unit/db/visual ✔ (G-15: czekaliśmy). Bez push na main.
 - **Krok (F7 #677 r1 B1+B2):** B1 — `listLegs`/`listHereRoadLegs`: `if (r.error) throw`; pusty słownik → `[...ROAD_LEGS]`; `resolveLegs` ten sam zapas; kolejność wdrożenia **0355 → Edge** w PLAN. B2 — testy zachowania: BN7 poza fetch/missing (browserOnly+cron); `roadSpecFromRow`/`checkRoads` kaa+SE_E22 vs INLAND; `browserFetchLegCount` 12→5; eksport funkcji. DP-44 `legDefFromRow` wspólne. Rejestr **DP-43…47**. Unit fokus i667/bmapa ✔ (43). **Dalej:** CI → gotowe do F7; potem F e2e.
 - Bez push na main.
+
+## 2026-10-31 03:55 — #676 SCALONE; #667 F e2e; DP-53
+
+- Skrzynka: **#667** pilne W TOKU (PR #677 E+F); #608 w planie; #550 WSTRZYMANE. Starsze #537/#538/#499/#500 — w planie.
+- Scalanie: **#676 SCALONE** `4ec47bd2` (F7 gotowe @ 2c6452ec; DP-13, DP-33…37). #677 bez „F7: gotowe do scalenia” — czekam F7 po F e2e. Bez push na main.
+- **Krok (#667 F):** `tests/i667-f-e2e-orange-roads.jsdom.test.ts` — ≥1 polilinia #E5A544 (paintOrangeRoads / ZonesMap / Geofence); SE-KAA w payloadzie `map_display_state`; PROD mapy z `loadRoadLines`+`paintOrangeRoads`; cron 21 d przed purge 30 d (`attempted=5`, SE-KAA w missing po HTTP 500). Playwright lokalnie: `tests/i667-f-orange-maps.local.spec.ts` (build supabase + lokalny SB). Merge `main` (#676). Rejestr: DP-13/33…37 SCALONE; **DP-53** (Cursor, bramka dist demo). Unit i667 F+E+orange ✔ (22). **Dalej:** CI → gotowe do F7 #677.
+- Bez push na main.
+
+## 2026-10-31 03:55 — #667 F e2e (jsdom + local Playwright)
+
+- Skrzynka: **#667** W TOKU (PR #677 E+F); #608 w planie; #550 WSTRZYMANE. #676 bez „F7: gotowe do scalenia”.
+- Scalanie: brak „F7: gotowe do scalenia” na #677 (CI ✔ @ `70df5d96` unit/db/visual — G-15 do zielonego; potem krok F). Bez push na main.
+- **Krok (#667 F):** `tests/i667-f-e2e-orange-roads.jsdom.test.ts` — ≥1 polilinia `#E5A544` (paint + ZonesMap/Geofence); SE-KAA w `map_display_state`; mapy PROD `loadRoadLines`; cron 21 d przy wieku 25 d (przed purge 30 d). Playwright `tests/i667-f-orange-maps.local.spec.ts` (build supabase + lokalny SB). Unit fokus i667/bmapa ✔ (41). **Dalej:** CI → gotowe do F7.
+- Bez push na main.
