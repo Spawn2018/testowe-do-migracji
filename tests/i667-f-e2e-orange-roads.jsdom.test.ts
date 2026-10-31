@@ -1,15 +1,15 @@
 /**
  * @vitest-environment jsdom
  * #667 F — e2e pomarańczowych linii (jsdom + zachowanie PROD / SE-KAA).
- * #677 F7 r3 B1–B3: ZonesMap/Geofence w VITE_AUTH_MODE=supabase + mock RPC;
- * SE-KAA jako E22 + INLAND; brak POST przy komplecie 5 core; BN7 nie podnosi progu.
+ * #677 F7 r3 B1–B3 + r4: ZonesMap/Geofence/CorridorMap w VITE_AUTH_MODE=supabase + mock RPC;
+ * SE-KAA jako E22 + INLAND; brak POST przy komplecie 5 core; BN7 (browser_fetch true) nie podnosi progu;
+ * Geofence: tylko L.Polyline (nie L.Circle); CorridorMap rysuje polilinię w PROD.
  * Playwright na buildzie VITE_AUTH_MODE=supabase: tests/i667-f-orange-maps.local.spec.ts
  */
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { act } from 'react';
-import { readFileSync } from 'node:fs';
 
 beforeAll(() => {
   const proto = (globalThis as unknown as { SVGSVGElement?: { prototype: { createSVGRect?: () => DOMRect } } })
@@ -29,6 +29,8 @@ const { DEMO_ROAD_LINES } = await import('../src/data/roadLinesDemo');
 const { useTowerStore } = await import('../src/store/useTowerStore');
 const { default: ZonesMap } = await import('../src/components/zones/ZonesMap');
 const { GeofenceEditorMap } = await import('../src/components/map/GeofenceEditorMap');
+const { CorridorMap } = await import('../src/components/map/CorridorMap');
+const { default: TrackReplay } = await import('../src/components/map/TrackReplay');
 
 const { rpc, getSession } = vi.hoisted(() => ({
   rpc: vi.fn(),
@@ -65,11 +67,27 @@ type RoadGeomRow = import('../supabase/functions/_shared/here/refreshRoadLegs.ts
 type RoadRefreshStore = import('../supabase/functions/_shared/here/refreshRoadLegs.ts').RoadRefreshStore;
 type LatLng = [number, number];
 
+/** Pomarańczowe ścieżki (polilinie + ewentualne okręgi geofence). */
 function orangeStrokeCount(root: ParentNode): number {
   return [...root.querySelectorAll('.leaflet-overlay-pane path')].filter((p) => {
     const stroke = (p.getAttribute('stroke') || '').toLowerCase();
     const style = (p.getAttribute('style') || '').toLowerCase();
     return stroke === '#e5a544' || /stroke:\s*#e5a544/.test(style);
+  }).length;
+}
+
+/**
+ * F7 r4: tylko L.Polyline drogi (#E5A544, fill=none) — bez L.Circle geofence
+ * (okrąg też #E5A544; mutacja M5b: sam okrąg spełniał ≥1).
+ */
+function orangeRoadPolylineCount(root: ParentNode): number {
+  return [...root.querySelectorAll('.leaflet-overlay-pane path')].filter((p) => {
+    const stroke = (p.getAttribute('stroke') || '').toLowerCase();
+    const style = (p.getAttribute('style') || '').toLowerCase();
+    const isOrange = stroke === '#e5a544' || /stroke:\s*#e5a544/.test(style);
+    if (!isOrange) return false;
+    const fill = (p.getAttribute('fill') || '').toLowerCase();
+    return fill === 'none' || fill === '' || fill === 'null';
   }).length;
 }
 
@@ -179,25 +197,34 @@ function coreRoadsComplete() {
   ];
 }
 
+/**
+ * F7 r4 M4: browser_fetch true + points null — filtr map_group==='bn7' musi ciąć próg;
+ * przy browser_fetch:false filtr map_group był nieosiągalny (M4 przeżywała).
+ */
 function bn7Placeholders() {
   return ['PL-TLL', 'PL-MUU', 'PL-PLD', 'FI-HEL', 'FI-VUO', 'SE-STO', 'SE-KPS'].map((leg) => ({
     leg,
     spec: 'loose',
     corridor_code: null,
     points: null as null,
-    browser_fetch: false,
+    browser_fetch: true,
     map_group: 'bn7',
     summary: '— oczekuje na HERE',
   }));
 }
 
 describe('#667 F e2e — paintOrangeRoads + mapy (jsdom)', () => {
-  let host: HTMLDivElement;
-  let root: Root;
+  let host: HTMLDivElement | undefined;
+  let root: Root | null = null;
 
   afterEach(() => {
-    act(() => { root?.unmount(); });
+    // F7 r4: bez podwójnego unmount (ręczny w teście M6 + afterEach).
+    if (root) {
+      act(() => { root!.unmount(); });
+      root = null;
+    }
     host?.remove();
+    host = undefined;
     document.querySelectorAll('.leaflet-container').forEach((n) => n.remove());
     vi.unstubAllEnvs();
     __resetRoadLinesCacheForTests();
@@ -223,7 +250,7 @@ describe('#667 F e2e — paintOrangeRoads + mapy (jsdom)', () => {
     el.remove();
   });
 
-  it('B1 PROD: ZonesMap i GeofenceEditorMap ładują loadRoadLines (nie DEMO)', async () => {
+  it('B1 PROD: ZonesMap ładuje loadRoadLines (nie DEMO)', async () => {
     vi.stubEnv('VITE_AUTH_MODE', 'supabase');
     __resetRoadLinesCacheForTests();
     __setHereRoadsSessionMsForTests(5 * 60_000);
@@ -259,15 +286,29 @@ describe('#667 F e2e — paintOrangeRoads + mapy (jsdom)', () => {
     expect(rpc).toHaveBeenCalled();
     expect(orangeStrokeCount(host)).toBe(1);
     expect(orangeStrokeCount(host)).not.toBe(DEMO_ROAD_LINES.length);
+  });
 
-    await act(async () => { root.unmount(); });
-    host.remove();
-    document.querySelectorAll('.leaflet-container').forEach((n) => n.remove());
-
+  it('B1 PROD: GeofenceEditorMap — 1 polilinia drogi (nie okrąg #E5A544)', async () => {
+    vi.stubEnv('VITE_AUTH_MODE', 'supabase');
     __resetRoadLinesCacheForTests();
-    rpc.mockClear();
+    __setHereRoadsSessionMsForTests(5 * 60_000);
+    rpc.mockReset();
+    getSession.mockReset();
+    const roads = [
+      {
+        leg: 'PL-GDY',
+        spec: 'loose',
+        corridor_code: null,
+        points: LOOSE_OK,
+        browser_fetch: true,
+        map_group: 'core',
+        summary: '',
+      },
+    ];
     rpc.mockResolvedValue({ data: { roads }, error: null });
+    getSession.mockResolvedValue({ data: { session: null } });
 
+    useTowerStore.setState({ theme: 'day' });
     host = document.createElement('div');
     host.style.width = '640px';
     host.style.height = '480px';
@@ -286,9 +327,9 @@ describe('#667 F e2e — paintOrangeRoads + mapy (jsdom)', () => {
     await act(async () => { await new Promise((r) => setTimeout(r, 400)); });
     expect(host.querySelector('[data-geofence-map]')).toBeTruthy();
     expect(rpc).toHaveBeenCalled();
-    // ≥1 pomarańcz z RPC; ≠ DEMO×3 (mutacja M5: gałąź demo).
-    expect(orangeStrokeCount(host)).toBeGreaterThanOrEqual(1);
-    expect(orangeStrokeCount(host)).toBeLessThan(DEMO_ROAD_LINES.length);
+    // F7 r4 M5b: okrąg geofence też #E5A544 — liczyć tylko polilinie (=== 1 z RPC).
+    expect(orangeRoadPolylineCount(host)).toBe(1);
+    expect(orangeStrokeCount(host)).toBeGreaterThan(orangeRoadPolylineCount(host));
   });
 
   it('B1 mapPool PROD: acquireMap → loadRoadLines (1 linia, nie DEMO×3)', async () => {
@@ -321,6 +362,82 @@ describe('#667 F e2e — paintOrangeRoads + mapy (jsdom)', () => {
     expect(rpc).toHaveBeenCalled();
     expect(orangeStrokeCount(host)).toBe(1);
     expect(orangeStrokeCount(host)).not.toBe(DEMO_ROAD_LINES.length);
+    releaseMap(entry, 'map');
+    __resetMapPool();
+  });
+
+  it('B1/M6 PROD: CorridorMap rysuje ≥1 polilinię z loadRoadLines; TrackReplay dziedziczy mapę', async () => {
+    vi.stubEnv('VITE_AUTH_MODE', 'supabase');
+    __resetRoadLinesCacheForTests();
+    __setHereRoadsSessionMsForTests(5 * 60_000);
+    rpc.mockReset();
+    getSession.mockReset();
+    const roads = [
+      {
+        leg: 'PL-GDY',
+        spec: 'loose',
+        corridor_code: null,
+        points: LOOSE_OK,
+        browser_fetch: true,
+        map_group: 'core',
+        summary: '',
+      },
+    ];
+    rpc.mockResolvedValue({ data: { roads }, error: null });
+    getSession.mockResolvedValue({ data: { session: null } });
+
+    useTowerStore.setState({ theme: 'day' });
+    host = document.createElement('div');
+    host.style.cssText = 'width:640px;height:480px;position:relative';
+    document.body.appendChild(host);
+    root = createRoot(host);
+
+    await act(async () => {
+      root!.render(createElement(CorridorMap, { loads: [], embedded: true, slot: 'kokpit' }));
+    });
+    // basemapReady: ensureBasemap albo timeout 1,5 s — potem loadRoadLines.
+    await act(async () => { await new Promise((r) => setTimeout(r, 2200)); });
+    expect(host.querySelector('.corridor-map-el')).toBeTruthy();
+    expect(rpc).toHaveBeenCalled();
+    // M6: usunięcie paintOrangeRoads w CorridorMap → 0 polilinii.
+    expect(orangeRoadPolylineCount(host)).toBe(1);
+
+    const { acquireMap, releaseMap, __resetMapPool } = await import('../src/components/map/mapPool');
+    await act(async () => { root!.unmount(); });
+    root = null;
+    host.remove();
+    host = undefined;
+    document.querySelectorAll('.leaflet-container').forEach((n) => n.remove());
+    __resetMapPool();
+
+    __resetRoadLinesCacheForTests();
+    rpc.mockClear();
+    rpc.mockResolvedValue({ data: { roads }, error: null });
+
+    host = document.createElement('div');
+    host.style.cssText = 'width:640px;height:480px;position:relative';
+    document.body.appendChild(host);
+    const entry = acquireMap(host, 'map');
+    await act(async () => { await new Promise((r) => setTimeout(r, 400)); });
+    const roadsBefore = orangeRoadPolylineCount(host);
+
+    const uiHost = document.createElement('div');
+    document.body.appendChild(uiHost);
+    root = createRoot(uiHost);
+    await act(async () => {
+      root!.render(createElement(TrackReplay, {
+        map: entry.map,
+        loadId: '00000000-0000-4000-8000-000000000001',
+        code: 'SG-00',
+        noFix: true,
+      }));
+    });
+    await act(async () => { await new Promise((r) => setTimeout(r, 100)); });
+    expect(uiHost.querySelector('[data-track-replay]')).toBeTruthy();
+    // TrackReplay nie dodaje osobnej mapy ani pomarańczowych dróg — dziedziczy z mapPool.
+    expect(document.querySelectorAll('.leaflet-container').length).toBe(1);
+    expect(orangeRoadPolylineCount(host)).toBe(roadsBefore);
+
     releaseMap(entry, 'map');
     __resetMapPool();
   });
@@ -431,15 +548,16 @@ describe('#667 F e2e — brak POST przy komplecie + BN7 (B3) + cron', () => {
     vi.unstubAllGlobals();
   });
 
-  it('B3: komplet 5 core + BN7 null → brak POST; BN7 nie podnosi progu', async () => {
+  it('B3: komplet 5 core + BN7 null (browser_fetch true) → brak POST; BN7 nie podnosi progu', async () => {
     const fetchMock = vi.fn(async () => new Response('{}', { status: 200 }));
     vi.stubGlobal('fetch', fetchMock);
     getSession.mockResolvedValue({ data: { session: { access_token: 'tok' } } });
 
     const roads = [...coreRoadsComplete(), ...bn7Placeholders()];
+    // M4: usunięcie filtra map_group==='bn7' przy browser_fetch true → 12.
     expect(browserFetchLegCount(roads)).toBe(5);
-    // Mutacja M4 (licz BN7) → 12.
     expect(browserFetchLegCount(roads)).toBeLessThan(roads.length);
+    expect(bn7Placeholders().every((r) => r.browser_fetch === true && r.map_group === 'bn7')).toBe(true);
 
     const checked = checkRoads(roads);
     expect(checked.accepted, `odrzucone: ${checked.rejected.map((r) => `${r.leg}:${r.why}`).join('; ')}`).toHaveLength(5);
@@ -451,23 +569,6 @@ describe('#667 F e2e — brak POST przy komplecie + BN7 (B3) + cron', () => {
     expect(lines).toHaveLength(5);
     expect(fetchMock).not.toHaveBeenCalled();
     expect(getSession).not.toHaveBeenCalled();
-  });
-
-  it('wszystkie L.map / CorridorMap ładują loadRoadLines w PROD; TrackReplay bez własnego L.map', () => {
-    const files = [
-      'src/components/map/mapPool.ts',
-      'src/components/map/CorridorMap.tsx',
-      'src/components/map/GeofenceEditorMap.tsx',
-      'src/components/zones/ZonesMap.tsx',
-    ];
-    for (const f of files) {
-      const src = readFileSync(f, 'utf8');
-      expect(src, f).toMatch(/loadRoadLines/);
-      expect(src, f).toMatch(/paintOrangeRoads/);
-      expect(src, f).toMatch(/VITE_AUTH_MODE/);
-    }
-    // TrackReplay dziedziczy warstwę z CorridorMap / mapPool — bez osobnego L.map dróg
-    expect(readFileSync('src/components/map/TrackReplay.tsx', 'utf8')).not.toMatch(/L\.map\(/);
   });
 
   it('cron 21 d: attempted obejmuje SE-KAA (nie tylko liczba 5)', async () => {

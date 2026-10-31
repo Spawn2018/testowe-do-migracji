@@ -7414,3 +7414,17 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (F7 r3 B1–B3):** `i667-f-e2e-orange-roads.jsdom.test.ts` — `vi.stubEnv('VITE_AUTH_MODE','supabase')` + mock `map_display_state` (ZonesMap/Geofence/mapPool ≠ DEMO); SE-KAA jako E22 + przypadek INLAND; komplet 5 core → brak POST, BN7 `points:null` nie podnosi progu; cron attempted zawiera SE-KAA. Rejestr **DP-58** (local.spec warunkowe), **DP-59** (pkt 6 = stubEnv vs prawdziwy build). Unit i667-f ✔ (8). **Dalej:** CI → gotowe do F7.
 - Bez push na main.
 
+## 2026-10-31 05:15 — #678 SCALONE; #677 F7 r4 (M4/M5b/M6)
+
+- Skrzynka: **#667** pilne W TOKU (PR #677); #608 w planie; #550 WSTRZYMANE.
+- Scalanie: **#678** już SCALONE (650b3e0b / 95990ce — DP-42/48/49/52). Brak „F7: gotowe do scalenia” na #677 po F7 r4. Bez push na main.
+- **Krok (F7 r4):** i667-f-e2e-orange-roads.jsdom.test.ts — M4 BN7 `browser_fetch:true` + filtr `map_group==='bn7'`; M5b Geofence tylko `L.Polyline` (nie okrąg #E5A544); M6 render CorridorMap+TrackReplay w PROD. Rejestr DP-63…68. Unit i667 ✔ (21). Merge main (#678) w gałęzi. **Dalej:** CI → gotowe do F7 → 0355→Edge → SELECT 12 legów.
+- Bez push na main.
+
+
+## 2026-10-31 05:15 — #678 SCALONE; #677 F7 r4 POPRAWKI (M4/M5b/M6)
+
+- Skrzynka: **#667** pilne W TOKU (PR #677); #608 w planie; #550 WSTRZYMANE. Starsze #537/#538/#499/#500 — w planie.
+- Scalanie: **#678 SCALONE** `650b3e0b` (F7: gotowe do scalenia @ `a95990ce`; DP-42/48/49/52). #677 bez „F7: gotowe do scalenia” — F7 r4 POPRAWKI @ 04:06Z. Bez push na main.
+- **Krok (F7 r4 #677):** `i667-f-e2e-orange-roads.jsdom.test.ts` — M4: BN7 `browser_fetch:true` + filtr `map_group`; M5b: Geofence tylko polilinie (nie okrąg #E5A544); M6: render CorridorMap PROD + TrackReplay dziedziczy mapę. Merge `main` (#678). Rejestr DP-42/48/49/52 SCALONE; **DP-63…68**. Unit i667-f ✔ (9). **Dalej:** CI → gotowe do F7.
+- Bez push na main.
