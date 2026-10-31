@@ -26,6 +26,7 @@ import {
 } from '../ferry/tallink.ts';
 import {
   DIGITRAFFIC_PORT_CALLS_URL, digitrafficPortCallsUrl, parseDigitrafficPortCalls,
+  vikingScheduleFromDigitrafficPortCalls, VIKING_DIGITRAFFIC_HORIZON_DAYS,
 } from '../ferry/digitrafficPortCalls.ts';
 import {
   PORT_TALLINN_ARRIVALS_URL, PORT_TALLINN_DEPARTURES_URL, PORT_TALLINN_UA,
@@ -790,6 +791,134 @@ export function pickUniqueInWindow<T>(
   return { kind: 'hit', item: inWin[0]! };
 }
 
+/**
+ * #685-a / decyzja 63a — Digitraffic FIHEL ES / Viking XPRS → sailings TLLA-HEL / HELA-TLL (źródło VIKING).
+ * Dopasowanie jak #682: jeden kandydat w oknie ±30 min; RECZNIE bez zmian; ambiguous → ryzyko MEDIUM.
+ * Nie zamyka SOURCE_DOWN:VIKING_SCHEDULE (to 63c / plik ≥ 30 dni).
+ */
+async function applyDigitrafficVikingNearSchedule(deps: JobDeps, sinceIso: string): Promise<{
+  inserted: number; updated: number; manualKept: number; warnings: string[]; fail: boolean; risks: number;
+}> {
+  const now = deps.now();
+  /* from −1 d: Portnet trzyma też ETA/ETD Agent spoza okna „od teraz” (probe #685). */
+  const fromIso = new Date(now.getTime() - 864e5).toISOString();
+  const toIso = new Date(now.getTime() + VIKING_DIGITRAFFIC_HORIZON_DAYS * 864e5).toISOString();
+  const url = digitrafficPortCallsUrl({ locode: 'FIHEL', fromIso, toIso });
+  const page = await readText(deps, url, {
+    headers: {
+      'User-Agent': USER_AGENT,
+      Accept: 'application/json',
+      'Accept-Encoding': 'gzip',
+      /* #685 decyzja 63a — Digitraffic-User: LOGMAR/WatchTower */
+      'Digitraffic-User': 'LOGMAR/WatchTower',
+    },
+  });
+  if (!page.ok) {
+    return { inserted: 0, updated: 0, manualKept: 0, warnings: [page.warning], fail: true, risks: 0 };
+  }
+  let json: unknown;
+  try { json = JSON.parse(page.text); } catch {
+    return {
+      inserted: 0, updated: 0, manualKept: 0,
+      warnings: ['Digitraffic Portnet (Viking): nieczytelny JSON'], fail: true, risks: 0,
+    };
+  }
+  const parsed = vikingScheduleFromDigitrafficPortCalls(json, { now });
+  if (parsed.warnings.some((w) => /Struktura/i.test(w))) {
+    return {
+      inserted: 0, updated: 0, manualKept: 0, warnings: parsed.warnings, fail: true, risks: 0,
+    };
+  }
+  if (parsed.sailings.length === 0) {
+    return { inserted: 0, updated: 0, manualKept: 0, warnings: parsed.warnings, fail: false, risks: 0 };
+  }
+  const [projectId, vessels, existing] = await Promise.all([
+    deps.store.projectId(), deps.store.vessels(), deps.store.sailingsSince(sinceIso),
+  ]);
+  const byName = new Map(vessels.map((v) => [v.name, v.id]));
+  const WINDOW_MS = 30 * 60_000;
+  let inserted = 0;
+  let updated = 0;
+  let manualKept = 0;
+  let risks = 0;
+  const warnings = [
+    ...parsed.warnings,
+    'Viking: najbliższe dni z Digitraffic Portnet (FIHEL/ES, CC BY 4.0) — zapas przy braku HTML',
+  ];
+  for (const inc of parsed.sailings) {
+    if (Date.parse(inc.departureUtc) < Date.parse(sinceIso)) continue;
+    const vesselId = byName.get(inc.vessel);
+    if (!vesselId) {
+      if (!warnings.includes(`Statek spoza rejestru: ${inc.vessel}`)) {
+        warnings.push(`Statek spoza rejestru: ${inc.vessel}`);
+      }
+      continue;
+    }
+    const depMs = Date.parse(inc.departureUtc);
+    const pool = existing.filter((s) => s.vessel_id === vesselId && s.route === inc.route);
+    const pick = pickUniqueInWindow(pool, depMs, (s) => Date.parse(s.departure_at), WINDOW_MS);
+    if (pick.kind === 'ambiguous') {
+      warnings.push(
+        `Digitraffic Viking: niejednoznaczne dopasowanie ${inc.vessel} ${inc.route} (±30 min, ${pick.items.length} rejsy)`,
+      );
+      await deps.store.raiseRisk({
+        kind: 'FERRY', severity: 'MEDIUM',
+        title: `Digitraffic: niejednoznaczne dopasowanie ${inc.vessel} — bez zmiany, do weryfikacji HHL`,
+        titleKey: 'rk_ferry_status_unknown',
+        params: { vessel: inc.vessel, dep: inc.departureUtc.slice(0, 16) },
+        detail: {
+          zrodlo: 'DIGITRAFFIC_VIKING_SCHEDULE', statek: inc.vessel, trasa: inc.route,
+          odejscie: inc.departureUtc, rejsy: pick.items.length,
+        },
+        dedup: `FERRY_UNKNOWN:DIGITRAFFIC_VIKING:${vesselId}:${inc.route}:${inc.departureUtc}`,
+        sourceUrl: DIGITRAFFIC_PORT_CALLS_URL,
+      });
+      risks += 1;
+      continue;
+    }
+    if (pick.kind === 'hit') {
+      const hit = pick.item;
+      if (hit.source === 'RECZNIE') { manualKept += 1; continue; }
+      const patch: SailingPatch = {};
+      if (hit.source !== 'VIKING') patch.source = 'VIKING';
+      if (new Date(hit.arrival_at).toISOString() !== new Date(inc.arrivalUtc).toISOString()) {
+        patch.arrival_at = new Date(inc.arrivalUtc).toISOString();
+      }
+      if (Object.keys(patch).length === 0) continue;
+      if (await deps.store.updateSailing(hit.id, patch)) {
+        updated += 1;
+        Object.assign(hit, patch);
+      }
+      continue;
+    }
+    const row: SailingInsert = {
+      project_id: projectId,
+      vessel_id: vesselId,
+      route: inc.route,
+      departure_at: new Date(inc.departureUtc).toISOString(),
+      arrival_at: new Date(inc.arrivalUtc).toISOString(),
+      delayed_departure_at: null,
+      delayed_arrival_at: null,
+      status: 'ZAPLANOWANY',
+      source: 'VIKING',
+    };
+    await deps.store.insertSailings([row]);
+    existing.push({
+      id: `digitraffic-vk-${inserted}`,
+      vessel_id: vesselId,
+      route: inc.route,
+      departure_at: row.departure_at,
+      arrival_at: row.arrival_at,
+      delayed_departure_at: null,
+      delayed_arrival_at: null,
+      status: 'ZAPLANOWANY',
+      source: 'VIKING',
+    });
+    inserted += 1;
+  }
+  return { inserted, updated, manualKept, warnings, fail: false, risks };
+}
+
 /** BN2/BN3 — Portnet Digitraffic: ATA/ATD → actual_*; ATA spóźnione ≥ FERRY_PORT_DELAY_MIN → delayed_arrival. */
 async function applyDigitrafficPortCallActuals(deps: JobDeps, sinceIso: string): Promise<{
   updated: number; warnings: string[]; fail: boolean;
@@ -1152,6 +1281,14 @@ export async function runFerrySchedule(deps: JobDeps): Promise<JobResult> {
     inserted += r.plan.inserts.length; updated += r.updated; manualKept += r.manualKept; unchanged += r.plan.unchanged;
     warnings.push(...r.plan.unknownVessels.map((v) => `Statek spoza rejestru: ${v}`));
   }
+  /* #685-a / decyzja 63a: Digitraffic FIHEL ES / XPRS — najbliższe dni (także gdy HTML 403).
+     SOURCE_DOWN zostaje przy vkFail (zamyka dopiero 63c / plik ≥ 30 dni). */
+  const vkDt = await applyDigitrafficVikingNearSchedule(deps, since);
+  warnings.push(...vkDt.warnings);
+  inserted += vkDt.inserted;
+  updated += vkDt.updated;
+  manualKept += vkDt.manualKept;
+  risks += vkDt.risks;
   if (vkFail) {
     await deps.store.raiseRisk(sourceDownRisk(
       'VIKING_SCHEDULE',

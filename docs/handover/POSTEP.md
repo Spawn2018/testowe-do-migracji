@@ -7435,6 +7435,18 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (odbiór prod):** SELECT `here_road_legs` — **12** / active 12 / `browser_fetch` 5; core bez zmian (3495/12561/3742/18854/19408); BN7 7× null. `here-roads` **#108803** @ 04:49Z ok (0 prób — core świeże; BN7 poza cronem). Komentarz w #667. **Dalej:** BN3 (#573).
 - Bez push na main.
 
+## 2026-10-31 17:35 — #685-a start (Digitraffic Viking near schedule)
+
+- Skrzynka: #685 W TOKU (a); #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne` do budowy.
+- Scalanie: **#683 SCALONE** `63088803` (F7: gotowe do scalenia @ `993e42fe`; CI ✔). Bez push na main.
+- **Krok #685-a (63a):**
+  - `vikingScheduleFromDigitrafficPortCalls` — FIHEL / ES / MMSI 230705000 → TLLA-HEL (ETA−120 min) / HELA-TLL (ETD+120 min), horyzont 3 d;
+  - `applyDigitrafficVikingNearSchedule` w `ferry-schedule` — source=VIKING; ±30 min jak #682; RECZNIE bez zmian; ambiguous → ryzyko; SOURCE_DOWN zostaje (63c);
+  - `Digitraffic-User: LOGMAR/WatchTower`; atrybucja CC BY 4.0 w warnings;
+  - testy: bn2-ferry-schedule + bn2-ferry-jobs (#685-a) **5** OK; fixture wycinek XPRS ES.
+- **Dalej:** commit/push → CI → gotowe do F7; potem #685-b.
+- Bez push na main.
+
 ## 2026-10-31 17:00 — #683 F7 R14 (tylko testy mutacji)
 
 - Skrzynka: #685 w planie (po #683); #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne` do budowy.

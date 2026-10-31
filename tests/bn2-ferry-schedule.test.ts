@@ -7,7 +7,10 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { parseTallinkTimetable, tallinkTimetableUrl } from '../src/lib/ferry/tallink';
-import { parseDigitrafficPortCalls } from '../src/lib/ferry/digitrafficPortCalls';
+import {
+  parseDigitrafficPortCalls, vikingScheduleFromDigitrafficPortCalls, digitrafficPortCallsUrl,
+  VIKING_XPRS_CROSSING_MS,
+} from '../src/lib/ferry/digitrafficPortCalls';
 import {
   parseVikingSchedule, parseVikingTimetableHtml, parseVikingPlannedChanges,
 } from '../src/lib/ferry/vikingline';
@@ -23,6 +26,7 @@ import { parsePortsStockholmPortEntry, portsStockholmToSailings } from '../src/l
 const TALLINK = JSON.parse(readFileSync(new URL('./fixtures/tallink-timetable-tal-hel-2026-10-30.json', import.meta.url), 'utf8'));
 const PORTNET = JSON.parse(readFileSync(new URL('./fixtures/digitraffic-port-calls-megastar-2026-10-29.json', import.meta.url), 'utf8'));
 const PORTNET_TERM_A = JSON.parse(readFileSync(new URL('./fixtures/digitraffic-port-calls-terminal-a-sample.json', import.meta.url), 'utf8'));
+const PORTNET_XPRS_ES = JSON.parse(readFileSync(new URL('./fixtures/digitraffic-viking-xprs-es-sample.json', import.meta.url), 'utf8'));
 const VIKING = JSON.parse(readFileSync(new URL('./fixtures/viking-schedule-sample.json', import.meta.url), 'utf8'));
 const ECKERO = JSON.parse(readFileSync(new URL('./fixtures/eckero-schedule-sample.json', import.meta.url), 'utf8'));
 const DFDS = JSON.parse(readFileSync(new URL('./fixtures/dfds-schedule-sample.json', import.meta.url), 'utf8'));
@@ -139,6 +143,35 @@ describe('BN2 Digitraffic Portnet', () => {
       arrivalRoute: 'TLL-HEL',
       departureRoute: 'HEL-TLL',
     });
+  });
+
+  // #685-a / decyzja 63a — wycinek prawdziwej odpowiedzi Digitraffic (XPRS MMSI 230705000, ES).
+  it('#685-a: XPRS ES ETA/ETD → TLLA-HEL/HELA-TLL; LS i inne statki pominięte', () => {
+    const now = new Date('2026-10-30T12:00:00.000Z');
+    const r = vikingScheduleFromDigitrafficPortCalls(PORTNET_XPRS_ES, { now });
+    expect(r.warnings).toEqual([]);
+    expect(r.sailings).toHaveLength(4);
+    expect(r.sailings.every((s) => s.vessel === 'M/F Viking XPRS')).toBe(true);
+    const morningArr = r.sailings.find((s) => s.route === 'TLLA-HEL' && s.arrivalUtc === '2026-10-31T07:30:00.000Z');
+    expect(morningArr).toMatchObject({
+      departureUtc: new Date(Date.parse('2026-10-31T07:30:00.000Z') - VIKING_XPRS_CROSSING_MS).toISOString(),
+    });
+    const morningDep = r.sailings.find((s) => s.route === 'HELA-TLL' && s.departureUtc === '2026-10-31T08:30:00.000Z');
+    expect(morningDep).toMatchObject({
+      arrivalUtc: new Date(Date.parse('2026-10-31T08:30:00.000Z') + VIKING_XPRS_CROSSING_MS).toISOString(),
+    });
+    expect(r.sailings.some((s) => s.departureUtc.startsWith('2026-10-31T20:'))).toBe(false);
+  });
+
+  it('#685-a: digitrafficPortCallsUrl z locode=FIHEL', () => {
+    const u = digitrafficPortCallsUrl({
+      locode: 'FIHEL',
+      fromIso: '2026-10-30T12:00:00.000Z',
+      toIso: '2026-11-02T12:00:00.000Z',
+    });
+    expect(u).toContain('locode=FIHEL');
+    expect(u).toContain('from=');
+    expect(u).toContain('to=');
   });
 });
 

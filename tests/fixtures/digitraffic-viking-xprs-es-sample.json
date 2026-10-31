@@ -1,0 +1,75 @@
+{
+  "dataUpdatedTime": "2026-10-30T12:00:00.000Z",
+  "portCalls": [
+    {
+      "portCallId": 9101,
+      "portToVisit": "FIHEL",
+      "prevPort": "EETLL",
+      "nextPort": "EETLL",
+      "vesselName": "Viking XPRS",
+      "imoLloyds": 9375654,
+      "mmsi": 230705000,
+      "portAreaDetails": [
+        {
+          "eta": "2026-10-31T07:30:00.000Z",
+          "etd": "2026-10-31T08:30:00.000Z",
+          "ata": null,
+          "atd": null,
+          "portAreaCode": "ES",
+          "portAreaName": "Eteläsatama"
+        }
+      ]
+    },
+    {
+      "portCallId": 9102,
+      "portToVisit": "FIHEL",
+      "prevPort": "EETLL",
+      "nextPort": "EETLL",
+      "vesselName": "Viking XPRS",
+      "imoLloyds": 9375654,
+      "mmsi": 230705000,
+      "portAreaDetails": [
+        {
+          "eta": "2026-10-31T17:30:00.000Z",
+          "etd": "2026-10-31T18:30:00.000Z",
+          "ata": null,
+          "atd": null,
+          "portAreaCode": "ES",
+          "portAreaName": "Eteläsatama"
+        }
+      ]
+    },
+    {
+      "portCallId": 9103,
+      "portToVisit": "FIHEL",
+      "prevPort": "EETLL",
+      "nextPort": "EETLL",
+      "vesselName": "Megastar",
+      "mmsi": 276829000,
+      "portAreaDetails": [
+        {
+          "eta": "2026-10-31T12:00:00.000Z",
+          "etd": "2026-10-31T13:00:00.000Z",
+          "portAreaCode": "ES",
+          "portAreaName": "Eteläsatama"
+        }
+      ]
+    },
+    {
+      "portCallId": 9104,
+      "portToVisit": "FIHEL",
+      "prevPort": "EETLL",
+      "nextPort": "EETLL",
+      "vesselName": "Viking XPRS",
+      "mmsi": 230705000,
+      "portAreaDetails": [
+        {
+          "eta": "2026-10-31T20:00:00.000Z",
+          "etd": "2026-10-31T21:00:00.000Z",
+          "portAreaCode": "LS",
+          "portAreaName": "Länsisatama"
+        }
+      ]
+    }
+  ]
+}
