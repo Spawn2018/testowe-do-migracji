@@ -1296,7 +1296,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 Źródło: #573 + komentarze BN3 31.10 (spec + decyzje 57–61). Po #667; DP-21 → #666 (63b).
 ~~Wycinek 1~~ SCALONE (#680 `8100f685` / **0356**): decyzja 60 + ręczny komunikat 6 armatorów (`p_operator`, formularz).
 ~~Wycinek 2~~ SCALONE (#682 `a9c396d7` / **0357** + F7 r1–r2): DFDS remark/ETA + Portnet ATA + SOURCE_DOWN MEDIUM (**decyzja 67**).
-**Wycinek 3** (`pakiet/bn3-tallink-tsee-auto` / PR #683): ~~DP-94/95/96~~; **0358** `operator_notices.source` AUTO; Tallink Alert / ts.ee — **F7 R6** (decyzja **68**: cała treść = jedno zdanie wzorcowe + opcjonalnie przeprosiny; sufiks `due to …`; nie przekreślać do F7 OK); **decyzja 69**: wpis AUTO w `operator_notices` tylko przy ODWOLANY — przy ryzyku historią jest samo ryzyko (`detail.tekst` + `sourceUrl`; bez migracji, FK `sailing_id` NOT NULL); DP-97…103, DP-105…109, DP-111/112 w kolejce (DP-111 po scaleniu).
+**Wycinek 3** (`pakiet/bn3-tallink-tsee-auto` / PR #683): ~~DP-94/95/96~~; **0358** `operator_notices.source` AUTO; Tallink Alert / ts.ee — **F7 R7** (decyzja **68**: `stripTags` całego bloku Alert; jedno zdanie wzorcowe + przeprosiny; sufiks `due to …`; bez OPAQUE/CONDITIONAL/`may`≠May; fallback bez auto); **decyzja 69**: AUTO tylko przy ODWOLANY; DP-97…103, DP-105…109, DP-111/112 w kolejce (DP-111 po scaleniu).
 1. ~~**60** Tallink poza PLD–KPS~~ — baza już tylko DFDS; front `ferryCatalog` bez TALLINK; test bn9a.
 2. Źródła → update — ~~**DFDS remark**~~; ~~Portnet ATA~~; ts.ee Lisainfo / Tallink Alert (F7 #683).
 3. ~~Opóźnienie: ATA − arrival; `FERRY_PORT_DELAY_MIN` z `app_parameters` (zapas 15)~~ (**0357** + Portnet + store F7 B1); ~~ATD 13–19 min przed planem bez delayed (DP-94)~~; ATD tylko gdy wiarygodne — dalej.
@@ -2290,4 +2290,8 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 31.10.2026 11:05 | #683 F7 R3-B1: ODWOLANY tylko przy dacie z treści; Scheduler = wygaśnięcie; DP-111/112; potem #685 | pętla |
 | 31.10.2026 11:35 | #685 decyzja 63 wpisana §4/§5/§8; #683 F7 R4-B1: auto-ODWOLANY = trio w zdaniu cancel (bez względnych) | pętla |
 | 31.10.2026 12:40 | #683 F7 R6: decyzja 68 (jedno zdanie wzorcowe + przeprosiny / due to); decyzja 69 (AUTO tylko przy ODWOLANY); testy 21 | pętla |
+| 31.10.2026 12:46 | #684 SCALONE `47112584` (DP-76 tory); #683 CI ✔ @ 380b98a1 | pętla |
+| 31.10.2026 13:05 | #683 F7 R7 POPRAWKI: stripTags całego Alertu; Scheduler 2025 bez fallbacku; bez CONDITIONAL (May); testy 24; potem #685 | pętla |
+| 31.10.2026 — | F7 #683 nieblokujące (osobna poprawka): Scheduler grudzień + „on 2 January” → rok bieżący, ciche wygaśnięcie; Alert INFO bez ryzyka/historii — świadomie | F7 #683 r7 |
+| 31.10.2026 13:05 | #683 F7 R7: stripTags całego Alertu; fallback bez auto przy Schedulerze 2025; bez OPAQUE/CONDITIONAL; May≠may; nieblokujące: rok grudzień→styczeń, Alert INFO bez ryzyka | pętla |
 

@@ -7435,11 +7435,11 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (odbiór prod):** SELECT `here_road_legs` — **12** / active 12 / `browser_fetch` 5; core bez zmian (3495/12561/3742/18854/19408); BN7 7× null. `here-roads` **#108803** @ 04:49Z ok (0 prób — core świeże; BN7 poza cronem). Komentarz w #667. **Dalej:** BN3 (#573).
 - Bez push na main.
 
-## 2026-10-31 12:40 — #683 F7 R6 (decyzja 68/69)
+## 2026-10-31 13:05 — #683 F7 R7 (stripTags / fallback / May)
 
 - Skrzynka: #685 w planie (po #683); #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne` do budowy.
-- Scalanie: #683 — F7 r6 **POPRAWKI** @ `3a208705` (CI unit/db/visual ✔). Bez „F7: gotowe do scalenia”. #684 wygląd bez F7. Bez push na main.
-- **Krok R6-B1/B2:** decyzja **68** — auto-ODWOLANY tylko gdy cała treść = jedno zdanie wzorcowe (+ opcjonalnie przeprosiny); sufiks `due to (a )?(technical fault|…)`; korekta/archiwum/cofnięcie → ryzyko MEDIUM. Decyzja **69** — AUTO w `operator_notices` tylko przy ODWOLANY (przy ryzyku: samo ryzyko). Fixture z „due to a technical fault”. vitest bn3-tallink-alert **21**. PLAN §4/§5/§8. **Dalej:** CI → „gotowe do F7 @ sha”; po F7 → #685-a.
+- Scalanie: #683 — F7 r7 **POPRAWKI** @ `380b98a1` (CI unit/db/visual ✔). Bez „F7: gotowe do scalenia”. Bez push na main.
+- **Krok R7-B1/B2/B3:** `stripTags` całego bloku Alert (H3/List/Text/goły); `schedulerAlertBlocks` — fallback tylko bez Schedulera Alert, zawsze `autoCancelOk=false`; usunięte OPAQUE/CONDITIONAL/`vesselsIn`/`routesIn` z bramki auto; May ≠ may → ODWOLANY. vitest bn3-tallink-alert **24**. Nieblokujące F7: rok grudzień→styczeń (osobno / DP-107); Alert INFO bez ryzyka (świadomie); usunięty duplikat POSTEP 12:40. **Dalej:** CI → „gotowe do F7 @ sha”; po F7/scal → #685-a.
 - Bez push na main.
 
 ## 2026-10-31 12:40 — #683 F7 R6 (decyzje 68/69)

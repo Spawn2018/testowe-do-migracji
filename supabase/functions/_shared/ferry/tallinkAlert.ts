@@ -10,6 +10,8 @@
  * R5: auto-ODWOLANY wyłącznie przy ścisłym wzorcu zdania (allowlist) — bez may/buffet/trasy z innego zdania.
  * R6 / decyzja 68: cała treść = dokładnie jedno zdanie wzorcowe (+ opcjonalnie zdania z listy przeprosin);
  *   opcjonalny sufiks „due to (a )?(technical fault|…)”; każde inne zdanie → ryzyko MEDIUM.
+ * R7: stripTags całego bloku Alert (nie tylko CwsP); fallback bez auto przy braku Schedulera;
+ *   bez OPAQUE/CONDITIONAL (`may` ≠ May); statek/trasa tylko z wzorca.
  * Decyzja 69: wpis AUTO w operator_notices tylko przy ODWOLANY; przy ryzyku historią jest samo ryzyko.
  * Kampanie pomijane. User-Agent uczciwy; bez obchodzenia.
  */
@@ -46,20 +48,6 @@ const SUSPEND_SAILING_RE = /\bsuspended\b/i;
 const SAILING_CTX_RE = /\b(sailing|departure|departing|voyage|vessel|route|ferry|shuttle)\b/i;
 const RESUME_RE = /\b(?:is\s+not\s+cancel|not\s+cancelled|not\s+canceled|resum(?:e|es|ed|ing)|returns?\s+to|back\s+in\s+service|operates\s+as\s+planned)\b/i;
 const CAMPAIGN_RE = /type\s*=\s*"campaign"|voucherid=|lower fares|book now|price-tag|last chance for/i;
-/** F7 #683 R4-B1: wskazówki względne / nierozpoznane → tylko ryzyko MEDIUM (nie auto-ODWOLANY). */
-const OPAQUE_HINT_RE = new RegExp(
-  String.raw`\b(?:tomorrow|tonight|next|this)\b` +
-    String.raw`|\b(?:monday|tuesday|wednesday|thursday|friday|saturday|sunday)\b` +
-    String.raw`|\b\d+(?:st|nd|rd|th)\b` +
-    String.raw`|\b(?:january|february|march|april|may|june|july|august|september|october|november|december)\s+\d{1,2}\b` +
-    String.raw`|\d{1,2}\s*(?:–|-|to|and)\s*\d{1,2}` +
-    String.raw`|\bupdated\b`,
-  'i',
-);
-/** F7 #683 R5: słowa warunkowe w całej treści → tylko ryzyko MEDIUM. */
-const CONDITIONAL_RE =
-  /\b(?:may|might|could|possibl\w*|risk|expected|likely|if|unless|in case)\b/i;
-
 const SHIP_NAME_ALT = String.raw`MyStar|Megastar|Victoria\s+I|Baltic\s*Queen|Silja\s*Europa`;
 const PORT_NAME_ALT = String.raw`Tallinn|Helsinki|Stockholm`;
 const DATE_CAPTURE = String.raw`(\d{1,2})\s+(${MONTH_NAMES})(?:\s+(\d{4}))?`;
@@ -113,36 +101,6 @@ export function decodeTallinkCmsHtml(raw: string): string {
 function stripTags(s: string): string {
   return s.replace(/<[^>]+>/g, ' ').replace(/&nbsp;/gi, ' ').replace(/&#038;/g, '&')
     .replace(/\s+/g, ' ').trim();
-}
-
-function vesselsIn(text: string): { vessel: string | null; multi: boolean } {
-  const found: string[] = [];
-  for (const a of SHIP_ALIASES) {
-    if (a.re.test(text) && !found.includes(a.vessel)) found.push(a.vessel);
-  }
-  if (found.length > 1) return { vessel: null, multi: true };
-  if (found.length === 1) return { vessel: found[0]!, multi: false };
-  return { vessel: null, multi: false };
-}
-
-function routesIn(text: string): FerryRoute[] {
-  const fromTo = text.match(
-    /\bfrom\s+(tallinn|helsinki|stockholm)\s+to\s+(tallinn|helsinki|stockholm)\b/i,
-  );
-  if (fromTo) {
-    const a = PORT_CODE[fromTo[1]!.toLowerCase()];
-    const b = PORT_CODE[fromTo[2]!.toLowerCase()];
-    if (a && b && a !== b) return [`${a}-${b}` as FerryRoute];
-  }
-  const out = new Set<FerryRoute>();
-  const dash: Array<{ re: RegExp; routes: FerryRoute[] }> = [
-    { re: /tallinn\s*[–\-—]\s*helsinki|helsinki\s*[–\-—]\s*tallinn|tal\s*[–\-—]\s*hel|hel\s*[–\-—]\s*tal/i, routes: ['TLL-HEL', 'HEL-TLL'] },
-    { re: /tallinn\s*[–\-—]\s*stockholm|stockholm\s*[–\-—]\s*tallinn|tal\s*[–\-—]\s*sto|sto\s*[–\-—]\s*tal/i, routes: ['TLL-STO', 'STO-TLL'] },
-  ];
-  for (const a of dash) {
-    if (a.re.test(text)) for (const r of a.routes) out.add(r);
-  }
-  return [...out];
 }
 
 function classify(text: string, blockHtml: string): TallinkAlertKind {
@@ -311,17 +269,14 @@ function isNeutralApologySentence(sent: string): boolean {
 }
 
 /**
- * F7 #683 R5/R6 (decyzja 68): auto-ODWOLANY tylko gdy cała treść = jedno zdanie wzorcowe
- * (+ opcjonalnie zdania z listy przeprosin). Strażnicy opaque/conditional/resume
- * zostają (R6-B2 — mutacje z czystym wzorcem + osobne zdanie).
+ * F7 #683 R5–R7 (decyzja 68): auto-ODWOLANY tylko gdy cała treść = jedno zdanie wzorcowe
+ * (+ opcjonalnie zdania z listy przeprosin). R7-B3: bez OPAQUE/CONDITIONAL/RESUME —
+ * reguła zdań pokrywa wyjątki; `\bmay\b` nie może łapać miesiąca May.
  */
 export function autoCancelFromCancelSentence(
   text: string,
   year: number,
 ): AutoCancelFields | null {
-  if (OPAQUE_HINT_RE.test(text)) return null;
-  if (CONDITIONAL_RE.test(text)) return null;
-  if (RESUME_RE.test(text)) return null;
   const hits: AutoCancelFields[] = [];
   for (const sent of alertSentences(text)) {
     const hit = matchStrictAutoCancelSentence(sent, year);
@@ -329,8 +284,8 @@ export function autoCancelFromCancelSentence(
       hits.push(hit);
       continue;
     }
-    // R6-B1: każde inne zdanie (poza listą przeprosin) → ryzyko MEDIUM.
-    // Mutacja: bez tego warunku → testy R6 padają.
+    // R6-B1 / R7-B3: każde inne zdanie (poza listą przeprosin) → ryzyko MEDIUM.
+    // Mutacja: bez ^/$ w NEUTRAL_APOLOGY_RE albo bez `$` po DUE_TO → testy R7 padają.
     if (!isNeutralApologySentence(sent)) return null;
   }
   if (hits.length !== 1) return null;
@@ -397,13 +352,17 @@ export function parseTallinkAlerts(
     body: string,
     dateStart: string | null,
     dateEnd: string | null,
+    /** R7-B2: fallback bez roku Schedulera — nigdy auto-ODWOLANY. */
+    allowAutoCancel = true,
   ) => {
     const kind = classify(text, body);
     if (kind === 'IGNORE') return;
     const yearHint = Number(dateStart?.slice(0, 4) ?? yearNow);
     const content = parseAlertContentDates(text, yearHint);
-    // R5: pola match tylko z autoCancelFromCancelSentence (allowlist); inaczej ambiguous.
-    const auto = kind === 'ODWOLANY' ? autoCancelFromCancelSentence(text, yearHint) : null;
+    // R5/R7: pola match tylko z allowlist; fallback → zawsze ryzyko (brak roku).
+    const auto = (allowAutoCancel && kind === 'ODWOLANY')
+      ? autoCancelFromCancelSentence(text, yearHint)
+      : null;
     const contentStart = auto?.startYmd ?? null;
     const contentEnd = auto?.endYmd ?? null;
     const contentHm = auto?.hm ?? null;
@@ -413,18 +372,16 @@ export function parseTallinkAlerts(
       : (content?.multiTime ?? false);
     const endForExpiry = contentEnd || content?.endYmd || dateEnd;
     if (endForExpiry && endForExpiry < today) return;
-    // Statek/trasa do match: wyłącznie z wzorca; przy ryzyku — z całej treści.
-    const ships = autoCancelOk
-      ? { vessel: auto!.vessel, multi: false }
-      : vesselsIn(text);
+    // R7-B3: statek/trasa do match wyłącznie z wzorca; przy ryzyku puste
+    // (reguła zdań pokrywa multiVessel / trasę w osobnym zdaniu).
     alerts.push({
       kind,
       text: text.slice(0, 800),
-      vessel: ships.vessel,
-      multiVessel: ships.multi,
+      vessel: autoCancelOk ? auto!.vessel : null,
+      multiVessel: false,
       multiTime,
       autoCancelOk,
-      routes: autoCancelOk ? auto!.routes : routesIn(text),
+      routes: autoCancelOk ? auto!.routes : [],
       windowStartYmd: dateStart,
       windowEndYmd: dateEnd,
       contentStartYmd: contentStart,
@@ -437,6 +394,8 @@ export function parseTallinkAlerts(
   const blocks = [...decoded.matchAll(
     /<Scheduler\b([^>]*)>([\s\S]*?)<\/Scheduler>/gi,
   )];
+  // R7-B2: licz bloki Alert (także wygasłe) — nie uruchamiaj fallbacku przy Schedulerze z zeszłego roku.
+  let schedulerAlertBlocks = 0;
   for (const m of blocks) {
     const attrs = m[1] ?? '';
     const body = m[2] ?? '';
@@ -444,26 +403,21 @@ export function parseTallinkAlerts(
       && !/data-analytics-group\s*=\s*"Alert"/i.test(attrs)
       && !/data-analytics-group="Alert"/i.test(body)) continue;
     if (!/data-analytics-group="Alert"/i.test(body)) continue;
+    schedulerAlertBlocks += 1;
     const dateStart = attrs.match(/dateStart\s*=\s*"(\d{4}-\d{2}-\d{2})"/i)?.[1] ?? null;
     const dateEnd = attrs.match(/dateEnd\s*=\s*"(\d{4}-\d{2}-\d{2})"/i)?.[1] ?? null;
-    const paras = [...body.matchAll(/<CwsP\b[^>]*>([\s\S]*?)<\/CwsP>/gi)]
-      .map((p) => stripTags(p[1] ?? ''))
-      .filter(Boolean);
-    const text = paras.join(' ').trim();
+    // R7-B1 / decyzja 68: cała treść Alertu po zdjęciu tagów (CwsH3/List/Text/goły tekst).
+    const text = stripTags(body).trim();
     if (!text) continue;
-    pushAlert(text, body, dateStart, dateEnd);
+    pushAlert(text, body, dateStart, dateEnd, true);
   }
-  if (alerts.length === 0) {
+  if (schedulerAlertBlocks === 0) {
     const loose = [...decoded.matchAll(/data-analytics-group="Alert"[\s\S]{0,2500}/gi)];
     for (const m of loose) {
       const chunk = m[0];
-      const text = stripTags(
-        [...chunk.matchAll(/<CwsP\b[^>]*>([\s\S]*?)<\/CwsP>/gi)]
-          .map((p) => p[1] ?? '')
-          .join(' '),
-      );
+      const text = stripTags(chunk).trim();
       if (!text) continue;
-      pushAlert(text, chunk, null, null);
+      pushAlert(text, chunk, null, null, false);
     }
   }
   return { alerts, warnings };
