@@ -1,6 +1,6 @@
 /**
- * BN3 — Tallink Alert + Lisainfo ts.ee (decyzje 57, 59, 68, 69, 71).
- * F7 #683 B1–B5 + R2–R9: allowlista zdań (68) + allowlista HTML (71).
+ * BN3 — Tallink Alert + Lisainfo ts.ee (decyzje 57, 59, 68, 69, 71, 72).
+ * F7 #683 B1–B5 + R2–R10: allowlista zdań (68) + allowlista HTML (71) + multi-Alert (72).
  *
  * Fixture `tallink-alert-cancel-mystar.html` — forma jak prawdziwy Alert
  * („due to a technical fault”; CwsSpan / hideSpacing / timeStart); treść pod test.
@@ -790,6 +790,111 @@ describe('BN3 Tallink Alert — runFerryStatus (F7 B5)', () => {
       `<CwsSection data-analytics-group="Alert"><img alt="x"><CwsP>${C}</CwsP></CwsSection></Scheduler>`;
     expect(alertHtmlAllowsAutoCancel(imgFull)).toBe(false);
   });
+
+  it('F7 R10-B1/B2/B3: każda mutacja łamie dokładnie jedną regułę allowlisty', () => {
+    const C =
+      'The MyStar 16:30 departure from Tallinn to Helsinki on 2 November is cancelled.';
+    const ok =
+      `<Scheduler dateStart="2026-11-02" dateEnd="2026-11-02">` +
+      `<CwsSection data-analytics-group="Alert"><CwsP>${C}</CwsP></CwsSection></Scheduler>`;
+    expect(alertHtmlAllowsAutoCancel(ok)).toBe(true);
+
+    // R10-B3: każdy przypadek łamie dokładnie jedną regułę.
+    expect(alertHtmlAllowsAutoCancel(
+      `<Scheduler dateStart="2026-11-02" dateEnd="2026-11-02">` +
+      `<CwsSection data-analytics-group="Alert"><CwsAlert><CwsP>${C}</CwsP></CwsAlert></CwsSection></Scheduler>`,
+    )).toBe(false); // tag CwsAlert
+    expect(alertHtmlAllowsAutoCancel(
+      `<Scheduler dateStart="2026-11-02" dateEnd="2026-11-02">` +
+      `<CwsSection data-analytics-group="Alert"><CwsLink/><CwsP>${C}</CwsP></CwsSection></Scheduler>`,
+    )).toBe(false); // tag CwsLink
+    expect(alertHtmlAllowsAutoCancel(
+      `<Scheduler dateStart="2026-11-02" dateEnd="2026-11-02">` +
+      `<CwsSection data-analytics-group="Alert"><CwsP title="x">${C}</CwsP></CwsSection></Scheduler>`,
+    )).toBe(false); // attr title
+    expect(alertHtmlAllowsAutoCancel(
+      `<Scheduler dateStart="2026-11-02" dateEnd="2026-11-02">` +
+      `<CwsSection data-analytics-group="Alert"><CwsP text="x">${C}</CwsP></CwsSection></Scheduler>`,
+    )).toBe(false); // attr text
+    expect(alertHtmlAllowsAutoCancel(
+      `<Scheduler dateStart="2026-11-02" dateEnd="2026-11-02">` +
+      `<CwsSection data-analytics-group="Alert"><CwsP alt="x">${C}</CwsP></CwsSection></Scheduler>`,
+    )).toBe(false); // attr alt
+    expect(alertHtmlAllowsAutoCancel(
+      `<Scheduler dateStart="2026-11-02" dateEnd="2026-11-02">` +
+      `<CwsSection data-analytics-group="Alert"><CwsP class="a&amp;b">${C}</CwsP></CwsSection></Scheduler>`,
+    )).toBe(false); // & w wartości atrybutu
+    expect(alertHtmlAllowsAutoCancel(
+      `<Scheduler dateStart="2026-11-02" dateEnd="2026-11-02" title="x">` +
+      `<CwsSection data-analytics-group="Alert"><CwsP>${C}</CwsP></CwsSection></Scheduler>`,
+    )).toBe(false); // attr title na Scheduler
+    expect(alertHtmlAllowsAutoCancel(
+      `<Scheduler dateStart="2026-11-02" dateEnd="2026-11-02">` +
+      `<CwsSection data-analytics-group="Alert"><CwsP>${C}&lt;</CwsP></CwsSection></Scheduler>`,
+    )).toBe(false); // niedozwolona encja
+    // R10-B1: goły `<` bez litery tagu.
+    for (const leak of [
+      `<CwsP>${C} <- correction</CwsP>`,
+      `< CwsP Correction: planned>`,
+      `<1 Correction: planned>`,
+      `<= Correction: planned>`,
+    ]) {
+      expect(alertHtmlAllowsAutoCancel(
+        `<Scheduler dateStart="2026-11-02" dateEnd="2026-11-02">` +
+        `<CwsSection data-analytics-group="Alert">${leak}</CwsSection></Scheduler>`,
+      )).toBe(false);
+    }
+    // R10-B2: niezbalansowane tagi (Scheduler zamyka przed CwsSection).
+    expect(alertHtmlAllowsAutoCancel(
+      `<Scheduler dateStart="2026-11-02" dateEnd="2026-11-02">` +
+      `<CwsSection data-analytics-group="Alert"><CwsP>${C}</CwsP></Scheduler>` +
+      `<CwsP>Correction: the departure will operate as planned.</CwsP></CwsSection></Scheduler>`,
+    )).toBe(false);
+    // R10-B2 reguła 3: surowy `-->` w bloku → brak auto.
+    expect(alertHtmlAllowsAutoCancel(
+      `<Scheduler dateStart="2026-11-02" dateEnd="2026-11-02">` +
+      `<CwsSection data-analytics-group="Alert"><CwsP>${C} --></CwsP></CwsSection></Scheduler>`,
+    )).toBe(false);
+    // Fallback bez Schedulera → brak auto.
+    expect(alertHtmlAllowsAutoCancel(
+      `<CwsSection data-analytics-group="Alert"><CwsP>${C}</CwsP></CwsSection>`,
+    )).toBe(false);
+  });
+
+  it('F7 R10 / decyzja 72: dwa bloki Alert w oknie → ryzyko (nie ODWOLANY)', async () => {
+    const cancel =
+      'The MyStar 16:30 departure from Tallinn to Helsinki on 2 November is cancelled.';
+    const correction =
+      'Correction: the MyStar 16:30 departure will operate as planned.';
+    const html = wrapTwoAlerts(
+      `<CwsP>${cancel}</CwsP>`,
+      `<CwsP>${correction}</CwsP>`,
+      '2026-11-02',
+    );
+    const { alerts } = parseTallinkAlerts(html, TALLINK_HOME(), NOW);
+    expect(alerts.length).toBeGreaterThanOrEqual(2);
+    expect(alerts.every((a) => a.autoCancelOk === false)).toBe(true);
+
+    const sailingsOk = {
+      id: 's-1630', vessel_id: MYST, route: 'TLL-HEL' as const,
+      departure_at: '2026-11-02T14:30:00.000Z', arrival_at: '2026-11-02T16:30:00.000Z',
+      delayed_departure_at: null as string | null, delayed_arrival_at: null as string | null,
+      status: 'ZAPLANOWANY', source: 'TALLINK',
+    };
+    const st = new MemStore();
+    st.sailings.push({ ...sailingsOk });
+    await runFerryStatus(deps(st, {
+      'tallink.com': html,
+      'ts.ee': 503, portsofstockholm: 503,
+    }, NOW));
+    expect(st.sailings[0]!.status).toBe('ZAPLANOWANY');
+    expect(st.notices).toHaveLength(0);
+    expect(st.risks.some((r) => String(r.titleKey).startsWith('rk_tallink_alert_'))).toBe(true);
+
+    // Mutacja: jeden Alert → nadal ODWOLANY (decyzja 72 nie rusza).
+    const one = parseTallinkAlerts(wrapAlert(cancel, '2026-11-02'), TALLINK_HOME(), NOW).alerts[0]!;
+    expect(one.autoCancelOk).toBe(true);
+  });
 });
 
 describe('BN3 Port of Tallinn Lisainfo', () => {
@@ -869,6 +974,18 @@ function wrapAlertInner(sectionInner: string, ymd: string): string {
   const inner =
     `<Scheduler dateStart="${ymd}" timeStart="00:01" dateEnd="${ymd}" timeEnd="23:59">` +
     `<CwsSection data-analytics-group="Alert">${sectionInner}</CwsSection></Scheduler>`;
+  return wrapRendered(inner);
+}
+
+/** F7 R10 / decyzja 72: dwa bloki Scheduler/Alert w jednym HTML. */
+function wrapTwoAlerts(inner1: string, inner2: string, ymd: string): string {
+  const block = (sectionInner: string) =>
+    `<Scheduler dateStart="${ymd}" timeStart="00:01" dateEnd="${ymd}" timeEnd="23:59">` +
+    `<CwsSection data-analytics-group="Alert">${sectionInner}</CwsSection></Scheduler>`;
+  return wrapRendered(block(inner1) + block(inner2));
+}
+
+function wrapRendered(inner: string): string {
   const json = JSON.stringify({ page: { content: { rendered: inner } } })
     .replace(/</g, '\\u003c')
     .replace(/>/g, '\\u003e');

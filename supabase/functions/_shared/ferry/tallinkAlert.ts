@@ -18,6 +18,8 @@
  *   atrybutów/encji; brak komentarzy/CDATA/PI); potem reguła zdań z decyzji 68.
  *   Dopisane do allowlisty względem F7 r9 (prawdziwy Alert 28.10 / fixture): `CwsSpan`,
  *   `timeStart`, `timeEnd`, `hideSpacing`.
+ * R10: po usunięciu tagów brak surowego `<`/`>`; stos zamykających tagów; `-->` w regule 3;
+ *   decyzja 72: ≥2 bloki Alert (nie-kampania) w tym samym oknie dnia → wszystkie ryzyko.
  * Decyzja 69: wpis AUTO w operator_notices tylko przy ODWOLANY; przy ryzyku historią jest samo ryzyko.
  * Kampanie pomijane. User-Agent uczciwy; bez obchodzenia.
  */
@@ -148,12 +150,14 @@ function stripTags(s: string): string {
 }
 
 /**
- * F7 #683 R9 / decyzja 71: surowy HTML bloku Alert ma wyłącznie dozwoloną budowę.
- * Mutacje: dodanie tagu/atrybutu do allowlisty, zdjęcie reguły komentarzy/encji → testy padają.
+ * F7 #683 R9–R10 / decyzja 71: surowy HTML bloku Alert ma wyłącznie dozwoloną budowę.
+ * R10-B1: po zdjęciu dopasowań tagów nie może zostać `<`/`>`.
+ * R10-B2: stos tagów (zamykający = wierzchołek; bez atrybutów na close; `br` i `…/>` poza stosem).
+ * Mutacje: dodanie tagu/atrybutu, zdjęcie reguły komentarzy/encji/stosu → testy padają.
  */
 export function alertHtmlAllowsAutoCancel(rawHtml: string): boolean {
-  // Reguła 3: komentarze / CDATA / PI gdziekolwiek → brak auto.
-  if (/<!--|--!>|<!\[CDATA\[|<\?/i.test(rawHtml)) return false;
+  // Reguła 3: komentarze / CDATA / PI / `-->` gdziekolwiek → brak auto (R10-B2: też `-->`).
+  if (/<!--|-->|--!>|<!\[CDATA\[|<\?/i.test(rawHtml)) return false;
 
   // Reguła 4: tylko dozwolone encje.
   for (let i = 0; i < rawHtml.length; i++) {
@@ -163,17 +167,30 @@ export function alertHtmlAllowsAutoCancel(rawHtml: string): boolean {
     i += m[0].length - 1;
   }
 
-  // Reguły 1–2: tagi i atrybuty.
-  let schedulerOpens = 0;
+  // Reguły 1–2: tagi i atrybuty + stos (R10-B2).
   const tagRe = /<\/?([a-zA-Z][\w-]*)\b([^>]*)\/?>/g;
-  for (const m of rawHtml.matchAll(tagRe)) {
+  const matches = [...rawHtml.matchAll(tagRe)];
+  // R10-B1: goły `<` / `>` (np. `<-`, `<1`, `<=`, `< CwsP`) → brak auto.
+  if (/[<>]/.test(rawHtml.replace(tagRe, ''))) return false;
+
+  let schedulerOpens = 0;
+  const stack: string[] = [];
+  for (const m of matches) {
     const name = m[1]!.toLowerCase();
     const isClose = m[0].startsWith('</');
+    const selfClose = /\/>\s*$/.test(m[0]) || name === 'br';
     if (!ALLOWED_ALERT_TAGS.has(name)) return false;
-    if (name === 'scheduler' && !isClose) schedulerOpens += 1;
-    if (isClose) continue;
+
+    if (isClose) {
+      // Zamykający bez atrybutów; musi pasować do wierzchołka stosu.
+      if ((m[2] ?? '').trim() !== '') return false;
+      if (stack.length === 0 || stack[stack.length - 1] !== name) return false;
+      stack.pop();
+      continue;
+    }
+
+    if (name === 'scheduler') schedulerOpens += 1;
     const attrChunk = m[2] ?? '';
-    // Samozamykające / puste OK; parsuj atrybuty.
     const attrRe =
       /([^\s="'<>\/]+)(?:\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+)))?/g;
     for (const a of attrChunk.matchAll(attrRe)) {
@@ -182,8 +199,10 @@ export function alertHtmlAllowsAutoCancel(rawHtml: string): boolean {
       const val = a[2] ?? a[3] ?? a[4];
       if (val != null && /[<>&]/.test(val)) return false;
     }
+    if (!selfClose) stack.push(name);
   }
-  // Dokładnie jeden zewnętrzny Scheduler.
+  if (stack.length !== 0) return false;
+  // Dokładnie jeden zewnętrzny Scheduler (fallback bez Schedulera → brak auto).
   if (schedulerOpens !== 1) return false;
   return true;
 }
@@ -559,7 +578,56 @@ export function parseTallinkAlerts(
       pushAlert(text, chunk, null, null, false);
     }
   }
+
+  // Decyzja 72: ≥2 bloki Alert (nie-kampania) aktywne w tym samym dniu okna → wszystkie ryzyko.
+  // Mutacja: zdjęcie tego bloku → dwa Alert (cancel + Correction) dają fałszywe ODWOLANY.
+  demoteMultiAlertWindows(alerts);
+
   return { alerts, warnings };
+}
+
+/** F7 #683 R10 / decyzja 72: grupuj po dniach pokrytych oknem Schedulera; ≥2 → bez auto. */
+function demoteMultiAlertWindows(alerts: TallinkAlert[]): void {
+  if (alerts.length < 2) return;
+  const byDay = new Map<string, TallinkAlert[]>();
+  for (const a of alerts) {
+    const start = a.windowStartYmd ?? a.contentStartYmd;
+    const end = a.windowEndYmd ?? a.contentEndYmd ?? start;
+    if (!start) {
+      // Bez dnia okna — traktuj jako wspólny koszyk „_”.
+      const bag = byDay.get('_') ?? [];
+      bag.push(a);
+      byDay.set('_', bag);
+      continue;
+    }
+    const endYmd = end && end >= start ? end : start;
+    for (let ymd = start; ymd <= endYmd; ) {
+      const bag = byDay.get(ymd) ?? [];
+      bag.push(a);
+      byDay.set(ymd, bag);
+      // Następny dzień kalendarzowy (YYYY-MM-DD leksykograficznie = chronologicznie).
+      const d = new Date(`${ymd}T12:00:00Z`);
+      d.setUTCDate(d.getUTCDate() + 1);
+      ymd = d.toISOString().slice(0, 10);
+      if (ymd > endYmd) break;
+    }
+  }
+  const demote = new Set<TallinkAlert>();
+  for (const bag of byDay.values()) {
+    const uniq = [...new Set(bag)];
+    if (uniq.length >= 2) {
+      for (const a of uniq) demote.add(a);
+    }
+  }
+  for (const a of demote) {
+    a.autoCancelOk = false;
+    a.vessel = null;
+    a.routes = [];
+    a.contentStartYmd = null;
+    a.contentEndYmd = null;
+    a.contentHm = null;
+    if (a.kind === 'ODWOLANY') a.multiTime = true;
+  }
 }
 
 export interface TallinkAlertMatchCandidate {
