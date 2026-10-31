@@ -7435,6 +7435,13 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (odbiór prod):** SELECT `here_road_legs` — **12** / active 12 / `browser_fetch` 5; core bez zmian (3495/12561/3742/18854/19408); BN7 7× null. `here-roads` **#108803** @ 04:49Z ok (0 prób — core świeże; BN7 poza cronem). Komentarz w #667. **Dalej:** BN3 (#573).
 - Bez push na main.
 
+## 2026-10-31 14:15 — #683 CI ✔ @ 2ca2acb2; decyzja 70 właściciel
+
+- Skrzynka: #685 w planie (po #683); #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne` do budowy.
+- Scalanie: #683 — brak „F7: gotowe do scalenia” po R8 @ `2ca2acb2` (tylko „gotowe do F7”); CI unit/db/visual ✔. Bez push na main.
+- **Krok (docs):** PLAN §4 wycinek 3 + §5 decyzja **70** + §8 — **zaakceptowana przez właściciela 31.10 13:37**; CI ✔ @ `2ca2acb2` (kod R8 bez zmian). **Dalej:** „gotowe do F7 @ sha”; po F7: gotowe do scalenia → #685-a Digitraffic Viking.
+- Bez push na main.
+
 ## 2026-10-31 13:50 — #683 F7 R8 POPRAWKI (B1/B2 + decyzja 70)
 
 - Skrzynka: #685 w planie (po #683); #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne` do budowy.
