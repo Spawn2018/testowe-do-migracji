@@ -7435,6 +7435,18 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (odbiór prod):** SELECT `here_road_legs` — **12** / active 12 / `browser_fetch` 5; core bez zmian (3495/12561/3742/18854/19408); BN7 7× null. `here-roads` **#108803** @ 04:49Z ok (0 prób — core świeże; BN7 poza cronem). Komentarz w #667. **Dalej:** BN3 (#573).
 - Bez push na main.
 
+## 2026-10-31 17:00 — #683 F7 R14 (tylko testy mutacji)
+
+- Skrzynka: #685 w planie (po #683); #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne` do budowy.
+- Scalanie: #683 — F7 r14 @ `056a85fc`: kod OK; brakowało 2 testów. Brak „F7: gotowe do scalenia”. Bez push na main.
+- **Krok R14 (bez zmian w kodzie):**
+  - **R14-B1** — `data-type="campaign"` na Schedulerze (attrs + zagnieżdżony w body) ≠ kampania; runFerryStatus → ZAPLANOWANY, notices 0 (mutacja lookbehind → `\b`);
+  - **R14-B2** — `campaignHasServiceText`: osobna kampania nowsza dla RESUME / MyStar / Vessel / Update → brak auto;
+  - §8: licznik atrybutów Alert liczy też komentarze/duplikaty (bezpiecznie) — przy żywym Alercie z DP r10; `:type` Vue / `&quot;Alert&quot;` niska realność;
+  - vitest bn3-tallink-alert **51**. PLAN §4/§8.
+- **Dalej:** CI → „gotowe do F7 @ sha”; po F7/scal → #685-a Digitraffic Viking.
+- Bez push na main.
+
 ## 2026-10-31 16:35 — #683 F7 R13 POPRAWKI (B1–B5 + 72a łagodna)
 
 - Skrzynka: #685 w planie (po #683); #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne` do budowy.
