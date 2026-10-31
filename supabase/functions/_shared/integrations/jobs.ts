@@ -49,7 +49,7 @@ import {
 } from '../ferry/dfds.ts';
 import {
   TALLINK_ALERT_UA, TALLINK_HEL_TLL_URL, TALLINK_HOME_URL,
-  matchTallinkAlertSailings, parseTallinkAlerts,
+  finalizeTallinkAlertsForStatus, matchTallinkAlertSailings, parseTallinkAlerts,
 } from '../ferry/tallinkAlert.ts';
 import {
   MARINE_POINTS, SMHI_OCOBS_URL, dmiWamUrl, evaluateMarineWindow, fmiHarmonieUrl, fmiWamUrl,
@@ -1522,7 +1522,12 @@ export async function runFerryStatus(deps: JobDeps): Promise<JobResult> {
         status: row.status,
         source: row.source,
       }));
-      for (const alert of allAlerts) {
+      // F7 #683 R11 / decyzja 72: najnowszy po złączeniu HOME + HEL-TLL (nie per strona).
+      const mergedAlerts = finalizeTallinkAlertsForStatus(allAlerts);
+      const hasAutoWinner = mergedAlerts.some((x) => x.autoCancelOk && x.kind === 'ODWOLANY');
+      for (const alert of mergedAlerts) {
+        if (alert.filterReject || alert.kind === 'IGNORE') continue;
+        if (alert.suppressedByNewer && hasAutoWinner) continue;
         if (alert.kind !== 'ODWOLANY') continue;
         // F7 #683 B1: pełna pula; already_cancelled → nic; manual_only / ambiguous / none → ryzyko.
         const hit = matchTallinkAlertSailings(alert, cands);

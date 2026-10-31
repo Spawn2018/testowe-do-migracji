@@ -1296,7 +1296,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 Źródło: #573 + komentarze BN3 31.10 (spec + decyzje 57–61). Po #667; DP-21 → #666 (63b).
 ~~Wycinek 1~~ SCALONE (#680 `8100f685` / **0356**): decyzja 60 + ręczny komunikat 6 armatorów (`p_operator`, formularz).
 ~~Wycinek 2~~ SCALONE (#682 `a9c396d7` / **0357** + F7 r1–r2): DFDS remark/ETA + Portnet ATA + SOURCE_DOWN MEDIUM (**decyzja 67**).
-**Wycinek 3** (`pakiet/bn3-tallink-tsee-auto` / PR #683): ~~DP-94/95/96~~; **0358** `operator_notices.source` AUTO; Tallink Alert / ts.ee — **F7 R10** + zmiana **72** właściciel 14:58 (decyzje **68–69** 13:04; **70** 13:37; **71** 14:31; **72**: najnowszy Alert w dniu wygrywa — `dateStart`+`timeStart`; remis → ryzyko; R10-B1 goły `<>`; R10-B2 stos + `-->`; R10-B3 mutacje 1:1; **68** zdania; **69** AUTO tylko przy ODWOLANY); DP-97…103, DP-105…109, DP-111/112 w kolejce (DP-111 po scaleniu).
+**Wycinek 3** (`pakiet/bn3-tallink-tsee-auto` / PR #683): ~~DP-94/95/96~~; **0358** `operator_notices.source` AUTO; Tallink Alert / ts.ee — **F7 R11** (decyzje **68–69** 13:04; **70** 13:37; **71** 14:31; **72** właściciel 14:58: najnowszy Alert po złączeniu stron — `dateStart`+`timeStart`; remis/zła data → ryzyko; kampania strukturalna; R11-B1 title na Scheduler; R10-B1–B3; **68** zdania; **69** AUTO tylko przy ODWOLANY); DP-97…103, DP-105…109, DP-111/112 w kolejce (DP-111 po scaleniu).
 1. ~~**60** Tallink poza PLD–KPS~~ — baza już tylko DFDS; front `ferryCatalog` bez TALLINK; test bn9a.
 2. Źródła → update — ~~**DFDS remark**~~; ~~Portnet ATA~~; ts.ee Lisainfo / Tallink Alert (F7 #683).
 3. ~~Opóźnienie: ATA − arrival; `FERRY_PORT_DELAY_MIN` z `app_parameters` (zapas 15)~~ (**0357** + Portnet + store F7 B1); ~~ATD 13–19 min przed planem bez delayed (DP-94)~~; ATD tylko gdy wiarygodne — dalej.
@@ -2301,6 +2301,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 31.10.2026 14:25 | #683 F7 R9 POPRAWKI: decyzja 71 allowlista HTML (zamiast czarnej listy 70); testy 28; potem #685-a | pętla |
 | 31.10.2026 14:50 | #683 F7 R10 POPRAWKI: B1 goły `<>`; B2 stos + `-->`; B3 mutacje 1:1; decyzja 71 właściciel 14:31; decyzja 72 multi-Alert; testy 30; potem #685-a | pętla |
 | 31.10.2026 15:15 | #683 decyzja 72 zmieniona przez właściciela 14:58: najnowszy Alert wygrywa; testy 33; potem F7 → #685-a | pętla |
+| 31.10.2026 15:25 | #683 F7 R11 POPRAWKI: R11-B1 title Scheduler; finalize po złączeniu stron; kampania strukturalna; zła data; testy 37; potem #685-a | pętla |
 | 31.10.2026 — | F7 #683 nieblokujące (osobna poprawka): Scheduler grudzień + „on 2 January” → rok bieżący, ciche wygaśnięcie; Alert INFO bez ryzyka/historii — świadomie | F7 #683 r7 |
 | 31.10.2026 — | F7 #683 r8 nieblokujące (osobno): Alert poza Schedulerem obok Schedulera; sprzeczne bloki (resume→cofnięcie auto); rok przy długim oknie Schedulera; mutanty M10/M15–M17/M22 świadomie bez testów | F7 #683 r8 |
 | 31.10.2026 — | F7 #683 r10 uwaga właściciel: fixture kampanii ma `CwsAlert type=…`; jeśli Tallink opakuje serwisowe w `CwsAlert` / `CwsLink` („Read more”) → ryzyko; po pierwszym żywym Alercie serwisowym — surowy HTML jako fixture + ocena allowlisty (osobny DP) | F7 #683 r10 |
