@@ -1169,7 +1169,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 2. **B SE-KAA dual** — ~~`SE-KAA` ← `SE_E22`; `SE-KAA-INLAND` ← jawnie `SE_KAA_INLAND`; migracja **0352**; `ROAD_LEGS=5`~~.
 3. **C cron HERE** — ~~`refreshRoadLegs` (próg 21 d); job + **0353** `tower-here-roads`; SOURCE_DOWN sticky; Edge dual~~. **Termin ≤ 04.11** (purge 05.11).
 4. Diagnostyka: ~~fundament `summary` w `map_display_state` + `checkRoads` (0354)~~; UI Stan systemu → DP-22; `integration_runs` (N1 retry_after +1 h w tym PR).
-5. ~~Słownik legów BN7 (`PL-TLL`…`SE-KPS`) gotowy do rysowania (DP-23)~~ — migracja **0355** `here_road_legs`; FK zamiast `IN (…)`; cron wszystkie, przeglądarka `browser_fetch` (core).
+5. ~~Słownik legów BN7 (`PL-TLL`…`SE-KPS`) gotowy do rysowania (DP-23)~~ — migracja **0355** `here_road_legs`; FK zamiast `IN (…)`; przeglądarka `browser_fetch` (core); BN7 bez auto-fetch do kalibracji.
 6. Testy e2e na buildzie produkcyjnym (nie demo): ≥1 polilinia na mapę; SE-KAA obecny.
 7. ~~**F7 r1–r6** (+ POPRAWKI) w #673~~ SCALONE; **E (0355)** — **czekam F7** (ten PR).
 
@@ -1213,6 +1213,9 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-35 | koordynator | test DP-27: po `reset()` kolejny błąd → drugie ostrzeżenie | F7 #675 | wyglad | w kolejce |
 | DP-36 | koordynator | test subskrypcji `useVesselGroups` (powiadomienie przy `load()`) | F7 #675 | wyglad | w kolejce |
 | DP-37 | koordynator | komentarz `CorridorMap.tsx:175` („referencja listy”, nie „wersja”) | F7 #675 | wyglad | w kolejce |
+| DP-38 | Cursor | test INLAND: lista via jak SQL (albo długości geodezyjne; dziś 9. via ~307 m vs prod) | F7 #673 r7 | po #667 E | w kolejce |
+| DP-39 | Cursor | przywróć test okna sesji 5 min (`__setHereRoadsSessionMsForTests(5*60_000)` → 2. wołanie bez POST) | F7 #673 r7 | po #667 E | w kolejce |
+| DP-40 | Cursor | wierzchołki INLAND 59.133/16.337 i 59.279/16.120 — SELECT na realnej linii HERE po wdrożeniu #673, ewent. przesunąć | F7 #673 r7 | po deploy #673 | w kolejce |
 
 ### BN9 — część na produkcji; ekrany zależne od danych (BN9-c*)
 Źródło: #671. BN9-a (#575) i BN9-b (#670) na produkcji. Zostają (koordynator, `wyglad/*`, zaraz po swoim etapie):
@@ -1228,7 +1231,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 1. **BN1** — ~~słowniki / strefy / CASE / F7 MFA~~ **SCALONE** (0338–0346).
 2. **BN2** — ~~LIVE~~ **SCALONE** (**0347**+**0348**, PR #660 `a94645d9`; PR #661 `392a9bc2`; dopisek F7 #665 `799ea18d`): Tallink; Portnet; Viking/Eckerö/DFDS HTML + Terminal A; B1–B3; Decyzja 50 MEDIUM.
 3. ~~**#666** (pilne)~~ — SCALONE (#668 `53890480` / **0351**).
-4. **#667** (pilne) — pomarańczowe drogi / SE-KAA / odświeżanie HERE — W TOKU (ten PR; F7 r6 POPRAWKI: B6 + E4 snap Umeå/Piteå).
+4. **#667** (pilne) — ~~A–D (#673)~~ SCALONE; E słownik BN7 (`pakiet/667-e-bn7-road-dict`, 0355) — czekam F7; potem F e2e.
 5. BN3…BN10 — jak #573 (opóźnienia, AIS, pogoda, drogi LT/LV/EE/FI, HERE, statusy/ETA, ekrany, odbiór 48 h).
 
 ### #662 · PILNE SafeFleet — link tymczasowy (SG-27) — SCALONE (`189688bc` / PR #663 / **0349**); #662-b SCALONE (`1ee855fd` / PR #664 / **0350**, 30.10.2026 12:54Z)

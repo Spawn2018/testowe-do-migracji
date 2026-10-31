@@ -7376,5 +7376,5 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 
 - Skrzynka: **#667** W TOKU (E); #608 w planie; #550 WSTRZYMANE. Starsze #537/#538/#499/#500 — w planie.
 - Scalanie: **#673 SCALONE** `5e8eb1ba` (A–D / 0352–0354, 01:28Z). Nowy PR `pakiet/667-e-bn7-road-dict` (0355). Bez push na main.
-- **Krok (#667 E / DP-23):** migracja **0355** — tabela `here_road_legs` (12 legów: 5 core + 7 BN7); FK zamiast `CHECK IN (…)`; `here_store_road` / `here_road_corridor_dev_m` / `map_display_state` ze słownika (`spec`/`corridor_code`/`map_group`/`browser_fetch`); placeholdery BN7 `points=null`. Edge/cron: `listLegs` z bazy; przeglądarka `browserOnly` (BN7 tylko cron). Front: `roadSpecFromRow` + próg `browserFetchLegCount`. bmapa EXPECTED 174→180. Unit fokus i667/bmapa ✔ (48). **Dalej:** CI → gotowe do F7; potem F e2e prod.
+- **Krok (#667 E / DP-23):** migracja **0355** — `here_road_legs` (12: 5 core + 7 BN7); FK zamiast `CHECK IN (…)`; store/dev/map_display_state ze słownika; BN7 `points=null`, `browser_fetch=false` (bez auto-fetch do kalibracji). Edge: `listLegs` + `browserOnly` w przeglądarce. Front: `roadSpecFromRow` + `browserFetchLegCount`. bmapa 174→180. DP-38…40 z F7 #673 r7. Unit fokus i667/bmapa ✔ (38). **Dalej:** push → CI → gotowe do F7; potem F e2e.
 - Bez push na main.
