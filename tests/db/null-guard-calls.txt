@@ -1,47 +1,47 @@
-# I-2A (0049) — wywołanie KAŻDEJ funkcji public z EXECUTE dla authenticated przez konto bez aktywnego wiersza app_users.
-# Format: nazwa | rodzaj | wywołanie SQL (zwraca 1 wartość) | oczekiwanie (regex odmowy albo wartość)
-#   GUARD  — wyjątek z komunikatem odmowy (regex); kontrola pozytywna: aktywny HHL NIE dostaje tego komunikatu
-#   TOKEN  — API kierowcy: uprawnieniem jest token, nie konto; zły token → wyjątek (regex)
-#   EMPTY  — brak danych/skutku: wynik musi być równy wartości (0, f, NULL=∅); kontrola pozytywna: HHL dostaje inną wartość
-#   PURE   — czysta funkcja obliczeniowa (tylko argumenty, bez odczytu tabel) — nie ma czego odmawiać; liczona osobno
-admin_invite_user | GUARD | select admin_invite_user('nowy@test.pl','KSH','CLIENT_USER',null,'pl','Jan','Kowalski','+48000000001') | wyłącznie administrator HHL
-admin_user_profile_set | GUARD | select admin_user_profile_set('$KSHID','Jan','Kowalski','+48000000001') | Profil zmienia wyłącznie|Brak aktywnego konta
-admin_revoke_invite | GUARD | select admin_revoke_invite(gen_random_uuid()) | Wyłącznie administrator HHL
-admin_set_user_active | GUARD | select admin_set_user_active('$KSHID', true) | Wyłącznie administrator HHL
-admin_set_user_role | GUARD | select admin_set_user_role('$KSHID', 'CLIENT_USER') | Role nadaje wyłącznie
-cancel_load | GUARD | select cancel_load('$L2', 'test strażnika') | wyłącznie HHL
+# I-2A (0049) â€” wywoĹ‚anie KAĹ»DEJ funkcji public z EXECUTE dla authenticated przez konto bez aktywnego wiersza app_users.
+# Format: nazwa | rodzaj | wywoĹ‚anie SQL (zwraca 1 wartoĹ›Ä‡) | oczekiwanie (regex odmowy albo wartoĹ›Ä‡)
+#   GUARD  â€” wyjÄ…tek z komunikatem odmowy (regex); kontrola pozytywna: aktywny HHL NIE dostaje tego komunikatu
+#   TOKEN  â€” API kierowcy: uprawnieniem jest token, nie konto; zĹ‚y token â†’ wyjÄ…tek (regex)
+#   EMPTY  â€” brak danych/skutku: wynik musi byÄ‡ rĂłwny wartoĹ›ci (0, f, NULL=â…); kontrola pozytywna: HHL dostaje innÄ… wartoĹ›Ä‡
+#   PURE   â€” czysta funkcja obliczeniowa (tylko argumenty, bez odczytu tabel) â€” nie ma czego odmawiaÄ‡; liczona osobno
+admin_invite_user | GUARD | select admin_invite_user('nowy@test.pl','KSH','CLIENT_USER',null,'pl','Jan','Kowalski','+48000000001') | wyĹ‚Ä…cznie administrator HHL
+admin_user_profile_set | GUARD | select admin_user_profile_set('$KSHID','Jan','Kowalski','+48000000001') | Profil zmienia wyĹ‚Ä…cznie|Brak aktywnego konta
+admin_revoke_invite | GUARD | select admin_revoke_invite(gen_random_uuid()) | WyĹ‚Ä…cznie administrator HHL
+admin_set_user_active | GUARD | select admin_set_user_active('$KSHID', true) | WyĹ‚Ä…cznie administrator HHL
+admin_set_user_role | GUARD | select admin_set_user_role('$KSHID', 'CLIENT_USER') | Role nadaje wyĹ‚Ä…cznie
+cancel_load | GUARD | select cancel_load('$L2', 'test straĹĽnika') | wyĹ‚Ä…cznie HHL
 create_document | GUARD | select id from create_document('$L2', 'CMR', 'a.pdf', 'application/pdf', 100) | niewidoczny dla konta
 fx_rate_before | GUARD | select rate_pln from fx_rate_before(current_date) | Brak aktywnego konta
-import_cancel_loads | GUARD | select count(*) from import_cancel_loads(array['$L2']::uuid[], 'test') | wyłącznie HHL
-import_removal_check | GUARD | select count(*) from import_removal_check(array['$L2']::uuid[]) | wyłącznie HHL
-import_schedule | GUARD | select import_schedule('$P', '[]'::jsonb, '{}', '{}', true) | wyłącznie HHL
-l1b_ksh_file_unreadable | GUARD | select l1b_ksh_file_unreadable('$P', 'zly.xlsx') | wyłącznie HHL
-issue_driver_token | GUARD | select issue_driver_token('$L2') | wyłącznie przewoźnik transportu albo HHL
+import_cancel_loads | GUARD | select count(*) from import_cancel_loads(array['$L2']::uuid[], 'test') | wyĹ‚Ä…cznie HHL
+import_removal_check | GUARD | select count(*) from import_removal_check(array['$L2']::uuid[]) | wyĹ‚Ä…cznie HHL
+import_schedule | GUARD | select import_schedule('$P', '[]'::jsonb, '{}', '{}', true) | wyĹ‚Ä…cznie HHL
+l1b_ksh_file_unreadable | GUARD | select l1b_ksh_file_unreadable('$P', 'zly.xlsx') | wyĹ‚Ä…cznie HHL
+issue_driver_token | GUARD | select issue_driver_token('$L2') | wyĹ‚Ä…cznie przewoĹşnik transportu albo HHL
 keep_alive | GUARD | select keep_alive('test') | Brak aktywnego konta
-mark_invoice_paid | GUARD | select mark_invoice_paid('$INV', current_date) | wyłącznie HHL
+mark_invoice_paid | GUARD | select mark_invoice_paid('$INV', current_date) | wyĹ‚Ä…cznie HHL
 register_invoice | GUARD | select register_invoice('{"direction":"PRZYCHOD"}'::jsonb) | Brak konta organizacji
 update_invoice | GUARD | select update_invoice('00000000-0000-0000-0000-00000000ffff', '{}'::jsonb) | Brak aktywnego konta
-report_position | GUARD | select count(*) from report_position('$L2', 59.3, 18.0, now()) | albo HHL|wyłącznie
-revoke_driver_token | GUARD | select revoke_driver_token('$L2') | albo HHL|wyłącznie
+report_position | GUARD | select count(*) from report_position('$L2', 59.3, 18.0, now()) | albo HHL|wyĹ‚Ä…cznie
+revoke_driver_token | GUARD | select revoke_driver_token('$L2') | albo HHL|wyĹ‚Ä…cznie
 revoke_user_sessions | GUARD | select revoke_user_sessions(null) | Brak aktywnego konta
 my_session_revoke | GUARD | select my_session_revoke('00000000-0000-0000-0000-00000000ffff') | Brak aktywnego konta
 rio_tracking_open | GUARD | select rio_tracking_open('00000000-0000-0000-0000-00000000ffff') | Brak aktywnego konta
 risk_audience_for | GUARD | select risk_audience_for('FERRY', '{}') | Brak aktywnego konta
-unmark_invoice_paid | GUARD | select unmark_invoice_paid('$INV', 'test') | wyłącznie HHL
-upsert_geofence_circle | GUARD | select upsert_geofence_circle(null, '$P', 'x', 'CUSTOM', 59.3, 18.0, 100, 50, 60, 2, true, true, true, null, true) | row-level security|Brak uprawnień
-delete_geofence | GUARD | select delete_geofence((select id from geofences limit 1)) | Brak uprawnień
-sefs_save_parameters | GUARD | select sefs_save_parameters('$P', '{}'::jsonb) | wyłącznie HHL
-fuel_add_reading | GUARD | select fuel_add_reading('$P', 'SEK', '2026-09', current_date, 19.5, 'https://www.okq8.se/foretag/priser/') | wyłącznie HHL
-baf_change_log | GUARD | select count(*) from baf_change_log('$P') | wyłącznie HHL
+unmark_invoice_paid | GUARD | select unmark_invoice_paid('$INV', 'test') | wyĹ‚Ä…cznie HHL
+upsert_geofence_circle | GUARD | select upsert_geofence_circle(null, '$P', 'x', 'CUSTOM', 59.3, 18.0, 100, 50, 60, 2, true, true, true, null, true) | row-level security|Brak uprawnieĹ„
+delete_geofence | GUARD | select delete_geofence((select id from geofences limit 1)) | Brak uprawnieĹ„
+sefs_save_parameters | GUARD | select sefs_save_parameters('$P', '{}'::jsonb) | wyĹ‚Ä…cznie HHL
+fuel_add_reading | GUARD | select fuel_add_reading('$P', 'SEK', '2026-09', current_date, 19.5, 'https://www.okq8.se/foretag/priser/') | wyĹ‚Ä…cznie HHL
+baf_change_log | GUARD | select count(*) from baf_change_log('$P') | wyĹ‚Ä…cznie HHL
 driver_get_instructions | TOKEN | select driver_get_instructions('wt_zly') | nieaktywny
 driver_post_event | TOKEN | select driver_post_event('wt_zly', '$L1', 'ARRIVED') | nieaktywny
 driver_post_position | TOKEN | select count(*) from driver_post_position('wt_zly', '$L1', 59.3, 18.0, now()) | nieaktywny
 is_hhl | EMPTY | select is_hhl() | f
 can_see_margin | EMPTY | select can_see_margin() | f
-current_app_role | EMPTY | select coalesce(current_app_role()::text, '∅') | ∅
-current_app_user_id | EMPTY | select coalesce(current_app_user_id()::text, '∅') | ∅
-current_org_id | EMPTY | select coalesce(current_org_id()::text, '∅') | ∅
-current_org_kind | EMPTY | select coalesce(current_org_kind()::text, '∅') | ∅
+current_app_role | EMPTY | select coalesce(current_app_role()::text, 'â…') | â…
+current_app_user_id | EMPTY | select coalesce(current_app_user_id()::text, 'â…') | â…
+current_org_id | EMPTY | select coalesce(current_org_id()::text, 'â…') | â…
+current_org_kind | EMPTY | select coalesce(current_org_kind()::text, 'â…') | â…
 discard_document | EMPTY | select discard_document('$DOC') | f
 mark_notification_read_any | EMPTY | select mark_notification_read_any($NOTIF) | 0
 mark_notifications_read | EMPTY | select mark_notifications_read(array[$NOTIF]::bigint[]) | 0
@@ -51,7 +51,7 @@ permit_fits | EMPTY | select ok from permit_fits('$L1', '$PERMIT') | f
 storage_upload_allowed | EMPTY | select storage_upload_allowed('dokumenty', '$DOCOBJ') | f
 kpi_detection_lag | EMPTY | select samples from kpi_detection_lag('$P') | 0
 my_mfa_status | EMPTY | select my_mfa_status()->>'satisfied' | false
-admin_set_mfa_enforcement | GUARD | select admin_set_mfa_enforcement(true) | wyłącznie administrator HHL
+admin_set_mfa_enforcement | GUARD | select admin_set_mfa_enforcement(true) | wyĹ‚Ä…cznie administrator HHL
 doc_bucket | PURE | select doc_bucket('CMR') | -
 doc_safe_name | PURE | select doc_safe_name('a b.pdf') | -
 invoice_week_local | PURE | select invoice_week_local(now()) | -
@@ -61,90 +61,90 @@ money_least_tier | PURE | select money_least_tier('A', 'B') | -
 fuel_basis_public | PURE | select fuel_basis_public('{"n_sek":7,"owner_note":"x"}'::jsonb)->>'n_sek' | -
 report_client_error | GUARD | select report_client_error('error', 'x') | Brak aktywnego konta
 ksh_confirm_dates | GUARD | select ksh_confirm_dates(null) | Brak aktywnego konta
-ksh_sync_state_get | EMPTY | select coalesce(ksh_sync_state_get()::text, '∅') | ∅
-ksh_sync_preview_get | EMPTY | select coalesce(ksh_sync_preview_get()::text, '∅') | ∅
-ksh_import_summary_get | EMPTY | select coalesce(ksh_import_summary_get(null)::text, '∅') | ∅
+ksh_sync_state_get | EMPTY | select coalesce(ksh_sync_state_get()::text, 'â…') | â…
+ksh_sync_preview_get | EMPTY | select coalesce(ksh_sync_preview_get()::text, 'â…') | â…
+ksh_import_summary_get | EMPTY | select coalesce(ksh_import_summary_get(null)::text, 'â…') | â…
 ksh_sync_write_set | GUARD | select ksh_sync_write_set(false) | Administrator HHL|42501
 ksh_sync_import_set | GUARD | select ksh_sync_import_set(false) | Administrator HHL|42501
-rate_match | GUARD | select rate_match(null, null) | wyłącznie HHL
-rate_card_save | GUARD | select rate_card_save(null, null, null, null) | wyłącznie HHL
-rate_card_change_log | GUARD | select count(*) from rate_card_change_log(null) | wyłącznie HHL
+rate_match | GUARD | select rate_match(null, null) | wyĹ‚Ä…cznie HHL
+rate_card_save | GUARD | select rate_card_save(null, null, null, null) | wyĹ‚Ä…cznie HHL
+rate_card_change_log | GUARD | select count(*) from rate_card_change_log(null) | wyĹ‚Ä…cznie HHL
 issue_driver_token_sms | GUARD | select issue_driver_token_sms('$L1') | Brak aktywnego konta
-sms_issue_device | GUARD | select sms_issue_device(null) | wyłącznie HHL
-sms_revoke_device | GUARD | select sms_revoke_device(null) | wyłącznie HHL
-sms_set_paused | GUARD | select sms_set_paused(null, null) | wyłącznie HHL
-sms_add_test_number | GUARD | select sms_add_test_number(null, null) | wyłącznie HHL
-sms_send_test | GUARD | select sms_send_test(null) | Administrator HHL|wyłącznie HHL
-admin_set_external_messaging | GUARD | select admin_set_external_messaging(null) | wyłącznie administrator HHL
-admin_security_flag_set | GUARD | select admin_security_flag_set(null, null) | wyłącznie administrator HHL
+sms_issue_device | GUARD | select sms_issue_device(null) | wyĹ‚Ä…cznie HHL
+sms_revoke_device | GUARD | select sms_revoke_device(null) | wyĹ‚Ä…cznie HHL
+sms_set_paused | GUARD | select sms_set_paused(null, null) | wyĹ‚Ä…cznie HHL
+sms_add_test_number | GUARD | select sms_add_test_number(null, null) | wyĹ‚Ä…cznie HHL
+sms_send_test | GUARD | select sms_send_test(null) | Administrator HHL|wyĹ‚Ä…cznie HHL
+admin_set_external_messaging | GUARD | select admin_set_external_messaging(null) | wyĹ‚Ä…cznie administrator HHL
+admin_security_flag_set | GUARD | select admin_security_flag_set(null, null) | wyĹ‚Ä…cznie administrator HHL
 security_flags_list | GUARD | select security_flags_list() | tylko HHL
 perf_results_latest | GUARD | select perf_results_latest() | tylko HHL
 app_errors_recent | GUARD | select app_errors_recent(7) | Administrator HHL|tylko HHL
-sms_external_messaging_state | GUARD | select sms_external_messaging_state() | wyłącznie HHL
-admin_set_permit_requirement | GUARD | select admin_set_permit_requirement(null) | wyłącznie administrator HHL
-permit_requirement_state | GUARD | select permit_requirement_state() | wyłącznie HHL
+sms_external_messaging_state | GUARD | select sms_external_messaging_state() | wyĹ‚Ä…cznie HHL
+admin_set_permit_requirement | GUARD | select admin_set_permit_requirement(null) | wyĹ‚Ä…cznie administrator HHL
+permit_requirement_state | GUARD | select permit_requirement_state() | wyĹ‚Ä…cznie HHL
 load_driver_contacts | EMPTY | select count(*) from load_driver_contacts() | 0
-import_template_save | GUARD | select import_template_save('22222222-0000-0000-0000-000000000001','x','{"shipmentCode":"A","qty":"B"}','sig-ng')::text | wyłącznie HHL
-doc_requirement_set | GUARD | select doc_requirement_set('$P', 'CMR', true, 'CARRIER', 'AT_LOAD', 2)::text | wyłącznie HHL
+import_template_save | GUARD | select import_template_save('22222222-0000-0000-0000-000000000001','x','{"shipmentCode":"A","qty":"B"}','sig-ng')::text | wyĹ‚Ä…cznie HHL
+doc_requirement_set | GUARD | select doc_requirement_set('$P', 'CMR', true, 'CARRIER', 'AT_LOAD', 2)::text | wyĹ‚Ä…cznie HHL
 doc_requirements_status | EMPTY | select count(*) from doc_requirements_status('$P') | 0
 document_supersede | GUARD | select document_supersede(gen_random_uuid(), gen_random_uuid()) | Brak aktywnego konta
 invoice_dispute_reply | GUARD | select invoice_dispute_reply('$INV', 'x') | Brak aktywnego konta
-load_permit_link | GUARD | select load_permit_link('$L1', '$PERMIT') | HHL albo przewoźnik transportu
+load_permit_link | GUARD | select load_permit_link('$L1', '$PERMIT') | HHL albo przewoĹşnik transportu
 load_permit_status | EMPTY | select count(*) from load_permit_status() | 0
-awiz_pilots_set | GUARD | select awiz_pilots_set('$L1', null, null, null, null) | Pilotów awizuje
-load_escorts_set | GUARD | select load_escorts_set('$L1', '[]'::jsonb) | HHL albo przewoźnik transportu
-carrier_rate_load | GUARD | select carrier_rate_load('$L1', 5) | wyłącznie HHL
-carrier_scorecard | GUARD | select count(*) from carrier_scorecard() | wyłącznie dla HHL
+awiz_pilots_set | GUARD | select awiz_pilots_set('$L1', null, null, null, null) | PilotĂłw awizuje
+load_escorts_set | GUARD | select load_escorts_set('$L1', '[]'::jsonb) | HHL albo przewoĹşnik transportu
+carrier_rate_load | GUARD | select carrier_rate_load('$L1', 5) | wyĹ‚Ä…cznie HHL
+carrier_scorecard | GUARD | select count(*) from carrier_scorecard() | wyĹ‚Ä…cznie dla HHL
 load_track | EMPTY | select count(*) from load_track('$L1') | 0
 latest_vehicle_fixes | EMPTY | select count(*) from latest_vehicle_fixes(array['$L1']::uuid[]) | 0
 load_escort_status | EMPTY | select count(*) from load_escort_status() | 0
-load_permit_save | GUARD | select load_permit_save('$L1', 'PL', 'X-1', current_date, current_date + 30, 30, 4, 4.5, 60) | HHL albo przewoźnik transportu
-load_permit_unlink | GUARD | select load_permit_unlink('$L1', '$PERMIT') | HHL albo przewoźnik transportu
-permit_save | GUARD | select permit_save('$P', 'PL', 'X-1', current_date, current_date + 30, 30, 4, 4.5, 60) | HHL albo przewoźnik
+load_permit_save | GUARD | select load_permit_save('$L1', 'PL', 'X-1', current_date, current_date + 30, 30, 4, 4.5, 60) | HHL albo przewoĹşnik transportu
+load_permit_unlink | GUARD | select load_permit_unlink('$L1', '$PERMIT') | HHL albo przewoĹşnik transportu
+permit_save | GUARD | select permit_save('$P', 'PL', 'X-1', current_date, current_date + 30, 30, 4, 4.5, 60) | HHL albo przewoĹşnik
 load_escort_contacts | EMPTY | select count(*) from load_escort_contacts() | 0
-carrier_rating_detail | GUARD | select count(*) from carrier_rating_detail('$L1') | wyłącznie dla HHL
+carrier_rating_detail | GUARD | select count(*) from carrier_rating_detail('$L1') | wyĹ‚Ä…cznie dla HHL
 insurance_policy_save | GUARD | select insurance_policy_save('00000000-0000-0000-0000-00000000a003', 'X-1', current_date, current_date + 30) | Brak aktywnego konta
 insurance_policies_list | GUARD | select count(*) from insurance_policies_list() | Brak aktywnego konta
-# D-30 (0125): zatwierdzanie — tylko HHL (is_hhl)
+# D-30 (0125): zatwierdzanie â€” tylko HHL (is_hhl)
 insurance_policy_approve | GUARD | select insurance_policy_approve(gen_random_uuid(), true, null) | Zatwierdzenie polisy tylko dla HHL|Brak aktywnego konta
 shipment_family | PURE | select shipment_family('KR-08') | KR
-kr_convoy_count | GUARD | select kr_convoy_count('$L1') | wyłącznie HHL
+kr_convoy_count | GUARD | select kr_convoy_count('$L1') | wyĹ‚Ä…cznie HHL
 sefs_lookup_mult | PURE | select sefs_lookup_mult(1, '[{"lte":10,"mult":1.1}]'::jsonb) | 1.1
 sefs_lookup_mult | PURE | select sefs_lookup_mult(23.03, '[{"lte":22.8,"mult":1.13},{"lte":23.1,"mult":1.14}]'::jsonb, 'MAX') | 1.14
-sefs_compute_hybrid | GUARD | select sefs_compute_hybrid('$P', 20, 6) | wyłącznie HHL
-sefs_week_for_load | GUARD | select sefs_week_for_load('$P', current_date) | wyłącznie HHL
+sefs_compute_hybrid | GUARD | select sefs_compute_hybrid('$P', 20, 6) | wyĹ‚Ä…cznie HHL
+sefs_week_for_load | GUARD | select sefs_week_for_load('$P', current_date) | wyĹ‚Ä…cznie HHL
 decision_open | GUARD | select decision_open('$P','BACKUP_FAILED','x','{}'::jsonb) | Brak aktywnego konta
 decision_assign | GUARD | select decision_assign(gen_random_uuid(), gen_random_uuid()) | HHL lub
 decision_snooze | GUARD | select decision_snooze(gen_random_uuid(), now() + interval '1 hour') | HHL lub
-decision_resolve | GUARD | select decision_resolve(gen_random_uuid(), 'ACCEPT') | wskazana firma|Rozstrzygnięcie
-decision_resolve_carrier_change | GUARD | select decision_resolve_carrier_change(gen_random_uuid(), 'CANCEL') | Rozstrzygnięcie|forbidden|HHL
+decision_resolve | GUARD | select decision_resolve(gen_random_uuid(), 'ACCEPT') | wskazana firma|RozstrzygniÄ™cie
+decision_resolve_carrier_change | GUARD | select decision_resolve_carrier_change(gen_random_uuid(), 'CANCEL') | RozstrzygniÄ™cie|forbidden|HHL
 load_restore_removed | GUARD | select load_restore_removed(gen_random_uuid()) | forbidden|HHL_ADMIN
 delivered_check_resolve | GUARD | select delivered_check_resolve('$L1', true, null) | wskazana firma|Rozstrzyg|Brak aktywnego konta
 decision_expire | GUARD | select decision_expire(gen_random_uuid(), 'test wygaszenia') | HHL lub system|Wygaszenie
 auth_email_allowed | EMPTY | select auth_email_allowed('hhl@test') | f
 app_user_mark_password_set | GUARD | select app_user_mark_password_set() | TOWER_AUTH|konto nieaktywne|brak
-admin_notification_matrix_set | GUARD | select admin_notification_matrix_set('DECISION','HHL_ADMIN',true,false,false) | wyłącznie administrator HHL
+admin_notification_matrix_set | GUARD | select admin_notification_matrix_set('DECISION','HHL_ADMIN',true,false,false) | wyĹ‚Ä…cznie administrator HHL
 my_notify_get | GUARD | select count(*) from my_notify_get() | Brak aktywnego konta
 my_notify_set | GUARD | select my_notify_set('src_down','mail',false) | Brak aktywnego konta
-security_advisor_snapshot_latest | GUARD | select * from security_advisor_snapshot_latest() | wyłącznie administrator HHL|Migawka doradcy
+security_advisor_snapshot_latest | GUARD | select * from security_advisor_snapshot_latest() | wyĹ‚Ä…cznie administrator HHL|Migawka doradcy
 load_status_rank | PURE | select load_status_rank('READY'::load_status) | -
 load_status_set | GUARD | select load_status_set('$L1','READY',now(),null) | Brak aktywnego konta|Zmiana statusu
-admin_sms_zone_recipient_set | GUARD | select admin_sms_zone_recipient_set('LOAD_SREM',1,'x','500000000','PL',true) | Tylko administrator HHL|wyłącznie HHL
-admin_sms_zone_trigger_set | GUARD | select admin_sms_zone_trigger_set('SMS_ZONE_APPROACH',true) | Tylko administrator HHL|wyłącznie HHL
-admin_sms_zone_test | GUARD | select admin_sms_zone_test('LOAD_SREM') | Tylko administrator HHL|wyłącznie HHL
-admin_ops_threshold_set | GUARD | select admin_ops_threshold_set('WAVE_M',3.8) | wyłącznie administrator HHL
+admin_sms_zone_recipient_set | GUARD | select admin_sms_zone_recipient_set('LOAD_SREM',1,'x','500000000','PL',true) | Tylko administrator HHL|wyĹ‚Ä…cznie HHL
+admin_sms_zone_trigger_set | GUARD | select admin_sms_zone_trigger_set('SMS_ZONE_APPROACH',true) | Tylko administrator HHL|wyĹ‚Ä…cznie HHL
+admin_sms_zone_test | GUARD | select admin_sms_zone_test('LOAD_SREM') | Tylko administrator HHL|wyĹ‚Ä…cznie HHL
+admin_ops_threshold_set | GUARD | select admin_ops_threshold_set('WAVE_M',3.8) | wyĹ‚Ä…cznie administrator HHL
 payment_terms_options | GUARD | select payment_terms_options() | tylko HHL
 payment_terms_options_set | GUARD | select payment_terms_options_set('KSH',30) | Administrator HHL
 accounting_addresses_get | GUARD | select accounting_addresses_get() | tylko HHL
 accounting_addresses_set | GUARD | select accounting_addresses_set('HHL',array['a@test.pl']) | Administrator HHL
 accounting_pack_config | GUARD | select accounting_pack_config() | tylko HHL
 accounting_pack_send | GUARD | select accounting_pack_send('KSH','2026-W41') | tylko HHL
-# accounting_pack_send_set_status — tylko service_role (bez GUARD authenticated)
+# accounting_pack_send_set_status â€” tylko service_role (bez GUARD authenticated)
 factoring_offer_get | GUARD | select factoring_offer_get() | tylko HHL|SCX
 factoring_offer_set | GUARD | select factoring_offer_set(true,1,48) | Administrator HHL
-invoice_factoring_set | GUARD | select invoice_factoring_set('00000000-0000-0000-0000-000000000001',true) | przewoźnik|Brak konta
+invoice_factoring_set | GUARD | select invoice_factoring_set('00000000-0000-0000-0000-000000000001',true) | przewoĹşnik|Brak konta
 factoring_tasks | GUARD | select factoring_tasks() | tylko HHL
-factoring_mark_paid | GUARD | select factoring_mark_paid('00000000-0000-0000-0000-000000000001') | wyłącznie HHL|Brak konta
+factoring_mark_paid | GUARD | select factoring_mark_paid('00000000-0000-0000-0000-000000000001') | wyĹ‚Ä…cznie HHL|Brak konta
 margin_threshold_get | GUARD | select margin_threshold_get() | tylko HHL
 margin_threshold_set | GUARD | select margin_threshold_set(4) | Administrator HHL
 push_devices_count | GUARD | select push_devices_count() | tylko HHL
@@ -156,25 +156,25 @@ admin_broadcast_set | GUARD | select admin_broadcast_set('x', now() + interval '
 admin_broadcast_clear | GUARD | select admin_broadcast_clear() | Tylko administrator HHL
 system_broadcast_current | EMPTY | select count(*) from system_broadcast_current() | 0
 driver_phone_e164 | PURE | select driver_phone_e164('601234567','PL') | -
-load_agreed_fee_add | GUARD | select load_agreed_fee_add('$L1', 'INNE', 10, 'COST', 'test straznika oplaty') | Dopłata — tylko HHL|wyłącznie HHL|tylko HHL
+load_agreed_fee_add | GUARD | select load_agreed_fee_add('$L1', 'INNE', 10, 'COST', 'test straznika oplaty') | DopĹ‚ata â€” tylko HHL|wyĹ‚Ä…cznie HHL|tylko HHL
 fee_catalog_hints | EMPTY | select count(*) from fee_catalog_hints() | 0
-load_dwell_info | GUARD | select count(*) from load_dwell_info('$L1') | Brak aktywnego konta|Brak dostępu
-admin_impersonate_start | GUARD | select admin_impersonate_start('$KSHID') | Tylko administrator HHL|wyłącznie administrator
+load_dwell_info | GUARD | select count(*) from load_dwell_info('$L1') | Brak aktywnego konta|Brak dostÄ™pu
+admin_impersonate_start | GUARD | select admin_impersonate_start('$KSHID') | Tylko administrator HHL|wyĹ‚Ä…cznie administrator
 admin_impersonate_stop | GUARD | select admin_impersonate_stop() | Brak aktywnego konta
-real_app_user_id | EMPTY | select coalesce(real_app_user_id()::text, '∅') | ∅
-real_app_role | EMPTY | select coalesce(real_app_role()::text, '∅') | ∅
-admin_audit_history | GUARD | select count(*) from admin_audit_history(null,null,null,null,null,null,5,0) | Brak sesji|Brak dostępu
-admin_set_eta_calibration_frozen | GUARD | select admin_set_eta_calibration_frozen(true) | wyłącznie HHL_ADMIN
+real_app_user_id | EMPTY | select coalesce(real_app_user_id()::text, 'â…') | â…
+real_app_role | EMPTY | select coalesce(real_app_role()::text, 'â…') | â…
+admin_audit_history | GUARD | select count(*) from admin_audit_history(null,null,null,null,null,null,5,0) | Brak sesji|Brak dostÄ™pu
+admin_set_eta_calibration_frozen | GUARD | select admin_set_eta_calibration_frozen(true) | wyĹ‚Ä…cznie HHL_ADMIN
 apply_eta_calibration_version | GUARD | select apply_eta_calibration_version(1) | ETA_NOT_ADMIN
 eta_calibration_undo | GUARD | select eta_calibration_undo(1) | ETA_NOT_ADMIN
 eta_route_dict_upsert | GUARD | select eta_route_dict_upsert('X','Y','Z', null) | ETA_DICT_NOT_ADMIN
-email_budget_status | EMPTY | select coalesce(email_budget_status()::text, '∅') | ∅
+email_budget_status | EMPTY | select coalesce(email_budget_status()::text, 'â…') | â…
 h1_route_check_state | GUARD | select h1_route_check_state() | Brak aktywnego konta
-here_budget_view | GUARD | select here_budget_view() | wyłącznie HHL
+here_budget_view | GUARD | select here_budget_view() | wyĹ‚Ä…cznie HHL
 h3_corridor_state | GUARD | select h3_corridor_state() | Brak aktywnego konta
 h3_highlighted | GUARD | select h3_highlighted('$L1') | Brak aktywnego konta
-operator_notice_apply | GUARD | select operator_notice_apply(gen_random_uuid(), 'ODWOLANY', null, 'test') | wyłącznie administrator
-deepl_usage_view | GUARD | select deepl_usage_view() | wyłącznie HHL
+operator_notice_apply | GUARD | select operator_notice_apply(gen_random_uuid(), 'ODWOLANY', null, 'test') | wyĹ‚Ä…cznie administrator
+deepl_usage_view | GUARD | select deepl_usage_view() | wyĹ‚Ä…cznie HHL
 map_display_state | GUARD | select map_display_state() | Brak aktywnego konta
 here_tiles_report | GUARD | select here_tiles_report(1) | Brak aktywnego konta
 ferry_track_sample | GUARD | select count(*) from ferry_track_sample() | Brak aktywnego konta
@@ -186,9 +186,9 @@ viking_schedule_import_record | GUARD | select viking_schedule_import_record('x.
 ferry_sailings_map | GUARD | select count(*) from ferry_sailings_map() | Brak aktywnego konta
 wf_duplicate_check | GUARD | select wf_duplicate_check('DELAY_DETECTED', 'true'::jsonb, '[]'::jsonb, null)::text | tylko HHL_ADMIN
 workflow_rule_history | GUARD | select count(*) from workflow_rule_history(null, 5) | tylko HHL_ADMIN|HHL_OPS
-workflow_rule_write | GUARD | select workflow_rule_write(null, '$P', 'x', '', 'DELAY_DETECTED', 'true'::jsonb, '[{"type":"notify","audience":"HHL"}]'::jsonb, true, null) | Zapis reguł|42501
-workflow_rule_set_enabled | GUARD | select workflow_rule_set_enabled((select id from workflows limit 1), false, null) | Zapis reguł|42501
-workflow_rule_soft_delete | GUARD | select workflow_rule_soft_delete((select id from workflows where code is null limit 1), null) | Zapis reguł|42501
+workflow_rule_write | GUARD | select workflow_rule_write(null, '$P', 'x', '', 'DELAY_DETECTED', 'true'::jsonb, '[{"type":"notify","audience":"HHL"}]'::jsonb, true, null) | Zapis reguĹ‚|42501
+workflow_rule_set_enabled | GUARD | select workflow_rule_set_enabled((select id from workflows limit 1), false, null) | Zapis reguĹ‚|42501
+workflow_rule_soft_delete | GUARD | select workflow_rule_soft_delete((select id from workflows where code is null limit 1), null) | Zapis reguĹ‚|42501
 csp_status_view | PURE | select 1 | 1
 list_load_messages_ui | PURE | select 1 | 1
 load_agreed_fee_accept | PURE | select 1 | 1
@@ -212,9 +212,11 @@ a7_policies_list | GUARD | select a7_policies_list() | Brak aktywnego konta
 a7_apply_symbol | GUARD | select a7_apply_symbol('00000000-0000-0000-0000-000000000001') | Brak aktywnego konta
 symbol_resolve_code | PURE | select symbol_resolve_code('SG-03') | SG
 symbol_spec_of | EMPTY | select (symbol_spec_of(null) is null)::text | true
-admin_preview_start | GUARD | select admin_preview_start('KSH') | Tylko administrator HHL|wyłącznie administrator
+admin_preview_start | GUARD | select admin_preview_start('KSH') | Tylko administrator HHL|wyĹ‚Ä…cznie administrator
 admin_preview_stop | GUARD | select admin_preview_stop() | Brak aktywnego konta
 assert_not_preview | EMPTY | select assert_not_preview() |
 is_preview_read_only | EMPTY | select is_preview_read_only()::text | false
-sailing_mismatch_suggest | GUARD | select sailing_mismatch_suggest('00000000-0000-0000-0000-000000000001') | Brak aktywnego konta|wyłącznie HHL
+sailing_mismatch_suggest | GUARD | select sailing_mismatch_suggest('00000000-0000-0000-0000-000000000001') | Brak aktywnego konta|wyĹ‚Ä…cznie HHL
 sailing_mismatch_assign | GUARD | select sailing_mismatch_assign('00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000002') | Brak aktywnego konta|Administrator HHL|2FA|42501
+viking_schedule_import_assert | GUARD | select viking_schedule_import_assert() | Administrator HHL|42501
+viking_schedule_import_record | GUARD | select viking_schedule_import_record('x.html','abc',0,null,null,'{}'::jsonb) | Administrator HHL|42501

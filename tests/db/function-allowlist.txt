@@ -1,37 +1,37 @@
 
 # --- anon: API tokenu kierowcy (2.3), podtrzymanie bazy (PR1). Od 0030 (3.2d) bez pomocniczych RLS.
-# --- authenticated: RPC aplikacji (każda sprawdza rolę w środku)
-# --- authenticated: pomocnicze RLS / widoki / funkcje wywoływane przez funkcje security invoker
-# 0068: blokada wiadomości zewnętrznych przed R-2
-# ADM-10 (0117): Działaj jako
-# ANEKS 5 odp. §6.1 — jawna lista funkcji schematu public, które anon / authenticated mogą wywołać.
-# B-5: kreator reguł — ostrzeżenie o duplikacie i historia zmian (tylko HHL_ADMIN w funkcji)
-# B-MAPA: podkład i geometria trasy, próbka śladu promu dla Q-18
-# D-30 (0125): zatwierdzanie polisy — tylko HHL w ciele; testy insurance.sh
+# --- authenticated: RPC aplikacji (kaĹĽda sprawdza rolÄ™ w Ĺ›rodku)
+# --- authenticated: pomocnicze RLS / widoki / funkcje wywoĹ‚ywane przez funkcje security invoker
+# 0068: blokada wiadomoĹ›ci zewnÄ™trznych przed R-2
+# ADM-10 (0117): DziaĹ‚aj jako
+# ANEKS 5 odp. Â§6.1 â€” jawna lista funkcji schematu public, ktĂłre anon / authenticated mogÄ… wywoĹ‚aÄ‡.
+# B-5: kreator reguĹ‚ â€” ostrzeĹĽenie o duplikacie i historia zmian (tylko HHL_ADMIN w funkcji)
+# B-MAPA: podkĹ‚ad i geometria trasy, prĂłbka Ĺ›ladu promu dla Q-18
+# D-30 (0125): zatwierdzanie polisy â€” tylko HHL w ciele; testy insurance.sh
 # DEC-2 (0102): centrum decyzji
-# DEC-4 (0105): macierz powiadomień — tylko HHL_ADMIN
-# DEC-5 (0106): SMS stref — odbiorcy i wyzwalacze (tylko HHL w ciele)
+# DEC-4 (0105): macierz powiadomieĹ„ â€” tylko HHL_ADMIN
+# DEC-5 (0106): SMS stref â€” odbiorcy i wyzwalacze (tylko HHL w ciele)
 # DEC-6 (0107): progi ops_thresholds
 # DEC-6 (0110): dziennik Auth + baner
-# FERRY-STATUS: ręczny komunikat armatora
-# Format: <rola> <nazwa funkcji>  (wszystkie przeciążenia). Zmiana listy = świadoma decyzja w przeglądzie.
+# FERRY-STATUS: rÄ™czny komunikat armatora
+# Format: <rola> <nazwa funkcji>  (wszystkie przeciÄ…ĹĽenia). Zmiana listy = Ĺ›wiadoma decyzja w przeglÄ…dzie.
 # H-1: stan kontroli trasy i kafelek HERE
-# H-3: podświetlenie przeszkód korytarza
+# H-3: podĹ›wietlenie przeszkĂłd korytarza
 # HIST-11 (0118): historia zmian
-# I-12 (0064): dobór stawki z cennika (HHL)
+# I-12 (0064): dobĂłr stawki z cennika (HHL)
 # I-18 (0061): KSH potwierdza / zmienia daty planu
-# I-19 (0065): formularz cennika HHL — zapis wersji i dziennik zmian
-# I-2f (0052): formularz BAF/SEFS — tylko HHL (strażnik is_hhl() is not true), null-guard-calls GUARD
-# I-2l (0055): mediana czasu wykrycia — SECURITY INVOKER, zakres = RLS risk_signals (null-guard-calls EMPTY)
-# I-3 (0067): bramka SMS — telefon (anon, token urządzenia), HHL (urządzenia), link kierowcy SMS-em
-# I-31 (0101): SEFS hybrid_min — lookup/tydzień (tylko HHL w ciele funkcji)
-# I-5 (0057): 2FA HHL_ADMIN — stan dla UI (działa przy aal1) i przełącznik wymagania (HHL_ADMIN + aal2)
-# I-6 (0058): błędy przeglądarki — zapis przez RPC (anon: PWA kierowcy i ekran logowania; zalogowany tylko z aktywnym kontem)
+# I-19 (0065): formularz cennika HHL â€” zapis wersji i dziennik zmian
+# I-2f (0052): formularz BAF/SEFS â€” tylko HHL (straĹĽnik is_hhl() is not true), null-guard-calls GUARD
+# I-2l (0055): mediana czasu wykrycia â€” SECURITY INVOKER, zakres = RLS risk_signals (null-guard-calls EMPTY)
+# I-3 (0067): bramka SMS â€” telefon (anon, token urzÄ…dzenia), HHL (urzÄ…dzenia), link kierowcy SMS-em
+# I-31 (0101): SEFS hybrid_min â€” lookup/tydzieĹ„ (tylko HHL w ciele funkcji)
+# I-5 (0057): 2FA HHL_ADMIN â€” stan dla UI (dziaĹ‚a przy aal1) i przeĹ‚Ä…cznik wymagania (HHL_ADMIN + aal2)
+# I-6 (0058): bĹ‚Ä™dy przeglÄ…darki â€” zapis przez RPC (anon: PWA kierowcy i ekran logowania; zalogowany tylko z aktywnym kontem)
 # II-7b (0123): kalibracja ETA
 # L-13: licznik poczty w Stanie systemu
-# OPL-8 (0115): dopłaty wyłącznie ręczne
+# OPL-8 (0115): dopĹ‚aty wyĹ‚Ä…cznie rÄ™czne
 # TEL-1 (0111): E.164 tylko przy SMS
-# Test (tests/db/security.sh) porównuje ją z katalogiem: funkcja spoza listy = test czerwony.
+# Test (tests/db/security.sh) porĂłwnuje jÄ… z katalogiem: funkcja spoza listy = test czerwony.
 -- I-30 (0100): pomocnicze cennika SYMBOL
 anon driver_get_instructions
 anon driver_post_event
@@ -174,7 +174,7 @@ authenticated awiz_pilots_set
 authenticated load_escorts_set
 authenticated load_insurance_cover
 authenticated load_insurance_cover_one
-# A2 (D-0330): lista czytających — tylko widoczna wiadomość; nazwiska i e-maile dla wszystkich firm (decyzja 15.10, 03:12, zgody RODO)
+# A2 (D-0330): lista czytajÄ…cych â€” tylko widoczna wiadomoĹ›Ä‡; nazwiska i e-maile dla wszystkich firm (decyzja 15.10, 03:12, zgody RODO)
 authenticated load_message_read_list
 authenticated load_permit_link
 authenticated load_permit_save
@@ -250,3 +250,5 @@ authenticated assert_not_preview
 authenticated is_preview_read_only
 authenticated sailing_mismatch_suggest
 authenticated sailing_mismatch_assign
+authenticated viking_schedule_import_assert
+authenticated viking_schedule_import_record
