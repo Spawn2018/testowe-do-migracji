@@ -40,6 +40,11 @@ export type PoolEntry = {
   pooled: boolean;
   /** Motyw, dla którego podkład jest założony (null = brak / do przełożenia). */
   tilesTheme: ThemeName | null;
+  /**
+   * DP-76: motyw, w którym są narysowane tory promów — niezależny od podkładu (`tilesTheme` bywa null przy awarii,
+   * ponawianiu i budżecie D-78, a tory i tak muszą przejść na nowy motyw).
+   */
+  lanesTheme: ThemeName;
   tilesLoaded: boolean;
   basemapSeq: number;
   views: Map<MapSlot, { center: L.LatLng; zoom: number; w: number; h: number }>;
@@ -169,6 +174,8 @@ function build(pooled: boolean, root: HTMLElement): PoolEntry {
     ).catch(() => undefined);
   }
   const ferryLeg = L.layerGroup().addTo(map);
+  /* DP-76: tory w bieżącym motywie (domyślny motyw `drawFerryLanes`) — zapamiętany w `lanesTheme` */
+  const lanesTheme = useTowerStore.getState().theme;
   drawFerryLanes(ferryLeg);
   const detour = L.layerGroup().addTo(map);
   const geofences = L.layerGroup().addTo(map);
@@ -184,7 +191,7 @@ function build(pooled: boolean, root: HTMLElement): PoolEntry {
   if (pooled) poolStats.created += 1;
   else poolStats.oneOff += 1;
   return {
-    map, el, pooled, tilesTheme: null, tilesLoaded: false, basemapSeq: 0, views: new Map(),
+    map, el, pooled, tilesTheme: null, lanesTheme, tilesLoaded: false, basemapSeq: 0, views: new Map(),
     layers: { tiles, route, ferryLeg, detour, geofences, poi, fleet, situations, ais },
     health: { state: 'loading', tries: 0, via: 'fallback', reported: false, cause: 'tiles' },
     healthSubs: new Set(), unwatch: null, chunkFails: 0, slot: 'map',
@@ -310,10 +317,13 @@ export function releaseMap(e: PoolEntry, slot: MapSlot): void {
  * nowy podkład niezależnie od widoku, który go zamówił (widok mógł się już zamknąć).
  */
 export function ensureBasemap(e: PoolEntry, theme: ThemeName): Promise<L.Layer> {
+  /* DP-76: zmiana motywu na żywo — tory promów (stałe i z HERE) w stylu nowego motywu, także gdy podkład jest
+     w awarii / ponawianiu (`tilesTheme` = null); własny znacznik `lanesTheme`, bez przerysowania w tym samym motywie */
+  if (e.lanesTheme !== theme) {
+    restyleFerryLanes(e.layers.ferryLeg, theme);
+    e.lanesTheme = theme;
+  }
   if (e.tilesTheme === theme) return Promise.resolve(e.layers.tiles);
-  /* DP-76: zmiana motywu na żywo — tory promów (stałe i z HERE) w stylu nowego motywu, jak podkład
-     (pierwszy podkład: tory już narysowane w bieżącym motywie) */
-  if (e.tilesTheme !== null) restyleFerryLanes(e.layers.ferryLeg, theme);
   e.tilesTheme = theme;
   e.tilesLoaded = false;
   const seq = ++e.basemapSeq;

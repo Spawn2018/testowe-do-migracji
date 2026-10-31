@@ -47,7 +47,7 @@ const { default: L } = await import('leaflet');
 const { useTowerStore } = await import('../src/store/useTowerStore');
 const { default: ZonesMap } = await import('../src/components/zones/ZonesMap');
 const { CorridorMap } = await import('../src/components/map/CorridorMap');
-const { __resetMapPool } = await import('../src/components/map/mapPool');
+const { __resetMapPool, acquireMap, ensureBasemap } = await import('../src/components/map/mapPool');
 const { __resetRoadLinesCacheForTests } = await import('../src/components/map/applyBasemap');
 const { FERRY_LANE_STYLES, ferryLaneStyle, ferryLaneLines, HERE_FERRY_LEGS } = await import('../src/lib/map/ferryLanes');
 
@@ -108,6 +108,45 @@ function expectLanes(lanes: Polyline[], theme: Theme) {
     expect(path?.getAttribute('stroke-opacity')).toBe(String(EXPECTED[theme].opacity));
     expect(path?.getAttribute('stroke-dasharray')).toBe(EXPECTED[theme].dashArray);
   }
+}
+
+/** Mapa z puli (demo, bez HERE): wszystkie polilinie warstwy promu. */
+function poolLanes(e: ReturnType<typeof acquireMap>): Polyline[] {
+  return e.layers.ferryLeg.getLayers().filter((l): l is Polyline => l instanceof L.Polyline);
+}
+
+for (const theme of ['light', 'dark'] as const) {
+  describe(`DP-76 · mapa z puli (demo, bez HERE), motyw ${theme}`, () => {
+    const newPoolMap = () => {
+      useTowerStore.setState({ theme });
+      const el = document.createElement('div');
+      el.style.cssText = 'width:1200px;height:800px;position:relative';
+      document.body.appendChild(el);
+      return acquireMap(el, 'mapa');
+    };
+
+    it('T1: warstwa promu ma dokładnie tyle torów, ile `ferryLaneLines()` — także po zmianie motywu', async () => {
+      const e = newPoolMap();
+      expect(e.layers.ferryLeg.getLayers()).toHaveLength(ferryLaneLines().length);
+      expectLanes(poolLanes(e), theme);
+      await ensureBasemap(e, theme);
+      useTowerStore.setState({ theme: other(theme) });
+      await ensureBasemap(e, other(theme));
+      expect(e.layers.ferryLeg.getLayers()).toHaveLength(ferryLaneLines().length);
+      expectLanes(poolLanes(e), other(theme));
+    });
+
+    it('B2: podkład w awarii / ponawianiu (tilesTheme = null) — zmiana motywu i tak przerysowuje wszystkie tory', async () => {
+      const e = newPoolMap();
+      await ensureBasemap(e, theme);
+      /* jak `retryBasemap`, `onChunkFail` i zamknięty budżet D-78: podkład do przełożenia */
+      e.tilesTheme = null;
+      useTowerStore.setState({ theme: other(theme) });
+      await ensureBasemap(e, other(theme));
+      expect(e.layers.ferryLeg.getLayers()).toHaveLength(ferryLaneLines().length);
+      expectLanes(poolLanes(e), other(theme));
+    });
+  });
 }
 
 describe('DP-76 · styl torów promów zależny od motywu (wspólna funkcja)', () => {
