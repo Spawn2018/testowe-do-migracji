@@ -1,6 +1,6 @@
 /**
  * BN3 — Tallink Alert + Lisainfo ts.ee (decyzje 57, 59, 68, 69, 71, 72 + 72a/b/c).
- * F7 #683 B1–B5 + R2–R12: allowlista zdań (68) + HTML (71) + najnowszy Alert globalnie (72).
+ * F7 #683 B1–B5 + R2–R13: allowlista zdań (68) + HTML (71) + najnowszy Alert globalnie (72).
  *
  * Fixture `tallink-alert-cancel-mystar.html` — forma jak prawdziwy Alert
  * („due to a technical fault”; CwsSpan / hideSpacing / timeStart); treść pod test.
@@ -1093,12 +1093,12 @@ describe('BN3 Tallink Alert — runFerryStatus (F7 B5)', () => {
       expect(alerts.every((a) => a.autoCancelOk === false), `case ${i}`).toBe(true);
     }
 
-    // Nowsze sprostowanie ze złą datą nie może wygrać — oba bez auto.
+    // R13-B4: daty ≤ 31.10 (NOW), żeby oba bloki w puli published — gałąź invalid_date (:764).
     const badCorr =
-      `<Scheduler dateStart="2026-11-2" timeStart="18:00" dateEnd="2026-11-02">` +
+      `<Scheduler dateStart="2026-10-3" timeStart="11:00" dateEnd="2026-10-31">` +
       `<CwsSection data-analytics-group="Alert"><CwsP>Correction: operates as planned.</CwsP></CwsSection></Scheduler>`;
     const goodC =
-      `<Scheduler dateStart="2026-11-02" timeStart="10:00" dateEnd="2026-11-02">` +
+      `<Scheduler dateStart="2026-10-31" timeStart="10:00" dateEnd="2026-10-31">` +
       `<CwsSection data-analytics-group="Alert"><CwsP>${C}</CwsP></CwsSection></Scheduler>`;
     const mixed = finalizeTallinkAlertsForStatus(
       parseTallinkAlerts(wrapRendered(goodC + badCorr), TALLINK_HOME(), NOW).alerts,
@@ -1183,11 +1183,10 @@ describe('BN3 Tallink Alert — runFerryStatus (F7 B5)', () => {
       parseTallinkAlerts(wrapRendered(quoted), TALLINK_HOME(), NOW).alerts, NOW,
     )[0]!.autoCancelOk).toBe(true);
 
-    // data-type="campaign" nie jest kampanią strukturalną — treść serwisowa w „fałszywej” kampanii.
+    // data-type="campaign" nie jest kampanią strukturalną (R13-B2); allowlista HTML → brak auto.
     const fakeCamp =
       `<Scheduler dateStart="2026-11-02" dateEnd="2026-11-02">` +
       `<CwsSection data-analytics-group="Alert"><CwsAlert data-type="campaign"><CwsP>${C}</CwsP></CwsAlert></CwsSection></Scheduler>`;
-    // allowlista HTML: data-type niedozwolony → brak auto z HTML; finalize bez trucizny kampanii.
     expect(finalizeTallinkAlertsForStatus(
       parseTallinkAlerts(wrapRendered(fakeCamp), TALLINK_HOME(), NOW).alerts, NOW,
     )[0]!.autoCancelOk).toBe(false);
@@ -1316,6 +1315,115 @@ describe('BN3 Tallink Alert — runFerryStatus (F7 B5)', () => {
     }, NOW));
     expect(st4.sailings[0]!.status).toBe('ZAPLANOWANY');
     expect(st4.risks.some((r) => String(r.titleKey).startsWith('rk_tallink_alert_'))).toBe(true);
+  });
+
+  it('F7 R13-B1: luźny Alert obok Schedulera → brak ODWOLANY (runFerryStatus)', async () => {
+    const C =
+      'The MyStar 16:30 departure from Tallinn to Helsinki on 2 November is cancelled.';
+    const corr = 'Correction: the MyStar 16:30 departure will operate as planned.';
+    const variants = [
+      `<Scheduler dateStart="2026-10-31" timeStart="10:00">` +
+      `<CwsSection data-analytics-group="Alert"><CwsP>${C}</CwsP></CwsSection></Scheduler>` +
+      `<CwsSection data-analytics-group="Alert"><CwsP>${corr}</CwsP></CwsSection>`,
+      `<Scheduler dateStart="2026-10-31" timeStart="10:00">` +
+      `<CwsSection data-analytics-group="Alert"><CwsP>${C}</CwsP></CwsSection></Scheduler>` +
+      `<CwsAlert data-analytics-group='Alert'><CwsP>${corr}</CwsP></CwsAlert>`,
+      `<Scheduler dateStart="2026-10-31" timeStart="10:00">` +
+      `<CwsSection data-analytics-group="Alert"><CwsP>${C}</CwsP></CwsSection></Scheduler>` +
+      `<div data-analytics-group=Alert><CwsP>${corr}</CwsP></div>`,
+    ];
+    for (const [i, inner] of variants.entries()) {
+      const st = new MemStore();
+      st.sailings.push({
+        id: 's-1630', vessel_id: MYST, route: 'TLL-HEL',
+        departure_at: '2026-11-02T14:30:00.000Z', arrival_at: '2026-11-02T16:30:00.000Z',
+        delayed_departure_at: null, delayed_arrival_at: null,
+        status: 'ZAPLANOWANY', source: 'TALLINK',
+      });
+      await runFerryStatus(deps(st, {
+        'tallink.com': wrapRendered(inner), 'ts.ee': 503, portsofstockholm: 503,
+      }, NOW));
+      expect(st.sailings[0]!.status, `variant ${i}`).toBe('ZAPLANOWANY');
+    }
+  });
+
+  it('F7 R13-B2: data-type="campaign" + sprostowanie bez cancel → brak ODWOLANY', () => {
+    const C =
+      'The MyStar 16:30 departure from Tallinn to Helsinki on 2 November is cancelled.';
+    const corr = 'Correction: the departure will operate as planned.';
+    // timeStart ≤ teraz (NOW 12:00Z ≈ 14:00 Tallinn) — oba w puli published.
+    const html =
+      `<Scheduler dateStart="2026-10-31" timeStart="10:00" dateEnd="2026-11-02">` +
+      `<CwsSection data-analytics-group="Alert"><CwsP>${C}</CwsP></CwsSection></Scheduler>` +
+      `<Scheduler dateStart="2026-10-31" timeStart="12:00" dateEnd="2026-11-02">` +
+      `<CwsSection data-analytics-group="Alert"><CwsAlert data-type="campaign"><CwsP>${corr}</CwsP></CwsAlert></CwsSection></Scheduler>`;
+    const alerts = finalizeTallinkAlertsForStatus(
+      parseTallinkAlerts(wrapRendered(html), TALLINK_HOME(), NOW).alerts, NOW,
+    );
+    // data-type ≠ kampania → nowsze sprostowanie wygrywa (brak auto); bez trucizny kampanii.
+    expect(alerts.every((a) => !a.autoCancelOk)).toBe(true);
+    expect(alerts.every((a) => !a.isCampaign)).toBe(true);
+  });
+
+  it('F7 R13-B3: kampania z correction/statek zatruwa; Book now bez wpływu', () => {
+    const C =
+      'The MyStar 16:30 departure from Tallinn to Helsinki on 2 November is cancelled.';
+    const poisonCamp =
+      `<Scheduler dateStart="2026-10-31" timeStart="18:00" dateEnd="2026-11-02">` +
+      `<CwsSection data-analytics-group="Alert"><CwsAlert type="campaign">` +
+      `<CwsP>Correction: the MyStar departure will operate as planned.</CwsP>` +
+      `</CwsAlert></CwsSection></Scheduler>` +
+      `<Scheduler dateStart="2026-10-31" timeStart="10:00" dateEnd="2026-11-02">` +
+      `<CwsSection data-analytics-group="Alert"><CwsP>${C}</CwsP></CwsSection></Scheduler>`;
+    expect(finalizeTallinkAlertsForStatus(
+      parseTallinkAlerts(wrapRendered(poisonCamp), TALLINK_HOME(), NOW).alerts, NOW,
+    ).every((a) => !a.autoCancelOk)).toBe(true);
+
+    const bookNow =
+      `<Scheduler dateStart="2026-11-02" timeStart="18:00" dateEnd="2026-11-02">` +
+      `<CwsSection data-analytics-group="Alert"><CwsAlert type="campaign">` +
+      `<CwsP>Last chance — Book now</CwsP></CwsAlert></CwsSection></Scheduler>` +
+      `<Scheduler dateStart="2026-11-02" timeStart="10:00" dateEnd="2026-11-02">` +
+      `<CwsSection data-analytics-group="Alert"><CwsP>${C}</CwsP></CwsSection></Scheduler>`;
+    const ok = finalizeTallinkAlertsForStatus(
+      parseTallinkAlerts(wrapRendered(bookNow), TALLINK_HOME(), NOW).alerts, NOW,
+    );
+    expect(ok.find((a) => /cancelled/i.test(a.text))!.autoCancelOk).toBe(true);
+  });
+
+  it('F7 R13-B4: nowsze sprostowanie ze złą datą (≤ dziś) przez runFerryStatus', async () => {
+    const C =
+      'The MyStar 16:30 departure from Tallinn to Helsinki on 2 November is cancelled.';
+    const html =
+      `<Scheduler dateStart="2026-10-31" timeStart="10:00" dateEnd="2026-10-31">` +
+      `<CwsSection data-analytics-group="Alert"><CwsP>${C}</CwsP></CwsSection></Scheduler>` +
+      `<Scheduler dateStart="2026-10-3" timeStart="11:00" dateEnd="2026-10-31">` +
+      `<CwsSection data-analytics-group="Alert"><CwsP>Correction: operates as planned.</CwsP></CwsSection></Scheduler>`;
+    const st = new MemStore();
+    st.sailings.push({
+      id: 's-1630', vessel_id: MYST, route: 'TLL-HEL',
+      departure_at: '2026-11-02T14:30:00.000Z', arrival_at: '2026-11-02T16:30:00.000Z',
+      delayed_departure_at: null, delayed_arrival_at: null,
+      status: 'ZAPLANOWANY', source: 'TALLINK',
+    });
+    await runFerryStatus(deps(st, {
+      'tallink.com': wrapRendered(html), 'ts.ee': 503, portsofstockholm: 503,
+    }, NOW));
+    expect(st.sailings[0]!.status).toBe('ZAPLANOWANY');
+    expect(st.risks.some((r) => String(r.titleKey).startsWith('rk_tallink_alert_'))).toBe(true);
+  });
+
+  it('F7 R13-B5: dateStart 2026-11-31 → brak auto', () => {
+    const C =
+      'The MyStar 16:30 departure from Tallinn to Helsinki on 2 November is cancelled.';
+    const inner =
+      `<Scheduler dateStart="2026-11-31" dateEnd="2026-11-31" timeStart="10:00">` +
+      `<CwsSection data-analytics-group="Alert"><CwsP>${C}</CwsP></CwsSection></Scheduler>`;
+    const alerts = finalizeTallinkAlertsForStatus(
+      parseTallinkAlerts(wrapRendered(inner), TALLINK_HOME(), NOW).alerts, NOW,
+    );
+    expect(alerts[0]!.filterReject).toBe('invalid_date');
+    expect(alerts[0]!.autoCancelOk).toBe(false);
   });
 });
 

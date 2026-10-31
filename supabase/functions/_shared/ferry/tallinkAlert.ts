@@ -22,12 +22,15 @@
  * Decyzja 72 (właściciel 31.10 14:58): spośród **wszystkich** niekampanijnych Alertów (po złączeniu
  *   stron) obowiązuje **najnowszy** (`dateStart`+`timeStart`, brak `timeStart`=00:00); bez grupowania
  *   po dniach okna (R12-B2). Starsze bez auto; remis / zła data / brak `dateStart` → ryzyko bez auto.
- *   72a: blok z datą+godziną późniejszą niż teraz nie bierze udziału w wyborze.
- *   72b: `data-analytics-group` w dowolnym cudzysłowie; kampania tylko `type="campaign"`; luźny Alert
- *   poza Schedulerem → brak auto dla wszystkich.
+ *   72a (łagodna): przyszły klucz poza wyborem tylko gdy jest już opublikowany Alert; gdy wszystkie
+ *   bloki przyszłe — ranking wśród nich (wczesne ogłoszenie). Potem #686 cofnie status przy sprostowaniu.
+ *   72b: `data-analytics-group` w cudzysłowie lub bez; kampania tylko `(?<![\w-])type=campaign` (nie data-type);
+ *   luźny Alert (także obok Schedulera) / kampania z treścią serwisową → brak auto dla wszystkich.
  *   72c: zdegradowany Alert zawsze podnosi ryzyko (nawet gdy inny wygrał auto).
  * F7 R12: atrybuty luźno (`["']…\1`); invalid_date przy złym formacie / braku dateStart / dateEnd<dateStart /
  *   zdublowanym atrybucie; dedupe po surowym `full` (R12-B3).
+ * F7 R13: luźny Alert obok Schedulera zatruwa; `(?<![\w-])type`; kampania-serwisowa (CANCEL/RESUME/statek/
+ *   sailing/correction…); invalid_date testy ≤ dziś + kalendarz 11-31.
  * Decyzja 69: wpis AUTO w operator_notices tylko przy ODWOLANY; przy ryzyku historią jest samo ryzyko.
  * Kampanie pomijane. User-Agent uczciwy; bez obchodzenia.
  */
@@ -63,10 +66,14 @@ const CANCEL_RE = /\b(cancel(?:led|ed)?|call(?:ed)?\s+off|will\s+not\s+(?:sail|o
 const SUSPEND_SAILING_RE = /\bsuspended\b/i;
 const SAILING_CTX_RE = /\b(sailing|departure|departing|voyage|vessel|route|ferry|shuttle)\b/i;
 const RESUME_RE = /\b(?:is\s+not\s+cancel|not\s+cancelled|not\s+canceled|resum(?:e|es|ed|ing)|returns?\s+to|back\s+in\s+service|operates\s+as\s+planned)\b/i;
-/** F7 #683 R12 / 72b: kampania tylko jawne `\btype=` na CwsAlert/Scheduler (nie data-type). */
-const CAMPAIGN_TYPE_RE = /\btype\s*=\s*(["'])campaign\1/i;
-const ALERT_GROUP_RE = /data-analytics-group\s*=\s*(["'])Alert\1/i;
+/** F7 #683 R13-B2 / 72b: kampania tylko `type=`, nie `data-type` (`\b` łapie po `-`). */
+const CAMPAIGN_TYPE_RE = /(?<![\w-])type\s*=\s*(["'])campaign\1/i;
+/** F7 #683 R13-B1: cudzysłów `"`/`'` albo bez cudzysłowu. */
+const ALERT_GROUP_RE = /data-analytics-group\s*=\s*(?:(["'])Alert\1|Alert\b)/i;
 const SHIP_NAME_ALT = String.raw`MyStar|Megastar|Victoria\s+I|Baltic\s*Queen|Silja\s*Europa`;
+const SHIP_NAME_RE = new RegExp(`\\b(?:${SHIP_NAME_ALT})\\b`, 'i');
+/** F7 #683 R13-B3: kampania z treścią serwisową zatruwa całą pulę. */
+const CAMPAIGN_SERVICE_RE = /\b(correction|update|operate|reinstat)/i;
 const PORT_NAME_ALT = String.raw`Tallinn|Helsinki|Stockholm`;
 const DATE_CAPTURE = String.raw`(\d{1,2})\s+(${MONTH_NAMES})(?:\s+(\d{4}))?`;
 /** F7 #683 R6 / decyzja 68: jedyny dozwolony sufiks przed kropką (prawdziwy Alert 28.10). */
@@ -303,10 +310,23 @@ export function isValidYmd(s: string | null | undefined): boolean {
 }
 
 function isStructuralCampaign(body: string, attrs: string): boolean {
-  // 72b: tylko jawne `\btype=`, nie `data-type`.
+  // R13-B2 / 72b: `(?<![\w-])type=`, nie `data-type`.
   return CAMPAIGN_TYPE_RE.test(attrs)
-    || /<CwsAlert\b[^>]*\btype\s*=\s*(["'])campaign\1/i.test(body)
-    || /<Scheduler\b[^>]*\btype\s*=\s*(["'])campaign\1/i.test(body);
+    || /<CwsAlert\b[^>]*(?<![\w-])type\s*=\s*(["'])campaign\1/i.test(body)
+    || /<Scheduler\b[^>]*(?<![\w-])type\s*=\s*(["'])campaign\1/i.test(body);
+}
+
+function countAlertGroupAttrs(html: string): number {
+  const re = /data-analytics-group\s*=\s*(?:(["'])Alert\1|Alert\b)/gi;
+  return [...html.matchAll(re)].length;
+}
+
+function campaignHasServiceText(text: string): boolean {
+  return CANCEL_RE.test(text)
+    || RESUME_RE.test(text)
+    || SHIP_NAME_RE.test(text)
+    || SAILING_CTX_RE.test(text)
+    || CAMPAIGN_SERVICE_RE.test(text);
 }
 
 /** Luźny odczyt atrybutu w cudzysłowach `"`/`'`; wykrywa duplikaty (R12-B1). */
@@ -670,13 +690,19 @@ export function parseTallinkAlerts(
     const text = stripTags(decodeAllowedEntities(body)).trim();
     pushAlert(text, body, attrs, full, allowAuto, false);
   }
+  const totalAlertGroups = countAlertGroupAttrs(decoded);
   if (schedulerAlertBlocks === 0) {
-    const loose = [...decoded.matchAll(/data-analytics-group\s*=\s*(["'])Alert\1[\s\S]{0,2500}/gi)];
+    const loose = [...decoded.matchAll(
+      /data-analytics-group\s*=\s*(?:(["'])Alert\1|Alert\b)[\s\S]{0,2500}/gi,
+    )];
     for (const m of loose) {
       const chunk = m[0]!;
       const text = stripTags(chunk).trim();
       pushAlert(text, chunk, '', chunk, false, true);
     }
+  } else if (totalAlertGroups > schedulerAlertBlocks) {
+    // R13-B1: luźny Alert obok Schedulera na tej samej stronie → trucizna całej puli.
+    pushAlert('', '', '', 'fromLoose', false, true);
   }
 
   // Wybór najnowszego po złączeniu stron — finalizeTallinkAlertsForStatus w jobs.ts.
@@ -733,9 +759,9 @@ function demoteAlert(a: TallinkAlert): void {
  * null klucz / remis / przyszły (72a) / trucizna luźna/kampania-serwisowa (72b) → bez auto.
  */
 export function applyNewestAlertWins(alerts: TallinkAlert[], now: Date = new Date()): void {
-  // 72b: luźny Alert albo kampania z treścią serwisową → brak auto dla wszystkich.
+  // 72b / R13-B3: luźny Alert albo kampania z treścią serwisową → brak auto dla wszystkich.
   const poison = alerts.some((a) => a.fromLoose)
-    || alerts.some((a) => a.isCampaign && CANCEL_RE.test(a.text));
+    || alerts.some((a) => a.isCampaign && campaignHasServiceText(a.text));
   if (poison) {
     for (const a of alerts) demoteAlert(a);
     return;
