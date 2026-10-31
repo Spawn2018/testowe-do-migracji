@@ -5,7 +5,7 @@
  * Zapas: PDF sezonowy ze strony (link „Download seasonal schedule”), potem HTML
  * tabeli tygodniowej / stary PDF sidugraafik. User-Agent uczciwy.
  */
-import { localToUtc, type FerryRoute } from './polferries.ts';
+import { localToUtc, type FerryRoute, type FerryStatus } from './polferries.ts';
 import {
   dateRangeFromYmd, parseDaySpec, parseLocalTime, stripTags, weekdayInTz, ymdInTz,
 } from './weeklySchedule.ts';
@@ -39,11 +39,88 @@ export interface DfdsSailing {
   vessel: string;
   departureUtc: string;
   arrivalUtc: string;
+  /** BN3: z remark / status API (tylko ferry-status; rozkład bez statusu). */
+  status?: FerryStatus;
+  expectedDepartureUtc?: string;
+  expectedArrivalUtc?: string;
+  rawStatus?: string;
+  rawRemark?: string;
 }
 
 export interface DfdsParseResult {
   sailings: DfdsSailing[];
   warnings: string[];
+}
+
+/** Próg opóźnienia z danych portowych (decyzja 58) — kopia w app_parameters. */
+export const FERRY_PORT_DELAY_MIN_DEFAULT = 15;
+
+/**
+ * BN3: „New ETD is at 28/10 01:00am …” → UTC w strefie odjazdu trasy.
+ * Rok z planowego odejścia (korekta ±1 przy przełomie roku).
+ */
+export function parseDfdsRemarkEtd(
+  remark: string,
+  scheduledDepartureUtc: string,
+  route: FerryRoute,
+): string | null {
+  const m = remark.match(/New ETD is at\s+(\d{1,2})\/(\d{1,2})\s+(\d{1,2}):(\d{2})\s*(am|pm)/i);
+  if (!m) return null;
+  const day = Number(m[1]);
+  const month = Number(m[2]);
+  let hour = Number(m[3]);
+  const minute = Number(m[4]);
+  const ap = (m[5] ?? '').toLowerCase();
+  if (ap === 'pm' && hour < 12) hour += 12;
+  if (ap === 'am' && hour === 12) hour = 0;
+  const tz = route === 'PLD-KPS' ? 'Europe/Tallinn' : 'Europe/Stockholm';
+  const schedMs = Date.parse(scheduledDepartureUtc);
+  if (!Number.isFinite(schedMs)) return null;
+  const sched = new Date(schedMs);
+  let year = sched.getUTCFullYear();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const tryY = (y: number) => localToUtc(`${y}-${pad(month)}-${pad(day)}`, `${pad(hour)}:${pad(minute)}`, 0, tz);
+  let utc = tryY(year);
+  const delta = Date.parse(utc) - schedMs;
+  if (delta < -150 * 864e5) utc = tryY(year + 1);
+  else if (delta > 150 * 864e5) utc = tryY(year - 1);
+  return utc;
+}
+
+/** BN3: status/remark z wiersza Dynamic → FerryStatus (odwołanie niepotwierdzone → NIEZNANY). */
+export function dfdsApiStatusFields(
+  row: { status?: unknown; remark?: unknown; actualDeparture?: unknown; scheduledDeparture?: unknown },
+  route: FerryRoute,
+  departureUtc: string,
+  arrivalUtc: string,
+): Pick<DfdsSailing, 'status' | 'expectedDepartureUtc' | 'expectedArrivalUtc' | 'rawStatus' | 'rawRemark'> {
+  const rawStatus = row.status == null ? '' : String(row.status).trim();
+  const rawRemark = row.remark == null ? '' : String(row.remark).trim();
+  const out: Pick<DfdsSailing, 'status' | 'expectedDepartureUtc' | 'expectedArrivalUtc' | 'rawStatus' | 'rawRemark'> = {
+    rawStatus: rawStatus || undefined,
+    rawRemark: rawRemark || undefined,
+  };
+  if (/cancel|odwo|cancell?ed/i.test(`${rawStatus} ${rawRemark}`)) {
+    // Spec: wartość status dla odwołania niepotwierdzona → NIEZNANY (np. „may be cancelled”).
+    const sureStatus = /^(CANCELLED|CANCELED|CANCEL)$/i.test(rawStatus);
+    const sureRemark = /\bcancell?ed\b/i.test(rawRemark) && !/\bmay\b/i.test(rawRemark);
+    out.status = sureStatus || sureRemark ? 'ODWOLANY' : 'NIEZNANY';
+    return out;
+  }
+  const etd = rawRemark ? parseDfdsRemarkEtd(rawRemark, departureUtc, route) : null;
+  if (etd && Date.parse(etd) - Date.parse(departureUtc) >= FERRY_PORT_DELAY_MIN_DEFAULT * 60_000) {
+    out.status = 'OPOZNIONY';
+    out.expectedDepartureUtc = etd;
+    out.expectedArrivalUtc = arrivalUtc;
+    return out;
+  }
+  const actualDep = isoToUtc(String(row.actualDeparture ?? ''));
+  if (actualDep && Date.parse(actualDep) - Date.parse(departureUtc) >= FERRY_PORT_DELAY_MIN_DEFAULT * 60_000) {
+    out.status = 'OPOZNIONY';
+    out.expectedDepartureUtc = actualDep;
+    out.expectedArrivalUtc = arrivalUtc;
+  }
+  return out;
 }
 
 export type DfdsRawSail = {
@@ -193,7 +270,8 @@ export function parseDfdsTimetableApi(raw: unknown): DfdsParseResult {
       warnings.push(`DFDS Dynamic ${route}: nieczytelne godziny.`);
       continue;
     }
-    sailings.push({ route, vessel, departureUtc, arrivalUtc });
+    const statusFields = dfdsApiStatusFields(row, route, departureUtc, arrivalUtc);
+    sailings.push({ route, vessel, departureUtc, arrivalUtc, ...statusFields });
   }
   if (sailings.length === 0 && warnings.length === 0) {
     warnings.push('DFDS Dynamic: brak rejsów w odczycie.');

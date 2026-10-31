@@ -86,8 +86,8 @@ vik=$(asuser "$HHL" "select operator_notice_apply('$SID4','ODWOLANY',null,'BN3 V
 vikop=$(sys "select operator||'/'||status from sailings s join operator_notices n on n.sailing_id=s.id where s.id='$SID4' order by n.created_at desc limit 1")
 if [ "$vikop" = "VIKING/ODWOLANY" ]; then ok=$((ok+1)); echo "  OK    BN3 TLLA-HEL z Vikingiem → operator=VIKING"; else fail=$((fail+1)); echo "  FAIL  BN3 Viking TLLA ($vikop) rpc:$vik"; fi
 
-# Zły p_operator (DFDS na GDN-NYN) → 22023.
-# SID już ODWOLANY — używamy SID3 po resecie statusu albo nowego wywołania na SID2 z DFDS.
+# Zły p_operator (DFDS na GDY-KAA / Stena) → 22023. DP-88: nie GDN-NYN.
+# SID już ODWOLANY — używamy SID2 (Stena) z DFDS.
 bad=$(asuser "$HHL" "select operator_notice_apply('$SID2','OPOZNIONY', now() + interval '6 days 2 hours','zly', 'DFDS')")
 if echo "$bad" | grep -qiE 'Armator nie obsługuje|22023'; then ok=$((ok+1)); echo "  OK    zły p_operator → odmowa"; else fail=$((fail+1)); echo "  FAIL  zły p_operator ($bad)"; fi
 

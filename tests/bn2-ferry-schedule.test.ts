@@ -13,8 +13,8 @@ import {
 } from '../src/lib/ferry/vikingline';
 import { parseEckeroSchedule, parseEckeroTimetableHtml } from '../src/lib/ferry/eckero';
 import {
-  extractDfdsSeasonalPdfUrl, filterDfdsFallbackToFailedWeeks, mergeDfdsMissingDays, mergeDfdsSailings,
-  parseDfdsSchedule, parseDfdsTimetableApi, parseDfdsWeeklyHtml,
+  dfdsApiStatusFields, extractDfdsSeasonalPdfUrl, filterDfdsFallbackToFailedWeeks, mergeDfdsMissingDays,
+  mergeDfdsSailings, parseDfdsRemarkEtd, parseDfdsSchedule, parseDfdsTimetableApi, parseDfdsWeeklyHtml,
 } from '../src/lib/ferry/dfds';
 import { parseSeasonRanges, ymdInRanges } from '../supabase/functions/_shared/ferry/weeklySchedule';
 import { parsePortTallinnHtml, portTallinnToSailings } from '../src/lib/ferry/portTallinn';
@@ -535,6 +535,45 @@ describe('BN2 Viking / Eckerö / DFDS HTML tygodniowy → 14 dni', () => {
     expect(bad.warnings.join(' ')).toMatch(/tablicy|Dynamic/);
     const html = `Download seasonal schedule <a href="https://assets.ctfassets.net/z860498abl84/Gy4OYoQ6LuDjJU4BuGKun/f8fe25019414d460662df90e830c3ba6/Schedule_Paldiski_-_Kapellskär.pdf">PDF</a>`;
     expect(extractDfdsSeasonalPdfUrl(html)).toMatch(/Schedule_Paldiski/);
+  });
+
+  it('BN3: DFDS remark „New ETD…” → OPOZNIONY (≥15 min); odwołanie niepewne → NIEZNANY', () => {
+    const sched = '2026-10-27T21:59:00.000Z'; // 23:59 EET
+    const etd = parseDfdsRemarkEtd(
+      'New ETD is at 28/10 01:00am due to the weather condition',
+      sched,
+      'PLD-KPS',
+    );
+    expect(etd).toBe('2026-10-27T23:00:00.000Z'); // 01:00 EET
+    const late = dfdsApiStatusFields(
+      { remark: 'New ETD is at 28/10 01:00am due to the weather condition', status: 'TALLIED' },
+      'PLD-KPS',
+      sched,
+      '2026-10-28T07:30:00.000Z',
+    );
+    expect(late).toMatchObject({
+      status: 'OPOZNIONY',
+      expectedDepartureUtc: '2026-10-27T23:00:00.000Z',
+    });
+    const pld = parseDfdsTimetableApi(DFDS_API.pld_kps_week44);
+    const fromRemark = pld.sailings.filter((s) => s.rawRemark?.includes('New ETD') && s.status === 'OPOZNIONY');
+    expect(fromRemark.length).toBeGreaterThanOrEqual(2);
+    expect(fromRemark.map((s) => s.expectedDepartureUtc).filter(Boolean).length).toBe(fromRemark.length);
+    // Spec: niepewne odwołanie (słowo „odwo…”, bez CANCELLED) → NIEZNANY.
+    const cancelUnsure = dfdsApiStatusFields(
+      { status: 'UNKNOWN', remark: 'odwolanie niepotwierdzone' },
+      'PLD-KPS',
+      sched,
+      '2026-10-28T07:30:00.000Z',
+    );
+    expect(cancelUnsure.status).toBe('NIEZNANY');
+    const cancelSure = dfdsApiStatusFields(
+      { status: 'CANCELLED', remark: null },
+      'PLD-KPS',
+      sched,
+      '2026-10-28T07:30:00.000Z',
+    );
+    expect(cancelSure.status).toBe('ODWOLANY');
   });
 
   it('F7 #661: rozwinięcie tygodnia przez DST (marzec / październik Tallinn)', () => {

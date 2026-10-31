@@ -344,6 +344,40 @@ describe('F7 #660 ferry-portnet', () => {
     });
   });
 
+  it('BN3 decyzja 58: ATA − arrival ≥ 15 min → delayed_arrival_at; RECZNIE bez delayed', async () => {
+    // Fixture Megastar ATA 16:30Z — plan 16:00 → +30 min ≥ 15.
+    const late = new MemStore();
+    late.sailings.push({
+      id: 'late-arr', vessel_id: MEGA, route: 'TLL-HEL',
+      departure_at: '2026-10-29T14:00:00.000Z', arrival_at: '2026-10-29T16:00:00.000Z',
+      delayed_departure_at: null, delayed_arrival_at: null,
+      actual_departure_at: '2026-10-29T14:05:00.000Z', actual_arrival_at: null,
+      status: 'W_REJSIE', source: 'TALLINK',
+    });
+    const r1 = await runFerryPortnet(deps(late, { 'port-calls': PORTNET }, new Date('2026-10-29T20:00:00Z')));
+    expect(r1.ok).toBe(true);
+    expect(late.sailings.find((s) => s.id === 'late-arr')).toMatchObject({
+      status: 'DOPLYNAL',
+      actual_arrival_at: '2026-10-29T16:30:00.000Z',
+      delayed_arrival_at: '2026-10-29T16:30:00.000Z',
+    });
+    const recz = new MemStore();
+    recz.sailings.push({
+      id: 'late-recz', vessel_id: MEGA, route: 'TLL-HEL',
+      departure_at: '2026-10-29T14:00:00.000Z', arrival_at: '2026-10-29T16:00:00.000Z',
+      delayed_departure_at: null, delayed_arrival_at: null,
+      actual_departure_at: null, actual_arrival_at: null,
+      status: 'ZAPLANOWANY', source: 'RECZNIE',
+    });
+    const r2 = await runFerryPortnet(deps(recz, { 'port-calls': PORTNET }, new Date('2026-10-29T20:00:00Z')));
+    expect(r2.ok).toBe(true);
+    expect(recz.sailings.find((s) => s.id === 'late-recz')).toMatchObject({
+      status: 'ZAPLANOWANY',
+      actual_arrival_at: '2026-10-29T16:30:00.000Z',
+      delayed_arrival_at: null,
+    });
+  });
+
   it('HEL-TLL / STO-TLL / KPS-PLD po arrival_at+2h bez ATA → DOPLYNAL', async () => {
     const st = new MemStore();
     st.sailings.push(

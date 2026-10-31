@@ -45,7 +45,7 @@ import {
   DFDS_SCHEDULE_PAGE, DFDS_TERMINAL_KPS, DFDS_TERMINAL_PLD, DFDS_UA, DFDS_WEEKLY_PDF_URL,
   dfdsTimetableUrl, dfdsWeekWindows, extractDfdsSeasonalPdfUrl, filterDfdsFallbackToFailedWeeks,
   mergeDfdsMissingDays, mergeDfdsSailings, type DfdsFailedWindow,
-  parseDfdsTimetableApi, parseDfdsWeeklyHtml,
+  FERRY_PORT_DELAY_MIN_DEFAULT, parseDfdsTimetableApi, parseDfdsWeeklyHtml,
 } from '../ferry/dfds.ts';
 import {
   MARINE_POINTS, SMHI_OCOBS_URL, dmiWamUrl, evaluateMarineWindow, fmiHarmonieUrl, fmiWamUrl,
@@ -352,10 +352,10 @@ async function readText(deps: JobDeps, url: string, init?: RequestInit): Promise
   }
 }
 
-/** F7 #660: jak AIS — RECZNIE/ODWOLANY: actual_* bez zmiany statusu. */
+/** F7 #660: jak AIS — RECZNIE/ODWOLANY: actual_* bez zmiany statusu. BN3: też delayed_arrival. */
 function sailingActualPatch(
   s: { source: string; status: string },
-  actual: Pick<SailingPatch, 'actual_departure_at' | 'actual_arrival_at'>,
+  actual: Pick<SailingPatch, 'actual_departure_at' | 'actual_arrival_at' | 'delayed_arrival_at'>,
   status: 'W_REJSIE' | 'DOPLYNAL',
 ): SailingPatch {
   const patch: SailingPatch = { ...actual };
@@ -752,7 +752,7 @@ async function fetchDfdsDays(deps: JobDeps, days: number): Promise<{
   };
 }
 
-/** BN2 — Portnet Digitraffic: ATA/ATD → actual_* na dopasowanych rejsach (±3 h od planu). */
+/** BN2/BN3 — Portnet Digitraffic: ATA/ATD → actual_*; ATA spóźnione ≥ FERRY_PORT_DELAY_MIN → delayed_arrival. */
 async function applyDigitrafficPortCallActuals(deps: JobDeps, sinceIso: string): Promise<{
   updated: number; warnings: string[]; fail: boolean;
 }> {
@@ -785,6 +785,7 @@ async function applyDigitrafficPortCallActuals(deps: JobDeps, sinceIso: string):
   const byName = new Map(vessels.map((v) => [v.name, v.id]));
   let updated = 0;
   const WINDOW_MS = 3 * 3600_000;
+  const delayMinMs = FERRY_PORT_DELAY_MIN_DEFAULT * 60_000;
   for (const c of parsed.calls) {
     const vesselId = byName.get(c.vessel);
     if (!vesselId) continue;
@@ -796,12 +797,23 @@ async function applyDigitrafficPortCallActuals(deps: JobDeps, sinceIso: string):
         && Math.abs(Date.parse(s.arrival_at) - t) <= WINDOW_MS
         && s.actual_arrival_at == null);
       // F7 #660: RECZNIE → tylko actual_*; ODWOLANY bez zmiany statusu (jak AIS).
-      if (hit && await deps.store.updateSailing(
-        hit.id, sailingActualPatch(hit, { actual_arrival_at: c.actualArrivalUtc }, 'DOPLYNAL'),
-      )) {
-        updated += 1;
-        hit.actual_arrival_at = c.actualArrivalUtc;
-        if (hit.source !== 'RECZNIE' && hit.status !== 'ODWOLANY') hit.status = 'DOPLYNAL';
+      // BN3 decyzja 58: ATA − arrival ≥ 15 min → delayed_arrival_at (ATD bez opóźnienia wypłynięcia).
+      if (hit) {
+        const lateArr = t - Date.parse(hit.arrival_at) >= delayMinMs;
+        const patch = sailingActualPatch(
+          hit,
+          {
+            actual_arrival_at: c.actualArrivalUtc,
+            ...(lateArr && hit.source !== 'RECZNIE' ? { delayed_arrival_at: c.actualArrivalUtc } : {}),
+          },
+          'DOPLYNAL',
+        );
+        if (await deps.store.updateSailing(hit.id, patch)) {
+          updated += 1;
+          hit.actual_arrival_at = c.actualArrivalUtc;
+          if (lateArr && hit.source !== 'RECZNIE') hit.delayed_arrival_at = c.actualArrivalUtc;
+          if (hit.source !== 'RECZNIE' && hit.status !== 'ODWOLANY') hit.status = 'DOPLYNAL';
+        }
       }
     }
     if (c.actualDepartureUtc && c.departureRoute) {
@@ -1347,8 +1359,38 @@ export async function runFerryStatus(deps: JobDeps): Promise<JobResult> {
     await deps.store.resolveRisks('SOURCE_DOWN:STENA_STATUS:');
   }
 
+  // BN3: DFDS Dynamic — remark „New ETD…” / actualDeparture → OPOZNIONY (ferry-status, nie rozkład).
+  const dfdsStatus = await fetchDfdsDays(deps, 7);
+  warnings.push(...dfdsStatus.warnings.filter((w) => !warnings.includes(w)));
+  const dfStatusFail = dfdsStatus.apiSailingsCount === 0;
+  if (dfStatusFail) {
+    if (await deps.store.raiseRisk(sourceDownRisk(
+      'DFDS_STATUS',
+      dfdsStatus.warnings.length ? dfdsStatus.warnings : ['Brak odpowiedzi DFDS status'],
+      now,
+      DFDS_SCHEDULE_PAGE,
+    ))) risks += 1;
+  } else {
+    const withStatus = dfdsStatus.sailings.filter((s) => s.status);
+    if (withStatus.length > 0) {
+      const incomingD: IncomingSailing[] = withStatus.map((s) => ({
+        route: s.route, vessel: s.vessel, departureUtc: s.departureUtc, arrivalUtc: s.arrivalUtc,
+        status: s.status, expectedDepartureUtc: s.expectedDepartureUtc, expectedArrivalUtc: s.expectedArrivalUtc,
+      }));
+      const { plan, updated: u, manualKept: m } = await applySailings(deps, incomingD, since, 'DFDS');
+      inserted += plan.inserts.length; updated += u; manualKept += m; unchanged += plan.unchanged; unknown += plan.unknown.length;
+      for (const urow of plan.unknown) {
+        const raw = withStatus.find((p) => p.vessel === urow.vessel && p.departureUtc === urow.departureUtc);
+        if (await deps.store.raiseRisk(unknownStatusRisk(urow, `${raw?.rawStatus ?? ''} / ${raw?.rawRemark ?? ''}`, 'DFDS'))) {
+          risks += 1;
+        }
+      }
+    }
+    await deps.store.resolveRisks('SOURCE_DOWN:DFDS_STATUS:');
+  }
+
   const result: JobResult = {
-    job: 'ferry-status', mode: 'LIVE', ok: !(pfFail && stFail),
+    job: 'ferry-status', mode: 'LIVE', ok: !(pfFail && stFail && dfStatusFail),
     inserted, updated, manualKept, unchanged, unknown, risks, warnings,
   };
   // #421 F7: po zmianie statusu odśwież rozkład, ale max raz na 60 min (unikaj 28× Stena / 10 min).

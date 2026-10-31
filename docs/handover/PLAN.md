@@ -1204,6 +1204,9 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-83 | Cursor | rozbieżność słowników TLL-HEL: front `['TALLINK','VIKING','ECKERO']`, baza tylko TALLINK (Viking/Eckerö na TLLA-HEL) — ważne dla walidacji `p_operator` | F7 #680 | BN3/BN8 + DP-11 | w kolejce |
 | DP-84 | Cursor | `operator_notice_apply` dopasowanie `vessels.operator` przez `like '%…%'` + `limit 1` niedeterministyczne → równość kodu/nazwy | F7 #680 | BN3 | DONE w #680 (0356: tylko kod/nazwa) |
 | DP-85 | Cursor | `comment on constraint` dla FK `operator_notices_operator_fkey` | F7 #680 | BN3 | DONE w #680 (0356) |
+| DP-86 | koordynator | test filtra armatora — wydzielić `noticeSailingsFor(...)` (>40 rejsów bałtyckich + GDN-NYN, GDY-KAA, TLLA-HEL/Eckerö) | F7 #680 r2 | BN9-c1 | w kolejce |
+| DP-87 | koordynator | lista rejsów w formularzu komunikatu bez rejsów z przeszłości | F7 #680 r2 | BN9-c1 | w kolejce |
+| DP-88 | Cursor | komentarz `tests/db/ferry-status.sh` „DFDS na GDN-NYN” → GDY-KAA | F7 #680 r2 | BN3 | DONE (bn3-status-sources) |
 | DP-22 | Cursor | Stan systemu: ostrzeżenie z `summary` odrzuconego legu z bazy (nie tylko `points not null`); fundament 0354 + `checkRoads` | F7 #673 r1 N5 / r2 | #667 D | fundament w #673; UI w kolejce |
 | DP-23 | Cursor | Słownik legów drogowych w bazie zamiast `IN (…)` / `ROAD_LEGS` w kodzie | F7 #673 r1 N2 | #667 E / BN7 | SCALONE (#677 `675bb299` / 0355) |
 | DP-24 | Cursor | `corridor_fetches.leg` / `corridor_obstacles.leg` + SE-KAA-INLAND gdy przeszkody H3 obejmą inland | F7 #673 r1 N3 | po #667 | w kolejce |
@@ -1263,21 +1266,22 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 3. ~~**#666** (pilne)~~ — SCALONE (#668 `53890480` / **0351**).
 4. ~~**#667** (pilne)~~ — **NA PRODUKCJI** (#677 `675bb299` / **0355**; SELECT 12/12 bf5; core bez zmian; Edge 200 skip 1380). DP-69 w #679.
 5. ~~**DP-21**~~ przeniesione do #666 (decyzja 63b) — parser pliku właściciela (F7 #680).
-6. **BN3** — W TOKU (`pakiet/bn3-ferry-notices` / PR #680) — poniżej.
+6. **BN3** — W TOKU (`pakiet/bn3-status-sources` / po #680) — poniżej.
 7. BN4…BN10 — jak #573 (AIS, pogoda, drogi LT/LV/EE/FI, HERE, statusy/ETA, ekrany, odbiór 48 h).
 
-### BN3 · Opóźnienia i odwołania nowych armatorów — W TOKU (`pakiet/bn3-ferry-notices` / PR #680)
+### BN3 · Opóźnienia i odwołania nowych armatorów — W TOKU (`pakiet/bn3-status-sources`)
 Źródło: #573 + komentarze BN3 31.10 (spec + decyzje 57–61). Po #667; DP-21 → #666 (63b).
+~~Wycinek 1~~ SCALONE (#680 `8100f685` / **0356**): decyzja 60 + ręczny komunikat 6 armatorów (`p_operator`, formularz).
 1. ~~**60** Tallink poza PLD–KPS~~ — baza już tylko DFDS; front `ferryCatalog` bez TALLINK; test bn9a.
-2. Źródła → `IncomingSailing` → `applySailings` / `planSailingSync` (tolerancja portowa).
-3. Opóźnienie: ATA − arrival; `FERRY_PORT_DELAY_MIN`=15; ATD tylko gdy wiarygodne.
+2. Źródła → `IncomingSailing` → `applySailings` / `planSailingSync` — **DFDS remark** w ferry-status (wycinek 2); Portnet/ts.ee/Tallink Alert — dalej.
+3. ~~Opóźnienie: ATA − arrival; `FERRY_PORT_DELAY_MIN`=15~~ (**0357** + Portnet `delayed_arrival`); ATD tylko gdy wiarygodne — dalej.
 4. Odwołanie: jawna treść (ts.ee, DFDS, Tallink Alert z dopasowaniem); podejrzenie 45 min+AIS → FERRY MEDIUM.
-5. `operator_notices`: ~~ręczny 6 armatorów (0356 FK + `operator_notice_apply` + opcjonalny `p_operator` ze słownika trasy; formularz: wybór armatora → lista rejsów)~~ — F7 #680 B2/B4/B5; `source` AUTO/RECZNIE + URL (kolejne); front BN9-c1 (koordynator).
-6. SOURCE_DOWN: TALLINK/DFDS/ECKERO/DIGITRAFFIC = MEDIUM; Viking bez SourceId statusu (VIKING_SCHEDULE MEDIUM zostaje — decyzja 50).
+5. `operator_notices`: ~~ręczny 6 armatorów (0356)~~ — F7 #680; `source` AUTO/RECZNIE + URL (kolejne); front BN9-c1 (koordynator).
+6. ~~SOURCE_DOWN: TALLINK/DFDS/ECKERO/DIGITRAFFIC = MEDIUM~~ (wycinek 2: `sourceDownRisk`); Viking bez SourceId statusu (VIKING_SCHEDULE MEDIUM zostaje — decyzja 50).
 7. Digitraffic winter-navigation; Urząd Morski Gdynia (zapas Stena); port-call v2 cancelled (obserwacja).
 8. MMSI XPRS/Finbo/Finlandia/MyStar/Megastar; DP-1 + DP-11 razem z BN3.
-9. Testy: wycinki DFDS/Portnet/ts.ee/Alert/Imperva; tolerancja; RECZNIE; ODWOLANY→FERRY_CANCELLED.
-10. Role komunikatu: HHL_ADMIN + CARRIER_DISPATCH (SCX); KSH odmowa (F7 #680 — stan dzisiejszy).
+9. Testy: wycinki DFDS remark / Portnet ATA (wycinek 2); ts.ee/Alert/Imperva; tolerancja; RECZNIE; ODWOLANY→FERRY_CANCELLED — dalej.
+10. ~~Role komunikatu: HHL_ADMIN + CARRIER_DISPATCH (SCX); KSH odmowa~~ (F7 #680).
 
 ### #662 · PILNE SafeFleet — link tymczasowy (SG-27) — SCALONE (`189688bc` / PR #663 / **0349**); #662-b SCALONE (`1ee855fd` / PR #664 / **0350**, 30.10.2026 12:54Z)
 Źródło: #662 (Spawn2018, `pilne`; właściciel 30.10 11:51). Przed poprawkami F7 #661.
@@ -2231,4 +2235,6 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 31.10.2026 06:00 | DP-21 DONE (Viking cargo+sales 403; TLLA-HEL ECKERO); BN3 start — decyzja 60 front PLD-KPS tylko DFDS | pętla |
 | 31.10.2026 06:20 | #680 db FAIL: assert_not_preview w 0356 + ferry-status EXPECTED 9; czekam CI+F7 | pętla |
 | 31.10.2026 06:50 | #680 F7 r1 POPRAWKI B2+B4+B5: p_operator, formularz armator→rejsy, testy 14; DP-21→#666; DP-83/84/85; assert bez komentarza | pętla |
+| 31.10.2026 07:25 | #680 SCALONE `8100f685` (F7: gotowe @ db57ed2a); DP-86/87/88; start BN3 wycinek 2 (0357 + DFDS remark + Portnet delay) | pętla |
+| 31.10.2026 07:35 | BN3 wycinek 2: 0357 FERRY_PORT_DELAY_MIN; DFDS remark→OPOZNIONY w ferry-status; Portnet delayed_arrival; SOURCE_DOWN MEDIUM; DP-88; testy | pętla |
 

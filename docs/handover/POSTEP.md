@@ -7435,6 +7435,19 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (odbiór prod):** SELECT `here_road_legs` — **12** / active 12 / `browser_fetch` 5; core bez zmian (3495/12561/3742/18854/19408); BN7 7× null. `here-roads` **#108803** @ 04:49Z ok (0 prób — core świeże; BN7 poza cronem). Komentarz w #667. **Dalej:** BN3 (#573).
 - Bez push na main.
 
+## 2026-10-31 07:35 — BN3 wycinek 2: DFDS remark + Portnet delay (0357)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE; #499/#537/#538/#500 w planie. Bez nowych `pilne`.
+- Scalanie: **#680 SCALONE** `8100f685` (F7: gotowe do scalenia @ `db57ed2a`; CI ✔). Bez push na main.
+- **Krok** (`pakiet/bn3-status-sources`):
+  - **0357** — `app_parameters.FERRY_PORT_DELAY_MIN`=15 (decyzja 58);
+  - DFDS: `parseDfdsRemarkEtd` / `dfdsApiStatusFields` → OPOZNIONY w **ferry-status** (`DFDS_STATUS`); rozkład bez statusu;
+  - Portnet: ATA − arrival ≥ 15 → `delayed_arrival_at` (RECZNIE bez delayed);
+  - `sourceDownRisk`: TALLINK/DFDS/ECKERO/DIGITRAFFIC = MEDIUM; Polferries/Stena = HIGH;
+  - DP-86/87 koordynator; **DP-88 DONE**; testy unit DFDS remark + Portnet delay.
+- **Dalej:** CI → „gotowe do F7”; potem ts.ee / Tallink Alert / PoT / `operator_notices.source` AUTO.
+- Bez push na main.
+
 ## 2026-10-31 06:50 — #680 F7 B2+B4+B5 (p_operator + formularz + testy)
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE; #499 w planie. Bez nowych `pilne`.

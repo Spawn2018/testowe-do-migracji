@@ -140,7 +140,8 @@ export function unknownStatusRisk(s: IncomingSailing, raw: string, source: AutoS
 export type SourceId =
   | 'POLFERRIES_STATUS' | 'POLFERRIES_SCHEDULE'
   | 'STENA_STATUS' | 'STENA_SCHEDULE'
-  | 'TALLINK_SCHEDULE' | 'VIKING_SCHEDULE' | 'ECKERO_SCHEDULE' | 'DFDS_SCHEDULE'
+  | 'TALLINK_SCHEDULE' | 'TALLINK_STATUS' | 'VIKING_SCHEDULE' | 'ECKERO_SCHEDULE' | 'ECKERO_STATUS'
+  | 'DFDS_SCHEDULE' | 'DFDS_STATUS'
   | 'DIGITRAFFIC' | 'DIGITRAFFIC_PORTCALL' | 'PORT_TALLINN' | 'PORTS_STOCKHOLM'
   | 'STENA_IRM' | 'TRAFIKVERKET' | 'KPD_GDDKIA' | 'TOMTOM'
   | 'FMI' | 'DMI' | 'SMHI' | 'MARINE_WEATHER'
@@ -148,8 +149,10 @@ export type SourceId =
 const SOURCE_LABEL: Record<SourceId, string> = {
   POLFERRIES_STATUS: 'status promów (Polferries)', POLFERRIES_SCHEDULE: 'rozkład promów (Polferries)',
   STENA_STATUS: 'status promów (Stena Line)', STENA_SCHEDULE: 'rozkład promów (Stena Line)',
-  TALLINK_SCHEDULE: 'rozkład promów (Tallink)', VIKING_SCHEDULE: 'rozkład promów (Viking Line)',
-  ECKERO_SCHEDULE: 'rozkład promów (Eckerö/Finbo)', DFDS_SCHEDULE: 'rozkład promów (DFDS)',
+  TALLINK_SCHEDULE: 'rozkład promów (Tallink)', TALLINK_STATUS: 'status promów (Tallink)',
+  VIKING_SCHEDULE: 'rozkład promów (Viking Line)',
+  ECKERO_SCHEDULE: 'rozkład promów (Eckerö/Finbo)', ECKERO_STATUS: 'status promów (Eckerö/Finbo)',
+  DFDS_SCHEDULE: 'rozkład promów (DFDS)', DFDS_STATUS: 'status promów (DFDS)',
   DIGITRAFFIC: 'AIS promów (Digitraffic)', DIGITRAFFIC_PORTCALL: 'godziny portowe (Digitraffic Portnet)',
   PORT_TALLINN: 'odjazdy/przyjazdy (Port of Tallinn)', PORTS_STOCKHOLM: 'odjazdy/przyjazdy (Ports of Stockholm)',
   STENA_IRM: 'pozycje promów Stena (IRM)', TRAFIKVERKET: 'utrudnienia drogowe SE (Trafikverket)',
@@ -165,7 +168,8 @@ const SOURCE_LABEL: Record<SourceId, string> = {
 const SOURCE_KIND: Record<SourceId, RiskKind> = {
   POLFERRIES_STATUS: 'FERRY', POLFERRIES_SCHEDULE: 'FERRY',
   STENA_STATUS: 'FERRY', STENA_SCHEDULE: 'FERRY',
-  TALLINK_SCHEDULE: 'FERRY', VIKING_SCHEDULE: 'FERRY', ECKERO_SCHEDULE: 'FERRY', DFDS_SCHEDULE: 'FERRY',
+  TALLINK_SCHEDULE: 'FERRY', TALLINK_STATUS: 'FERRY', VIKING_SCHEDULE: 'FERRY',
+  ECKERO_SCHEDULE: 'FERRY', ECKERO_STATUS: 'FERRY', DFDS_SCHEDULE: 'FERRY', DFDS_STATUS: 'FERRY',
   DIGITRAFFIC: 'FERRY', DIGITRAFFIC_PORTCALL: 'FERRY', PORT_TALLINN: 'FERRY', PORTS_STOCKHOLM: 'FERRY',
   STENA_IRM: 'FERRY', TRAFIKVERKET: 'ROAD_SE', KPD_GDDKIA: 'ROAD_PL', TOMTOM: 'ROAD_SE',
   FMI: 'FERRY', DMI: 'FERRY', SMHI: 'FERRY', MARINE_WEATHER: 'FERRY',
@@ -187,9 +191,8 @@ export function sourceDownRisk(src: SourceId, warnings: string[], nowIso: string
   const when = warsawStamp(nowIso);
   return {
     kind: SOURCE_KIND[src],
-    severity: src === 'VIKING_SCHEDULE'
-      ? 'MEDIUM'
-      : /^(POLFERRIES|STENA|TALLINK|ECKERO|DFDS)/.test(src) ? 'HIGH' : 'MEDIUM',
+    // BN3 decyzja 50/61: TALLINK/DFDS/ECKERO/DIGITRAFFIC/VIKING_SCHEDULE = MEDIUM; Polferries/Stena = HIGH.
+    severity: /^(POLFERRIES|STENA)_/.test(src) ? 'HIGH' : 'MEDIUM',
     title: sticky
       ? `Źródło niedostępne: ${SOURCE_LABEL[src]} od ${when} — HHL weryfikuje ręcznie`
       : `Źródło niedostępne: ${SOURCE_LABEL[src]} — HHL weryfikuje ręcznie`,
