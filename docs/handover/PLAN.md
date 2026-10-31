@@ -2315,6 +2315,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 31.10.2026 16:35 | #683 F7 R13 POPRAWKI: B1 luźny obok Schedulera; B2 `(?<![\w-])type`; B3 kampania-serwisowa; B4/B5 invalid_date; 72a łagodna w §5; testy 49; potem #685-a | pętla |
 | 31.10.2026 17:00 | #683 F7 R14: tylko testy mutacji (data-type na Schedulerze; campaignHasServiceText gałęzie); uwaga §8: licznik Alert w komentarzach/duplikatach — przy żywym Alercie + DP r10; `:type` Vue / `&quot;Alert&quot;` niska realność | pętla |
 | 31.10.2026 18:20 | #687 DP-114: URL HEL–TLL `travelling/one-way/helsinki-tallinn-ferry`; niepełna pula → brak auto; streak≥3 → SOURCE_DOWN; przed scaleniem #688 | pętla |
+| 31.10.2026 19:10 | #689 F7 r1 POPRAWKI: R1-B1 usable HTML (Cws/Footer, ≥2 KB, bez Incapsula); R1-B2 mutacje HTTP; R1-B3 streak z integration_runs; DP-115; testy 58 | pętla |
 | 31.10.2026 — | F7 #683 nieblokujące (osobna poprawka): Scheduler grudzień + „on 2 January” → rok bieżący, ciche wygaśnięcie; Alert INFO bez ryzyka/historii — świadomie | F7 #683 r7 |
 | 31.10.2026 — | F7 #683 r8 nieblokujące (osobno): Alert poza Schedulerem obok Schedulera; sprzeczne bloki (resume→cofnięcie auto); rok przy długim oknie Schedulera; mutanty M10/M15–M17/M22 świadomie bez testów | F7 #683 r8 |
 | 31.10.2026 — | F7 #683 r10 uwaga właściciel: fixture kampanii ma `CwsAlert type=…`; jeśli Tallink opakuje serwisowe w `CwsAlert` / `CwsLink` („Read more”) → ryzyko; po pierwszym żywym Alercie serwisowym — surowy HTML jako fixture + ocena allowlisty (osobny DP) | F7 #683 r10 |

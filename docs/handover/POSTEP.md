@@ -7447,6 +7447,19 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (odbiór prod):** SELECT `here_road_legs` — **12** / active 12 / `browser_fetch` 5; core bez zmian (3495/12561/3742/18854/19408); BN7 7× null. `here-roads` **#108803** @ 04:49Z ok (0 prób — core świeże; BN7 poza cronem). Komentarz w #667. **Dalej:** BN3 (#573).
 - Bez push na main.
 
+## 2026-10-31 19:10 — #689 F7 r1 POPRAWKI (DP-114 R1-B1…B3)
+
+- Skrzynka: **#687** / PR #689 F7 r1; #685/#688 czekają po #687; #608 w planie; #550 WSTRZYMANE.
+- Scalanie: brak „F7: gotowe do scalenia”. Bez push na main.
+- **Krok F7 #689 r1:**
+  - **R1-B1** — `isTallinkAlertHtmlUsable`: Cws*/Footer, ≥ 2 KB, bez Incapsula/captcha; brak Schedulera ≠ niepełna;
+  - **R1-B2** — mutacje 404/403/5xx/pustka/timeout → ZAPLANOWANY, 0 notices, INCOMPLETE MEDIUM;
+  - **R1-B3** — streak SOURCE_DOWN z `integration_runs` (`tallink_alert_incomplete` w JobResult + `recentJobResults`); `vi.resetModules` OK;
+  - `rk_tallink_alert_incomplete`; zamykanie INCOMPLETE przy pełnej puli; skip INCOMPLETE gdy already_cancelled; DP-115 (Stena backoff);
+  - vitest bn3-tallink-alert **58**.
+- **Dalej:** CI → gotowe do F7 @ sha → scalenie #689 → F7 #688 R1.
+- Bez push na main.
+
 ## 2026-10-31 18:20 — #687 DP-114 Tallink HEL–TLL URL + niepełna pula
 
 - Skrzynka: **#687** W TOKU (przed scaleniem #688); #685/#688 F7 r1 POPRAWKI czekają; #608 w planie; #550 WSTRZYMANE.
