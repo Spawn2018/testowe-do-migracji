@@ -1535,7 +1535,7 @@ describe('#685-a Digitraffic Viking near schedule (decyzja 63a)', () => {
     expect(upd.departure_at).toBe('2026-10-31T05:45:00.000Z');
   });
 
-  it('F7 #688 r1 B4: wycofanie portCall → delete / ryzyko z transportem', async () => {
+  it('F7 #688 r2 B1: wycofanie jednego portCallId → delete / ryzyko z transportem', async () => {
     const st = new MemStore();
     const pages: Record<string, string | number> = {
       ...tallinkPages,
@@ -1547,12 +1547,135 @@ describe('#685-a Digitraffic Viking near schedule (decyzja 63a)', () => {
       'ctfassets.net': 503,
     };
     await runFerrySchedule(deps(st, pages));
-    const keep = st.sailings.find((s) => s.source_ref === 'digitraffic:portcall:9101:HELA-TLL')!;
-    st.assignedLoads.add(keep.id);
-    await runFerrySchedule(deps(st, { ...pages, 'port-calls': JSON.stringify({ portCalls: [] }) }));
+    const withLoad = st.sailings.find((s) => s.source_ref === 'digitraffic:portcall:9102:HELA-TLL')!;
+    st.assignedLoads.add(withLoad.id);
+    const full = JSON.parse(PORTNET_XPRS_ES) as { portCalls: { portCallId: number }[] };
+    const without9102 = {
+      portCalls: full.portCalls.filter((p) => p.portCallId !== 9102),
+    };
+    expect(without9102.portCalls.some((p) => p.portCallId === 9101)).toBe(true);
+    await runFerrySchedule(deps(st, { ...pages, 'port-calls': JSON.stringify(without9102) }));
+    /* 9101 zostaje; 9102 HELA-TLL z transportem → ryzyko; 9102 TLLA-HEL bez transportu → delete. */
     expect(st.sailings.some((s) => s.source_ref === 'digitraffic:portcall:9101:HELA-TLL')).toBe(true);
+    expect(st.sailings.some((s) => s.source_ref === 'digitraffic:portcall:9101:TLLA-HEL')).toBe(true);
+    expect(st.sailings.some((s) => s.source_ref === 'digitraffic:portcall:9102:HELA-TLL')).toBe(true);
     expect(st.risks.some((x) => String(x.dedup).includes('DIGITRAFFIC_VIKING_WITHDRAWN'))).toBe(true);
     expect(st.sailings.some((s) => s.source_ref === 'digitraffic:portcall:9102:TLLA-HEL')).toBe(false);
+  });
+
+  it('F7 #688 r2 B1: pusta lista / ETA 503+ETD [] / foo — nie kasuje Digitraffic', async () => {
+    const vkPages: Record<string, string | number> = {
+      ...tallinkPages,
+      'viking-line-cargo': 403,
+      'sales.vikingline.com': 403,
+      'eckeroline.com': 503,
+      'dfds.com': 503,
+      'ctfassets.net': 503,
+    };
+    const seed = new MemStore();
+    await runFerrySchedule(deps(seed, { ...vkPages, 'port-calls': PORTNET_XPRS_ES }));
+    const n0 = seed.sailings.filter((s) => s.source_ref?.startsWith('digitraffic:portcall:')).length;
+    expect(n0).toBeGreaterThanOrEqual(4);
+
+    const empty = new MemStore();
+    empty.sailings = seed.sailings.map((s) => ({ ...s }));
+    await runFerrySchedule(deps(empty, { ...vkPages, 'port-calls': JSON.stringify({ portCalls: [] }) }));
+    expect(empty.sailings.filter((s) => s.source_ref?.startsWith('digitraffic:portcall:')).length).toBe(n0);
+
+    const partial = new MemStore();
+    partial.sailings = seed.sailings.map((s) => ({ ...s }));
+    /* Klucze dłuższe niż `port-calls` (tallinkPages) — osobne ETA/ETD. */
+    await runFerrySchedule(deps(partial, {
+      ...vkPages,
+      'port-calls?etaFrom': 503,
+      'port-calls?etdFrom': JSON.stringify({ portCalls: [] }),
+    }));
+    expect(partial.sailings.filter((s) => s.source_ref?.startsWith('digitraffic:portcall:')).length).toBe(n0);
+
+    const weird = new MemStore();
+    weird.sailings = seed.sailings.map((s) => ({ ...s }));
+    await runFerrySchedule(deps(weird, { ...vkPages, 'port-calls': JSON.stringify({ foo: 1 }) }));
+    expect(weird.sailings.filter((s) => s.source_ref?.startsWith('digitraffic:portcall:')).length).toBe(n0);
+  });
+
+  it('F7 #688 r2 B2: HTML po Digitraffic (nocny 04.00) → 1 wiersz; drugi przebieg bez zapisów', async () => {
+    const nightDt = {
+      portCalls: [{
+        portCallId: 9401, portCallTimestamp: '2026-10-28T10:00:00.000Z',
+        portToVisit: 'FIHEL', prevPort: 'EETLL', nextPort: 'EETLL',
+        vesselName: 'Viking XPRS', mmsi: 230705000,
+        /* ETA 06:45 EET = 04:45Z → Digitraffic dep 02:15Z; HTML piątek 04:00 = 02:00Z */
+        portAreaDetails: [{
+          eta: '2026-10-30T04:45:00.000Z', etd: '2026-10-30T08:30:00.000Z',
+          portAreaCode: 'ES', berthCode: 'KATAJANOKKA',
+        }],
+      }],
+    };
+    const wall = new Date('2026-10-29T12:00:00.000Z');
+    const st = new MemStore();
+    const dtOnly: Record<string, string | number> = {
+      ...tallinkPages,
+      'viking-line-cargo': 403,
+      'sales.vikingline.com': 403,
+      'port-calls': JSON.stringify(nightDt),
+      'eckeroline.com': 503,
+      'dfds.com': 503,
+      'ctfassets.net': 503,
+    };
+    await runFerrySchedule(deps(st, dtOnly, wall));
+    const dtRow = st.sailings.find((s) => s.source_ref === 'digitraffic:portcall:9401:TLLA-HEL');
+    expect(dtRow).toMatchObject({ departure_at: '2026-10-30T02:15:00.000Z' });
+
+    const withHtml: Record<string, string | number> = {
+      ...tallinkPages,
+      'viking-line-cargo': VIKING_CARGO_HTML,
+      'sales.vikingline.com': 403,
+      'port-calls': JSON.stringify(nightDt),
+      'eckeroline.com': 503,
+      'dfds.com': 503,
+      'ctfassets.net': 503,
+    };
+    await runFerrySchedule(deps(st, withHtml, wall));
+    const tllaNight = st.sailings.filter((s) =>
+      s.vessel_id === 'v-xprs' && s.route === 'TLLA-HEL'
+      && Math.abs(Date.parse(s.departure_at) - Date.parse('2026-10-30T02:00:00.000Z')) <= 30 * 60_000);
+    expect(tllaNight).toHaveLength(1);
+    expect(tllaNight[0]!.source_ref == null || !String(tllaNight[0]!.source_ref).startsWith('digitraffic:')).toBe(true);
+
+    const before = st.sailings.map((s) => ({ ...s }));
+    const r2 = await runFerrySchedule(deps(st, withHtml, wall));
+    expect(r2.inserted ?? 0).toBe(0);
+    expect(r2.updated ?? 0).toBe(0);
+    expect(st.sailings).toHaveLength(before.length);
+  });
+
+  it('F7 #688 r2 B3: status≠ZAPLANOWANY / przeszły / RECZNIE+source_ref — bez delete', async () => {
+    const st = new MemStore();
+    const pages: Record<string, string | number> = {
+      ...tallinkPages,
+      'viking-line-cargo': 403,
+      'sales.vikingline.com': 403,
+      'port-calls': PORTNET_XPRS_ES,
+      'eckeroline.com': 503,
+      'dfds.com': 503,
+      'ctfassets.net': 503,
+    };
+    await runFerrySchedule(deps(st, pages));
+    const full = JSON.parse(PORTNET_XPRS_ES) as { portCalls: { portCallId: number }[] };
+    const only9101 = { portCalls: full.portCalls.filter((p) => p.portCallId === 9101) };
+
+    const wRejsie = st.sailings.find((s) => s.source_ref === 'digitraffic:portcall:9102:HELA-TLL')!;
+    wRejsie.status = 'W_REJSIE';
+    const past = st.sailings.find((s) => s.source_ref === 'digitraffic:portcall:9102:TLLA-HEL')!;
+    past.departure_at = '2026-10-29T10:00:00.000Z';
+    past.arrival_at = '2026-10-29T12:30:00.000Z';
+    const recz = st.sailings.find((s) => s.source_ref === 'digitraffic:portcall:9101:TLLA-HEL')!;
+    recz.source = 'RECZNIE';
+
+    await runFerrySchedule(deps(st, { ...pages, 'port-calls': JSON.stringify(only9101) }));
+    expect(st.sailings.some((s) => s.id === wRejsie.id)).toBe(true);
+    expect(st.sailings.some((s) => s.id === past.id)).toBe(true);
+    expect(st.sailings.some((s) => s.id === recz.id && s.source === 'RECZNIE')).toBe(true);
   });
 
   it('F7 #688 r1 B1: URL Portnet ma etaFrom/mmsi, bez from=', async () => {

@@ -131,6 +131,7 @@ const pl: Dict = {
   rk_src_DFDS_STATUS: 'status promów (DFDS)',
   rk_src_DIGITRAFFIC: 'AIS promów (Digitraffic)',
   rk_src_DIGITRAFFIC_PORTCALL: 'godziny portowe (Digitraffic Portnet)',
+  rk_src_DIGITRAFFIC_VIKING: 'rozkład Viking (Digitraffic Portnet)',
   rk_src_PORT_TALLINN: 'odjazdy/przyjazdy (Port of Tallinn)',
   rk_src_PORTS_STOCKHOLM: 'odjazdy/przyjazdy (Ports of Stockholm)',
   rk_src_STENA_IRM: 'pozycje promów Stena (IRM)',

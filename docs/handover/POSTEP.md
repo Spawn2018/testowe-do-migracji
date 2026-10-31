@@ -7457,6 +7457,19 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (odbiór prod):** SELECT `here_road_legs` — **12** / active 12 / `browser_fetch` 5; core bez zmian (3495/12561/3742/18854/19408); BN7 7× null. `here-roads` **#108803** @ 04:49Z ok (0 prób — core świeże; BN7 poza cronem). Komentarz w #667. **Dalej:** BN3 (#573).
 - Bez push na main.
 
+## 2026-10-31 21:00 — #688 F7 r2 POPRAWKI (B1–B3 + DIGITRAFFIC_VIKING)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE; #685/#499/#537/#538/#500 w planie. Bez nowych `pilne`.
+- Scalanie: #688 — F7 r2 **POPRAWKI** @ `9a9c5e97` (CI unit/db/visual ✔). Brak „F7: gotowe do scalenia”. Bez push na main.
+- **Krok F7 #688 r2:**
+  - **R2-B1** — usuwanie Digitraffic tylko gdy obie strony OK + obie mają `portCalls` + scalona niepusta; pusta/`foo`/ETA 503+ETD [] → ostrzeżenie, bez kasowania; wycofanie = lista bez jednego portCallId;
+  - **R2-B2** — HTML/plik w ±30 min wygrywa (usuń Digitraffic / ryzyko duplikatu); test nocny 04.00;
+  - **R2-B3** — status≠ZAPLANOWANY / przeszły / RECZNIE+source_ref bez delete;
+  - nieblokujące: `SOURCE_DOWN:DIGITRAFFIC_VIKING` przy `vkDt.fail`; bez stałego ostrzeżenia co przebieg; 0359 przed Edge; Awizacja empty = #678;
+  - vitest bn2-ferry-* + risk-keys ✔.
+- **Dalej:** push → CI → gotowe do F7 @ sha. Po F7/scal: #685-b.
+- Bez push na main.
+
 ## 2026-10-31 20:45 — #688 F7 r1 mutacje (brakujące testy)
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE; #685/#499/#537/#538/#500 w planie. Bez nowych `pilne`.
