@@ -37,10 +37,15 @@
 import type { FerryRoute } from './polferries.ts';
 
 export const TALLINK_HOME_URL = 'https://www.tallink.com/';
-/** DP-98: URL HEL–TLL bywa 404 — job nadal woła HOME+HEL; ostrzeżenie osobno w rejestrze. */
-export const TALLINK_HEL_TLL_URL = 'https://www.tallink.com/en/helsinki-tallinn';
+/**
+ * DP-114 / DP-98: strona trasy HEL–TLL (link z tallink.com; stary `/en/helsinki-tallinn` = 404).
+ * Jedno miejsce — jobs/ferry-status i testy.
+ */
+export const TALLINK_HEL_TLL_URL = 'https://www.tallink.com/travelling/one-way/helsinki-tallinn-ferry';
 export const TALLINK_ALERT_UA = 'Watch Tower (https://tower.log-mar.pl; ferry timetable)';
 export const TALLINK_ALERT_ATTRIBUTION = 'Komunikat: Tallink (tallink.com)';
+/** DP-114: po ilu kolejnych przebiegach z błędem strony → SOURCE_DOWN:TALLINK_STATUS. */
+export const TALLINK_ALERT_FAIL_STREAK_SOURCE_DOWN = 3;
 
 const SHIP_ALIASES: Array<{ re: RegExp; vessel: string }> = [
   { re: /\bmystar\b/i, vessel: 'M/F MyStar' },

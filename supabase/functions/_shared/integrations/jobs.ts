@@ -48,7 +48,7 @@ import {
   FERRY_PORT_DELAY_MIN_DEFAULT, parseDfdsTimetableApi, parseDfdsWeeklyHtml,
 } from '../ferry/dfds.ts';
 import {
-  TALLINK_ALERT_UA, TALLINK_HEL_TLL_URL, TALLINK_HOME_URL,
+  TALLINK_ALERT_FAIL_STREAK_SOURCE_DOWN, TALLINK_ALERT_UA, TALLINK_HEL_TLL_URL, TALLINK_HOME_URL,
   finalizeTallinkAlertsForStatus, matchTallinkAlertSailings, parseTallinkAlerts,
 } from '../ferry/tallinkAlert.ts';
 import {
@@ -1485,15 +1485,21 @@ export async function runFerryStatus(deps: JobDeps): Promise<JobResult> {
   }
 
   // BN3: Tallink Alert (decyzja 59) — ODWOLANY przy jednoznacznym dopasowaniu; inaczej FERRY MEDIUM.
+  // DP-114: niepełna pula (któraś strona ≠ OK) → brak auto-ODWOLANY; streak ≥ 3 → SOURCE_DOWN.
   {
     const urls = [TALLINK_HOME_URL, TALLINK_HEL_TLL_URL];
     const headers = { 'User-Agent': TALLINK_ALERT_UA, Accept: 'text/html' };
     let alertFail = 0;
+    const failMsgs: string[] = [];
     const allAlerts = [];
     for (const url of urls) {
       const page = await readText(deps, url, { headers });
-      if (!page.ok) {
-        warnings.push(page.warning);
+      if (!page.ok || !String(page.text ?? '').trim()) {
+        const w = page.ok
+          ? `Tallink Alert: pusta odpowiedź ${url}`
+          : page.warning;
+        warnings.push(w);
+        failMsgs.push(w);
         alertFail += 1;
         continue;
       }
@@ -1501,15 +1507,26 @@ export async function runFerryStatus(deps: JobDeps): Promise<JobResult> {
       warnings.push(...parsed.warnings);
       allAlerts.push(...parsed.alerts);
     }
-    if (alertFail === urls.length) {
+    const poolIncomplete = alertFail > 0;
+    if (poolIncomplete) tallinkAlertPageFailStreak += 1;
+    else tallinkAlertPageFailStreak = 0;
+
+    const sourceDown = alertFail === urls.length
+      || tallinkAlertPageFailStreak >= TALLINK_ALERT_FAIL_STREAK_SOURCE_DOWN;
+    if (sourceDown) {
       if (await deps.store.raiseRisk(sourceDownRisk(
         'TALLINK_STATUS',
-        ['Brak odpowiedzi Tallink Alert (tallink.com)'],
+        failMsgs.length
+          ? failMsgs.slice(0, 5)
+          : ['Brak odpowiedzi Tallink Alert (tallink.com)'],
         now,
         TALLINK_HOME_URL,
       ))) risks += 1;
     } else {
       await deps.store.resolveRisks('SOURCE_DOWN:TALLINK_STATUS:');
+    }
+
+    if (alertFail < urls.length) {
       const [vessels, existing] = await Promise.all([
         deps.store.vessels(), deps.store.sailingsSince(since),
       ]);
@@ -1528,6 +1545,27 @@ export async function runFerryStatus(deps: JobDeps): Promise<JobResult> {
         if (alert.isCampaign || alert.kind === 'IGNORE') continue;
         if (alert.filterReject === 'expired' || alert.filterReject === 'empty') continue;
         if (alert.kind !== 'ODWOLANY') continue;
+        // DP-114 pkt 2: niepełna pula → tylko ryzyko MEDIUM, bez auto-ODWOLANY (reguła 72 traci połowę).
+        if (poolIncomplete) {
+          const ok = await deps.store.raiseRisk({
+            kind: 'FERRY',
+            severity: 'MEDIUM',
+            title: 'Tallink Alert: niepełna pula stron — bez auto-odwołania, weryfikacja HHL',
+            titleKey: 'rk_tallink_alert_unmatched',
+            params: { vessel: alert.vessel ?? '' },
+            detail: {
+              tekst: alert.text.slice(0, 400),
+              statek: alert.vessel,
+              trasy: alert.routes,
+              niepelna_pula: true,
+              atrybucja: 'Komunikat: Tallink (tallink.com)',
+            },
+            dedup: `TALLINK_ALERT_INCOMPLETE:${alert.vessel ?? 'any'}:${alert.contentStartYmd ?? alert.windowStartYmd ?? 'x'}:${alert.text.slice(0, 40)}`,
+            sourceUrl: alert.sourceUrl,
+          });
+          if (ok) risks += 1;
+          continue;
+        }
         // F7 #683 B1: pełna pula; already_cancelled → nic; manual_only / ambiguous / none → ryzyko.
         const hit = matchTallinkAlertSailings(alert, cands);
         if (hit.kind === 'already_cancelled') continue;
@@ -1623,6 +1661,14 @@ export function acceptActualDepartureAt(
 
 /** Wycofanie Stena IRM po 403/429 — bez SOURCE_DOWN przy każdym przebiegu (F7). */
 let stenaIrmBackoffUntilMs = 0;
+
+/** DP-114: kolejne przebiegi z błędem którejś strony Tallink Alert (HOME / HEL–TLL). */
+let tallinkAlertPageFailStreak = 0;
+
+/** Testy DP-114 — reset streak między przypadkami. */
+export function __resetTallinkAlertFailStreakForTests(): void {
+  tallinkAlertPageFailStreak = 0;
+}
 
 async function readStenaIrm(deps: JobDeps, nowMs: number): Promise<{ fixes: VesselFix[]; warning: string | null; suppressRisk?: boolean }> {
   if (nowMs < stenaIrmBackoffUntilMs) {
