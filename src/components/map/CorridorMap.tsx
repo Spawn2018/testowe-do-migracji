@@ -172,7 +172,7 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
   const layersRef = useRef<LayerBag | null>(null);
   const entryRef = useRef<PoolEntry | null>(null);
   /* DP-17 (F7 r2 #672): statki z bazy także na mapach (jedna pamięć z Rejsami).
-     B1 (F7 #674): wersja listy jest zależnością efektu rysowania — po pobraniu dymki się przerysowują (także w PROD). */
+     B1 (F7 #674): referencja listy jest zależnością efektu rysowania — po pobraniu dymki się przerysowują (także w PROD). */
   const vessels = useVesselGroups();
   useEffect(() => {
     /* DP-27: ostrzeżenie raz na sesję w loaderze */
