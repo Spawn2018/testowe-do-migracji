@@ -1318,13 +1318,13 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 4. ~~F7 r2~~ — test R2-B1 (strona ≥2 KB bez Footer/Cws → INCOMPLETE) + nieblokujące. Testy bn3-tallink-alert **59**.
 DP-98 DONE; DP-114 DONE; DP-115 (Stena IRM backoff) w kolejce.
 
-### #685 · Decyzja 63: rozkład Viking Line (Digitraffic + import z pliku) — W TOKU (PR #688; F7 r4 POPRAWKI; po #687 SCALONE)
+### #685 · Decyzja 63: rozkład Viking Line (Digitraffic + import z pliku) — W TOKU (#685-b; #685-a SCALONE `774fd2c0` / PR #688 / **0359**)
 Źródło: #685 (Spawn2018, `dla-cursora`; decyzja 63 potwierdzona właścicielem 31.10 09:56). Bez obchodzenia Imperva (cargo/sales 403).
 **Podział PR (prognoza):**
-1. **#685-a (63a)** — W TOKU (PR #688; F7 r4: mutacje filtra trasy / `!isDigitrafficRef` / `safeDelete` / granica ±3 h / `titleKey` withdrawn; RECZNIE+DANE_STARTOWE = rozkład w `nearestScheduleNeighbor`; 0359 przed Edge).
-2. **#685-b (63b)** ~4–6 h baza/Edge (+ ekran BN9-c1 koordynator) — import HTML właściciela (`D:\Watch Tower\dane\viking-cargo-hel-tll.html`); **osobne RPC** (nie `applySailings`): w ±3 h tej samej trasy/statku **zastępuje/usuwa** `source_ref like 'digitraffic:%'` (bez transportów → usuń; z transportami → przejmij: czasy z pliku, `source_ref=null`); RECZNIE nietykalne.
-3. **#685-c (63c)** ~1 h (z b) — `SOURCE_DOWN:VIKING_SCHEDULE` MEDIUM zamykane, gdy rozkład z pliku ≥ 30 dni.
-Kolejność: a → b(+c). DP-21 pozostaje w #666/63b. **Wdrożenie:** migracja **0359** przed Edge (deploy-main).
+1. **#685-a (63a)** — ~~SCALONE~~ (`774fd2c0` / PR #688 / **0359**, 31.10.2026 21:31Z; F7: gotowe @ `b31d504e`).
+2. **#685-b (63b)** — W TOKU (`pakiet/685b-viking-schedule-import`; **0360** `viking_schedule_import` HHL_ADMIN+2FA; `planVikingFileImport`; Edge parse→RPC; ±3 h digitraffic; ekran BN9-c1 koordynator).
+3. **#685-c (63c)** — w b: `SOURCE_DOWN:VIKING_SCHEDULE` zamykane przy pokryciu ≥ 30 dni (RPC + plan).
+Kolejność: a → b(+c). DP-21 w #685-b. **Wdrożenie:** **0359** na main; **0360** przed Edge `viking-schedule-import`.
 
 ### #662 · PILNE SafeFleet — link tymczasowy (SG-27) — SCALONE (`189688bc` / PR #663 / **0349**); #662-b SCALONE (`1ee855fd` / PR #664 / **0350**, 30.10.2026 12:54Z)
 Źródło: #662 (Spawn2018, `pilne`; właściciel 30.10 11:51). Przed poprawkami F7 #661.
@@ -2327,6 +2327,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 31.10.2026 21:00 | #688 F7 r2 POPRAWKI: B1 kompletność przed delete; B2 HTML>Digitraffic; B3 status/przeszły/RECZNIE; SOURCE_DOWN DIGITRAFFIC_VIKING; 0359 przed Edge; Awizacja empty = #678 | pętla |
 | 31.10.2026 21:30 | #688 F7 r3 POPRAWKI: B1 HTML adoptuje Digitraffic (`source_ref` null); B2 VIKING ±3 h; B3 mutacje + titleKey DUP/withdrawn; completeForRemoval ETA∩ETD; delete/insert try/catch | pętla |
 | 31.10.2026 22:10 | #688 F7 r4 POPRAWKI: mutacje (trasa, !isDigitrafficRef, safeDelete, granica 2,5/3,5 h, withdrawn titleKey); RECZNIE+DANE_STARTOWE w ±3 h; #685-b RPC ±3 h | pętla |
+| 31.10.2026 22:35 | #688 SCALONE `774fd2c0` (F7: gotowe @ b31d504e); start #685-b — 0360 + Edge viking-schedule-import + applyVikingFileSchedule | pętla |
 | 31.10.2026 — | Decyzja 73: TLLA-HEL ETA−150 min / HELA-TLL ETD+160 min (fixture Cargo; nocny 165 min OK). Decyzja 74: `sailings.source_ref` 0359; Digitraffic `digitraffic:portcall:<id>:<route>`; HTML/RECZNIE/DANE_STARTOWE wygrywają; #685-b RPC zastępuje digitraffic:% w ±3 h | F7 #688 r1–r4 |
 | 31.10.2026 — | F7 #683 nieblokujące (osobna poprawka): Scheduler grudzień + „on 2 January” → rok bieżący, ciche wygaśnięcie; Alert INFO bez ryzyka/historii — świadomie | F7 #683 r7 |
 | 31.10.2026 — | F7 #683 r8 nieblokujące (osobno): Alert poza Schedulerem obok Schedulera; sprzeczne bloki (resume→cofnięcie auto); rok przy długim oknie Schedulera; mutanty M10/M15–M17/M22 świadomie bez testów | F7 #683 r8 |

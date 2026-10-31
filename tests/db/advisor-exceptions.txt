@@ -87,6 +87,8 @@ authenticated_security_definer_function_executable	public.ferry_sailings_map	E19
 authenticated_security_definer_function_executable	public.ferry_dict_snapshot	E19 — allowlista RPC; sprawdzenie roli w funkcji (BN1)
 authenticated_security_definer_function_executable	public.ferry_route_port_countries	E19 — allowlista RPC; sprawdzenie roli w funkcji (BN1)
 authenticated_security_definer_function_executable	public.ferry_route_set_active	E19 — allowlista RPC; sprawdzenie roli w funkcji (BN1 #648)
+authenticated_security_definer_function_executable	public.viking_schedule_import_assert	E19 — allowlista RPC; sprawdzenie roli w funkcji (#685-b)
+authenticated_security_definer_function_executable	public.viking_schedule_import_record	E19 — allowlista RPC; sprawdzenie roli w funkcji (#685-b)
 authenticated_security_definer_function_executable	public.fuel_add_reading	E19 — allowlista RPC; sprawdzenie roli w funkcji
 authenticated_security_definer_function_executable	public.fx_rate_before	E19 — allowlista RPC; sprawdzenie roli w funkcji
 authenticated_security_definer_function_executable	public.h1_route_check_state	E19 — allowlista RPC; sprawdzenie roli w funkcji
@@ -189,3 +191,4 @@ authenticated_security_definer_function_executable	public.admin_preview_start	E1
 authenticated_security_definer_function_executable	public.admin_preview_stop	E19 — allowlista RPC; B5 Podgląd; sprawdzenie roli w funkcji
 authenticated_security_definer_function_executable	public.assert_not_preview	E19 — allowlista RPC; B5 Podgląd
 authenticated_security_definer_function_executable	public.is_preview_read_only	E19 — allowlista RPC; B5 Podgląd
+authenticated_security_definer_function_executable	public.viking_schedule_import	E19 � allowlista RPC; HHL_ADMIN+2FA (#685-b)

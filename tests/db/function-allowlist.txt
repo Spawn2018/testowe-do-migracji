@@ -131,6 +131,8 @@ authenticated ferry_sailings_map
 authenticated ferry_dict_snapshot
 authenticated ferry_route_port_countries
 authenticated ferry_route_set_active
+authenticated viking_schedule_import_assert
+authenticated viking_schedule_import_record
 authenticated fuel_add_reading
 authenticated fx_rate_before
 authenticated h1_route_check_state
@@ -248,3 +250,4 @@ authenticated assert_not_preview
 authenticated is_preview_read_only
 authenticated sailing_mismatch_suggest
 authenticated sailing_mismatch_assign
+authenticated viking_schedule_import

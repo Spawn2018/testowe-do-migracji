@@ -181,6 +181,8 @@ ferry_track_sample | GUARD | select count(*) from ferry_track_sample() | Brak ak
 ferry_dict_snapshot | GUARD | select ferry_dict_snapshot() | Brak aktywnego konta
 ferry_route_port_countries | GUARD | select count(*) from ferry_route_port_countries('GDN-NYN') | Brak aktywnego konta
 ferry_route_set_active | GUARD | select ferry_route_set_active('TLLA-HEL', true) | Administrator HHL|42501
+viking_schedule_import_assert | GUARD | select viking_schedule_import_assert() | Administrator HHL|42501
+viking_schedule_import_record | GUARD | select viking_schedule_import_record('x.html','abc',0,null,null,'{}'::jsonb) | Administrator HHL|42501
 ferry_sailings_map | GUARD | select count(*) from ferry_sailings_map() | Brak aktywnego konta
 wf_duplicate_check | GUARD | select wf_duplicate_check('DELAY_DETECTED', 'true'::jsonb, '[]'::jsonb, null)::text | tylko HHL_ADMIN
 workflow_rule_history | GUARD | select count(*) from workflow_rule_history(null, 5) | tylko HHL_ADMIN|HHL_OPS
@@ -216,3 +218,4 @@ assert_not_preview | EMPTY | select assert_not_preview() |
 is_preview_read_only | EMPTY | select is_preview_read_only()::text | false
 sailing_mismatch_suggest | GUARD | select sailing_mismatch_suggest('00000000-0000-0000-0000-000000000001') | Brak aktywnego konta|wyłącznie HHL
 sailing_mismatch_assign | GUARD | select sailing_mismatch_assign('00000000-0000-0000-0000-000000000001','00000000-0000-0000-0000-000000000002') | Brak aktywnego konta|Administrator HHL|2FA|42501
+viking_schedule_import | GUARD | select viking_schedule_import('00000000-0000-0000-0000-000000000001','[]'::jsonb,'{}'::jsonb,true) | Administrator HHL|42501
