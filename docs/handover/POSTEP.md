@@ -7400,9 +7400,3 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (#667 F):** `tests/i667-f-e2e-orange-roads.jsdom.test.ts` — ≥1 polilinia #E5A544 (paintOrangeRoads / ZonesMap / Geofence); SE-KAA w payloadzie `map_display_state`; PROD mapy z `loadRoadLines`+`paintOrangeRoads`; cron 21 d przed purge 30 d (`attempted=5`, SE-KAA w missing po HTTP 500). Playwright lokalnie: `tests/i667-f-orange-maps.local.spec.ts` (build supabase + lokalny SB). Merge `main` (#676). Rejestr: DP-13/33…37 SCALONE; **DP-53** (Cursor, bramka dist demo). Unit i667 F+E+orange ✔ (22). **Dalej:** CI → gotowe do F7 #677.
 - Bez push na main.
 
-## 2026-10-31 03:55 — #667 F e2e (jsdom + local Playwright)
-
-- Skrzynka: **#667** W TOKU (PR #677 E+F); #608 w planie; #550 WSTRZYMANE. #676 bez „F7: gotowe do scalenia”.
-- Scalanie: brak „F7: gotowe do scalenia” na #677 (CI ✔ @ `70df5d96` unit/db/visual — G-15 do zielonego; potem krok F). Bez push na main.
-- **Krok (#667 F):** `tests/i667-f-e2e-orange-roads.jsdom.test.ts` — ≥1 polilinia `#E5A544` (paint + ZonesMap/Geofence); SE-KAA w `map_display_state`; mapy PROD `loadRoadLines`; cron 21 d przy wieku 25 d (przed purge 30 d). Playwright `tests/i667-f-orange-maps.local.spec.ts` (build supabase + lokalny SB). Unit fokus i667/bmapa ✔ (41). **Dalej:** CI → gotowe do F7.
-- Bez push na main.

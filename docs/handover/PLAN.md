@@ -1225,6 +1225,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-45 | Cursor | FK bez ON DELETE — wyłączanie legu przez `active=false` (odnotować w PLAN) | F7 #677 r1 N3 | #667 E | odnotowane (§4 pkt 8) |
 | DP-46 | Cursor | `map_display_state` sortuje po `sort_order` zamiast `leg` — zmiana zachowania RPC | F7 #677 r1 N4 | #667 E | odnotowane |
 | DP-47 | Cursor | `here_store_road` przyjmuje legi nieaktywne — akceptowalne | F7 #677 r1 N5 | #667 E | odnotowane |
+| DP-53 | Cursor | bramka na zbudowanej paczce demo: brak `vesselsServer` i klienta Supabase w `dist` (warunek `VITE_AUTH_MODE === 'supabase'` tylko w buildzie) | F7 #676 r2 | po #667 | w kolejce |
 
 ### BN9 — część na produkcji; ekrany zależne od danych (BN9-c*)
 Źródło: #671. BN9-a (#575) i BN9-b (#670) na produkcji. Zostają (koordynator, `wyglad/*`, zaraz po swoim etapie):
