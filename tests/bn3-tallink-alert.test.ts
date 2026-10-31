@@ -1,6 +1,6 @@
 /**
  * BN3 — Tallink Alert + Lisainfo ts.ee (decyzje 57, 59).
- * F7 #683 B1–B5: pełna pula, data/HH:MM z treści, negacja, >1 statek, job AUTO.
+ * F7 #683 B1–B5 + R2-B2: pełna pula, data/HH:MM, >1 godzina/data → ambiguous, negacja, job AUTO.
  *
  * Fixture `tallink-alert-cancel-mystar.html` — treść odwołania **syntetyczna**
  * (przeróbka pod test; nie jest żywym Alertem z produkcji).
@@ -181,6 +181,26 @@ describe('BN3 Tallink Alert', () => {
     ).alerts[0]!;
     expect(queen.vessel).toBeNull();
   });
+
+  it('F7 R2-B2: >1 HH:MM w treści → multiTime / ambiguous (nie ODWOLANY na pierwszej godzinie)', () => {
+    // Syntetyczna treść z F7 r2 — dwie godziny; pierwsza to rejs który płynie.
+    const text =
+      'The MyStar 10:30 departure from Tallinn to Helsinki will operate; the 13:30 departure on 2 November is cancelled.';
+    const d = parseAlertContentDates(text, 2026);
+    expect(d?.multiTime).toBe(true);
+    expect(d?.hm).toBeNull();
+
+    const alert = parseTallinkAlerts(wrapAlert(text, '2026-11-02'), TALLINK_HOME(), NOW).alerts[0]!;
+    expect(alert.kind).toBe('ODWOLANY');
+    expect(alert.multiTime).toBe(true);
+    expect(alert.contentHm).toBeNull();
+    // 10:30 Tallinn 2.11 ≈ 08:30Z (EET+2)
+    const hit = matchTallinkAlertSailings(alert, [{
+      id: 's-1030', vesselName: 'M/F MyStar', route: 'TLL-HEL',
+      departureAt: '2026-11-02T08:30:00.000Z', status: 'ZAPLANOWANY', source: 'TALLINK',
+    }]);
+    expect(hit.kind).toBe('ambiguous');
+  });
 });
 
 describe('BN3 Tallink Alert — runFerryStatus (F7 B5)', () => {
@@ -240,6 +260,24 @@ describe('BN3 Tallink Alert — runFerryStatus (F7 B5)', () => {
     await runFerryStatus(deps(st, { 'tallink.com': html, 'ts.ee': 503, portsofstockholm: 503 }, NOW));
     expect(st.sailings[0]!.status).toBe('ZAPLANOWANY');
     expect(st.notices).toHaveLength(0);
+  });
+
+  it('F7 R2-B2: dwie godziny w Alertcie → ryzyko, bez ODWOLANY na 10:30', async () => {
+    const html = wrapAlert(
+      'The MyStar 10:30 departure from Tallinn to Helsinki will operate; the 13:30 departure on 2 November is cancelled.',
+      '2026-11-02',
+    );
+    const st = new MemStore();
+    st.sailings.push({
+      id: 's-1030', vessel_id: MYST, route: 'TLL-HEL',
+      departure_at: '2026-11-02T08:30:00.000Z', arrival_at: '2026-11-02T10:30:00.000Z',
+      delayed_departure_at: null, delayed_arrival_at: null,
+      status: 'ZAPLANOWANY', source: 'TALLINK',
+    });
+    await runFerryStatus(deps(st, { 'tallink.com': html, 'ts.ee': 503, portsofstockholm: 503 }, NOW));
+    expect(st.sailings[0]!.status).toBe('ZAPLANOWANY');
+    expect(st.notices).toHaveLength(0);
+    expect(st.risks.some((r) => r.titleKey === 'rk_tallink_alert_ambiguous')).toBe(true);
   });
 });
 

@@ -7435,6 +7435,13 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (odbiór prod):** SELECT `here_road_legs` — **12** / active 12 / `browser_fetch` 5; core bez zmian (3495/12561/3742/18854/19408); BN7 7× null. `here-roads` **#108803** @ 04:49Z ok (0 prób — core świeże; BN7 poza cronem). Komentarz w #667. **Dalej:** BN3 (#573).
 - Bez push na main.
 
+## 2026-10-31 10:35 — #683 F7 R2-B2: multiTime (>1 HH:MM/data)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE; #499/#537/#538/#500 w planie. Bez nowych `pilne`.
+- Scalanie: #683 — F7 r2: R2-B1 (asercja 0358) zrobione @ `f42ce3a0` (CI unit/db/visual ✔); R2-B2 otwarte — bez „F7: gotowe do scalenia”. #684 wygląd bez F7. Bez push na main.
+- **Krok R2-B2:** `tallinkAlert` — >1 różna HH:MM lub >1 data w treści → `multiTime` → `ambiguous` (tylko ryzyko MEDIUM); test zdania 10:30/13:30. PLAN: DP-105…109. vitest bn3-tallink-alert **14**. **Dalej:** CI → „gotowe do F7 @ sha”.
+- Bez push na main.
+
 ## 2026-10-31 10:15 — #683 CI db FAIL → asercja 0358 `true/AUTO`
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE; #499/#537/#538/#500 w planie. Bez nowych `pilne`.

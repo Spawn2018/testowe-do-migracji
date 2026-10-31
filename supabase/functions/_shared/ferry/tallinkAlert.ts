@@ -3,7 +3,8 @@
  *
  * Decyzja 59: jawne odwołanie + jednoznaczne dopasowanie (pełna pula statek/trasa/okno;
  * data+HH:MM z treści, Europe/Tallinn, ±30 min) → ODWOLANY; inaczej FERRY MEDIUM.
- * F7 #683 B1–B4. Kampanie pomijane. User-Agent uczciwy; bez obchodzenia.
+ * F7 #683 B1–B4; R2-B2: >1 HH:MM lub >1 data w treści → niejednoznaczne.
+ * Kampanie pomijane. User-Agent uczciwy; bez obchodzenia.
  */
 import type { FerryRoute } from './polferries.ts';
 
@@ -43,6 +44,8 @@ export interface TallinkAlert {
   text: string;
   vessel: string | null;
   multiVessel: boolean;
+  /** F7 #683 R2-B2: >1 różna HH:MM lub >1 data w treści. */
+  multiTime: boolean;
   routes: FerryRoute[];
   /** Okno Scheduler (wyświetlanie CMS) — zapas, gdy brak daty w treści. */
   windowStartYmd: string | null;
@@ -142,26 +145,51 @@ function hmToMin(hm: string): number {
   return (h ?? 0) * 60 + (m ?? 0);
 }
 
-/** Data i opcjonalna godzina z treści Alertu (B2). */
+/** Data i opcjonalna godzina z treści Alertu (B2). R2-B2: wiele HH:MM/dat → multiTime. */
 export function parseAlertContentDates(
   text: string,
   year: number,
-): { startYmd: string; endYmd: string; hm: string | null } | null {
-  const hmM = text.match(/\b(?:at\s+)?(\d{1,2}):(\d{2})\b/i);
-  const hm = hmM
-    ? `${String(Number(hmM[1])).padStart(2, '0')}:${hmM[2]}`
-    : null;
-  const dateM = text.match(
-    /\b(?:on|today,?)\s+(\d{1,2})\s+(January|February|March|April|May|June|July|August|September|October|November|December)(?:\s+(\d{4}))?\b/i,
-  ) ?? text.match(
-    /\b(\d{1,2})\s+(January|February|March|April|May|June|July|August|September|October|November|December)\s+(\d{4})\b/i,
+): { startYmd: string; endYmd: string; hm: string | null; multiTime: boolean } | null {
+  const hmAll = [...text.matchAll(/\b(?:at\s+)?(\d{1,2}):(\d{2})\b/gi)].map(
+    (m) => `${String(Number(m[1])).padStart(2, '0')}:${m[2]}`,
   );
-  if (!dateM) return hm ? { startYmd: '', endYmd: '', hm } : null;
-  const day = String(Number(dateM[1])).padStart(2, '0');
-  const mon = MONTH[dateM[2]!.toLowerCase()]!;
-  const y = dateM[3] ?? String(year);
-  const ymd = `${y}-${mon}-${day}`;
-  return { startYmd: ymd, endYmd: ymd, hm };
+  const hmUnique = [...new Set(hmAll)];
+  const multiHm = hmUnique.length > 1;
+  const hm = hmUnique.length === 1 ? hmUnique[0]! : null;
+
+  const monthNames =
+    'January|February|March|April|May|June|July|August|September|October|November|December';
+  const ymds: string[] = [];
+  const pushYmd = (dayRaw: string, monRaw: string, yearRaw: string | undefined) => {
+    const day = String(Number(dayRaw)).padStart(2, '0');
+    const mon = MONTH[monRaw.toLowerCase()]!;
+    const y = yearRaw ?? String(year);
+    const ymd = `${y}-${mon}-${day}`;
+    if (!ymds.includes(ymd)) ymds.push(ymd);
+  };
+  for (const m of text.matchAll(
+    new RegExp(`\\b(?:on|today,?)\\s+(\\d{1,2})\\s+(${monthNames})(?:\\s+(\\d{4}))?\\b`, 'gi'),
+  )) {
+    pushYmd(m[1]!, m[2]!, m[3]);
+  }
+  for (const m of text.matchAll(
+    new RegExp(`\\b(\\d{1,2})\\s+(${monthNames})\\s+(\\d{4})\\b`, 'gi'),
+  )) {
+    pushYmd(m[1]!, m[2]!, m[3]);
+  }
+  const multiDate = ymds.length > 1;
+  const multiTime = multiHm || multiDate;
+  if (ymds.length === 0) {
+    if (!hm && !multiTime) return null;
+    return { startYmd: '', endYmd: '', hm: multiTime ? null : hm, multiTime };
+  }
+  const ymd = ymds[0]!;
+  return {
+    startYmd: multiTime ? '' : ymd,
+    endYmd: multiTime ? '' : ymd,
+    hm: multiTime ? null : hm,
+    multiTime,
+  };
 }
 
 /** Czy odejście pasuje do Alertu — Europe/Tallinn; content* > Scheduler; ±30 min przy HH:MM. */
@@ -203,7 +231,7 @@ export function parseTallinkAlerts(
     const content = parseAlertContentDates(text, Number(dateStart?.slice(0, 4) ?? yearNow));
     const contentStart = content?.startYmd || null;
     const contentEnd = content?.endYmd || null;
-    const endForExpiry = contentEnd ?? dateEnd;
+    const endForExpiry = contentEnd || dateEnd;
     if (endForExpiry && endForExpiry < today) return;
     const ships = vesselsIn(text);
     alerts.push({
@@ -211,6 +239,7 @@ export function parseTallinkAlerts(
       text: text.slice(0, 800),
       vessel: ships.vessel,
       multiVessel: ships.multi,
+      multiTime: content?.multiTime ?? false,
       routes: routesIn(text),
       windowStartYmd: dateStart,
       windowEndYmd: dateEnd,
@@ -280,7 +309,7 @@ export function matchTallinkAlertSailings(
   alert: TallinkAlert,
   sailings: TallinkAlertMatchCandidate[],
 ): TallinkAlertMatch {
-  if (alert.multiVessel) return { kind: 'ambiguous', candidates: [] };
+  if (alert.multiVessel || alert.multiTime) return { kind: 'ambiguous', candidates: [] };
 
   const start = alert.contentStartYmd ?? alert.windowStartYmd;
   if (alert.vessel && start) {
