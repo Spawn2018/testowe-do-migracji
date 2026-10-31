@@ -7350,3 +7350,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - Scalanie: brak „F7: gotowe do scalenia” na #673. CI @ `e386b06c`: unit/visual ✔, **db FAIL** bmapa roads 5≠4. F7 r4 POPRAWKI.
 - **Krok (F7 r4 #673):** B4 — 0354: wierzchołek `21.2932/64.3511` (E22+INLAND); INLAND `16.120/59.279`; Rockneby/Västervik na E22. B4-test — fixture `se-nyn-north-here.json` + via jak `here_corridor_via_points`; pada na korytarzu sprzed dens., przechodzi po r4. CI — bmapa `roads=5` (legi z `points=null`). Uwaga 1 — prawdziwe `loadRoadLines` + atrapa fetch/Supabase. Uwaga 3 — `monthSpend` null → bez HERE. Unit fokus i667 ✔ (16). **Dalej:** CI → gotowe do F7; potem D/E/F.
 - Bez push na main.
+
+## 2026-10-31 01:15 — #667 F7 r5 POPRAWKI (fixture prod + B6/B7)
+
+- Skrzynka: **#667** W TOKU (ten PR); #608 w planie; #550 WSTRZYMANE; #675 wygląd bez F7.
+- Scalanie: brak „F7: gotowe do scalenia”. CI @ `ff28f980` unit/db/visual ✔; F7 r5 POPRAWKI @ 00:05Z.
+- **Krok (F7 r5 #673):** B4-test (a) fixture SE-NYN północ z `here_road_geometry` (lat≥63.2, ~3 km); (b) `segKm` haversine + lista via SQL po B7. B6 — `hereRoadsInFlight` przed `getSession`; test `vi.waitFor` + 1 POST. B7 — 0354 Uppsala `17.6953/59.8767`, Gävle `17.109/60.6638`, Hudiksvall `17.065/61.7279`. Uwagi: INLAND 16.120/59.279 = OSRM (SELECT po deploy); Norwegia też INLAND; `runHereRoads` bez `hereMonthSpend`; bmapa 174 INLAND null+summary. **Dalej:** CI → gotowe do F7; potem D/E/F.
+- Bez push na main.

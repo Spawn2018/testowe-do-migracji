@@ -1171,7 +1171,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 4. Diagnostyka: ~~fundament `summary` w `map_display_state` + `checkRoads` (0354)~~; UI Stan systemu → DP-22; `integration_runs` (N1 retry_after +1 h w tym PR).
 5. Słownik legów BN7 (`PL-TLL`…`SE-KPS`) gotowy do rysowania (DP-23).
 6. Testy e2e na buildzie produkcyjnym (nie demo): ≥1 polilinia na mapę; SE-KAA obecny.
-7. ~~**F7 r1** B1–B3 / N1·N4·N7~~; ~~**F7 r2** B4 origin+Luleå (**0354**)~~; ~~**F7 r3** B5 SE_E22 0298 + sparse~~; **F7 r4** — B4 dens. Umeå–Skellefteå `21.2932/64.3511` (+ INLAND Katrineholm `16.120/59.279`); Rockneby/Västervik na E22; fixture SE-NYN północ; bmapa roads=5; `loadRoadLines` in-flight z atrapą; brak `hereMonthSpend` → bez HERE — **czekam F7 „gotowe do scalenia”**.
+7. ~~**F7 r1** B1–B3 / N1·N4·N7~~; ~~**F7 r2** B4 origin+Luleå (**0354**)~~; ~~**F7 r3** B5 SE_E22 0298 + sparse~~; ~~**F7 r4** dens. Umeå–Skellefteå~~; **F7 r5** — fixture SE-NYN z prod; via haversine=SQL; B7 Uppsala/Gävle/Hudiksvall na E4; in-flight przed `getSession`; bmapa 174 (INLAND null+summary); `runHereRoads` bez monthSpend → SOURCE_DOWN — **czekam F7 „gotowe do scalenia”**.
 
 
 ### Rejestr drobnych poprawek (DP) — #671 (zasada 30.10 18:31)
@@ -2160,4 +2160,5 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 31.10.2026 00:10 | #673 F7 r3: B5 SE_E22=30 pkt 0298; B4 kaaDeviationOk sparse 15 km; B2 ZonesMap | pętla |
 | 31.10.2026 00:45 | #668 SCALONE `53890480`; #673 F7 r4: dens. Umeå–Skellefteå + Katrineholm; bmapa roads=5; loadRoadLines atrapa; monthSpend null | pętla |
 | 31.10.2026 00:25 | #673 merge main (#668); DP-29…32; czekam F7 gotowe do scalenia | pętla |
+| 31.10.2026 01:15 | #673 F7 r5: fixture SE-NYN prod; B7 Uppsala/Gävle/Hudiksvall E4; in-flight przed read; bmapa 174; runHereRoads null spend | pętla |
 

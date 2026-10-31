@@ -1,5 +1,6 @@
--- #667 F7 r2–r4 B4/B5: korytarze SE_E22 / SE_KAA_INLAND — origin Karlskrona + Luleå na E4/97.
--- SE_E22 = 0298 + origin HERE + Luleå E4/97 + densyfikacja Umeå–Skellefteå (F7 r4).
+-- #667 F7 r2–r5 B4/B5/B7: korytarze SE_E22 / SE_KAA_INLAND — origin Karlskrona + Luleå na E4/97.
+-- SE_E22 = 0298 + origin HERE + Luleå E4/97 + densyfikacja Umeå–Skellefteå (F7 r4)
+--   + via Uppsala/Gävle/Hudiksvall na E4 (F7 r5 B7 — bez zjazdu do miasta przy passThrough).
 -- DP-22: map_display_state zwraca też legi bez points + summary (odrzucone / oczekujące).
 
 begin;
@@ -32,9 +33,9 @@ update public.corridor_polylines
          st_makepoint(17.57,   59.09),    -- Järna (E4)
          st_makepoint(17.628,  59.195),   -- Södertälje (E4)
          st_makepoint(18.0686, 59.3293),  -- Sztokholm
-         st_makepoint(17.6389, 59.8586),
-         st_makepoint(17.1413, 60.6749),  -- Gävle
-         st_makepoint(17.1056, 61.7274),
+         st_makepoint(17.6953, 59.8767),  -- Uppsala E4 (F7 r5 B7 — było 17.6389/59.8586 ≈ 3,7 km od E4)
+         st_makepoint(17.109,  60.6638),  -- Gävle E4 (F7 r5 B7)
+         st_makepoint(17.065,  61.7279),  -- Hudiksvall E4 (F7 r5 B7)
          st_makepoint(17.3069, 62.3908),
          st_makepoint(17.9379, 62.6323),
          st_makepoint(18.7153, 63.2909),
@@ -45,7 +46,7 @@ update public.corridor_polylines
          st_makepoint(22.053,  65.606),   -- E4/97 przy Luleå (nie centrum)
          st_makepoint(21.7591, 65.8054)   -- Boden
        ]), 4326),
-       source = 'OSM / ODbL — Karlskrona (origin HERE) → E22 → E4 → Umeå–Skellefteå dens. → Boden (#667 F7 r4 B4)',
+       source = 'OSM / ODbL — Karlskrona (origin HERE) → E22 → E4 (Uppsala/Gävle/Hudiksvall na jezdni) → dens. → Boden (#667 F7 r5 B7)',
        updated_at = now()
  where code = 'SE_E22';
 
@@ -81,8 +82,8 @@ update public.corridor_polylines
          st_makepoint(16.6066, 59.9079), -- Sala
          st_makepoint(16.929,  60.151),
          st_makepoint(17.00,   60.45),
-         st_makepoint(17.1413, 60.6749), -- Gävle
-         st_makepoint(17.1056, 61.7274),
+         st_makepoint(17.109,  60.6638), -- Gävle E4 (F7 r5 B7)
+         st_makepoint(17.065,  61.7279), -- Hudiksvall E4 (F7 r5 B7)
          st_makepoint(17.3069, 62.3908),
          st_makepoint(17.9379, 62.6323),
          st_makepoint(18.7153, 63.2909),
@@ -93,7 +94,7 @@ update public.corridor_polylines
          st_makepoint(22.053,  65.606),  -- E4/97 przy Luleå
          st_makepoint(21.7591, 65.8054)  -- Boden
        ]), 4326),
-       source = 'OSM / ODbL — Karlskrona → Västerås → dens. Umeå–Skellefteå → Boden (#667 F7 r4 B4)',
+       source = 'OSM / ODbL — Karlskrona → Västerås → E4 (Gävle/Hudiksvall) → dens. → Boden (#667 F7 r5 B7)',
        updated_at = now()
  where code = 'SE_KAA_INLAND';
 

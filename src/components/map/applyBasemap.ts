@@ -309,20 +309,22 @@ export function __resetRoadLinesCacheForTests(): void {
 /** #667 F7 r1 N4: loadRoadLines + loadFerryLines dzielą cache `readMapDisplayState` (TTL 60 s). */
 export async function loadRoadLines(): Promise<LatLng[][]> {
   if (!SUPABASE_AUTH_ENABLED) return [];
-  try {
-    const { getSupabase } = await import('../../auth/client');
-    const sb = await getSupabase();
-    const read = async (force = false) => acceptedRoads((await readMapDisplayState(force))?.roads);
-    let lines = await read();
-    // #572 / #667: nie kończ przy 2 legach — SE-KAA z SE_E22 + INLAND.
-    if (lines.length >= ROAD_LEGS) return lines;
-    if (hereRoadsSessionAt > 0 && Date.now() - hereRoadsSessionAt < HERE_ROADS_SESSION_MS) return lines;
-    if (hereRoadsInFlight) return hereRoadsInFlight;
-    const { data } = await sb.auth.getSession();
-    const token = data.session?.access_token;
-    if (!token) return lines;
-    const started = lines;
-    hereRoadsInFlight = (async () => {
+  // F7 r5 B6: in-flight synchronicznie przed pierwszym await (read/getSession),
+  // żeby równoległe wołania dzieliły jedną obietnicę / 1× POST.
+  if (hereRoadsInFlight) return hereRoadsInFlight;
+  hereRoadsInFlight = (async () => {
+    try {
+      const { getSupabase } = await import('../../auth/client');
+      const sb = await getSupabase();
+      const read = async (force = false) => acceptedRoads((await readMapDisplayState(force))?.roads);
+      let lines = await read();
+      // #572 / #667: nie kończ przy 2 legach — SE-KAA z SE_E22 + INLAND.
+      if (lines.length >= ROAD_LEGS) return lines;
+      if (hereRoadsSessionAt > 0 && Date.now() - hereRoadsSessionAt < HERE_ROADS_SESSION_MS) return lines;
+      const started = lines;
+      const { data } = await sb.auth.getSession();
+      const token = data.session?.access_token;
+      if (!token) return started;
       const ac = new AbortController();
       const timer = setTimeout(() => ac.abort(), HERE_ROADS_TIMEOUT_MS);
       try {
@@ -346,14 +348,14 @@ export async function loadRoadLines(): Promise<LatLng[][]> {
         return await read(true);
       } catch {
         return started;
-      } finally {
-        hereRoadsInFlight = null;
       }
-    })();
-    return hereRoadsInFlight;
-  } catch {
-    return [];
-  }
+    } catch {
+      return [];
+    } finally {
+      hereRoadsInFlight = null;
+    }
+  })();
+  return hereRoadsInFlight;
 }
 
 
