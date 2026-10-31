@@ -22,8 +22,8 @@ describe('P9-a · plik z podkładem (E22)', () => {
     const tiles = {};
     const e = {
       map: { getContainer: () => ({ dataset: {} }) },
-      el: {}, pooled: true, tilesTheme: null, tilesLoaded: false, basemapSeq: 0, views: new Map(),
-      layers: { tiles },
+      el: {}, pooled: true, tilesTheme: null, lanesTheme: 'light', tilesLoaded: false, basemapSeq: 0, views: new Map(),
+      layers: { tiles, ferryLeg: { eachLayer() { /* DP-76: pusta warstwa promu */ } } },
       health: { state: 'loading', tries: 0, via: 'fallback', reported: false, cause: 'tiles' },
       healthSubs: new Set(), unwatch: null, chunkFails: 0, slot: 'map',
     };

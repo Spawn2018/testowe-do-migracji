@@ -13,7 +13,7 @@ import { groupOf, radiusText, routeOf, type ZoneRow } from '../../lib/p8cZones';
 import type { NearPos } from '../../lib/p8cSource';
 import { formatListDateTime } from '../../lib/format';
 import { DEMO_ROAD_LINES } from '../../data/roadLinesDemo';
-import { ferryLaneLines } from '../../lib/map/ferryLanes';
+import { ferryLaneLines, ferryLaneOptions, restyleFerryLanes } from '../../lib/map/ferryLanes';
 import { p8ct } from '../../i18n/p8c';
 
 type Circle = { lat: number; lng: number; radiusM: number };
@@ -85,6 +85,8 @@ export default function ZonesMap({ mode, zones = NO_ZONES, zone, prev, draft, ne
   /** #667 F7 r1 B2: osobna warstwa dróg — paintOrangeRoads nie kasuje torów promów. */
   const roadsRef = useRef<L.LayerGroup | null>(null);
   const tilesRef = useRef<L.Layer | null>(null);
+  /** DP-76: motyw, w którym narysowano tory promów (przerysowanie tylko przy zmianie motywu). */
+  const laneThemeRef = useRef<string | null>(null);
   const onMoveRef = useRef(onMove);
   const fitKey = useRef('');
   useEffect(() => { onMoveRef.current = onMove; }, [onMove]);
@@ -112,9 +114,12 @@ export default function ZonesMap({ mode, zones = NO_ZONES, zone, prev, draft, ne
         if (roadsRef.current === roads) paintOrangeRoads(roads, lines);
       }).catch(() => undefined);
     }
-    /* DP-13: tory promów ze wspólnego źródła (`ferryLaneLines`) — Polska–Szwecja i 4 przeprawy bałtyckie; styl mapy Stref bez zmian */
+    /* DP-13: tory promów ze wspólnego źródła (`ferryLaneLines`) — Polska–Szwecja i 4 przeprawy bałtyckie.
+       DP-76: styl wspólny z mapą korytarza (`ferryLaneOptions(theme)`); zmianę motywu przerysowuje efekt motywu */
+    laneThemeRef.current = useTowerStore.getState().theme;
+    const laneOpts = ferryLaneOptions(laneThemeRef.current);
     for (const lane of ferryLaneLines()) {
-      L.polyline(lane.map(([lat, lng]) => L.latLng(lat, lng)), { color: tok('--sea', '#245C87'), weight: 2, opacity: 0.8, dashArray: '6 6', interactive: false }).addTo(route);
+      L.polyline(lane.map(([lat, lng]) => L.latLng(lat, lng)), { ...laneOpts, interactive: false }).addTo(route);
     }
     groupRef.current = L.layerGroup().addTo(map);
     mapRef.current = map;
@@ -133,6 +138,11 @@ export default function ZonesMap({ mode, zones = NO_ZONES, zone, prev, draft, ne
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
+    /* DP-76: zmiana motywu na żywo — tory promów w stylu motywu (jak podkład) */
+    if (routeRef.current && laneThemeRef.current !== theme) {
+      restyleFerryLanes(routeRef.current, theme);
+      laneThemeRef.current = theme;
+    }
     if (import.meta.env.VITE_AUTH_MODE !== 'supabase') {
       tilesRef.current = installFallback(map, tilesRef.current, theme);
       return;
