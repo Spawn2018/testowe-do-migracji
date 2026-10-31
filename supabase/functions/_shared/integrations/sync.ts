@@ -103,6 +103,10 @@ export function planSailingSync(o: {
     }
     if (SOURCE_RANK[cur.source] > SOURCE_RANK[src]) { plan.manualKept += 1; continue; }
     const want: SailingPatch = { source: src };
+    /* F7 #688 r3 B1: HTML Viking adoptuje wiersz Digitraffic → czyść source_ref (nie kasuj przy wycofaniu portCall). */
+    if (src === 'VIKING' && (cur.source_ref ?? '').startsWith('digitraffic:')) {
+      want.source_ref = null;
+    }
     if (cur.vessel_id !== vesselId) want.vessel_id = vesselId;
     if (iso(cur.arrival_at) !== iso(inc.arrivalUtc)) want.arrival_at = new Date(inc.arrivalUtc).toISOString();
     if (inc.status) {

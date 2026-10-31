@@ -107,6 +107,9 @@ const pl: Dict = {
   job_label_backup: 'kopia zapasowa (backup-export)',
   // --- funkcje Edge (integracje)
   rk_ferry_status_unknown: 'Nieznany status rejsu {vessel} {dep} — bez zmiany, do weryfikacji HHL',
+  /* F7 #688 r3: osobne klucze Digitraffic Viking (DUP / wycofane) */
+  rk_ferry_digitraffic_dup: 'Zdublowany rejs Vikinga — sprawdź ({vessel}, {dep})',
+  rk_ferry_digitraffic_withdrawn: 'Digitraffic: zgłoszenie portowe wycofane — sprawdź {vessel} {dep}',
   /* BN3 decyzja 59: Tallink Alert bez jednoznacznego rejsu → tylko ryzyko MEDIUM */
   rk_tallink_alert_ambiguous: 'Tallink Alert: odwołanie — wiele rejsów, weryfikacja HHL',
   rk_tallink_alert_unmatched: 'Tallink Alert: odwołanie bez jednoznacznego rejsu — weryfikacja HHL',

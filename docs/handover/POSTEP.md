@@ -7457,6 +7457,19 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (odbiór prod):** SELECT `here_road_legs` — **12** / active 12 / `browser_fetch` 5; core bez zmian (3495/12561/3742/18854/19408); BN7 7× null. `here-roads` **#108803** @ 04:49Z ok (0 prób — core świeże; BN7 poza cronem). Komentarz w #667. **Dalej:** BN3 (#573).
 - Bez push na main.
 
+## 2026-10-31 21:30 — #688 F7 r3 POPRAWKI (adopcja HTML + ±3 h)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE; #685/#499/#537/#538/#500 w planie. Bez nowych `pilne`.
+- Scalanie: #688 — F7 r3 **POPRAWKI** @ `c309e601` (CI unit/db/visual ✔). Brak „F7: gotowe do scalenia”. Bez push na main.
+- **Krok F7 #688 r3:**
+  - **R3-B1** — `planSailingSync` VIKING: przy adopcji wiersza Digitraffic → `source_ref: null`;
+  - **R3-B2** — najbliższy VIKING bez `digitraffic:` w ±3 h → Digitraffic nie wstawia / usuwa swój (opóźnienie tylko `delayed_*`);
+  - **R3-B3** — mutacje: ETA foo+ETD, przeszły, DUP z transportem, SOURCE_DOWN DIGITRAFFIC_VIKING;
+  - nieblokujące: `completeForRemoval` ETA∩ETD niepuste; `deleteSailing`/`insert` try/catch; `rk_ferry_digitraffic_dup` / `_withdrawn`;
+  - vitest bn2-ferry-* + risk-keys ✔.
+- **Dalej:** push → CI → gotowe do F7 @ sha. Po F7/scal: #685-b.
+- Bez push na main.
+
 ## 2026-10-31 21:00 — #688 F7 r2 POPRAWKI (B1–B3 + DIGITRAFFIC_VIKING)
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE; #685/#499/#537/#538/#500 w planie. Bez nowych `pilne`.
