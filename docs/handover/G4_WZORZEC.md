@@ -261,3 +261,10 @@ gałąź `wyglad/BN9-b`, przebieg 41083266249, artefakt `visual-artifacts`). Poz
 Przyczyna: warstwa promu (`mapPool` → ferryLeg) rysuje teraz zawsze niebieskie tory TLL–HEL, MUU–VUO, TLL–STO i PLD–KPS.
 W kadrze widać je przy Sztokholmie, Tallinnie i Helsinkach: 791 px (jasny) i 953 px (ciemny), zmierzone na PR #670 i lokalnie.
 Kadrowanie, linie drogowe i markery bez zmian. Zamierzone, **regresji 0**. Wzorca `shots-baseline` nie zmieniano.
+
+## DP-76 (31.10.2026) — migawki smoke mapy: tory promów przerywane
+Odświeżone tylko `tests/__screenshots__/mapa-hhl-pl-1920-{light,dark-default}.png`, z workflowu `visual` (`update=true`,
+gałąź `wyglad/DP-76`, przebieg 41187141430, commit `7c44f9d`, artefakt `visual-artifacts`). Pozostałe 13 migawek w artefakcie jest identycznych co do bajtu (Kokpit też).
+Przyczyna: decyzja właściciela 31.10.2026, tory promów na wszystkich mapach są jasnoniebieskie przerywane (`FERRY_LANE_STYLE.dashArray = '6 6'`).
+Różnice tylko w obszarze torów (Gdańsk/Gdynia–Nynäshamn/Karlskrona, Sztokholm–Tallinn–Helsinki): 1827 px (jasny) i 1851 px (ciemny), prostokąt x 583–846, y 569–845.
+Kadrowanie, linie drogowe i markery bez zmian. Zmiana zamierzona, **regresji 0**. Wzorca `shots-baseline` nie zmieniano.
