@@ -442,6 +442,107 @@ describe('F7 #660 ferry-portnet', () => {
     expect(one).toMatchObject({ kind: 'hit', item: { id: 'n' } });
   });
 
+  // DP-94 (F7 #682 r2): ATD 13–19 min przed planem → actual_*, bez delayed_departure, W_REJSIE.
+  it('DP-94: ATD 13–19 min przed planem nie daje delayed_departure', async () => {
+    // Fixture ATD HEL-TLL = 17:15Z; plan 17:28 / 17:30 / 17:34 = −13 / −15 / −19 min.
+    for (const [id, dep] of [
+      ['early13', '2026-10-29T17:28:00.000Z'],
+      ['early15', '2026-10-29T17:30:00.000Z'],
+      ['early19', '2026-10-29T17:34:00.000Z'],
+    ] as const) {
+      const st = new MemStore();
+      st.sailings.push({
+        id, vessel_id: MEGA, route: 'HEL-TLL',
+        departure_at: dep, arrival_at: '2026-10-29T19:30:00.000Z',
+        delayed_departure_at: null, delayed_arrival_at: null,
+        actual_departure_at: null, actual_arrival_at: null,
+        status: 'ZAPLANOWANY', source: 'TALLINK',
+      });
+      const r = await runFerryPortnet(deps(st, { 'port-calls': PORTNET }, new Date('2026-10-29T20:00:00Z')));
+      expect(r.ok).toBe(true);
+      expect(st.sailings.find((s) => s.id === id)).toMatchObject({
+        actual_departure_at: '2026-10-29T17:15:00.000Z',
+        delayed_departure_at: null,
+        status: 'W_REJSIE',
+      });
+    }
+  });
+
+  // DP-95 (F7 #682 r2): ±3 h — ATA tylko do jednoznacznego rejsu; bez ryzyka przy jednym hicie.
+  it('DP-95: tolerancja ±3 h — ATA tylko do jednego rejsu; wariant po północy', async () => {
+    // Dzień: przypłynięcia 10:30 / 16:30Z, ATA 16:30 → tylko drugi; pierwszy bez actual i bez ryzyka.
+    const day = new MemStore();
+    day.sailings.push(
+      {
+        id: 'm1030', vessel_id: MEGA, route: 'TLL-HEL',
+        departure_at: '2026-10-29T08:30:00.000Z', arrival_at: '2026-10-29T10:30:00.000Z',
+        delayed_departure_at: null, delayed_arrival_at: null,
+        actual_departure_at: null, actual_arrival_at: null,
+        status: 'W_REJSIE', source: 'TALLINK',
+      },
+      {
+        id: 'm1630', vessel_id: MEGA, route: 'TLL-HEL',
+        departure_at: '2026-10-29T14:30:00.000Z', arrival_at: '2026-10-29T16:30:00.000Z',
+        delayed_departure_at: null, delayed_arrival_at: null,
+        actual_departure_at: null, actual_arrival_at: null,
+        status: 'W_REJSIE', source: 'TALLINK',
+      },
+    );
+    await runFerryPortnet(deps(day, { 'port-calls': PORTNET }, new Date('2026-10-29T20:00:00Z')));
+    expect(day.sailings.find((s) => s.id === 'm1030')).toMatchObject({
+      actual_arrival_at: null,
+    });
+    expect(day.sailings.find((s) => s.id === 'm1630')).toMatchObject({
+      actual_arrival_at: '2026-10-29T16:30:00.000Z',
+      status: 'DOPLYNAL',
+    });
+    expect(day.risks.some((r) => String(r.dedup).startsWith('FERRY_UNKNOWN:PORTNET_ATA:'))).toBe(false);
+
+    // Po północy: 23:50 / ATA 00:20 / następny 06:00 — tylko pierwszy w ±3 h.
+    const midJson = JSON.stringify({
+      portCalls: [{
+        vesselName: 'Megastar',
+        mmsi: 276829000,
+        portToVisit: 'FIHEL',
+        prevPort: 'EETLL',
+        nextPort: 'EETLL',
+        portAreaDetails: [{
+          ata: '2026-10-30T00:20:00.000Z',
+          atd: null,
+          eta: '2026-10-30T00:20:00.000Z',
+          etd: null,
+        }],
+      }],
+    });
+    const mid = new MemStore();
+    mid.sailings.push(
+      {
+        id: 'pre-mid', vessel_id: MEGA, route: 'TLL-HEL',
+        departure_at: '2026-10-29T21:50:00.000Z', arrival_at: '2026-10-29T23:50:00.000Z',
+        delayed_departure_at: null, delayed_arrival_at: null,
+        actual_departure_at: null, actual_arrival_at: null,
+        status: 'W_REJSIE', source: 'TALLINK',
+      },
+      {
+        id: 'post-mid', vessel_id: MEGA, route: 'TLL-HEL',
+        departure_at: '2026-10-30T04:00:00.000Z', arrival_at: '2026-10-30T06:00:00.000Z',
+        delayed_departure_at: null, delayed_arrival_at: null,
+        actual_departure_at: null, actual_arrival_at: null,
+        status: 'W_REJSIE', source: 'TALLINK',
+      },
+    );
+    await runFerryPortnet(deps(mid, { 'port-calls': midJson }, new Date('2026-10-30T08:00:00Z')));
+    expect(mid.sailings.find((s) => s.id === 'pre-mid')).toMatchObject({
+      actual_arrival_at: '2026-10-30T00:20:00.000Z',
+      status: 'DOPLYNAL',
+    });
+    expect(mid.sailings.find((s) => s.id === 'post-mid')).toMatchObject({
+      actual_arrival_at: null,
+      status: 'W_REJSIE',
+    });
+    expect(mid.risks.some((r) => String(r.dedup).startsWith('FERRY_UNKNOWN:PORTNET_ATA:'))).toBe(false);
+  });
+
   it('F7 #682 B5: sourceDownRisk Polferries/Stena HIGH; DFDS/Tallink MEDIUM; ferry-status DFDS', async () => {
     expect(sourceDownRisk('POLFERRIES_STATUS', ['x'], '2026-10-31T12:00:00.000Z').severity).toBe('HIGH');
     expect(sourceDownRisk('STENA_SCHEDULE', ['x'], '2026-10-31T12:00:00.000Z').severity).toBe('HIGH');

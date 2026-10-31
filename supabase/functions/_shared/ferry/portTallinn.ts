@@ -45,6 +45,8 @@ export interface PortTallinnEvent {
   otherUtc: string;
   cancelled: boolean;
   company: string;
+  /** BN3: kolumna Lisainfo / Additional info (odwołanie, opóźnienie). */
+  lisainfo: string | null;
 }
 
 export interface PortTallinnParseResult {
@@ -167,7 +169,13 @@ function parseTable(
     const toRaw = cellVal(3);
     const terminal = terminalLetter(cellVal(4), dataTerminal);
     const company = cellVal(5);
-    const cancelled = /cancelled|canceled|odwo[lł]|tühistatud/i.test(body);
+    // BN3: Lisainfo (kolumna Additional info) — jawna treść odwołania / opóźnienia.
+    const lisainfoRaw = tds.length >= 7 ? stripTags(tds[6]?.[2] ?? '') : '';
+    const lisainfo = lisainfoRaw && !/^Lisainfo$/i.test(lisainfoRaw) && !/^Additional info$/i.test(lisainfoRaw)
+      ? lisainfoRaw.slice(0, 400)
+      : null;
+    const cancelBlob = `${body} ${lisainfo ?? ''}`;
+    const cancelled = /cancelled|canceled|odwo[lł]|tühistatud|tühistamine/i.test(cancelBlob);
     const route = routeFor(kind, fromRaw, toRaw, terminal);
     if (!route) {
       warnings.push(`Port of Tallinn: nieznana trasa ${fromRaw}→${toRaw} (${vessel}).`);
@@ -179,7 +187,7 @@ function parseTable(
       ? addMinutesIso(atUtc, cross)
       : addMinutesIso(atUtc, -cross);
     events.push({
-      kind, route, vessel, terminal, atUtc, otherUtc, cancelled, company,
+      kind, route, vessel, terminal, atUtc, otherUtc, cancelled, company, lisainfo,
     });
   }
   if (dataRows === 0) {

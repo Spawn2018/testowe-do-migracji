@@ -7435,6 +7435,216 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (odbiór prod):** SELECT `here_road_legs` — **12** / active 12 / `browser_fetch` 5; core bez zmian (3495/12561/3742/18854/19408); BN7 7× null. `here-roads` **#108803** @ 04:49Z ok (0 prób — core świeże; BN7 poza cronem). Komentarz w #667. **Dalej:** BN3 (#573).
 - Bez push na main.
 
+## 2026-10-31 17:00 — #683 F7 R14 (tylko testy mutacji)
+
+- Skrzynka: #685 w planie (po #683); #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne` do budowy.
+- Scalanie: #683 — F7 r14 @ `056a85fc`: kod OK; brakowało 2 testów. Brak „F7: gotowe do scalenia”. Bez push na main.
+- **Krok R14 (bez zmian w kodzie):**
+  - **R14-B1** — `data-type="campaign"` na Schedulerze (attrs + zagnieżdżony w body) ≠ kampania; runFerryStatus → ZAPLANOWANY, notices 0 (mutacja lookbehind → `\b`);
+  - **R14-B2** — `campaignHasServiceText`: osobna kampania nowsza dla RESUME / MyStar / Vessel / Update → brak auto;
+  - §8: licznik atrybutów Alert liczy też komentarze/duplikaty (bezpiecznie) — przy żywym Alercie z DP r10; `:type` Vue / `&quot;Alert&quot;` niska realność;
+  - vitest bn3-tallink-alert **51**. PLAN §4/§8.
+- **Dalej:** CI → „gotowe do F7 @ sha”; po F7/scal → #685-a Digitraffic Viking.
+- Bez push na main.
+
+## 2026-10-31 16:35 — #683 F7 R13 POPRAWKI (B1–B5 + 72a łagodna)
+
+- Skrzynka: #685 w planie (po #683); #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne` do budowy.
+- Scalanie: #683 — F7 r13 **POPRAWKI** @ `99dfcfd9` (CI unit/db/visual ✔). Brak „F7: gotowe do scalenia”. Bez push na main.
+- **Krok R13:**
+  - **R13-B1** — luźny Alert obok Schedulera (`countAlertGroupAttrs` > schedulery) → `fromLoose` trucizna; `data-analytics-group=Alert` bez cudzysłowu;
+  - **R13-B2** — `(?<![\w-])type=campaign` (nie `data-type`);
+  - **R13-B3** — kampania-serwisowa: CANCEL/RESUME/statek/sailing/correction|update|operate|reinstat; „Book now” bez wpływu;
+  - **R13-B4/B5** — invalid_date testy ≤ dziś + `2026-11-31`;
+  - **72a łagodna** w PLAN §5 (uzasadnienie F7 r13);
+  - vitest bn3-tallink-alert **49**. PLAN §4/§5/§8.
+- **Dalej:** CI → „gotowe do F7 @ sha”; po F7/scal → #685-a Digitraffic Viking.
+- Bez push na main.
+
+## 2026-10-31 16:00 — #683 F7 R12 POPRAWKI (B1–B3 + 72a/b/c)
+
+- Skrzynka: #685 w planie (po #683); #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne` do budowy.
+- Scalanie: #683 — F7 r12 **POPRAWKI** @ `fb6f710f` (CI unit/db/visual ✔). Brak „F7: gotowe do scalenia”. Bez push na main.
+- **Krok R12:**
+  - **R12-B1** — luźne atrybuty `["']`; `invalid_date` (brak/zły format/duplikat/`dateEnd<dateStart`/zły `timeStart`); null klucz → wszystkie bez auto;
+  - **R12-B2** — najnowszy globalnie (bez pętli dni; ogromne `dateEnd` < 100 ms);
+  - **R12-B3** — dedupe po `rawFull` (+ `autoCancelOk = AND`);
+  - **72a** przyszłe bloki; **72b** cudzysłów/kampania/`data-type`/luźny; **72c** ryzyko ze zdegradowanych;
+  - vitest bn3-tallink-alert **44**. PLAN §4/§5/§8.
+- **Dalej:** CI → „gotowe do F7 @ sha”; po F7/scal → #685-a Digitraffic Viking.
+- Bez push na main.
+
+## 2026-10-31 15:25 — #683 F7 R11 POPRAWKI (decyzja 72 najnowszy + R11-B1)
+
+- Skrzynka: #685 w planie (po #683); #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne` do budowy.
+- Scalanie: #683 — F7 r11 **POPRAWKI** @ `297310a9` (CI unit/db/visual ✔). Brak „F7: gotowe do scalenia”. Bez push na main.
+- **Krok R11 / decyzja 72 (właściciel 14:58):**
+  - **R11-B1** — atrybut `title` na Scheduler → brak auto (test `runFerryStatus`);
+  - najnowszy po złączeniu HOME+HEL-TLL (`finalizeTallinkAlertsForStatus`); odduplikowanie; kampania strukturalna;
+  - wybór przed filtrami treści; zła data → `invalid_date` bez wyjątku; `Book now` w Correction nie odpada;
+  - vitest bn3-tallink-alert **37**. PLAN §4/§5/§8.
+- **Dalej:** CI → „gotowe do F7 @ sha”; po F7/scal → #685-a Digitraffic Viking.
+- Bez push na main.
+
+## 2026-10-31 15:15 — #683 decyzja 72: najnowszy Alert wygrywa (właściciel 14:58)
+
+- Skrzynka: #685 w planie (po #683); #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne` do budowy.
+- Scalanie: #683 — CI unit/db/visual ✔ @ `297310a9` (R10). Brak „F7: gotowe do scalenia”. Bez push na main.
+- **Krok (zmiana 72):**
+  - właściciel 31.10 14:58: „obowiązuje zawsze najnowszy komunikat” — zastępuje „2+ → wszystkie ryzyko”;
+  - spośród Alertów w dniu: max(`dateStart`+`timeStart`, brak=00:00); starsze bez auto; remis → ryzyko;
+  - testy: starszy C + nowszy Correction → ZAPLANOWANY; starszy Correction + nowszy C → ODWOLANY; remis → ryzyko;
+  - vitest bn3-tallink-alert **33**. PLAN §4/§5/§8.
+- **Dalej:** CI → „gotowe do F7 @ sha”; po F7/scal → #685-a Digitraffic Viking.
+- Bez push na main.
+
+## 2026-10-31 14:50 — #683 F7 R10 POPRAWKI (B1–B3 + decyzje 71/72)
+
+- Skrzynka: #685 w planie (po #683); #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne` do budowy.
+- Scalanie: #683 — F7 r10 **POPRAWKI** @ `e7483cbc` (CI unit/db/visual ✔). Brak „F7: gotowe do scalenia”. Bez push na main.
+- **Krok R10:**
+  - **R10-B1** — po zdjęciu tagów brak surowego `<`/`>` (`<-`, `<1`, `<=`, `< CwsP`);
+  - **R10-B2** — stos zamykających tagów (wierzchołek; close bez atrybutów; `br`/`…/>` poza stosem); reguła 3 + `-->`;
+  - **R10-B3** — testy `alertHtmlAllowsAutoCancel` łamiące po jednej regule;
+  - **decyzja 71** — PLAN §4/§5: **zaakceptowana przez właściciela 31.10 14:31**;
+  - **decyzja 72** — ≥2 bloki Alert w oknie dnia → wszystkie `autoCancelOk=false` (ryzyko);
+  - vitest bn3-tallink-alert **30**.
+- **Dalej:** CI → „gotowe do F7 @ sha”; po F7/scal → #685-a Digitraffic Viking.
+- Bez push na main.
+
+## 2026-10-31 14:25 — #683 F7 R9 POPRAWKI (decyzja 71 allowlista HTML)
+
+- Skrzynka: #685 w planie (po #683); #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne` do budowy.
+- Scalanie: #683 — F7 r9 **POPRAWKI** @ `2ca2acb2` (CI ✔). Bez push na main.
+- **Krok R9 / decyzja 71:**
+  - allowlista surowej struktury HTML bloku Alert (tagi/atrybuty/encje; brak komentarzy/CDATA/PI);
+  - dopisane względem F7: `CwsSpan`, `timeStart`, `timeEnd`, `hideSpacing` (prawdziwy Alert / fixture);
+  - czarna lista z decyzji 70 zbędna dla bramki auto; reguła zdań 68 bez zmian;
+  - `extractBalancedSchedulers` przez `matchAll`; testy bn3-tallink-alert **28**.
+- **Dalej:** CI → „gotowe do F7 @ sha”; po F7/scal → #685-a Digitraffic Viking.
+- Bez push na main.
+
+## 2026-10-31 14:15 — #683 CI ✔ @ 2ca2acb2; decyzja 70 właściciel
+
+- Skrzynka: #685 w planie (po #683); #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne` do budowy.
+- Scalanie: #683 — brak „F7: gotowe do scalenia” po R8 @ `2ca2acb2` (tylko „gotowe do F7”); CI unit/db/visual ✔. Bez push na main.
+- **Krok (docs):** PLAN §4 wycinek 3 + §5 decyzja **70** + §8 — **zaakceptowana przez właściciela 31.10 13:37**; CI ✔ @ `2ca2acb2` (kod R8 bez zmian). **Dalej:** „gotowe do F7 @ sha”; po F7: gotowe do scalenia → #685-a Digitraffic Viking.
+- Bez push na main.
+
+## 2026-10-31 13:50 — #683 F7 R8 POPRAWKI (B1/B2 + decyzja 70)
+
+- Skrzynka: #685 w planie (po #683); #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne` do budowy.
+- Scalanie: #683 — F7 r8 **POPRAWKI** @ `ac48eda3` (docs-only nie był odpowiedzią). Bez push na main.
+- **Krok R8:**
+  - **R8-B1** — `extractBalancedSchedulers` (licznik tagów); zagnieżdżony/niezbalansowany → `allowAutoCancel=false`;
+  - **R8-B2** — testy zabijające zdjęcie `^` we wzorcach 1 i 2 (`It is not true that…` / `Correction: today…`);
+  - **Decyzja 70** — atrybuty tekstowe ≥ 2 słowa → bez auto; `stripHtmlComments`; from X to X → ryzyko;
+  - PLAN §4/§5/§8 + nieblokujące r8; vitest bn3-tallink-alert **27**.
+- **Dalej:** CI → „gotowe do F7 @ sha”; po F7/scal → #685-a.
+- Bez push na main.
+
+## 2026-10-31 13:25 — #683 CI ✔; decyzje 68–69 zaakceptowane przez właściciela
+
+- Skrzynka: #685 w planie (po #683); #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne` do budowy.
+- Scalanie: #683 — brak „F7: gotowe do scalenia” po R7 @ `7b0ac3ee` (tylko „gotowe do F7”); CI unit/db/visual ✔. Bez push na main.
+- **Krok (docs):** PLAN §4 wycinek 3 + §5 decyzje **68–69** + §8 — **zaakceptowane przez właściciela 31.10 13:04** (komentarz #683); CI ✔ @ `7b0ac3ee`. Kod R7 bez zmian. **Dalej:** „gotowe do F7 @ sha”; po F7: gotowe do scalenia → #685-a Digitraffic Viking.
+- Bez push na main.
+
+## 2026-10-31 13:05 — #684 SCALONE; #683 F7 R7 POPRAWKI
+
+- Skrzynka: #685 w planie (po #683); #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne` do budowy.
+- Scalanie: **#684 SCALONE** `47112584` (F7: gotowe @ `206fe833`; CI ✔). #683 — F7 r7 **POPRAWKI** @ `380b98a1` (CI unit/db/visual ✔). Bez push na main.
+- **Krok R7-B1/B2/B3:** `stripTags` całego bloku Alert (H3/List/Text/goły); `schedulerAlertBlocks` — fallback tylko bez Schedulera Alert, zawsze `autoCancelOk=false`; usunięte OPAQUE/CONDITIONAL/`vesselsIn`/`routesIn` z bramki auto; May ≠ may → ODWOLANY. vitest bn3-tallink-alert **24**. Nieblokujące F7: rok grudzień→styczeń (osobno / DP-107); Alert INFO bez ryzyka (świadomie); usunięty duplikat POSTEP 12:40. **Dalej:** CI → „gotowe do F7 @ sha”; po F7/scal → #685-a.
+- Bez push na main.
+
+## 2026-10-31 12:40 — #683 F7 R6 (decyzje 68/69)
+
+- Skrzynka: #685 w planie (po #683); #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne` do budowy.
+- Scalanie: #683 — F7 r6 **POPRAWKI** @ `3a208705` (CI unit/db/visual ✔). Bez „F7: gotowe do scalenia”. Bez push na main.
+- **Krok R6:** decyzja **68** — auto-ODWOLANY tylko gdy cała treść = jedno zdanie wzorcowe (+ opcjonalnie przeprosiny); sufiks `due to (a )?(technical fault|…)`; archiwum/korekta/cofnięcie/rebook → ryzyko MEDIUM. Decyzja **69** — AUTO w `operator_notices` tylko przy ODWOLANY (przy ryzyku: samo ryzyko). Fixture z „due to a technical fault”. vitest bn3-tallink-alert **21**. **Dalej:** CI → „gotowe do F7 @ sha”; po F7/scal → #685-a.
+- Bez push na main.
+
+## 2026-10-31 12:05 — #683 F7 R5 allowlist
+
+- Skrzynka: #685 w planie (po #683); #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne` do budowy.
+- Scalanie: #683 — F7 r5 **POPRAWKI** @ `ee8c8866` (CI unit/db/visual ✔). Bez „F7: gotowe do scalenia”. #684 wygląd bez F7. Bez push na main.
+- **Krok R5:** `autoCancelFromCancelSentence` = ścisły wzorzec allowlist (statek+HH:MM+from/to+data+is/has been cancelled); `CONDITIONAL_RE`; trasa tylko z wzorca; fixture dopasowany; testy may/buffet/car deck/trasa z innego zdania + today. vitest bn3-tallink-alert **19**. Probe Digitraffic FIHEL (przygotowanie #685-a): XPRS MMSI 230705000, `portAreaCode=ES`, ETA/ETD z Agent (nie tylko okno `from≥now`). **Dalej:** CI → „gotowe do F7 @ sha”; po F7 → #685-a.
+- Bez push na main.
+
+## 2026-10-31 11:35 — #683 F7 R4-B1 + #685 w planie
+
+- Skrzynka: **#685** (Spawn2018, `dla-cursora`) — decyzja 63 → PLAN §4 (po #683) / §5 / §8 / POSTEP; podział PR a/b/c + prognoza godzin. #608 w planie; #550 WSTRZYMANE; #499/#537/#538/#500 w planie. Bez nowych `pilne` do budowy.
+- Scalanie: #683 — F7 r4 **POPRAWKI** R4-B1 @ `ced146b5` (CI unit/db/visual ✔). Bez „F7: gotowe do scalenia”. Bez push na main.
+- **Krok R4-B1:** `autoCancelFromCancelSentence` — ODWOLANY tylko przy trio statek+HH:MM+data w zdaniu cancel; `OPAQUE_HINT_RE` (updated/tomorrow/dni tygodnia/Month D/zakresy); fixture +07:30. vitest bn3-tallink-alert **18**. **Dalej:** CI → „gotowe do F7 @ sha”; po F7 → #685-a.
+- Bez push na main.
+
+## 2026-10-31 11:00 — #683 F7 R3-B1: data tylko z treści
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE; #499/#537/#538/#500 w planie. Bez nowych `pilne`.
+- Scalanie: #683 — F7 r3 **POPRAWKI** R3-B1 @ `18b7b7ef` (CI unit/db/visual ✔). Bez „F7: gotowe do scalenia”. #684 wygląd bez F7. Bez push na main.
+- **Krok R3-B1:** `departureMatchesAlert` / `matchTallinkAlertSailings` — automatyczne ODWOLANY tylko przy `contentStartYmd`; okno Schedulera wyłącznie do wygaśnięcia; bez daty w treści → `ambiguous` (ryzyko MEDIUM). Testy: tomorrow / Monday / November 2 / 2nd / from–to + job. PLAN: DP-111/112. **Dalej:** CI → „gotowe do F7 @ sha”; po F7 → #685 (rozkład Vikinga). DP-97 osobno (nie na #683).
+- Bez push na main.
+
+## 2026-10-31 10:35 — #683 F7 R2-B2: multiTime (>1 HH:MM/data)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE; #499/#537/#538/#500 w planie. Bez nowych `pilne`.
+- Scalanie: #683 — F7 r2: R2-B1 (asercja 0358) zrobione @ `f42ce3a0` (CI unit/db/visual ✔); R2-B2 otwarte — bez „F7: gotowe do scalenia”. #684 wygląd bez F7. Bez push na main.
+- **Krok R2-B2:** `tallinkAlert` — >1 różna HH:MM lub >1 data w treści → `multiTime` → `ambiguous` (tylko ryzyko MEDIUM); test zdania 10:30/13:30. PLAN: DP-105…109. vitest bn3-tallink-alert **14**. **Dalej:** CI → „gotowe do F7 @ sha”.
+- Bez push na main.
+
+## 2026-10-31 10:15 — #683 CI db FAIL → asercja 0358 `true/AUTO`
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE; #499/#537/#538/#500 w planie. Bez nowych `pilne`.
+- Scalanie: #683 — bez „F7: gotowe do scalenia” po POPRAWKACH; CI @ `d48abd58`: unit ✔, visual ✔, **db FAIL** (ferry-status 17/1). Bez push na main.
+- **Krok:** `ferry-status.sh` 0358 — `(created_by is null)::text` = `true` (nie `t`); oczekiwane `true/AUTO`. **Dalej:** CI → „gotowe do F7 @ sha”.
+- Bez push na main.
+
+## 2026-10-31 10:00 — #683 db FAIL: ferry-status 0358 AUTO `t`→`true`
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE; #499/#537/#538/#500 w planie. Bez nowych `pilne`.
+- Scalanie: #683 — brak „F7: gotowe do scalenia” po `d48abd58` (tylko „gotowe do F7”); unit/visual ✔, **db FAIL**. Bez push na main.
+- **Krok:** `tests/db/ferry-status.sh` — asercja 0358 AUTO: `(created_by is null)::text` na PG17 daje `true`, nie `t` (jak i2/security). Oczekiwane `true/AUTO`.
+- **Dalej:** CI → „gotowe do F7 @ sha”; F7; potem DP-97 / pkt 7–8.
+- Bez push na main.
+
+## 2026-10-31 09:45 — #683 F7 POPRAWKI B1–B5 (Tallink Alert)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE; #499/#537/#538/#500 w planie. Bez nowych `pilne`.
+- Scalanie: #683 — F7 **POPRAWKI** @ `5a4ef4fd` (CI unit/db/visual ✔). Bez push na main.
+- **Krok F7 #683:**
+  - **B1** — jednoznaczność na pełnej puli (ODWOLANY/RECZNIE w puli); already_cancelled / manual_only / beyond_horizon;
+  - **B2** — data i HH:MM z treści (`Europe/Tallinn`, ±30 min); Scheduler tylko zapas; wygasłe okna pomijane; `from … to …`;
+  - **B3** — negacja/wznowienie → INFO; `suspended` tylko z kontekstem rejsu;
+  - **B4** — >1 statek → multiVessel/ambiguous; usunięte samo `queen`;
+  - **B5** — testy job `runFerryStatus` (AUTO+dedup, negacja, niejednoznaczność); DB 0358 (+4 OK, EXPECTED 18); fixture oznaczona jako syntetyczna;
+  - PLAN: Tallink/ts.ee bez przedwczesnego przekreślenia; **DP-98…103** w rejestrze.
+- **Dalej:** CI → „gotowe do F7 @ sha”; potem DP-97 / pkt 7–8 albo kolejne F7.
+- Bez push na main.
+
+## 2026-10-31 09:05 — BN3 wycinek 3: Tallink Alert / ts.ee Lisainfo / source AUTO (0358)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE; #499/#537/#538/#500 w planie. Bez nowych `pilne`.
+- Scalanie: #683 — bez „F7: gotowe do scalenia” (wcześniej „gotowe do F7” @ `435733ec`, CI ✔); nowy commit → ponowne F7. Bez push na main.
+- **Krok** (`pakiet/bn3-tallink-tsee-auto`):
+  - **0358** — `operator_notices.source` AUTO/RECZNIE, `source_url`, `created_by` null dla AUTO; apply → RECZNIE;
+  - Tallink Alert (decyzja 59) w `ferry-status`: jednoznaczne → ODWOLANY + AUTO notice; niejednoznaczne → FERRY MEDIUM;
+  - ts.ee Lisainfo → `cancelled` + AUTO notice przy Port of Tallinn;
+  - testy `bn3-tallink-alert` (fixture CMS + Lisainfo).
+- **Dalej:** CI → „gotowe do F7”; DP-97; potem BN3 pkt 7–8 (winter-nav / MMSI / DP-1+11) albo F7 poprawki.
+- Bez push na main.
+
+## 2026-10-31 08:40 — #682 SCALONE; BN3 wycinek 3 start (DP-94/95/96)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE; #499/#537/#538/#500 w planie. Bez nowych `pilne`.
+- Scalanie: **#682 SCALONE** `a9c396d7` (F7: gotowe do scalenia @ `085dc5e6`; CI unit/db/visual ✔). Bez push na main.
+- **Krok** (`pakiet/bn3-tallink-tsee-auto`, pierwsze pozycje F7 #682 r2 przed Tallink/ts.ee):
+  - **DP-94 DONE** — test ATD 13/15/19 min przed planem → `actual_departure_at`, bez `delayed_departure_at`, W_REJSIE;
+  - **DP-95 DONE** — test ±3 h: Megastar 10:30/16:30 → ATA tylko do 16:30; wariant po północy 23:50/00:20/06:00;
+  - **DP-96 DONE** — decyzja 67 w PLAN §5 (MEDIUM dla `*_SCHEDULE` Tallink/Eckerö/DFDS; Polferries/Stena HIGH);
+  - **DP-97** w rejestrze (nieblokujące).
+- **Dalej:** Tallink Alert / ts.ee Lisainfo / `operator_notices.source` AUTO.
+- Bez push na main.
+
 ## 2026-10-31 08:00 — #682 F7 r1 POPRAWKI B1–B5 (BN3 wycinek 2)
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE; #499/#537/#538/#500 w planie. Bez nowych `pilne`.

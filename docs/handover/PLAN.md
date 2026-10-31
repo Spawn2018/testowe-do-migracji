@@ -1212,6 +1212,23 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-91 | Cursor | OPOZNIONY z remarku DFDS nie cofany, gdy remark zniknie przed wypłynięciem | F7 #682 r1 | BN3 | w kolejce |
 | DP-92 | Cursor | ATD DFDS na rejsie już wypłyniętym → `actual_departure_at` + W_REJSIE (#446), ATD przed remarkiem | F7 #682 r1 | BN3 | w kolejce |
 | DP-93 | Cursor | `delayed_arrival_at` nie dopisywane rejsowi ODWOLANY (Portnet) | F7 #682 r1 | BN3 | w kolejce |
+| DP-94 | Cursor | test: ATD 13–19 min przed planem → `actual_departure_at`, bez `delayed_departure_at`, W_REJSIE (mutacja M2a) | F7 #682 r2 | BN3 wycinek 3 | DONE (bn3-tallink-tsee-auto) |
+| DP-95 | Cursor | test tolerancji ±3 h w `runFerryPortnet`: dwa Megastar TLL-HEL (10:30/16:30) → ATA tylko do drugiego; wariant po północy (mutacja M3a) | F7 #682 r2 | BN3 wycinek 3 | DONE (bn3-tallink-tsee-auto) |
+| DP-96 | Cursor | decyzja 67 w PLAN §5 z uzasadnieniem (`TALLINK`/`ECKERO`/`DFDS_SCHEDULE` = MEDIUM przy całkowitej awarii; Polferries/Stena HIGH) | F7 #682 r2 | BN3 wycinek 3 | DONE (bn3-tallink-tsee-auto) |
+| DP-97 | Cursor | ryzyka `FERRY_UNKNOWN:PORTNET_ATA/ATD:…` bez auto-zamknięcia; `params.dep` w UTC zamiast czasu warszawskiego | F7 #682 r2 | BN3 | w kolejce |
+| DP-98 | Cursor | `TALLINK_HEL_TLL_URL` zwraca 404 → ostrzeżenie co 10 min — poprawić/usunąć | F7 #683 | BN3 | w kolejce |
+| DP-99 | Cursor | `operatorFromSailingSource` fallback MUU-VUO → VIKING (prod tylko ECKERO), domyślnie TALLINK → z `data-company` ts.ee albo `ferry_route_operators` (DP-1) | F7 #683 | BN3 | w kolejce |
+| DP-100 | Cursor | dedup AUTO tylko aplikacyjny → partial unique index `(sailing_id, kind) where source='AUTO'` albo `.neq('status','ODWOLANY')` w update | F7 #683 | BN3 | w kolejce |
+| DP-101 | Cursor | `insertOperatorNotice` z `must()` po zmianie statusu — przy błędzie wpis nie powstanie nigdy (kolejność / transakcja) | F7 #683 | BN3 | w kolejce |
+| DP-102 | Cursor | ts.ee dopasowanie `existing.find` ±3 h (BN2) → reguła jednego kandydata, ±30 min dla komunikatu z godziną; prefiks „Lisainfo” w nocie | F7 #683 | BN3 | w kolejce |
+| DP-103 | Cursor | dedup ryzyka Tallink Alert „ambiguous/unmatched” po `text.slice(0,40)` — drobna zmiana treści = nowe ryzyko | F7 #683 | BN3 | w kolejce |
+| DP-105 | Cursor | godziny STO-* w Tallink Alert porównywane w czasie Tallinna (Alert „18:30 from Stockholm” → brak dopasowania) — strefa portu wypłynięcia | F7 #683 r2 | BN3 | w kolejce |
+| DP-106 | Cursor | `beyond_horizon` tylko `start > lastYmd` — zaostrzyć do `>=` (ostatni, niepełny dzień rozkładu) | F7 #683 r2 | BN3 | w kolejce |
+| DP-107 | Cursor | rok z `dateStart` Schedulera — data styczniowa w komunikacie grudniowym → zły rok | F7 #683 r2 | BN3 | w kolejce |
+| DP-108 | Cursor | test DB łańcucha AUTO bez asercji `FERRY_CANCELLED` | F7 #683 r2 | BN3 | w kolejce |
+| DP-109 | Cursor | `RESUME_RE` `returns? to` może wyciszyć prawdziwe odwołanie („passengers return to Tallinn by bus”) — zawęzić do statku/trasy; redundantny warunek w `classify` | F7 #683 r2 | BN3 | w kolejce |
+| DP-111 | Cursor | rozpoznawanie częstych form dat Tallink Alert („November 2”, „2nd November”, „2–4 November”, „from 2 to 4 November”, „tomorrow”, dni tygodnia) | F7 #683 r3 | BN3 | w kolejce |
+| DP-112 | Cursor | godziny w nawiasie z „UTC/local/Finnish/Swedish time” odfiltrować przed liczeniem multiTime (zakres „HH:MM–HH:MM” zostaje ambiguous) | F7 #683 r3 | BN3 | w kolejce |
 | DP-22 | Cursor | Stan systemu: ostrzeżenie z `summary` odrzuconego legu z bazy (nie tylko `points not null`); fundament 0354 + `checkRoads` | F7 #673 r1 N5 / r2 | #667 D | fundament w #673; UI w kolejce |
 | DP-23 | Cursor | Słownik legów drogowych w bazie zamiast `IN (…)` / `ROAD_LEGS` w kodzie | F7 #673 r1 N2 | #667 E / BN7 | SCALONE (#677 `675bb299` / 0355) |
 | DP-24 | Cursor | `corridor_fetches.leg` / `corridor_obstacles.leg` + SE-KAA-INLAND gdy przeszkody H3 obejmą inland | F7 #673 r1 N3 | po #667 | w kolejce |
@@ -1271,23 +1288,33 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 3. ~~**#666** (pilne)~~ — SCALONE (#668 `53890480` / **0351**).
 4. ~~**#667** (pilne)~~ — **NA PRODUKCJI** (#677 `675bb299` / **0355**; SELECT 12/12 bf5; core bez zmian; Edge 200 skip 1380). DP-69 w #679.
 5. ~~**DP-21**~~ przeniesione do #666 (decyzja 63b) — parser pliku właściciela (F7 #680).
-6. **BN3** — W TOKU (`pakiet/bn3-status-sources` / po #680) — poniżej.
-7. BN4…BN10 — jak #573 (AIS, pogoda, drogi LT/LV/EE/FI, HERE, statusy/ETA, ekrany, odbiór 48 h).
+6. **BN3** — W TOKU (`pakiet/bn3-tallink-tsee-auto` / po #682) — poniżej.
+7. **#685** decyzja 63 (rozkład Viking) — zaraz po #683; poniżej.
+8. BN4…BN10 — jak #573 (AIS, pogoda, drogi LT/LV/EE/FI, HERE, statusy/ETA, ekrany, odbiór 48 h).
 
-### BN3 · Opóźnienia i odwołania nowych armatorów — W TOKU (`pakiet/bn3-status-sources` / PR #682)
+### BN3 · Opóźnienia i odwołania nowych armatorów — W TOKU (`pakiet/bn3-tallink-tsee-auto`)
 Źródło: #573 + komentarze BN3 31.10 (spec + decyzje 57–61). Po #667; DP-21 → #666 (63b).
 ~~Wycinek 1~~ SCALONE (#680 `8100f685` / **0356**): decyzja 60 + ręczny komunikat 6 armatorów (`p_operator`, formularz).
-~~Wycinek 2~~ w PR #682 (**0357** + F7 r1 B1–B5): DFDS remark/ETA + Portnet ATA + SOURCE_DOWN MEDIUM (decyzja 67); Tallink Alert / ts.ee / `source` AUTO → kolejne PR (F7 r1).
+~~Wycinek 2~~ SCALONE (#682 `a9c396d7` / **0357** + F7 r1–r2): DFDS remark/ETA + Portnet ATA + SOURCE_DOWN MEDIUM (**decyzja 67**).
+**Wycinek 3** (`pakiet/bn3-tallink-tsee-auto` / PR #683): ~~DP-94/95/96~~; **0358** `operator_notices.source` AUTO; Tallink Alert / ts.ee — **F7 R14** (decyzje **68–69** 13:04; **70** 13:37; **71** 14:31; **72** właściciel 14:58 + **72a/b/c** + R13 kod + R14 testy mutacji `data-type`/campaignHasServiceText; R12–R11; **68** zdania; **69** AUTO tylko przy ODWOLANY); DP-97…103, DP-105…109, DP-111/112 w kolejce (DP-111 po scaleniu).
 1. ~~**60** Tallink poza PLD–KPS~~ — baza już tylko DFDS; front `ferryCatalog` bez TALLINK; test bn9a.
-2. Źródła → update — ~~**DFDS remark**~~; ~~Portnet ATA~~; ts.ee Lisainfo / Tallink Alert — kolejne PR.
-3. ~~Opóźnienie: ATA − arrival; `FERRY_PORT_DELAY_MIN` z `app_parameters` (zapas 15)~~ (**0357** + Portnet + store F7 B1); ATD tylko gdy wiarygodne — dalej.
-4. Odwołanie: ts.ee / Tallink Alert (decyzja 59) — kolejne PR; ~~DFDS cancel → NIEZNANY (F7 B3)~~; podejrzenie 45 min+AIS → FERRY MEDIUM — dalej.
-5. `operator_notices`: ~~ręczny 6 armatorów (0356)~~; `source` AUTO/RECZNIE + URL — kolejne PR; front BN9-c1 (koordynator).
-6. ~~SOURCE_DOWN: TALLINK/DFDS/ECKERO/DIGITRAFFIC (+ *_SCHEDULE) = MEDIUM~~ (wycinek 2 + **decyzja 67** F7 #682); Viking bez SourceId statusu.
+2. Źródła → update — ~~**DFDS remark**~~; ~~Portnet ATA~~; ts.ee Lisainfo / Tallink Alert (F7 #683).
+3. ~~Opóźnienie: ATA − arrival; `FERRY_PORT_DELAY_MIN` z `app_parameters` (zapas 15)~~ (**0357** + Portnet + store F7 B1); ~~ATD 13–19 min przed planem bez delayed (DP-94)~~; ATD tylko gdy wiarygodne — dalej.
+4. Odwołanie: ts.ee / Tallink Alert (decyzja 59 + **68**, F7 #683); ~~DFDS cancel → NIEZNANY (F7 B3)~~; podejrzenie 45 min+AIS → FERRY MEDIUM — dalej.
+5. `operator_notices`: ~~ręczny 6 armatorów (0356)~~; ~~`source` AUTO/RECZNIE + URL (**0358**)~~; **decyzja 69** AUTO tylko przy ODWOLANY; front BN9-c1 (koordynator).
+6. ~~SOURCE_DOWN: TALLINK/DFDS/ECKERO/DIGITRAFFIC (+ *_SCHEDULE) = MEDIUM~~ (wycinek 2 + **decyzja 67** F7 #682, uzasadnienie §5); Viking bez SourceId statusu.
 7. Digitraffic winter-navigation; Urząd Morski Gdynia (zapas Stena); port-call v2 cancelled (obserwacja).
 8. MMSI XPRS/Finbo/Finlandia/MyStar/Megastar; DP-1 + DP-11 razem z BN3.
-9. Testy: ~~DFDS remark / Portnet ATA / F7 B5~~; ts.ee/Alert — kolejne PR; Imperva; tolerancja; RECZNIE; ODWOLANY→FERRY_CANCELLED — część dalej.
+9. Testy: ~~DFDS remark / Portnet ATA / F7 B5 wycinek 2~~; ts.ee/Alert (F7 #683 B5); Imperva; tolerancja; RECZNIE; ODWOLANY→FERRY_CANCELLED — część dalej.
 10. ~~Role komunikatu: HHL_ADMIN + CARRIER_DISPATCH (SCX); KSH odmowa~~ (F7 #680).
+
+### #685 · Decyzja 63: rozkład Viking Line (Digitraffic + import z pliku) — DO ZROBIENIA (zaraz po #683)
+Źródło: #685 (Spawn2018, `dla-cursora`; decyzja 63 potwierdzona właścicielem 31.10 09:56). Nie przerywa #683. Bez obchodzenia Imperva (cargo/sales 403).
+**Podział PR (prognoza):**
+1. **#685-a (63a)** ~3–4 h — Digitraffic port-calls `FIHEL` (CC BY 4.0; `Digitraffic-User` + gzip), obszar ES / Viking XPRS MMSI 230705000, ETA/ETD ~2–3 dni → `sailings` TLLA-HEL / HELA-TLL armator VIKING + źródło; dopasowanie jak #682; bez nadpisywania RECZNIE; testy na wycinku prawdziwej odpowiedzi.
+2. **#685-b (63b)** ~4–6 h baza/Edge (+ ekran BN9-c1 koordynator) — import HTML właściciela (`D:\Watch Tower\dane\viking_cargo_hel_tll.html`); RPC HHL_ADMIN+2FA: wczytaj → parser (DP-21) → podgląd → zapis z historią; fixture przycięty bez PII.
+3. **#685-c (63c)** ~1 h (z b) — `SOURCE_DOWN:VIKING_SCHEDULE` MEDIUM zamykane, gdy rozkład z pliku ≥ 30 dni.
+Kolejność: po F7/scal #683 → a → b(+c). DP-21 pozostaje w #666/63b.
 
 ### #662 · PILNE SafeFleet — link tymczasowy (SG-27) — SCALONE (`189688bc` / PR #663 / **0349**); #662-b SCALONE (`1ee855fd` / PR #664 / **0350**, 30.10.2026 12:54Z)
 Źródło: #662 (Spawn2018, `pilne`; właściciel 30.10 11:51). Przed poprawkami F7 #661.
@@ -1626,6 +1653,20 @@ Bez ekranów Opcji (te w P10b, po P3).
 | W63 | #637: właściciel ustawia Edge `SHAREPOINT_FILE_MODE=test` i sprawdza po nazwie, że `SHAREPOINT_TEST_FILE_URL` istnieje; pisze „W63 gotowe”. Sekrety wpisuje **wyłącznie właściciel** (wykonawca nie ustawia przez API). | #637 | **zamknięte 29.10.2026 13:50** — właściciel: „W63 gotowe” |
 | W63b | #637: wartość `SHAREPOINT_FILE_MODE` dokładnie `test` (+ Redeploy tylko gdy runtime nie widzi sekretu). Po `write_test_ok_at` właściciel zmienia `SHAREPOINT_FILE_MODE` na `prod` (albo usuwa sekret) — dopiero potem zakolejkowanie aktywnych. Import off. | #637 | **zamknięte 29.10.2026 14:20** — runtime `mode=test` (redeploy zbędny); dalej fix (a) + cykl |
 | W63c | #637: zamknąć plik testowy SharePoint — **anulowane** (właściciel 29.10 15:13: współedycja; zapis bez zamykania → #645 workbook). | #637 / #645 | **anulowane 29.10.2026 15:13** |
+
+### Decyzje koordynatora (lista poranna — nie czekają na właściciela)
+| Nr | Co | Stan |
+|---|---|---|
+| **57** | Komunikaty automatyczne także do `operator_notices` (`source` AUTO/RECZNIE, `source_url`, `created_by` null dla AUTO). | **przyjęta** 31.10 (#573); kod **0358** / BN3 wycinek 3 |
+| **58** | `FERRY_PORT_DELAY_MIN` = 15 min od ATA; ATD tylko gdy wiarygodne. | **przyjęta** 31.10; kod **0357** |
+| **59** | Tallink Alert z jawnym odwołaniem + jednoznaczne dopasowanie rejsu → `ODWOLANY`; inaczej FERRY MEDIUM (bez statusu). | **przyjęta** 31.10 (zmiana względem rekomendacji); kod wycinek 3 |
+| **63** | Rozkład Viking Line TLLA⇄HEL: **63a** Digitraffic port-calls (najbliższe dni); **63b** import HTML z pliku właściciela (HHL_ADMIN+2FA; ekran BN9-c1); **63c** `SOURCE_DOWN:VIKING_SCHEDULE` MEDIUM zamykane przy rozkładzie z pliku ≥ 30 dni. Bez obchodzenia 403. | **przyjęta** 31.10 (#685; potw. właściciel 09:56); kod po #683 |
+| **67** | `SOURCE_DOWN` dla `TALLINK_SCHEDULE`, `ECKERO_SCHEDULE`, `DFDS_SCHEDULE` = **MEDIUM** także przy **całkowitej** awarii źródła (nie tylko częściowej). Uzasadnienie: rozkłady pobierane raz na dobę; wcześniejsze rejsy zostają w bazie, więc brak świeżego pobrania nie jest awarią krytyczną dla operacji. **Polferries / Stena** bez zmian = **HIGH**. Zakres kodu: `sync.ts` `sourceDownRisk` (F7 #682 r1; DP-96). | **przyjęta** 31.10.2026 F7 #682 |
+| **68** | Tallink Alert: auto-ODWOLANY tylko gdy cała treść (po zdjęciu tagów) = **dokładnie jedno** zdanie wzorcowe allowlist, ewentualnie + zdania z zamkniętej listy przeprosin („We apologise/apologize for any/the inconvenience.”). Opcjonalny sufiks przed kropką: `due to (a )?(technical fault\|technical reasons\|weather conditions\|storm\|strong winds)`. Każde inne zdanie → FERRY MEDIUM. | **przyjęta** 31.10 F7 #683 r6; **zaakceptowana przez właściciela** 31.10 13:04 |
+| **69** | Wpis AUTO w `operator_notices` tylko przy ODWOLANY. Przy ryzyku (ambiguous/unmatched) historią jest samo ryzyko (`detail.tekst` + `sourceUrl`). Bez nowej migracji (`sailing_id` NOT NULL + FK). | **przyjęta** 31.10 F7 #683 r6; **zaakceptowana przez właściciela** 31.10 13:04 |
+| **70** | Tallink Alert (w ramach 68 — „cała treść”): (1) atrybut `title`/`text`/`alt`/`aria-label`/`label`/`caption`/`heading`/`subtitle`/`description` z ≥ 2 słowami → bez auto (ryzyko); (2) usuwać `<!-- … -->` (także niezamknięte) przed dopasowaniem; (3) „from X to X” (trasa nierozpoznana) → ryzyko. | **przyjęta** 31.10 F7 #683 r8 (koordynator); **zaakceptowana przez właściciela** 31.10 13:37; **zastąpiona przez 71** (bramka auto) |
+| **71** | Tallink Alert (realizacja 68/70): auto-ODWOLANY **tylko** gdy surowy HTML bloku Alert ma dozwoloną budowę (allowlista): tagi `Scheduler` (dokładnie 1), `CwsSection`, `CwsP`, `CwsH1`–`CwsH6`, `br`/`strong`/`b`/`em`/`span`/`CwsSpan`; atrybuty `dateStart`/`dateEnd`/`timeStart`/`timeEnd`/`data-analytics-group`/`class`/`className`/`weight`/`color`/`size`/`variant`/`hideSpacing` (wartości bez `<>&`); brak `<!--`/`-->`/`CDATA`/`<?`; encje tylko `nbsp`/`#160`/`#xA0`/`amp`/`#39`/`rsquo`/`apos`/`quot`. Potem reguła zdań z 68. Czarna lista z 70 zbędna dla bramki auto. Po R10: goły `<>` po zdjęciu tagów → brak auto; stos zamykających; `-->` w regule 3. | **przyjęta** 31.10 F7 #683 r9; **zaakceptowana przez właściciela** 31.10 14:31; kod wycinek 3 (R10) |
+| **72** | Tallink Alert: spośród bloków Alert (niekampanijnych) obowiązuje **najnowszy** (`dateStart`+`timeStart`, brak `timeStart`=00:00) — klucz **globalny** (bez wyliczania dni okna; R12-B2). Najnowszy spełnia 68+71 → ODWOLANY; najnowszy niewzorcowy → bez ODWOLANY ze starszych, ryzyko MEDIUM; remis / zła data / brak `dateStart` → ryzyko bez auto. **72a (łagodna, F7 r13):** blok z kluczem > teraz poza wyborem tylko gdy jest już opublikowany Alert; gdy wszystkie bloki przyszłe — ranking wśród nich (wczesne ogłoszenie jest prawdziwym odwołaniem; fixture CMS ma `dateStart` w przyszłości); status i tak tylko przy 68+71; późniejsze sprostowanie cofnie w #686. **72b:** `data-analytics-group` w cudzysłowie lub bez; kampania tylko `(?<![\w-])type=campaign` (nie `data-type`; `\b` łapało po `-`); luźny Alert (także obok Schedulera) / kampania z treścią serwisową (CANCEL/RESUME/statek/sailing/correction…) → brak auto dla wszystkich. **72c:** zdegradowany Alert zawsze podnosi ryzyko (także przy auto-zwycięzcy). Cofnięcie ODWOLANY — poza #683 (po #685). | **zmieniona przez właściciela** 31.10 14:58; **72a/b/c** F7 #683 r12/r13; kod wycinek 3 |
 
 ## §6. Czeka na dane albo decyzję, przeniesione do paczek, PO 1.0 (rezerwa usunięta 17.10)
 **Część 1 — Czeka na dane albo decyzję właściciela (zaczynasz po „W<nr> gotowe”, §3):**
@@ -2244,4 +2285,27 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 31.10.2026 07:25 | #680 SCALONE `8100f685` (F7: gotowe @ db57ed2a); DP-86/87/88; start BN3 wycinek 2 (0357 + DFDS remark + Portnet delay) | pętla |
 | 31.10.2026 07:35 | BN3 wycinek 2: 0357 FERRY_PORT_DELAY_MIN; DFDS remark→OPOZNIONY w ferry-status; Portnet delayed_arrival; SOURCE_DOWN MEDIUM; DP-88; testy | pętla |
 | 31.10.2026 08:00 | #682 F7 r1 POPRAWKI B1–B5 (próg z app_parameters, ETA, NIEZNANY cancel, Portnet ±3 h, testy); DP-89 DONE; DP-90…93; decyzja 67 MEDIUM | pętla |
+| 31.10.2026 08:36 | #682 SCALONE `a9c396d7` (F7: gotowe do scalenia @ 085dc5e6); start BN3 wycinek 3 `pakiet/bn3-tallink-tsee-auto` — DP-94/95/96 | pętla |
+| 31.10.2026 09:05 | BN3 wycinek 3: Tallink Alert + ts.ee Lisainfo + **0358** `operator_notices.source` AUTO; PR #683 | pętla |
+| 31.10.2026 09:45 | #683 F7 POPRAWKI B1–B5 Tallink Alert (pełna pula, data/HH:MM z treści, negacja, multi-statek, testy+0358 DB); DP-98…103 | pętla |
+| 31.10.2026 10:15 | #683 CI db FAIL: ferry-status 0358 asercja `true/AUTO` (nie `t`); czekam CI → gotowe do F7 | pętla |
+| 31.10.2026 10:30 | #683 F7 R2-B2: >1 HH:MM/data w Tallink Alert → multiTime/ambiguous; DP-105…109; CI @ f42ce3a0 zielone | pętla |
+| 31.10.2026 11:05 | #683 F7 R3-B1: ODWOLANY tylko przy dacie z treści; Scheduler = wygaśnięcie; DP-111/112; potem #685 | pętla |
+| 31.10.2026 11:35 | #685 decyzja 63 wpisana §4/§5/§8; #683 F7 R4-B1: auto-ODWOLANY = trio w zdaniu cancel (bez względnych) | pętla |
+| 31.10.2026 12:40 | #683 F7 R6: decyzja 68 (jedno zdanie wzorcowe + przeprosiny / due to); decyzja 69 (AUTO tylko przy ODWOLANY); testy 21 | pętla |
+| 31.10.2026 12:46 | #684 SCALONE `47112584` (DP-76 tory); #683 CI ✔ @ 380b98a1 | pętla |
+| 31.10.2026 13:05 | #683 F7 R7 POPRAWKI: stripTags całego Alertu; Scheduler 2025 bez fallbacku; bez CONDITIONAL (May); testy 24; potem #685 | pętla |
+| 31.10.2026 13:25 | #683 CI ✔ @ 7b0ac3ee; decyzje 68–69 zaakceptowane przez właściciela 13:04 (PLAN §4/§5); czekam F7: gotowe do scalenia; potem #685-a | pętla |
+| 31.10.2026 13:50 | #683 F7 R8 POPRAWKI: zbalansowany Scheduler; `^` wzorce 1–2; decyzja 70 (atrybuty/komentarze/from–to); testy 27; potem #685-a | pętla |
+| 31.10.2026 14:15 | #683 CI ✔ @ 2ca2acb2 (unit/db/visual); decyzja 70 zaakceptowana przez właściciela 13:37 (PLAN §4/§5); czekam F7: gotowe do scalenia; potem #685-a | pętla |
+| 31.10.2026 14:25 | #683 F7 R9 POPRAWKI: decyzja 71 allowlista HTML (zamiast czarnej listy 70); testy 28; potem #685-a | pętla |
+| 31.10.2026 14:50 | #683 F7 R10 POPRAWKI: B1 goły `<>`; B2 stos + `-->`; B3 mutacje 1:1; decyzja 71 właściciel 14:31; decyzja 72 multi-Alert; testy 30; potem #685-a | pętla |
+| 31.10.2026 15:15 | #683 decyzja 72 zmieniona przez właściciela 14:58: najnowszy Alert wygrywa; testy 33; potem F7 → #685-a | pętla |
+| 31.10.2026 15:25 | #683 F7 R11 POPRAWKI: R11-B1 title Scheduler; finalize po złączeniu stron; kampania strukturalna; zła data; testy 37; potem #685-a | pętla |
+| 31.10.2026 16:00 | #683 F7 R12 POPRAWKI: B1 atrybuty/invalid; B2 globalny klucz (bez dni); B3 dedupe rawFull; 72a/b/c; testy 44; potem #685-a | pętla |
+| 31.10.2026 16:35 | #683 F7 R13 POPRAWKI: B1 luźny obok Schedulera; B2 `(?<![\w-])type`; B3 kampania-serwisowa; B4/B5 invalid_date; 72a łagodna w §5; testy 49; potem #685-a | pętla |
+| 31.10.2026 17:00 | #683 F7 R14: tylko testy mutacji (data-type na Schedulerze; campaignHasServiceText gałęzie); uwaga §8: licznik Alert w komentarzach/duplikatach — przy żywym Alercie + DP r10; `:type` Vue / `&quot;Alert&quot;` niska realność | pętla |
+| 31.10.2026 — | F7 #683 nieblokujące (osobna poprawka): Scheduler grudzień + „on 2 January” → rok bieżący, ciche wygaśnięcie; Alert INFO bez ryzyka/historii — świadomie | F7 #683 r7 |
+| 31.10.2026 — | F7 #683 r8 nieblokujące (osobno): Alert poza Schedulerem obok Schedulera; sprzeczne bloki (resume→cofnięcie auto); rok przy długim oknie Schedulera; mutanty M10/M15–M17/M22 świadomie bez testów | F7 #683 r8 |
+| 31.10.2026 — | F7 #683 r10 uwaga właściciel: fixture kampanii ma `CwsAlert type=…`; jeśli Tallink opakuje serwisowe w `CwsAlert` / `CwsLink` („Read more”) → ryzyko; po pierwszym żywym Alercie serwisowym — surowy HTML jako fixture + ocena allowlisty (osobny DP) | F7 #683 r10 |
 

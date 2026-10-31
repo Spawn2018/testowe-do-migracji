@@ -48,6 +48,10 @@ import {
   FERRY_PORT_DELAY_MIN_DEFAULT, parseDfdsTimetableApi, parseDfdsWeeklyHtml,
 } from '../ferry/dfds.ts';
 import {
+  TALLINK_ALERT_UA, TALLINK_HEL_TLL_URL, TALLINK_HOME_URL,
+  finalizeTallinkAlertsForStatus, matchTallinkAlertSailings, parseTallinkAlerts,
+} from '../ferry/tallinkAlert.ts';
+import {
   MARINE_POINTS, SMHI_OCOBS_URL, dmiWamUrl, evaluateMarineWindow, fmiHarmonieUrl, fmiWamUrl,
   marinePointsForRoute, marineWeatherRisk, parseDmiCoverageJson, parseFmiTimeValuePair, parseSmhiOcobs,
   samplesInWindow, type MarineSample, type MarinePointCode,
@@ -207,6 +211,15 @@ export interface SyncStore {
   insertSailings(rows: SailingInsert[]): Promise<void>;
   /** aktualizacja z warunkiem source <> 'RECZNIE' (wyścig ze zmianą ręczną HHL) — zwraca, czy zapisano */
   updateSailing(id: string, patch: SailingPatch): Promise<boolean>;
+  /** BN3 decyzja 57: AUTO komunikat do historii operator_notices (created_by null). */
+  insertOperatorNotice?(row: {
+    sailingId: string;
+    operator: string;
+    kind: 'ODWOLANY' | 'OPOZNIONY' | 'ZMIANA_GODZINY';
+    note?: string | null;
+    sourceUrl?: string | null;
+    newDeparture?: string | null;
+  }): Promise<string | null>;
   raiseRisk(r: RiskInput & { loadId?: string }): Promise<boolean>;
   latestPositions(maxAgeMin: number): Promise<VehiclePos[]>;
   lastRun(job: string): Promise<string | null>;
@@ -976,6 +989,16 @@ async function applyPortTallinn(deps: JobDeps, sinceIso: string): Promise<{
     if (hit && await deps.store.updateSailing(hit.id, { status: 'ODWOLANY' })) {
       cancelled += 1;
       hit.status = 'ODWOLANY';
+      // BN3 decyzja 57: AUTO historia (ts.ee Lisainfo / cancelled).
+      if (deps.store.insertOperatorNotice) {
+        await deps.store.insertOperatorNotice({
+          sailingId: hit.id,
+          operator: operatorFromSailingSource(hit.source, hit.route),
+          kind: 'ODWOLANY',
+          note: e.lisainfo ?? 'Port of Tallinn: odwołanie (ts.ee)',
+          sourceUrl: e.kind === 'DEPARTURE' ? PORT_TALLINN_DEPARTURES_URL : PORT_TALLINN_ARRIVALS_URL,
+        });
+      }
     }
   }
   return { warnings, fail: false, cancelled };
@@ -1329,6 +1352,19 @@ export async function fetchStenaFreight(deps: JobDeps): Promise<{
   return { sailings: parsed.sailings, warnings: parsed.warnings.filter((w) => !/brak rejsów/i.test(w)), ok: true };
 }
 
+const FERRY_OPERATOR_SOURCES = new Set(['POLFERRIES', 'STENA', 'TALLINK', 'VIKING', 'ECKERO', 'DFDS']);
+
+function operatorFromSailingSource(source: string, route: string): string {
+  const up = source.trim().toUpperCase();
+  if (FERRY_OPERATOR_SOURCES.has(up)) return up;
+  if (route === 'GDY-KAA' || route === 'KAA-GDY') return 'STENA';
+  if (route === 'GDN-NYN' || route === 'NYN-GDN') return 'POLFERRIES';
+  if (route.startsWith('TLLA') || route.startsWith('HELA') || route === 'MUU-VUO' || route === 'VUO-MUU') return 'VIKING';
+  if (route === 'TLL-HEL' || route === 'HEL-TLL' || route === 'TLL-STO' || route === 'STO-TLL') return 'TALLINK';
+  if (route === 'PLD-KPS' || route === 'KPS-PLD') return 'DFDS';
+  return 'TALLINK';
+}
+
 /** ferry-status — komunikaty Polferries + status Stena z JSON; 403 → NIEZNANY + ryzyko. */
 export async function runFerryStatus(deps: JobDeps): Promise<JobResult> {
   const now = deps.now().toISOString();
@@ -1446,6 +1482,103 @@ export async function runFerryStatus(deps: JobDeps): Promise<JobResult> {
       }
     }
     await deps.store.resolveRisks('SOURCE_DOWN:DFDS_STATUS:');
+  }
+
+  // BN3: Tallink Alert (decyzja 59) — ODWOLANY przy jednoznacznym dopasowaniu; inaczej FERRY MEDIUM.
+  {
+    const urls = [TALLINK_HOME_URL, TALLINK_HEL_TLL_URL];
+    const headers = { 'User-Agent': TALLINK_ALERT_UA, Accept: 'text/html' };
+    let alertFail = 0;
+    const allAlerts = [];
+    for (const url of urls) {
+      const page = await readText(deps, url, { headers });
+      if (!page.ok) {
+        warnings.push(page.warning);
+        alertFail += 1;
+        continue;
+      }
+      const parsed = parseTallinkAlerts(page.text, url, deps.now());
+      warnings.push(...parsed.warnings);
+      allAlerts.push(...parsed.alerts);
+    }
+    if (alertFail === urls.length) {
+      if (await deps.store.raiseRisk(sourceDownRisk(
+        'TALLINK_STATUS',
+        ['Brak odpowiedzi Tallink Alert (tallink.com)'],
+        now,
+        TALLINK_HOME_URL,
+      ))) risks += 1;
+    } else {
+      await deps.store.resolveRisks('SOURCE_DOWN:TALLINK_STATUS:');
+      const [vessels, existing] = await Promise.all([
+        deps.store.vessels(), deps.store.sailingsSince(since),
+      ]);
+      const byId = new Map(vessels.map((v) => [v.id, v.name]));
+      const cands = existing.map((row) => ({
+        id: row.id,
+        vesselName: byId.get(row.vessel_id) ?? '',
+        route: row.route,
+        departureAt: row.departure_at,
+        status: row.status,
+        source: row.source,
+      }));
+      // F7 #683 R12 / decyzja 72: najnowszy po złączeniu HOME + HEL-TLL; 72c — ryzyko też ze zdegradowanych.
+      const mergedAlerts = finalizeTallinkAlertsForStatus(allAlerts, deps.now());
+      for (const alert of mergedAlerts) {
+        if (alert.isCampaign || alert.kind === 'IGNORE') continue;
+        if (alert.filterReject === 'expired' || alert.filterReject === 'empty') continue;
+        if (alert.kind !== 'ODWOLANY') continue;
+        // F7 #683 B1: pełna pula; already_cancelled → nic; manual_only / ambiguous / none → ryzyko.
+        const hit = matchTallinkAlertSailings(alert, cands);
+        if (hit.kind === 'already_cancelled') continue;
+        if (hit.kind === 'match') {
+          const match = hit.sailing;
+          if (await deps.store.updateSailing(match.id, { status: 'ODWOLANY' })) {
+            updated += 1;
+            match.status = 'ODWOLANY';
+            const row = existing.find((x) => x.id === match.id);
+            if (row) row.status = 'ODWOLANY';
+            if (deps.store.insertOperatorNotice) {
+              await deps.store.insertOperatorNotice({
+                sailingId: match.id,
+                operator: 'TALLINK',
+                kind: 'ODWOLANY',
+                note: alert.text.slice(0, 400),
+                sourceUrl: alert.sourceUrl,
+              });
+            }
+          }
+          continue;
+        }
+        const ambiguous = hit.kind === 'ambiguous' || hit.kind === 'manual_only';
+        const beyond = hit.kind === 'beyond_horizon';
+        const ok = await deps.store.raiseRisk({
+          kind: 'FERRY',
+          severity: 'MEDIUM',
+          title: ambiguous
+            ? 'Tallink Alert: odwołanie — wiele rejsów, weryfikacja HHL'
+            : beyond
+              ? 'Tallink Alert: odwołanie poza horyzontem rozkładu — weryfikacja HHL'
+              : 'Tallink Alert: odwołanie bez jednoznacznego rejsu — weryfikacja HHL',
+          titleKey: ambiguous ? 'rk_tallink_alert_ambiguous' : 'rk_tallink_alert_unmatched',
+          params: { vessel: alert.vessel ?? '' },
+          detail: {
+            tekst: alert.text.slice(0, 400),
+            statek: alert.vessel,
+            trasy: alert.routes,
+            okno: [alert.contentStartYmd ?? alert.windowStartYmd, alert.contentEndYmd ?? alert.windowEndYmd],
+            godzina: alert.contentHm,
+            niejednoznaczne: ambiguous,
+            poza_horyzontem: beyond,
+            recznie: hit.kind === 'manual_only',
+            atrybucja: 'Komunikat: Tallink (tallink.com)',
+          },
+          dedup: `TALLINK_ALERT:${alert.vessel ?? 'any'}:${alert.contentStartYmd ?? alert.windowStartYmd ?? 'x'}:${alert.text.slice(0, 40)}`,
+          sourceUrl: alert.sourceUrl,
+        });
+        if (ok) risks += 1;
+      }
+    }
   }
 
   const result: JobResult = {
