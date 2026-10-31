@@ -33,14 +33,6 @@ export function ferryRouteLabel(locale: Locale, code: string | null | undefined)
   return `${endName(locale, e.from, e.fromTerminal)} → ${endName(locale, e.to, e.toTerminal)}`;
 }
 
-/** Skrót trasy „GDN → NYN”, „TLL A → HEL” (Harmonogram › Rejsy). */
-export function ferryRouteShort(code: string | null | undefined): string {
-  const e = routeEnds(code);
-  if (!e) return code ?? '';
-  /* zgodnie z #668 (routeShortLabel): „TLLA → HEL” */
-  return `${e.from}${e.fromTerminal ?? ''} → ${e.to}${e.toTerminal ?? ''}`;
-}
-
 /**
  * DP-4 (F7 #649): końce trasy pełnymi nazwami ze słownika tras (`routeEnds`) — „Tallinn A”, „Helsinki”.
  * Bez dzielenia kodu po myślniku („TLLA-HEL” nie daje portu „TLLA”). Trasa spoza słownika albo brak trasy → null

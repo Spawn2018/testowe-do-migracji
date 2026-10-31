@@ -68,16 +68,11 @@ export function routeOfVessel(vessel: string | null | undefined, groups: readonl
 /* DP-16, DP-17: jedna lista statków na sesję — Rejsy i mapy. Loader wstrzykiwany (testy, paczka demo bez Supabase). */
 /**
  * N8: stan sesji modułu — ostatnia lista statków pobrana z bazy (null = jeszcze nie pobrano albo błąd).
- * Wspólny dla wszystkich widoków; zmiana podbija `vesselGroupsVersion` i powiadamia subskrybentów (B1).
+ * Wspólny dla wszystkich widoków; zmiana podmienia referencję listy i powiadamia subskrybentów (B1) —
+ * `useVesselGroups()` zwraca nową referencję, która jest zależnością efektów i memo map (DP-25).
  */
 let lastGroups: readonly VesselGroup[] | null = null;
-let version = 0;
 const listeners = new Set<() => void>();
-
-/** B1/N1 (F7 #674): wersja listy statków — zależność efektów i memo map, żeby dymki odświeżyły się po pobraniu. */
-export function vesselGroupsVersion(): number {
-  return version;
-}
 
 export function subscribeVesselGroups(fn: () => void): () => void {
   listeners.add(fn);
@@ -86,7 +81,6 @@ export function subscribeVesselGroups(fn: () => void): () => void {
 
 function setLastGroups(g: readonly VesselGroup[] | null): void {
   lastGroups = g;
-  version += 1;
   for (const fn of listeners) fn();
 }
 
@@ -102,8 +96,15 @@ export interface VesselsLoader {
   reset(): void;
 }
 
-export function createVesselsLoader(fetchGroups: () => Promise<VesselGroup[]>): VesselsLoader {
+/** DP-27: komunikat przy błędzie odczytu listy statków — jeden na sesję (nie przy każdym montowaniu mapy). */
+export const VESSELS_WARN = '[Statki] lista statków z bazy niedostępna — lista zapasowa';
+
+export function createVesselsLoader(
+  fetchGroups: () => Promise<VesselGroup[]>,
+  warn: (msg: string) => void = (msg) => { console.warn(msg); },
+): VesselsLoader {
   let cache: Promise<VesselGroup[]> | null = null;
+  let warned = false;
   return {
     load() {
       cache ??= fetchGroups().then((g) => {
@@ -111,12 +112,14 @@ export function createVesselsLoader(fetchGroups: () => Promise<VesselGroup[]>): 
         return g;
       }).catch((e: unknown) => {
         cache = null;
+        if (!warned) { warned = true; warn(VESSELS_WARN); }
         throw e;
       });
       return cache;
     },
     reset() {
       cache = null;
+      warned = false;
       setLastGroups(null);
     },
   };

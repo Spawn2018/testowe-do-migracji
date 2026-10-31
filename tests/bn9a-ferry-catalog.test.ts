@@ -94,7 +94,7 @@ describe('BN9-a — katalog promów jest spójny', () => {
     expect(isKnownRoute('TLLA-HEL')).toBe(true);
     expect(isKnownRoute('HELA-TLL')).toBe(true);
     expect(ROUTE_SHORT['TLLA-HEL']).toBe('TLLA → HEL');
-    expect(ROUTE_SHORT['HELA-TLL']).toBe('HELA → TLL');
+    expect(ROUTE_SHORT['HELA-TLL']).toBe('HEL → TLLA');
     expect(ferryPortPl('TLLA-HEL')).toBe('Tallinn A–Helsinki');
     expect(ferryPortPl('HELA-TLL')).toBe('Helsinki–Tallinn A');
   });
