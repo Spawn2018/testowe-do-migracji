@@ -7443,7 +7443,7 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
   - `TALLINK_HEL_TLL_URL` → `…/travelling/one-way/helsinki-tallinn-ferry` (GET 200; stary `/en/helsinki-tallinn` = 404);
   - niepełna pula (HTTP ≠ OK / pusta) → brak auto-ODWOLANY; Alert → ryzyko MEDIUM (`TALLINK_ALERT_INCOMPLETE:`);
   - streak ≥ 3 → `SOURCE_DOWN:TALLINK_STATUS` MEDIUM; DP-98 DONE;
-  - vitest bn3-tallink-alert **54**.
+  - vitest bn3-tallink-alert **55** (także obie strony 404 → SOURCE_DOWN od 3. przebiegu).
 - **Dalej:** CI → gotowe do F7 → scalenie #687 → F7 #688 R1-B1…B4.
 - Bez push na main.
 

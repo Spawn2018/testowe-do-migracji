@@ -364,6 +364,22 @@ describe('BN3 Tallink Alert — runFerryStatus (F7 B5)', () => {
     expect(down!.severity).toBe('MEDIUM');
   });
 
+  it('DP-114 pkt 3: obie strony 404 — SOURCE_DOWN też dopiero od 3. przebiegu', async () => {
+    const st = new MemStore();
+    const pages = {
+      'helsinki-tallinn-ferry': 404,
+      'tallink.com': 404,
+      'ts.ee': 503,
+      portsofstockholm: 503,
+    };
+    await runFerryStatus(deps(st, pages, NOW));
+    expect(st.risks.some((r) => String(r.dedup).startsWith('SOURCE_DOWN:TALLINK_STATUS:'))).toBe(false);
+    await runFerryStatus(deps(st, pages, NOW));
+    expect(st.risks.some((r) => String(r.dedup).startsWith('SOURCE_DOWN:TALLINK_STATUS:'))).toBe(false);
+    await runFerryStatus(deps(st, pages, NOW));
+    expect(st.risks.some((r) => String(r.dedup).startsWith('SOURCE_DOWN:TALLINK_STATUS:'))).toBe(true);
+  });
+
   it('mutacja (b): negacja nie ustawia ODWOLANY', async () => {
     const html = wrapAlert(
       'MyStar on the Tallinn–Helsinki route on 2 November is not cancelled and operates as planned.',

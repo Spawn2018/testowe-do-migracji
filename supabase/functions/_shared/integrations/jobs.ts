@@ -1511,8 +1511,8 @@ export async function runFerryStatus(deps: JobDeps): Promise<JobResult> {
     if (poolIncomplete) tallinkAlertPageFailStreak += 1;
     else tallinkAlertPageFailStreak = 0;
 
-    const sourceDown = alertFail === urls.length
-      || tallinkAlertPageFailStreak >= TALLINK_ALERT_FAIL_STREAK_SOURCE_DOWN;
+    // DP-114 pkt 3: SOURCE_DOWN dopiero po ≥ 3 kolejnych przebiegach z błędem (także gdy obie strony padły).
+    const sourceDown = tallinkAlertPageFailStreak >= TALLINK_ALERT_FAIL_STREAK_SOURCE_DOWN;
     if (sourceDown) {
       if (await deps.store.raiseRisk(sourceDownRisk(
         'TALLINK_STATUS',
