@@ -19,7 +19,9 @@
  *   Dopisane do allowlisty względem F7 r9 (prawdziwy Alert 28.10 / fixture): `CwsSpan`,
  *   `timeStart`, `timeEnd`, `hideSpacing`.
  * R10: po usunięciu tagów brak surowego `<`/`>`; stos zamykających tagów; `-->` w regule 3;
- *   decyzja 72: ≥2 bloki Alert (nie-kampania) w tym samym oknie dnia → wszystkie ryzyko.
+ * Decyzja 72 (właściciel 31.10 14:58): spośród Alertów aktywnych w dniu obowiązuje **najnowszy**
+ *   (`dateStart`+`timeStart`, brak `timeStart`=00:00); starsze ignorowane dla statusu; remis /
+ *   brak `dateStart` → ryzyko MEDIUM bez auto. Zastępuje regułę „2+ → wszystkie ryzyko”.
  * Decyzja 69: wpis AUTO w operator_notices tylko przy ODWOLANY; przy ryzyku historią jest samo ryzyko.
  * Kampanie pomijane. User-Agent uczciwy; bez obchodzenia.
  */
@@ -80,6 +82,8 @@ export interface TallinkAlert {
   /** Okno Scheduler (wyświetlanie CMS) — tylko do odrzucania wygasłych (R3-B1). */
   windowStartYmd: string | null;
   windowEndYmd: string | null;
+  /** `timeStart` Schedulera (HH:MM); brak = 00:00 przy wyborze najnowszego (decyzja 72). */
+  windowTimeStart: string | null;
   /** Data z treści Alertu (B2/R3-B1/R4-B1) — wymagana do automatycznego ODWOLANY. */
   contentStartYmd: string | null;
   contentEndYmd: string | null;
@@ -511,6 +515,7 @@ export function parseTallinkAlerts(
     body: string,
     dateStart: string | null,
     dateEnd: string | null,
+    timeStart: string | null,
     /** R7-B2: fallback bez roku Schedulera — nigdy auto-ODWOLANY. */
     allowAutoCancel = true,
   ) => {
@@ -543,6 +548,7 @@ export function parseTallinkAlerts(
       routes: autoCancelOk ? auto!.routes : [],
       windowStartYmd: dateStart,
       windowEndYmd: dateEnd,
+      windowTimeStart: normalizeSchedulerHm(timeStart),
       contentStartYmd: contentStart,
       contentEndYmd: contentEnd,
       contentHm,
@@ -562,12 +568,13 @@ export function parseTallinkAlerts(
     schedulerAlertBlocks += 1;
     const dateStart = attrs.match(/dateStart\s*=\s*"(\d{4}-\d{2}-\d{2})"/i)?.[1] ?? null;
     const dateEnd = attrs.match(/dateEnd\s*=\s*"(\d{4}-\d{2}-\d{2})"/i)?.[1] ?? null;
+    const timeStart = attrs.match(/timeStart\s*=\s*"(\d{1,2}:\d{2})"/i)?.[1] ?? null;
     // R9 / decyzja 71: allowlista surowej struktury HTML (zamiast czarnej listy R8/70).
     const allowAuto = alertHtmlAllowsAutoCancel(full);
     // Decyzja 68: treść po zdjęciu tagów; dozwolone encje zamieniane przed zdaniami.
     const text = stripTags(decodeAllowedEntities(body)).trim();
     if (!text) continue;
-    pushAlert(text, body, dateStart, dateEnd, allowAuto);
+    pushAlert(text, body, dateStart, dateEnd, timeStart, allowAuto);
   }
   if (schedulerAlertBlocks === 0) {
     const loose = [...decoded.matchAll(/data-analytics-group="Alert"[\s\S]{0,2500}/gi)];
@@ -575,26 +582,45 @@ export function parseTallinkAlerts(
       const chunk = m[0];
       const text = stripTags(chunk).trim();
       if (!text) continue;
-      pushAlert(text, chunk, null, null, false);
+      pushAlert(text, chunk, null, null, null, false);
     }
   }
 
-  // Decyzja 72: ≥2 bloki Alert (nie-kampania) aktywne w tym samym dniu okna → wszystkie ryzyko.
-  // Mutacja: zdjęcie tego bloku → dwa Alert (cancel + Correction) dają fałszywe ODWOLANY.
-  demoteMultiAlertWindows(alerts);
+  // Decyzja 72 (właściciel 14:58): w dniu okna obowiązuje najnowszy Alert; starsze bez auto.
+  // Mutacja: wybór najstarszego / ignorowanie timeStart / remis=najnowszy → testy padają.
+  applyNewestAlertWins(alerts);
 
   return { alerts, warnings };
 }
 
-/** F7 #683 R10 / decyzja 72: grupuj po dniach pokrytych oknem Schedulera; ≥2 → bez auto. */
-function demoteMultiAlertWindows(alerts: TallinkAlert[]): void {
+/** HH:MM z atrybutu Schedulera; niepoprawne → null (traktowane jako 00:00 przy rankingu). */
+function normalizeSchedulerHm(raw: string | null): string | null {
+  if (!raw) return null;
+  const m = /^(\d{1,2}):(\d{2})$/.exec(raw.trim());
+  if (!m) return null;
+  const h = Number(m[1]);
+  const min = Number(m[2]);
+  if (!Number.isFinite(h) || !Number.isFinite(min) || h > 23 || min > 59) return null;
+  return `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}`;
+}
+
+/** Klucz chronologiczny publikacji bloku: dateStart + timeStart (brak = 00:00). */
+function alertPublishKey(a: TallinkAlert): string | null {
+  if (!a.windowStartYmd) return null;
+  return `${a.windowStartYmd}T${a.windowTimeStart ?? '00:00'}`;
+}
+
+/**
+ * F7 #683 / decyzja 72 (właściciel 31.10 14:58): spośród Alertów aktywnych w danym dniu
+ * zostaje jeden najnowszy (`dateStart`+`timeStart`); remis lub brak daty → wszystkie ryzyko.
+ */
+function applyNewestAlertWins(alerts: TallinkAlert[]): void {
   if (alerts.length < 2) return;
   const byDay = new Map<string, TallinkAlert[]>();
   for (const a of alerts) {
     const start = a.windowStartYmd ?? a.contentStartYmd;
     const end = a.windowEndYmd ?? a.contentEndYmd ?? start;
     if (!start) {
-      // Bez dnia okna — traktuj jako wspólny koszyk „_”.
       const bag = byDay.get('_') ?? [];
       bag.push(a);
       byDay.set('_', bag);
@@ -605,7 +631,6 @@ function demoteMultiAlertWindows(alerts: TallinkAlert[]): void {
       const bag = byDay.get(ymd) ?? [];
       bag.push(a);
       byDay.set(ymd, bag);
-      // Następny dzień kalendarzowy (YYYY-MM-DD leksykograficznie = chronologicznie).
       const d = new Date(`${ymd}T12:00:00Z`);
       d.setUTCDate(d.getUTCDate() + 1);
       ymd = d.toISOString().slice(0, 10);
@@ -615,8 +640,32 @@ function demoteMultiAlertWindows(alerts: TallinkAlert[]): void {
   const demote = new Set<TallinkAlert>();
   for (const bag of byDay.values()) {
     const uniq = [...new Set(bag)];
-    if (uniq.length >= 2) {
+    if (uniq.length < 2) continue;
+    if (uniq.some((a) => alertPublishKey(a) == null)) {
       for (const a of uniq) demote.add(a);
+      continue;
+    }
+    let bestKey = '';
+    const winners: TallinkAlert[] = [];
+    for (const a of uniq) {
+      const k = alertPublishKey(a)!;
+      // Mutacja: `k < bestKey` (najstarszy) albo bez timeStart w kluczu → testy padają.
+      if (k > bestKey) {
+        bestKey = k;
+        winners.length = 0;
+        winners.push(a);
+      } else if (k === bestKey) {
+        winners.push(a);
+      }
+    }
+    // Remis → bez auto. Mutacja: winners[0] jako zwycięzca → pada.
+    if (winners.length !== 1) {
+      for (const a of uniq) demote.add(a);
+      continue;
+    }
+    const winner = winners[0]!;
+    for (const a of uniq) {
+      if (a !== winner) demote.add(a);
     }
   }
   for (const a of demote) {

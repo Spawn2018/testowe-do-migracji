@@ -1,6 +1,6 @@
 /**
  * BN3 — Tallink Alert + Lisainfo ts.ee (decyzje 57, 59, 68, 69, 71, 72).
- * F7 #683 B1–B5 + R2–R10: allowlista zdań (68) + allowlista HTML (71) + multi-Alert (72).
+ * F7 #683 B1–B5 + R2–R10: allowlista zdań (68) + allowlista HTML (71) + najnowszy Alert (72).
  *
  * Fixture `tallink-alert-cancel-mystar.html` — forma jak prawdziwy Alert
  * („due to a technical fault”; CwsSpan / hideSpacing / timeStart); treść pod test.
@@ -861,28 +861,30 @@ describe('BN3 Tallink Alert — runFerryStatus (F7 B5)', () => {
     )).toBe(false);
   });
 
-  it('F7 R10 / decyzja 72: dwa bloki Alert w oknie → ryzyko (nie ODWOLANY)', async () => {
+  it('F7 / decyzja 72: remis dateStart+timeStart → ryzyko (nie ODWOLANY)', async () => {
     const cancel =
       'The MyStar 16:30 departure from Tallinn to Helsinki on 2 November is cancelled.';
     const correction =
       'Correction: the MyStar 16:30 departure will operate as planned.';
-    const html = wrapTwoAlerts(
+    // Ten sam timeStart → remis (mutacja: traktowanie remisu jako najnowszy → pada).
+    const html = wrapTwoAlertsTimed(
       `<CwsP>${cancel}</CwsP>`,
+      '00:01',
       `<CwsP>${correction}</CwsP>`,
+      '00:01',
       '2026-11-02',
     );
     const { alerts } = parseTallinkAlerts(html, TALLINK_HOME(), NOW);
     expect(alerts.length).toBeGreaterThanOrEqual(2);
     expect(alerts.every((a) => a.autoCancelOk === false)).toBe(true);
 
-    const sailingsOk = {
-      id: 's-1630', vessel_id: MYST, route: 'TLL-HEL' as const,
-      departure_at: '2026-11-02T14:30:00.000Z', arrival_at: '2026-11-02T16:30:00.000Z',
-      delayed_departure_at: null as string | null, delayed_arrival_at: null as string | null,
-      status: 'ZAPLANOWANY', source: 'TALLINK',
-    };
     const st = new MemStore();
-    st.sailings.push({ ...sailingsOk });
+    st.sailings.push({
+      id: 's-1630', vessel_id: MYST, route: 'TLL-HEL',
+      departure_at: '2026-11-02T14:30:00.000Z', arrival_at: '2026-11-02T16:30:00.000Z',
+      delayed_departure_at: null, delayed_arrival_at: null,
+      status: 'ZAPLANOWANY', source: 'TALLINK',
+    });
     await runFerryStatus(deps(st, {
       'tallink.com': html,
       'ts.ee': 503, portsofstockholm: 503,
@@ -890,8 +892,82 @@ describe('BN3 Tallink Alert — runFerryStatus (F7 B5)', () => {
     expect(st.sailings[0]!.status).toBe('ZAPLANOWANY');
     expect(st.notices).toHaveLength(0);
     expect(st.risks.some((r) => String(r.titleKey).startsWith('rk_tallink_alert_'))).toBe(true);
+  });
 
-    // Mutacja: jeden Alert → nadal ODWOLANY (decyzja 72 nie rusza).
+  it('F7 / decyzja 72: starszy C + nowszy Correction → brak ODWOLANY', async () => {
+    const cancel =
+      'The MyStar 16:30 departure from Tallinn to Helsinki on 2 November is cancelled.';
+    const correction =
+      'Correction: the MyStar 16:30 departure will operate as planned.';
+    const html = wrapTwoAlertsTimed(
+      `<CwsP>${cancel}</CwsP>`,
+      '08:00',
+      `<CwsP>${correction}</CwsP>`,
+      '12:00',
+      '2026-11-02',
+    );
+    const { alerts } = parseTallinkAlerts(html, TALLINK_HOME(), NOW);
+    expect(alerts.length).toBeGreaterThanOrEqual(2);
+    const cancelAlert = alerts.find((a) => /cancelled/i.test(a.text))!;
+    const corrAlert = alerts.find((a) => /correction/i.test(a.text))!;
+    expect(cancelAlert.autoCancelOk).toBe(false);
+    expect(corrAlert.kind).toBe('INFO');
+    // Mutacja: wybór najstarszego → cancel.autoCancelOk true → pada.
+    expect(alerts.filter((a) => a.autoCancelOk).length).toBe(0);
+
+    const st = new MemStore();
+    st.sailings.push({
+      id: 's-1630', vessel_id: MYST, route: 'TLL-HEL',
+      departure_at: '2026-11-02T14:30:00.000Z', arrival_at: '2026-11-02T16:30:00.000Z',
+      delayed_departure_at: null, delayed_arrival_at: null,
+      status: 'ZAPLANOWANY', source: 'TALLINK',
+    });
+    await runFerryStatus(deps(st, {
+      'tallink.com': html,
+      'ts.ee': 503, portsofstockholm: 503,
+    }, NOW));
+    expect(st.sailings[0]!.status).toBe('ZAPLANOWANY');
+    expect(st.notices).toHaveLength(0);
+    expect(st.risks.some((r) => String(r.titleKey).startsWith('rk_tallink_alert_'))).toBe(true);
+  });
+
+  it('F7 / decyzja 72: starszy Correction + nowszy C → ODWOLANY', async () => {
+    const cancel =
+      'The MyStar 16:30 departure from Tallinn to Helsinki on 2 November is cancelled.';
+    const correction =
+      'Correction: the MyStar 16:30 departure will operate as planned.';
+    // Mutacja: ignorowanie timeStart (oba 00:00) → remis / brak ODWOLANY → pada.
+    const html = wrapTwoAlertsTimed(
+      `<CwsP>${correction}</CwsP>`,
+      '08:00',
+      `<CwsP>${cancel}</CwsP>`,
+      '14:00',
+      '2026-11-02',
+    );
+    const { alerts } = parseTallinkAlerts(html, TALLINK_HOME(), NOW);
+    const cancelAlert = alerts.find((a) => /cancelled/i.test(a.text) && !/correction/i.test(a.text))!;
+    expect(cancelAlert.autoCancelOk).toBe(true);
+    expect(cancelAlert.windowTimeStart).toBe('14:00');
+
+    const st = new MemStore();
+    st.sailings.push({
+      id: 's-1630', vessel_id: MYST, route: 'TLL-HEL',
+      departure_at: '2026-11-02T14:30:00.000Z', arrival_at: '2026-11-02T16:30:00.000Z',
+      delayed_departure_at: null, delayed_arrival_at: null,
+      status: 'ZAPLANOWANY', source: 'TALLINK',
+    });
+    await runFerryStatus(deps(st, {
+      'tallink.com': html,
+      'ts.ee': 503, portsofstockholm: 503,
+    }, NOW));
+    expect(st.sailings[0]!.status).toBe('ODWOLANY');
+    expect(st.notices).toHaveLength(1);
+    expect(st.notices[0]!.source).toBe('AUTO');
+  });
+
+  it('F7 / decyzja 72: jeden Alert → nadal ODWOLANY', () => {
+    const cancel =
+      'The MyStar 16:30 departure from Tallinn to Helsinki on 2 November is cancelled.';
     const one = parseTallinkAlerts(wrapAlert(cancel, '2026-11-02'), TALLINK_HOME(), NOW).alerts[0]!;
     expect(one.autoCancelOk).toBe(true);
   });
@@ -977,12 +1053,18 @@ function wrapAlertInner(sectionInner: string, ymd: string): string {
   return wrapRendered(inner);
 }
 
-/** F7 R10 / decyzja 72: dwa bloki Scheduler/Alert w jednym HTML. */
-function wrapTwoAlerts(inner1: string, inner2: string, ymd: string): string {
-  const block = (sectionInner: string) =>
-    `<Scheduler dateStart="${ymd}" timeStart="00:01" dateEnd="${ymd}" timeEnd="23:59">` +
+/** F7 / decyzja 72: dwa bloki Scheduler/Alert z osobnym timeStart (najnowszy wygrywa). */
+function wrapTwoAlertsTimed(
+  inner1: string,
+  time1: string,
+  inner2: string,
+  time2: string,
+  ymd: string,
+): string {
+  const block = (sectionInner: string, hm: string) =>
+    `<Scheduler dateStart="${ymd}" timeStart="${hm}" dateEnd="${ymd}" timeEnd="23:59">` +
     `<CwsSection data-analytics-group="Alert">${sectionInner}</CwsSection></Scheduler>`;
-  return wrapRendered(block(inner1) + block(inner2));
+  return wrapRendered(block(inner1, time1) + block(inner2, time2));
 }
 
 function wrapRendered(inner: string): string {
