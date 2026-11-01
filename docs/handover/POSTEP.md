@@ -1,4 +1,12 @@
 
+## 2026-11-01 23:45 — #715 F7 r2: DP-138 B1/B2/N1
+
+- Skrzynka: #713/#714/#716 wpisane; #550 WSTRZYMANE.
+- Scalanie: #715 F7 r2 **niegotowe** @ `a235864a` (B1 ATA null utyka; B2 alter CHECK; N1 geofence).
+- **Krok:** 0373 — AT_PORT: `p_ts > coalesce(ATA, STATUS*→AT_PORT)`; FERRY bez zmian; testy bez `alter sailings`; geofence restore tylko wyłączone id; EXPECTED **568**.
+- **Dalej:** push → CI → ponowne F7. Po F7: BN5 (#714).
+- Bez push na main.
+
 ## 2026-11-01 23:05 — DP-137+138 w #715 (#713); skrzynka #713/#714/#716
 
 - Skrzynka: #713/#714/#716 wpisane §4; #608 w planie; #550 WSTRZYMANE. Bez nowych pilne.

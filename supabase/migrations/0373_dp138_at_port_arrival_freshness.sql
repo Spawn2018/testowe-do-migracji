@@ -1,7 +1,7 @@
--- DP-138 (F7 #708 r1): AT_PORT → IN_TRANSIT_SE z kontrolą ATA/p_ts.
--- W 0368 warunek ATA dotyczył tylko FERRY; przy AT_PORT_NYNASHAMN stary
--- punkt (p_ts ≤ ATA albo ATA null) mógł i tak przejść na IN_TRANSIT_SE.
--- Teraz ten sam warunek co dla FERRY — dla obu statusów wejściowych.
+-- DP-138 (F7 #708 r1 / F7 #715 r2 B1): AT_PORT → IN_TRANSIT_SE ze świeżością.
+-- FERRY: ATA not null i p_ts > ATA (jak 0368).
+-- AT_PORT: p_ts > coalesce(ATA, chwila STATUS*→AT_PORT_NYNASHAMN z load_events).
+-- Brak ref → false (bez utknięcia gdy ATA null, ale jest zdarzenie wejścia w port).
 
 begin;
 
@@ -31,6 +31,7 @@ declare
   v_ok          boolean := false;
   v_arr_country text;
   v_land_label  text;
+  v_ref         timestamptz;
 begin
   if p_lat is null or p_lon is null then
     return false;
@@ -45,9 +46,26 @@ begin
   if v_status is null or v_status not in ('FERRY', 'AT_PORT_NYNASHAMN') then
     return false;
   end if;
-  -- DP-138: ATA + p_ts > ATA także dla AT_PORT → IN_TRANSIT_SE (wcześniej tylko FERRY).
-  if (v_arr is not null and coalesce(p_ts, now()) > v_arr) is not true then
-    return false;
+  -- DP-138 / F7 #715 r2 B1:
+  -- FERRY: wymaga ATA i p_ts > ATA (jak wcześniej).
+  -- AT_PORT: ref = coalesce(ATA, max(occurred_at) STATUS*→AT_PORT); p_ts > ref.
+  -- Brak ref → false.
+  if v_status = 'FERRY' then
+    if (v_arr is not null and coalesce(p_ts, now()) > v_arr) is not true then
+      return false;
+    end if;
+  else
+    v_ref := v_arr;
+    if v_ref is null then
+      select max(e.occurred_at) into v_ref
+        from public.load_events e
+       where e.load_id = p_load_id
+         and e.event_type like 'STATUS%'
+         and e.payload->>'to' = 'AT_PORT_NYNASHAMN';
+    end if;
+    if (v_ref is not null and coalesce(p_ts, now()) > v_ref) is not true then
+      return false;
+    end if;
   end if;
 
   -- Nieznana / nieaktywna trasa: bez syntetycznego AT_PORT.
@@ -224,6 +242,6 @@ revoke all on function public.apply_ferry_ais_arrival_backup(uuid, double precis
 grant execute on function public.apply_ferry_ais_arrival_backup(uuid, double precision, double precision, timestamptz)
   to service_role;
 comment on function public.apply_ferry_ais_arrival_backup(uuid, double precision, double precision, timestamptz) is
-  'BN4/DP-138: FERRY/AT_PORT → Port/Droga; ATA wymagane także przy AT_PORT→IN_TRANSIT_SE.';
+  'BN4/DP-138 F7 r2: FERRY wymaga ATA; AT_PORT→IN_TRANSIT: p_ts > coalesce(ATA, STATUS→AT_PORT).';
 
 commit;

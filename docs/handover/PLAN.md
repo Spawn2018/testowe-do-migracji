@@ -1234,7 +1234,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-135 | Cursor | Test behawioralny SQL `ferry_sailings_map` zamiast samego grepa w `status.sh` | F7 #706 r1 | BN4 / testy | SCALONE #711 (z DP-134) |
 | DP-136 | Cursor | Przepięcie rejsu (0344) patrzy tylko na `sweden_land_geom` — dodać FI / `finland_land_geom` | F7 #708 r1 | BN4 / ferry | SCALONE #712 `4b9384dd` / **0371** |
 | DP-137 | Cursor | Status `IN_TRANSIT_SE` („Droga SE”) i `synthetic_port_se` dla Finlandii — potwierdzić z UI i ETA (etykiety FI) | F7 #708 r1 / #713 | BN4 / UI+ETA | W TOKU (#715 **0372**, z DP-138) |
-| DP-138 | Cursor | AT_PORT → IN_TRANSIT_SE: dodać kontrolę ATA/`p_ts` (w 0368 tylko FERRY) | F7 #708 r1 / #713 | BN4 / AIS backup | W TOKU (#715 **0373**, z DP-137) |
+| DP-138 | Cursor | AT_PORT → IN_TRANSIT_SE: `p_ts > coalesce(ATA, STATUS→AT_PORT)`; FERRY bez zmian | F7 #708 / #715 r2 / #713 | BN4 / AIS backup | W TOKU (#715 **0373**, z DP-137) |
 | DP-122 | Cursor | `viking_schedule_imports` (0360) brak w kopii 01.11 01:30 — koordynator #697: **nie wymaga zmian** (0360 po kopii 00:30; kontrola kopii 02.11) | #697 | backup | bez zmian (koord. 01.11) |
 | DP-117 | Cursor | `route-check/index.ts` `loads` `.limit(500)` bez sortu/filtra statusu — przy >500 transportach losowy dobór | F7 #693 r1 | ferry / route-check | w kolejce |
 | DP-118 | Cursor | `store.resolveStaleRisks` — `risk_signals` bez limitu (`max_rows`) → część nieaktualnych ryzyk niezamknięta | F7 #693 r1 | BN3 / ryzyka | w kolejce |
@@ -2460,6 +2460,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 01.11.2026 21:50 | #712 F7 r1: S136a kolizja vessel+departure z S649o → osobny vessel …0136; EXPECTED 556; timeout DP-116 60 s | pętla / F7 #712 |
 | 01.11.2026 22:20 | #712 SCALONE `4b9384dd` / **0371** (F7: gotowe @ 555a8b85); start DP-137 **0372** etykiety FI + assign SE-only | pętla / F7 #712 |
 | 01.11.2026 23:00 | #713/#714/#716 wpisane §4 (łączenie DP; BN5/BN6 spec); DP-138 **0373** w tym samym PR #715 co DP-137; status **566** | pętla / #713 |
+| 01.11.2026 23:45 | #715 F7 r2 niegotowe: B1 coalesce(ATA, STATUS→AT_PORT); B2 bez alter CHECK; N1 geofence restore; status **568** | pętla / F7 #715 |
 | 31.10.2026 — | Decyzja 73: TLLA-HEL ETA−150 min / HELA-TLL ETD+160 min (fixture Cargo; nocny 165 min OK). Decyzja 74: `sailings.source_ref` 0359; Digitraffic `digitraffic:portcall:<id>:<route>`; HTML/RECZNIE/DANE_STARTOWE wygrywają; #685-b RPC zastępuje digitraffic:% w ±3 h | F7 #688 r1–r4 |
 | 31.10.2026 — | F7 #683 nieblokujące (osobna poprawka): Scheduler grudzień + „on 2 January” → rok bieżący, ciche wygaśnięcie; Alert INFO bez ryzyka/historii — świadomie | F7 #683 r7 |
 | 31.10.2026 — | F7 #683 r8 nieblokujące (osobno): Alert poza Schedulerem obok Schedulera; sprzeczne bloki (resume→cofnięcie auto); rok przy długim oknie Schedulera; mutanty M10/M15–M17/M22 świadomie bez testów | F7 #683 r8 |
