@@ -7,6 +7,8 @@ import type { AisPosition } from '../src/lib/ais';
 
 const GDN = { lat: 54.40372, lon: 18.6813 };
 const NYN = { lat: 58.90453, lon: 17.95621 };
+const TLL_D = { lat: 59.440, lon: 24.775 };
+const HEL_T2 = { lat: 60.154, lon: 24.914 };
 
 function row(p: Partial<SailingMapRow> = {}): SailingMapRow {
   return {
@@ -16,6 +18,17 @@ function row(p: Partial<SailingMapRow> = {}): SailingMapRow {
     ais_lat: 54.6, ais_lon: 18.7, ais_observed_at: '2026-10-22T18:00:00Z',
     ...p,
   };
+}
+
+function rowTllHel(p: Partial<SailingMapRow> = {}): SailingMapRow {
+  return row({
+    sailing_id: 's-mega', vessel_id: 'v-mega', vessel_name: 'M/F Megastar', mmsi: 276829000, route: 'TLL-HEL',
+    departure_at: '2026-11-01T08:00:00Z', arrival_at: '2026-11-01T10:00:00Z',
+    dep_port: 'TLL_D', arr_port: 'HEL_T2',
+    dep_lat: TLL_D.lat, dep_lon: TLL_D.lon, arr_lat: HEL_T2.lat, arr_lon: HEL_T2.lon,
+    ais_lat: 59.6, ais_lon: 24.85, ais_observed_at: '2026-11-01T08:10:00Z',
+    ...p,
+  });
 }
 const at = (iso: string) => Date.parse(iso);
 
@@ -32,13 +45,21 @@ describe('estimateFerryPositions', () => {
     expect(estimateFerryPositions([row({ ais_observed_at: '2026-10-23T00:45:00Z' })], at('2026-10-23T01:00:00Z'))).toEqual([]);
   });
 
-  it('rejs SE→PL (Q-18), przed wypłynięciem, po dopłynięciu albo odwołany — brak szacunku', () => {
+  it('rejs SE→PL / FI→EE (Q-18 / isOutbound), przed wypłynięciem, po dopłynięciu albo odwołany — brak szacunku', () => {
     const now = at('2026-10-23T01:00:00Z');
-    expect(estimateFerryPositions([row({ dep_port: 'NYN', arr_port: 'GDN' })], now)).toEqual([]);
+    expect(estimateFerryPositions([row({ route: 'NYN-GDN', dep_port: 'NYN', arr_port: 'GDN' })], now)).toEqual([]);
+    expect(estimateFerryPositions([rowTllHel({ route: 'HEL-TLL', dep_port: 'HEL_T2', arr_port: 'TLL_D' })], at('2026-11-01T09:00:00Z'))).toEqual([]);
     expect(estimateFerryPositions([row()], at('2026-10-22T15:00:00Z'))).toEqual([]);
     expect(estimateFerryPositions([row()], at('2026-10-23T11:00:00Z'))).toEqual([]);
     expect(estimateFerryPositions([row({ arrived_at: '2026-10-23T00:30:00Z' })], now)).toEqual([]);
     expect(estimateFerryPositions([row({ status: 'ODWOLANY' })], now)).toEqual([]);
+  });
+
+  it('BN4: TLL-HEL w połowie, AIS stary → szacunek na odcinku Tallinn→Helsinki', () => {
+    const [e] = estimateFerryPositions([rowTllHel()], at('2026-11-01T09:00:00Z'));
+    expect(e.lat).toBeCloseTo((TLL_D.lat + HEL_T2.lat) / 2, 3);
+    expect(e.lng).toBeCloseTo((TLL_D.lon + HEL_T2.lon) / 2, 3);
+    expect(e.name).toBe('M/F Megastar');
   });
 
   it('bez departed_at: AIS w porcie odejścia albo brak AIS → brak szacunku (prom mógł nie wypłynąć)', () => {

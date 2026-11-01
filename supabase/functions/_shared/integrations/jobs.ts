@@ -2992,6 +2992,17 @@ export function acceptActualDepartureAt(
   return true;
 }
 
+/** BN4: etykiety portów docelowych dla ryzyka INFO `AIS_<port>` (jak NYN/KAA + HEL/STO/KPS/VUO). */
+export const AIS_ARRIVAL_PORT_LABEL: Readonly<Record<string, string>> = {
+  NYN: 'Nynäshamn',
+  KAA: 'Karlskrona',
+  HEL: 'Helsinki (West Harbour)',
+  HELA: 'Helsinki (Katajanokka)',
+  VUO: 'Vuosaari',
+  STO: 'Sztokholm',
+  KPS: 'Kapellskär',
+};
+
 /** Wycofanie Stena IRM po 403/429 — bez SOURCE_DOWN przy każdym przebiegu (F7).
  *  DP-115: ten sam wzorzec stanu w pamięci modułu co dawny streak Tallink — ocenić osobno. */
 let stenaIrmBackoffUntilMs = 0;
@@ -3219,23 +3230,37 @@ export async function runFerryAis(deps: JobDeps): Promise<JobResult> {
       }
     }
 
-    if (obs === 'W_PORCIE_NYNASHAMN' && s.route === 'GDN-NYN') {
-      const ok = await deps.store.raiseRisk({
-        kind: 'FERRY', severity: 'INFO', title: `AIS: ${v.name} w porcie Nynäshamn — potwierdzenie przypłynięcia (informacja)`,
-        titleKey: 'rk_ais_arrived', params: { vessel: v.name },
-        detail: { sailing_id: s.id, statek: v.name, pozycja: [fix.lat, fix.lon], sygnal: fix.timestampUtc, zrodlo: fix.source ?? 'DIGITRAFFIC', atrybucja: DIGITRAFFIC_ATTRIBUTION },
-        dedup: `AIS_NYN:${s.id}`, sourceUrl: 'https://www.digitraffic.fi/en/marine-traffic/',
-      });
-      if (ok) risks++;
-    }
-    if (obs === 'W_PORCIE_KARLSKRONA' && s.route === 'GDY-KAA') {
-      const ok = await deps.store.raiseRisk({
-        kind: 'FERRY', severity: 'INFO', title: `AIS: ${v.name} w porcie Karlskrona — potwierdzenie przypłynięcia (informacja)`,
-        titleKey: 'rk_ais_arrived_kaa', params: { vessel: v.name },
-        detail: { sailing_id: s.id, statek: v.name, pozycja: [fix.lat, fix.lon], sygnal: fix.timestampUtc, zrodlo: fix.source ?? 'DIGITRAFFIC', atrybucja: DIGITRAFFIC_ATTRIBUTION },
-        dedup: `AIS_KAA:${s.id}`, sourceUrl: 'https://www.digitraffic.fi/en/marine-traffic/',
-      });
-      if (ok) risks++;
+    /* BN4: INFO AIS_<port> — postój w hubie docelowym (≤3 km, SOG<3). NYN/KAA jak wcześniej; HEL/STO/KPS/VUO/… */
+    {
+      const arr = arrivalPortForRoute(s.route);
+      const hub = arr ? portCoords(arr) : null;
+      const ageArr = (Date.parse(now) - Date.parse(fix.timestampUtc)) / 60_000;
+      const inArr = hub != null
+        && ageArr <= 60
+        && distanceKm(fix.lat, fix.lon, hub.lat, hub.lon) <= 3
+        && (fix.sogKn ?? 0) < 3;
+      const portLabel = arr ? AIS_ARRIVAL_PORT_LABEL[arr] : null;
+      if (inArr && arr && portLabel) {
+        const titleKey = arr === 'NYN' ? 'rk_ais_arrived'
+          : arr === 'KAA' ? 'rk_ais_arrived_kaa'
+            : 'rk_ais_arrived_at';
+        const params = (arr === 'NYN' || arr === 'KAA')
+          ? { vessel: v.name }
+          : { vessel: v.name, port: portLabel };
+        const ok = await deps.store.raiseRisk({
+          kind: 'FERRY', severity: 'INFO',
+          title: `AIS: ${v.name} w porcie ${portLabel} — potwierdzenie przypłynięcia (informacja)`,
+          titleKey, params,
+          detail: {
+            sailing_id: s.id, statek: v.name, port: arr, pozycja: [fix.lat, fix.lon],
+            sygnal: fix.timestampUtc, zrodlo: fix.source ?? 'DIGITRAFFIC', atrybucja: DIGITRAFFIC_ATTRIBUTION,
+            obs,
+          },
+          dedup: `AIS_${arr}:${s.id}`,
+          sourceUrl: 'https://www.digitraffic.fi/en/marine-traffic/',
+        });
+        if (ok) risks++;
+      }
     }
   }
   for (const s of upcoming) {

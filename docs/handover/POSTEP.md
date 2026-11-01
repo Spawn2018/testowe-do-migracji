@@ -7469,6 +7469,18 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Dalej:** DP kolejka BN3 (np. DP-108 ODWOLANY→FERRY_CANCELLED) albo ATD wiarygodne / BN4.
 - Bez push na main.
 
+## 2026-11-01 16:50 — #705 SCALONE; start BN4 pkt 8 (szacunek + map + AIS_<port>)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne`.
+- Scalanie: **#705** `aa6ab71c` (F7: gotowe @ `41f30aef`; CI unit/visual/db ✔). Bez push na main — `deploy-main` (0365).
+- **Krok (BN4 pkt 8 cz.1):**
+  - migracja **0366**: `ferry_sailings_map` — join `ferry_routes` (bez coalesce GDN/NYN); porty z `ferry_ports`;
+  - front `estimateFerryPositions`: `isOutbound` (PL/EE→SE/FI), nie tylko GDN/GDY;
+  - Edge `runFerryAis`: INFO `AIS_<port>` dla HEL/HELA/STO/KPS/VUO (+ NYN/KAA); i18n `rk_ais_arrived_at`;
+  - status EXPECTED **513** (+1); vitest w-prom-szacowany + bn4-ais.
+- **Dalej:** push → CI → gotowe do F7. Po F7: `apply_ferry_ais_arrival_backup` FI/nowe SE → BN9-c2 / BN5.
+- Bez push na main.
+
 ## 2026-11-01 16:15 — #704 SCALONE; start DP-131 (FERRY+GPS port wyjścia)
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne`.
