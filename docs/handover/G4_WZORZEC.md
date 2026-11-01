@@ -275,3 +275,9 @@ Przyczyna: w jasnym motywie tor ma teraz `#3A82BA` z kryciem 1 (wcześniej `#6BA
 Różnica koloru w mierze pixelmatch (YIQ) wynosi ok. 1242 przy progu 2761 (`threshold: 0.28`), więc piksele toru mieszczą się w tolerancji.
 `--update-snapshots` (tryb „changed”) przepisuje tylko migawki niezgodne, więc wzorzec zostaje. Kształt i przerywanie torów są bez zmian (DP-76 r1).
 Styl jasny sprawdza test zachowania `tests/dp-76-ferry-style.jsdom.test.ts`. Wzorca `shots-baseline` nie zmieniano.
+
+## BN9-c1 (01.11.2026) — nowe migawki: ekran „Wczytaj rozkład Vikinga z pliku”
+Dodane `tests/__screenshots__/rejsy-viking-import-hhl-pl-{1440,390}-light.png` z workflowu `visual` (`update=true`,
+gałąź `wyglad/BN9-c1`, przebieg 41258516039, commit `92f5e60`, artefakt `visual-artifacts`). Pozostałe 15 migawek w artefakcie jest identycznych co do bajtu.
+Migawka samego ekranu importu (Harmonogram › Rejsy, Administrator HHL, demo): podgląd przykładowy (wymyślone rejsy, G-09), zapis nieaktywny z wyjaśnieniem, historia przykładowa.
+Okno wyższe (1440×2200, 390×3400), żeby cały ekran był w kadrze; dolny pasek telefonu ukryty na czas migawki. Wzorca `shots-baseline` nie zmieniano.
