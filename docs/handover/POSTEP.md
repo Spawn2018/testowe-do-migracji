@@ -7469,6 +7469,14 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Dalej:** DP kolejka BN3 (np. DP-108 ODWOLANY→FERRY_CANCELLED) albo ATD wiarygodne / BN4.
 - Bez push na main.
 
+## 2026-11-01 19:00 — #708 CI: unique vs BN1 0344 + DP-116 timeout
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE.
+- Scalanie: brak „F7: gotowe do scalenia” na #708. Bez push na main.
+- **Krok (#708):** CI db status 538/6 FAIL — BN4 TLL-STO/PLD-KPS `16:00`/`18:00` kolidowały z BN1 NYN-GDN/GDN-NYN (unique vessel+departure) → puste ładunki; czasy BN4 → `16:20`/`18:20`. Unit push: R1-B2 DP-116 timeout → `15_000`.
+- **Dalej:** push → CI → gotowe do F7. Po F7: BN9-c2 / BN5.
+- Bez push na main.
+
 ## 2026-11-01 18:25 — merge main (#707) → #708; fix unique departure B1
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE.

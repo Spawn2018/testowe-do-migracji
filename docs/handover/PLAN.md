@@ -1317,7 +1317,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 5. ~~**DP-21**~~ przeniesione do #666 (decyzja 63b) — parser pliku właściciela (F7 #680).
 6. ~~**BN3**~~ — **SCALONE** (wycinki + #699 RSS ERR `40141ff4`) — poniżej; DP kolejka / ATD wiarygodne dalej.
 7. ~~**#685** decyzja 63~~ — SCALONE (poniżej).
-8. **BN4** — cz.1 SCALONE (#701 `ef613eff`); ~~DP-127~~…~~DP-131~~; ~~pkt 8 cz.1~~ SCALONE (#706 `3c0b76ee` / **0366** — naruszenie F7: bez „gotowe”); ~~hotfix AIS INFO~~ SCALONE (#707 `bc7998ff` / **0367**); **pkt 8 cz.2** W TOKU (PR #708 / **0368** F7 r1 B1/B2) → front `FERRY_VESSELS`→baza (BN9-c2) → BN5…BN10 jak #573.
+8. **BN4** — cz.1 SCALONE (#701 `ef613eff`); ~~DP-127~~…~~DP-131~~; ~~pkt 8 cz.1~~ SCALONE (#706 `3c0b76ee` / **0366** — naruszenie F7: bez „gotowe”); ~~hotfix AIS INFO~~ SCALONE (#707 `bc7998ff` / **0367**); **pkt 8 cz.2** W TOKU (PR #708 / **0368** F7 r1 + CI unique vs BN1) → front `FERRY_VESSELS`→baza (BN9-c2) → BN5…BN10 jak #573.
 
 ### BN3 · Opóźnienia i odwołania nowych armatorów — SCALONE (po wycinkach 1–3; ~~#685~~ / ~~#691~~ / ~~#692~~ / ~~#694~~ / ~~#695~~ / ~~#696~~ / ~~#686~~ / ~~#699~~; DP kolejka / ATD wiarygodne dalej)
 Źródło: #573 + komentarze BN3 31.10 (spec + decyzje 57–61). Po #667; DP-21 → #666 (63b).
@@ -1347,7 +1347,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 5. ~~**DP-128**~~ SCALONE (#703 `d8708766` / **0363**) — ATA/ATD AIS×geofence (pas 3–4 km pomijany); korekta XPRS HELA-TLL.
 6. ~~**DP-130**~~ SCALONE (#704 `68421fbb` / **0364**) — trigger nie cofa jawnego DOPLYNAL przy ATA null; migracja 23+ rejsów W_REJSIE; testy status + vitest.
 7. ~~**DP-131**~~ SCALONE (#705 `aa6ab71c` / **0365**) — ryzyko HIGH gdy FERRY a GPS ≤3 km od portu wyjścia po ATD/ATA; dedup; bez zmiany statusu; cron `tower-prom-opoznienie`.
-8. ~~**cz.1**~~ SCALONE (#706 `3c0b76ee` / **0366**; scalenie bez F7 gotowe). ~~Hotfix~~ SCALONE (#707 `bc7998ff` / **0367**): INFO tylko z transportami + ATA. **W TOKU cz.2** (`pakiet/bn4-0368-arrival-backup-fi` / PR #708 / **0368**): F7 r1 B1/B2 — outbound+PL↔SE; brzeg FI; Kapellskär; unikalne departure testów B1; status **544**. **Dalej:** front `FERRY_VESSELS` → baza (BN9-c2).
+8. ~~**cz.1**~~ SCALONE (#706 `3c0b76ee` / **0366**; scalenie bez F7 gotowe). ~~Hotfix~~ SCALONE (#707 `bc7998ff` / **0367**): INFO tylko z transportami + ATA. **W TOKU cz.2** (`pakiet/bn4-0368-arrival-backup-fi` / PR #708 / **0368**): F7 r1 B1/B2 — outbound+PL↔SE; brzeg FI; Kapellskär; unique departure vs BN1 0344 (TLL-STO/PLD-KPS 16:20/18:20); status **544**. **Dalej:** front `FERRY_VESSELS` → baza (BN9-c2).
 
 ### #687 · DP-114 Tallink HEL–TLL 404 + niepełna pula Alert — SCALONE (`5fc7d4a0` / PR #689)
 Źródło: #687 (Spawn2018, `dla-cursora`). Po #683 prod: `TALLINK_HEL_TLL_URL` `/en/helsinki-tallinn` → HTTP 404; reguła 72 traci połowę puli.
@@ -2441,6 +2441,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 01.11.2026 17:50 | start BN4 pkt 8 cz.2 arrival backup FI/SE **0368** (`pakiet/bn4-0368-arrival-backup-fi`) | pętla |
 | 01.11.2026 18:05 | #708 F7 r1 B1/B2: outbound/PL↔SE; brzeg FI; Kapellskär; DP-136…138; status **544** | pętla / F7 #708 |
 | 01.11.2026 18:20 | #707 SCALONE `bc7998ff` / **0367**; merge main→#708; fix unique departure B1 | pętla / F7 #707 |
+| 01.11.2026 19:00 | #708 CI status 538/6: TLL-STO/PLD-KPS kolidowały z BN1 NYN-GDN/GDN-NYN → 16:20/18:20; DP-116 timeout 15 s | pętla / F7 #708 |
 | 31.10.2026 — | Decyzja 73: TLLA-HEL ETA−150 min / HELA-TLL ETD+160 min (fixture Cargo; nocny 165 min OK). Decyzja 74: `sailings.source_ref` 0359; Digitraffic `digitraffic:portcall:<id>:<route>`; HTML/RECZNIE/DANE_STARTOWE wygrywają; #685-b RPC zastępuje digitraffic:% w ±3 h | F7 #688 r1–r4 |
 | 31.10.2026 — | F7 #683 nieblokujące (osobna poprawka): Scheduler grudzień + „on 2 January” → rok bieżący, ciche wygaśnięcie; Alert INFO bez ryzyka/historii — świadomie | F7 #683 r7 |
 | 31.10.2026 — | F7 #683 r8 nieblokujące (osobno): Alert poza Schedulerem obok Schedulera; sprzeczne bloki (resume→cofnięcie auto); rok przy długim oknie Schedulera; mutanty M10/M15–M17/M22 świadomie bez testów | F7 #683 r8 |

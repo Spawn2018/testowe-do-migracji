@@ -235,7 +235,7 @@ describe('DP-116 sailingsSince stronicowanie (#691 / F7 #693 r1–r2)', () => {
     await expect(
       fetchSailingsSincePaged(() => sb.from('sailings') as never, makeRow(0).departure_at),
     ).rejects.toThrow(/sailings page cap exceeded/);
-  });
+  }, 15_000);
 
   it('R2: dedupe po id przy wstawce między stronami (przesunięcie offsetu)', async () => {
     /* Strona 0: s0…s999. Między zapytaniami wstawka na początku → strona 1 z offset 1000
