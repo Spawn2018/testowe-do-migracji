@@ -542,6 +542,34 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
       }
       return null;
     },
+    /** DP-128: pierwsza pozycja w hubie po pozycji poza hubem (obie ≥ sinceIso). */
+    async firstPortEntryAfter(
+      vesselId: string,
+      hub: { lat: number; lon: number },
+      radiusKm: number,
+      sinceIso: string,
+    ) {
+      const rows = must(await sb.from('vessel_positions')
+        .select('observed_at,lat,lon')
+        .eq('vessel_id', vesselId)
+        .gte('observed_at', sinceIso)
+        .order('observed_at', { ascending: true })
+        .limit(200), 'vessel_positions entry') as { observed_at: string; lat: number; lon: number }[];
+      const R = 6371, rad = Math.PI / 180;
+      const distKm = (lat: number, lon: number) => {
+        const dLatR = (lat - hub.lat) * rad, dLonR = (lon - hub.lon) * rad;
+        const h = Math.sin(dLatR / 2) ** 2
+          + Math.cos(hub.lat * rad) * Math.cos(lat * rad) * Math.sin(dLonR / 2) ** 2;
+        return 2 * R * Math.asin(Math.sqrt(h));
+      };
+      let sawOutside = false;
+      for (const r of rows) {
+        const d = distKm(r.lat, r.lon);
+        if (d > radiusKm) sawOutside = true;
+        else if (sawOutside) return new Date(r.observed_at).toISOString();
+      }
+      return null;
+    },
     async latestAisstreamFixes(sinceIso: string) {
       const rows = must(await sb.from('vessel_positions')
         .select('vessel_id,lat,lon,sog_kn,cog,nav_stat,observed_at,vessels(mmsi)')

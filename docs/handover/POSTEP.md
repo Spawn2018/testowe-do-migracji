@@ -7469,6 +7469,18 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Dalej:** DP kolejka BN3 (np. DP-108 ODWOLANY→FERRY_CANCELLED) albo ATD wiarygodne / BN4.
 - Bez push na main.
 
+## 2026-11-01 14:10 — #702 SCALONE; start DP-128 (AIS×geofence)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne`.
+- Scalanie: **#702** `483a7ce8` (F7: gotowe do scalenia @ `052ea652`; CI 8/8 ✔). Bez push na main — `deploy-main`.
+- **Krok (DP-128, priorytet F7 #702 przed resztą BN4):**
+  - ATD z AIS tylko przy `lastPortPosition` (wyjście z geofence); bez zapasu #446 3–10 km;
+  - ATA z AIS tylko po `firstPortEntryAfter` (outside→inside po depRef); pierwszy sygnał już w porcie → `BEZ_GEOFENCE_WEJSCIA`;
+  - migracja **0363**: czyści fałszywe ATA Viking XPRS HELA-TLL `dd177080…` (`2026-11-01T12:18:52.731Z`), status DOPLYNAL;
+  - vitest ferry-ais fokus **11**; PLAN: DP-127 SCALONE, DP-128 W TOKU.
+- **Dalej:** push → CI → gotowe do F7. Po F7: BN4 pkt 6 (luka AIS / `AIS_<port>` / arrival backup).
+- Bez push na main.
+
 ## 2026-11-01 14:25 — #701 SCALONE; start DP-127 (liczniki ERR)
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne`.
