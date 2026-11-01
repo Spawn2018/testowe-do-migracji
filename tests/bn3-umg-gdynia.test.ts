@@ -83,6 +83,25 @@ class MemStore implements SyncStore {
 function deps(store: MemStore, pages: Record<string, string | number>, now = NOW): JobDeps {
   const f = (async (input: RequestInfo | URL) => {
     const url = String(input);
+    /* UMG: dokładne ścieżki (in-port jest prefiksem wychodzących/spodziewanych). */
+    if (url.includes('umgdy.gov.pl')) {
+      if (url.includes('statki-spodziewane') && pages['statki-spodziewane'] != null) {
+        const v = pages['statki-spodziewane']!;
+        return typeof v === 'number' ? new Response('err', { status: v }) : new Response(v, { status: 200 });
+      }
+      if (url.includes('statki-wychodzace') && pages['statki-wychodzace'] != null) {
+        const v = pages['statki-wychodzace']!;
+        return typeof v === 'number' ? new Response('err', { status: v }) : new Response(v, { status: 200 });
+      }
+      if (pages['statki-w-porcie'] != null) {
+        const v = pages['statki-w-porcie']!;
+        return typeof v === 'number' ? new Response('err', { status: v }) : new Response(v, { status: 200 });
+      }
+      if (pages['umgdy.gov.pl'] != null) {
+        const v = pages['umgdy.gov.pl']!;
+        return typeof v === 'number' ? new Response('err', { status: v }) : new Response(v, { status: 200 });
+      }
+    }
     const hit = Object.entries(pages)
       .filter(([k]) => url.includes(k))
       .sort((a, b) => b[0].length - a[0].length)[0];
