@@ -1301,7 +1301,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 7. **#685** decyzja 63 (rozkład Viking) — zaraz po #683; poniżej.
 8. BN4…BN10 — jak #573 (AIS, pogoda, drogi LT/LV/EE/FI, HERE, statusy/ETA, ekrany, odbiór 48 h).
 
-### BN3 · Opóźnienia i odwołania nowych armatorów — W TOKU (po wycinkach 1–3; ~~#685~~ / ~~#691~~ / ~~#692~~ SCALONE; winter-nav/MMSI PR #694 F7 r1)
+### BN3 · Opóźnienia i odwołania nowych armatorów — W TOKU (po wycinkach 1–3; ~~#685~~ / ~~#691~~ / ~~#692~~ / ~~#694~~ SCALONE; UMG Gdynia W TOKU `pakiet/bn3-umg-gdynia`)
 Źródło: #573 + komentarze BN3 31.10 (spec + decyzje 57–61). Po #667; DP-21 → #666 (63b).
 ~~Wycinek 1~~ SCALONE (#680 `8100f685` / **0356**): decyzja 60 + ręczny komunikat 6 armatorów (`p_operator`, formularz).
 ~~Wycinek 2~~ SCALONE (#682 `a9c396d7` / **0357** + F7 r1–r2): DFDS remark/ETA + Portnet ATA + SOURCE_DOWN MEDIUM (**decyzja 67**).
@@ -1312,7 +1312,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 4. Odwołanie: ~~ts.ee / Tallink Alert (decyzja 59 + **68**, F7 #683)~~; ~~DFDS cancel → NIEZNANY (F7 B3)~~; podejrzenie 45 min+AIS → FERRY MEDIUM — dalej.
 5. `operator_notices`: ~~ręczny 6 armatorów (0356)~~; ~~`source` AUTO/RECZNIE + URL (**0358**)~~; ~~**decyzja 69** AUTO tylko przy ODWOLANY~~; ~~front BN9-c1 (#692)~~.
 6. ~~SOURCE_DOWN: TALLINK/DFDS/ECKERO/DIGITRAFFIC (+ *_SCHEDULE) = MEDIUM~~ (wycinek 2 + **decyzja 67** F7 #682, uzasadnienie §5); Viking bez SourceId statusu.
-7. Digitraffic winter-navigation (**PR #694** `pakiet/bn3-winter-nav-mmsi` / **0361** + F7 r1: locode z tras, bez ryzyka v2 cancelled → **DP-121**; testy joba); Urząd Morski Gdynia (zapas Stena) — dalej; sonda v2 cancelled = observations.
+7. ~~Digitraffic winter-navigation~~ (**#694** `ef89f5d3` / **0361** + F7 r1: locode z tras, bez ryzyka v2 cancelled → **DP-121**); Urząd Morski Gdynia (zapas Stena) — **W TOKU** `pakiet/bn3-umg-gdynia`; sonda v2 cancelled = observations.
 8. ~~MMSI XPRS/Finbo/Finlandia/MyStar/Megastar~~ (**0361**, vessel-details 01.11); ~~DP-11~~ (RPC przed seedem); ~~DP-1~~ (BN1 0339/0344).
 9. Testy: ~~DFDS remark / Portnet ATA / F7 B5 wycinek 2~~; ~~ts.ee/Alert (F7 #683 B5)~~; ~~winter-nav / DP-11 / F7 #694 R1-B3~~; Imperva; tolerancja; RECZNIE; ODWOLANY→FERRY_CANCELLED — część dalej.
 10. ~~Role komunikatu: HHL_ADMIN + CARRIER_DISPATCH (SCX); KSH odmowa~~ (F7 #680).
@@ -2365,6 +2365,10 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 01.11.2026 02:45 | #693 SCALONE `67b3af12` (F7: gotowe @ ec403152); start BN3 winter-nav/MMSI `pakiet/bn3-winter-nav-mmsi` / **0361** | pętla |
 | 01.11.2026 03:12 | #692 SCALONE `b24b95ba` (F7: gotowe @ bcd068c1; DP-86/87/104 DONE); #694 unit FAIL PL-T „cancelled” → tekst PL bez EN | pętla |
 | 01.11.2026 03:45 | #694 F7 r1 POPRAWKI: R1-B1 bez ryzyka v2 cancelled (HTTP 400); R1-B2 locode z tras; R1-B3 testy joba; DP-120/121 | pętla |
+| 01.11.2026 04:10 | #694 SCALONE `ef89f5d3` (F7: gotowe @ e22ad036); start BN3 UMG Gdynia `pakiet/bn3-umg-gdynia` | pętla |
+| 01.11.2026 04:55 | #695 F7 r1 POPRAWKI: B1 przyszłe ETD→delayed; B2 ETA+próg; B3 tr[^>]*> + SOURCE_DOWN tylko 3×OK; vitest 12 | pętla |
+| 01.11.2026 05:10 | #695 F7 r2 POPRAWKI: B2 delayed_* tylko przy SOURCE_DOWN:STENA_STATUS (+ aktualizacja własnej); B4 past ETD→actual tylko gdy „w porcie” OK; vitest 14 | pętla |
+| 01.11.2026 05:25 | #695 F7 r3: 3 testy mutacji (przyszłe ETD bez down; 2OK+503 SOURCE_DOWN; RECZNIE+ETA przy down); vitest 17 | pętla |
 | 31.10.2026 — | Decyzja 73: TLLA-HEL ETA−150 min / HELA-TLL ETD+160 min (fixture Cargo; nocny 165 min OK). Decyzja 74: `sailings.source_ref` 0359; Digitraffic `digitraffic:portcall:<id>:<route>`; HTML/RECZNIE/DANE_STARTOWE wygrywają; #685-b RPC zastępuje digitraffic:% w ±3 h | F7 #688 r1–r4 |
 | 31.10.2026 — | F7 #683 nieblokujące (osobna poprawka): Scheduler grudzień + „on 2 January” → rok bieżący, ciche wygaśnięcie; Alert INFO bez ryzyka/historii — świadomie | F7 #683 r7 |
 | 31.10.2026 — | F7 #683 r8 nieblokujące (osobno): Alert poza Schedulerem obok Schedulera; sprzeczne bloki (resume→cofnięcie auto); rok przy długim oknie Schedulera; mutanty M10/M15–M17/M22 świadomie bez testów | F7 #683 r8 |
