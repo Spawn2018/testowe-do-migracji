@@ -122,7 +122,7 @@ const pl: Dict = {
   rk_ferry_weather: 'Pogoda morska: możliwe odwołanie — fala {wave} m / porywy {gust} węzłów ({vessel}; progi {wave_thr} m / {gust_thr} węzłów)',
   /* BN3: Digitraffic winter-navigation v2 */
   rk_ferry_winter_nav: 'Żegluga zimowa: {kind} — {port} ({locode}): {summary}',
-  rk_ferry_portcall_v2_fihel: 'Digitraffic port-call v2: FIHEL w cancelled — sprawdź odwołania Helsinki',
+  rk_ferry_portcall_v2_fihel: 'Digitraffic port-call v2: anulowane wizyty FIHEL — sprawdź odwołania Helsinki',
   rk_source_down: 'Źródło niedostępne: {source} — HHL weryfikuje ręcznie',
   /* A8: jedna sprawa na źródło z „od kiedy” (`detail.od_kiedy`) */
   rk_source_down_since: 'Źródło niedostępne: {source} od {since} — HHL weryfikuje ręcznie',

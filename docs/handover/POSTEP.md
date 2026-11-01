@@ -7457,6 +7457,13 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (odbiór prod):** SELECT `here_road_legs` — **12** / active 12 / `browser_fetch` 5; core bez zmian (3495/12561/3742/18854/19408); BN7 7× null. `here-roads` **#108803** @ 04:49Z ok (0 prób — core świeże; BN7 poza cronem). Komentarz w #667. **Dalej:** BN3 (#573).
 - Bez push na main.
 
+## 2026-11-01 03:12 — #692 SCALONE; #694 unit PL-T (cancelled → PL)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE; #538/#537/#500/#499 w planie. Bez nowych `pilne`.
+- Scalanie: **#692 SCALONE** `b24b95ba` (F7: gotowe do scalenia @ `bcd068c1`; CI unit/visual ✔; db nie dotyczy). DP-86/87/104 → DONE. Bez push na main.
+- **Krok BN3 #694:** CI unit FAIL — `pl-t` słowo „cancelled” w `rk_ferry_portcall_v2_fihel` → tekst PL: „anulowane wizyty FIHEL”. PLAN §4/§8. **Dalej:** push → CI → gotowe do F7 @ sha; potem Urząd Morski Gdynia / podejrzenie 45 min+AIS.
+- Bez push na main.
+
 ## 2026-11-01 02:55 — #693 SCALONE; start BN3 winter-nav / MMSI
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE; #685/#691 baza SCALONE (ekran #692 bez F7). Bez nowych `pilne`.

@@ -1204,8 +1204,9 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-83 | Cursor | rozbieżność słowników TLL-HEL: front `['TALLINK','VIKING','ECKERO']`, baza tylko TALLINK (Viking/Eckerö na TLLA-HEL) — ważne dla walidacji `p_operator` | F7 #680 | BN3/BN8 + DP-11 | w kolejce |
 | DP-84 | Cursor | `operator_notice_apply` dopasowanie `vessels.operator` przez `like '%…%'` + `limit 1` niedeterministyczne → równość kodu/nazwy | F7 #680 | BN3 | DONE w #680 (0356: tylko kod/nazwa) |
 | DP-85 | Cursor | `comment on constraint` dla FK `operator_notices_operator_fkey` | F7 #680 | BN3 | DONE w #680 (0356) |
-| DP-86 | koordynator | test filtra armatora — wydzielić `noticeSailingsFor(...)` (>40 rejsów bałtyckich + GDN-NYN, GDY-KAA, TLLA-HEL/Eckerö) | F7 #680 r2 | BN9-c1 | w kolejce |
-| DP-87 | koordynator | lista rejsów w formularzu komunikatu bez rejsów z przeszłości | F7 #680 r2 | BN9-c1 | w kolejce |
+| DP-86 | koordynator | test filtra armatora — wydzielić `noticeSailingsFor(...)` (>40 rejsów bałtyckich + GDN-NYN, GDY-KAA, TLLA-HEL/Eckerö) | F7 #680 r2 | BN9-c1 | DONE (#692 `b24b95ba`) |
+| DP-87 | koordynator | lista rejsów w formularzu komunikatu bez rejsów z przeszłości | F7 #680 r2 | BN9-c1 | DONE (#692 `b24b95ba`) |
+| DP-104 | koordynator | historia komunikatów: „automatyczny”/„ręczny” (source) + link źródła tylko https (noopener) | F7 #680 / #692 | BN9-c1 | DONE (#692 `b24b95ba`) |
 | DP-88 | Cursor | komentarz `tests/db/ferry-status.sh` „DFDS na GDN-NYN” → GDY-KAA | F7 #680 r2 | BN3 | DONE (bn3-status-sources) |
 | DP-89 | Cursor | `0357` on conflict nie nadpisuje `value` zmienionego przez admina (`do nothing` / tylko label+source); etykieta Portnet nie Ports of Stockholm | F7 #682 r1 | BN3 | DONE w #682 (0357) |
 | DP-90 | Cursor | ferry-status: `fetchDfdsDays` tylko API statusu (bez PDF/HTML przy częściowej awarii); puste tygodnie ≠ SOURCE_DOWN DFDS_STATUS | F7 #682 r1 | BN3 | w kolejce |
@@ -1280,7 +1281,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 
 ### BN9 — część na produkcji; ekrany zależne od danych (BN9-c*)
 Źródło: #671. BN9-a (#575) i BN9-b (#670) na produkcji. Zostają (koordynator, `wyglad/*`, zaraz po swoim etapie):
-- **BN9-c1** po BN3 — komunikaty i ręczny komunikat w Ryzykach;
+- **BN9-c1** — ~~SCALONE~~ (#692 `b24b95ba`: ekran importu Vikinga + DP-86/87/104); komunikaty i ręczny komunikat w Ryzykach — część w BN3;
 - **BN9-c2** po BN4 — markery promów, pozycja szacowana, pasek śledzenia;
 - **BN9-c3** po BN5 — pogoda morska Kokpit/Ryzyka;
 - **BN9-c4** po BN6 — Ryzyka › Drogi LT/LV/EE/FI;
@@ -1307,7 +1308,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 2. Źródła → update — ~~**DFDS remark**~~; ~~Portnet ATA~~; ~~ts.ee Lisainfo / Tallink Alert (F7 #683)~~; Digitraffic Viking near (#685-a).
 3. ~~Opóźnienie: ATA − arrival; `FERRY_PORT_DELAY_MIN` z `app_parameters` (zapas 15)~~ (**0357** + Portnet + store F7 B1); ~~ATD 13–19 min przed planem bez delayed (DP-94)~~; ATD tylko gdy wiarygodne — dalej.
 4. Odwołanie: ~~ts.ee / Tallink Alert (decyzja 59 + **68**, F7 #683)~~; ~~DFDS cancel → NIEZNANY (F7 B3)~~; podejrzenie 45 min+AIS → FERRY MEDIUM — dalej.
-5. `operator_notices`: ~~ręczny 6 armatorów (0356)~~; ~~`source` AUTO/RECZNIE + URL (**0358**)~~; ~~**decyzja 69** AUTO tylko przy ODWOLANY~~; front BN9-c1 (koordynator).
+5. `operator_notices`: ~~ręczny 6 armatorów (0356)~~; ~~`source` AUTO/RECZNIE + URL (**0358**)~~; ~~**decyzja 69** AUTO tylko przy ODWOLANY~~; ~~front BN9-c1 (#692)~~.
 6. ~~SOURCE_DOWN: TALLINK/DFDS/ECKERO/DIGITRAFFIC (+ *_SCHEDULE) = MEDIUM~~ (wycinek 2 + **decyzja 67** F7 #682, uzasadnienie §5); Viking bez SourceId statusu.
 7. Digitraffic winter-navigation (**W TOKU** `pakiet/bn3-winter-nav-mmsi` / **0361** + ferry-portnet); Urząd Morski Gdynia (zapas Stena) — dalej; port-call v2 cancelled FIHEL (obserwacja w tym samym PR).
 8. ~~MMSI XPRS/Finbo/Finlandia/MyStar/Megastar~~ (**0361**, vessel-details 01.11); ~~DP-11~~ (RPC przed seedem); ~~DP-1~~ (BN1 0339/0344).
@@ -1322,11 +1323,11 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 4. ~~F7 r2~~ — test R2-B1 (strona ≥2 KB bez Footer/Cws → INCOMPLETE) + nieblokujące. Testy bn3-tallink-alert **59**.
 DP-98 DONE; DP-114 DONE; DP-115 (Stena IRM backoff) w kolejce.
 
-### #685 · Decyzja 63: rozkład Viking Line (Digitraffic + import z pliku) — SCALONE baza (`45d27978` / PR #690 / **0360**; #685-a `774fd2c0` / **0359**); ekran BN9-c1 = PR #692 (koordynator)
+### #685 · Decyzja 63: rozkład Viking Line (Digitraffic + import z pliku) — SCALONE baza (`45d27978` / PR #690 / **0360**; #685-a `774fd2c0` / **0359**); ekran BN9-c1 SCALONE (#692 `b24b95ba`)
 Źródło: #685 (Spawn2018, `dla-cursora`; decyzja 63 potwierdzona właścicielem 31.10 09:56). Bez obchodzenia Imperva (cargo/sales 403).
 **Podział PR (prognoza):**
 1. **#685-a (63a)** — ~~SCALONE~~ (`774fd2c0` / PR #688 / **0359**, 31.10.2026 21:31Z; F7: gotowe @ `b31d504e`).
-2. **#685-b (63b)** — ~~SCALONE~~ (`45d27978` / PR #690 / **0360**, 01.11.2026 00:32Z; F7: gotowe @ `8fed1389`): `viking_schedule_import_assert`/`_record` HHL_ADMIN+2FA + `STEGRA_BODEN`; Edge `viking-schedule-import` + `applyVikingFileSchedule`; F7 r1–r3; ekran BN9-c1 → **#692**.
+2. **#685-b (63b)** — ~~SCALONE~~ (`45d27978` / PR #690 / **0360**, 01.11.2026 00:32Z; F7: gotowe @ `8fed1389`): `viking_schedule_import_assert`/`_record` HHL_ADMIN+2FA + `STEGRA_BODEN`; Edge `viking-schedule-import` + `applyVikingFileSchedule`; F7 r1–r3; ~~ekran BN9-c1 #692 `b24b95ba`~~.
 3. **#685-c (63c)** — w b: apply i cron zamykają / nie wystawiają `SOURCE_DOWN:VIKING_SCHEDULE` przy pokryciu **od teraz** ≥ 30 d (kompletny plik + próg 50%; `maxVikingFileDepartureAt`).
 Kolejność: a → b(+c). DP-21 w #685-b. **Wdrożenie:** **0360** przed Edge `viking-schedule-import` (deploy-main).
 
@@ -2360,6 +2361,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 01.11.2026 01:32 | #690 SCALONE `45d27978` (F7: gotowe @ 8fed1389); deploy-main 0360+Edge; start #691 DP-116 `sailingsSince` stronicowanie | pętla |
 | 01.11.2026 02:05 | #693 F7 r1 POPRAWKI: R1-B1 żywe testy atrapy; R1-B2 page cap throw; dedupe id; DP-117/118/119 | pętla |
 | 01.11.2026 02:45 | #693 SCALONE `67b3af12` (F7: gotowe @ ec403152); start BN3 winter-nav/MMSI `pakiet/bn3-winter-nav-mmsi` / **0361** | pętla |
+| 01.11.2026 03:12 | #692 SCALONE `b24b95ba` (F7: gotowe @ bcd068c1; DP-86/87/104 DONE); #694 unit FAIL PL-T „cancelled” → tekst PL bez EN | pętla |
 | 31.10.2026 — | Decyzja 73: TLLA-HEL ETA−150 min / HELA-TLL ETD+160 min (fixture Cargo; nocny 165 min OK). Decyzja 74: `sailings.source_ref` 0359; Digitraffic `digitraffic:portcall:<id>:<route>`; HTML/RECZNIE/DANE_STARTOWE wygrywają; #685-b RPC zastępuje digitraffic:% w ±3 h | F7 #688 r1–r4 |
 | 31.10.2026 — | F7 #683 nieblokujące (osobna poprawka): Scheduler grudzień + „on 2 January” → rok bieżący, ciche wygaśnięcie; Alert INFO bez ryzyka/historii — świadomie | F7 #683 r7 |
 | 31.10.2026 — | F7 #683 r8 nieblokujące (osobno): Alert poza Schedulerem obok Schedulera; sprzeczne bloki (resume→cofnięcie auto); rok przy długim oknie Schedulera; mutanty M10/M15–M17/M22 świadomie bez testów | F7 #683 r8 |
