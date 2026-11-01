@@ -2424,6 +2424,8 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 01.11.2026 14:55 | #703 F7 r2: B1/P1 pas 3–4 km pomijany (gęsty tor); P2 **0363** W_REJSIE do DP-130; **DP-130** (trigger 0264 / 23 rejsy) | pętla / F7 #703 |
 | 01.11.2026 15:02 | **DP-131** w rejestrze (FERRY + GPS ≤3 km port wyjścia po ATD/ATA) — po DP-130, osobny mały PR | #703 komentarz |
 | 01.11.2026 15:25 | #703 SCALONE `d8708766` (F7: gotowe @ 03ff7c23); start DP-130 `pakiet/dp130-doplynal-ata-null` / **0364** | pętla / F7 #703 |
+| 01.11.2026 15:55 | #704 CI: status DP-130 — source TALLINK (nie DIGITRAFFIC); ID 704/705 | pętla / F7 #704 |
+| 01.11.2026 15:50 | #704 db FAIL status DP-130: source DIGITRAFFIC → TALLINK (`sailings_source_check`); ponowne CI / F7 | pętla / #704 |
 | 31.10.2026 — | Decyzja 73: TLLA-HEL ETA−150 min / HELA-TLL ETD+160 min (fixture Cargo; nocny 165 min OK). Decyzja 74: `sailings.source_ref` 0359; Digitraffic `digitraffic:portcall:<id>:<route>`; HTML/RECZNIE/DANE_STARTOWE wygrywają; #685-b RPC zastępuje digitraffic:% w ±3 h | F7 #688 r1–r4 |
 | 31.10.2026 — | F7 #683 nieblokujące (osobna poprawka): Scheduler grudzień + „on 2 January” → rok bieżący, ciche wygaśnięcie; Alert INFO bez ryzyka/historii — świadomie | F7 #683 r7 |
 | 31.10.2026 — | F7 #683 r8 nieblokujące (osobno): Alert poza Schedulerem obok Schedulera; sprzeczne bloki (resume→cofnięcie auto); rok przy długim oknie Schedulera; mutanty M10/M15–M17/M22 świadomie bez testów | F7 #683 r8 |

@@ -796,22 +796,23 @@ chk "#446 F7: OPOZNIONY przy actual_* → zostaje DOPLYNAL" \
   "select status from sailings where id='$S446'" DOPLYNAL
 
 # DP-130: jawny DOPLYNAL przy ATA null (closeStale) — trigger nie cofa do W_REJSIE
+# ID 704/705; source TALLINK — DIGITRAFFIC nie w sailings_source_check 0338 (INSERT cichy → pusty SELECT)
 echo; echo "[DP-130] jawny DOPLYNAL bez ATA zostaje"
-S130=77777777-0000-0000-0000-000000000130
+S130=77777777-0000-0000-0000-000000000704
+S130b=77777777-0000-0000-0000-000000000705
 q "insert into sailings (id,project_id,vessel_id,route,departure_at,arrival_at,actual_departure_at,actual_arrival_at,status,source) values
  ('$S130','$P','66666666-0000-0000-0000-000000000001','HEL-TLL',
   now() - interval '8 hours', now() - interval '5 hours',
-  now() - interval '7 hours', null, 'W_REJSIE','DIGITRAFFIC')" >/dev/null
+  now() - interval '7 hours', null, 'W_REJSIE','TALLINK')" >/dev/null
 q "update sailings set status = 'DOPLYNAL' where id='$S130'" >/dev/null
 chk "DP-130: UPDATE status=DOPLYNAL przy ATA null → zostaje DOPLYNAL" \
   "select status from sailings where id='$S130'" DOPLYNAL
 chk "DP-130: ATA nadal null po jawnym DOPLYNAL" \
   "select (actual_arrival_at is null)::text from sailings where id='$S130'" true
 # ATD bez jawnego DOPLYNAL nadal → W_REJSIE
-S130b=77777777-0000-0000-0000-000000000131
 q "insert into sailings (id,project_id,vessel_id,route,departure_at,arrival_at,status,source) values
  ('$S130b','$P','66666666-0000-0000-0000-000000000002','HELA-TLL',
-  now() - interval '2 hours', now() + interval '1 hour','ZAPLANOWANY','DIGITRAFFIC')" >/dev/null
+  now() - interval '2 hours', now() + interval '1 hour','ZAPLANOWANY','TALLINK')" >/dev/null
 q "update sailings set actual_departure_at = now() - interval '30 minutes' where id='$S130b'" >/dev/null
 chk "DP-130: actual_departure_at bez jawnego DOPLYNAL → W_REJSIE" \
   "select status from sailings where id='$S130b'" W_REJSIE

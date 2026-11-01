@@ -7469,6 +7469,21 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Dalej:** DP kolejka BN3 (np. DP-108 ODWOLANY→FERRY_CANCELLED) albo ATD wiarygodne / BN4.
 - Bez push na main.
 
+## 2026-11-01 15:50 — DP-130 CI db FAIL → poprawka source w status.sh
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne`.
+- Scalanie: **#704** bez „F7: gotowe do scalenia”; unit/visual ✔; **db FAIL** (status 502/505) na `9f941593`. Bez push na main.
+- **Krok:** `status.sh` DP-130: `source='DIGITRAFFIC'` pada na `sailings_source_check` (0338) — INSERT cichy → pusty SELECT. → `TALLINK` (jak HEL-TLL/HELA-TLL). EXPECTED status nadal **505**.
+- **Dalej:** push → CI → gotowe do F7. Po F7: DP-131 → BN4 pkt 8.
+
+## 2026-11-01 15:55 — #704 CI czerwone: status.sh source TALLINK
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne`.
+- Scalanie: **#704** CI db FAIL @ `9f941593` (status 502/505) — nie scalać; poprawka w tym PR.
+- **Krok:** DP-130 testy — `DIGITRAFFIC` odrzucane przez `sailings_source_check` (0338) → INSERT cichy, pusty SELECT; source=`TALLINK`, ID 704/705.
+- **Dalej:** push → CI → gotowe do F7. Po F7: DP-131 → BN4 pkt 8.
+- Bez push na main.
+
 ## 2026-11-01 15:25 — #703 SCALONE; start DP-130 (+ DP-131 w planie)
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE; komentarz #703 → **DP-131** wpisane (po DP-130, osobny mały PR).
