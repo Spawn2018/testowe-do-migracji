@@ -36,6 +36,13 @@ import {
   winterNavIceRisk,
 } from '../ferry/winterNavigation.ts';
 import {
+  cancelSuspectRisk, cancelSuspectRiskDedup, cancelSuspectTrigger,
+  departureHubsForRoute, digitrafficAisUrl, isDigitrafficAisPayloadOk, isFreshAisFix,
+  aisClearsCancelSuspect, isGulfFerryRoute, isStandingAtDeparturePort,
+  mergePortCallIdsIfComplete, nearestGulfHub,
+  CANCEL_SUSPECT_DEDUP_PREFIX, DIGITRAFFIC_AIS_LOCATIONS_URL,
+} from '../ferry/cancelSuspect.ts';
+import {
   UMG_ATTRIBUTION, UMG_EXPECTED_URL, UMG_IN_PORT_URL, UMG_OUTGOING_URL, UMG_UA,
   parseUmgdyGdyniaHtml, stenaUmgCandidates, type UmgKind, type UmgShipRow,
 } from '../ferry/umgdyShipMovements.ts';
@@ -255,6 +262,11 @@ export interface SyncStore {
   recentJobResults?(job: string, limit: number): Promise<JobResult[]>;
   /** F7 #695 r2 B2: czy jest otwarte ryzyko z prefiksem dedup (np. SOURCE_DOWN:STENA_STATUS:). */
   hasOpenRisk?(dedupPrefix: string): Promise<boolean>;
+  /**
+   * F7 #696 r3 B1: otwarte FERRY_CANCEL_SUSPECT + ich rejsy (bez limitu since).
+   * Brak metody → job nie woła resolveStaleRisks (nie zamyka na ślepo).
+   */
+  openCancelSuspectSailings?(): Promise<DbSailing[]>;
   /** zamyka otwarte ryzyka o kluczu z prefiksem (np. źródło znów działa) — zwraca liczbę */
   resolveRisks(dedupPrefix: string): Promise<number>;
   /** zamyka otwarte ryzyka z prefiksu, których klucza nie ma na liście (sytuacja zniknęła) */
@@ -1259,8 +1271,215 @@ async function applyDigitrafficPortCallActuals(deps: JobDeps, sinceIso: string):
 }
 
 /**
+ * F7 #696 r1 B5 — id Portnet do „zniknięcia” tylko przy kompletnej odpowiedzi
+ * etaFrom/etaTo + etdFrom/etdTo (jak DP-116/#688 completeForRemoval).
+ */
+async function fetchCancelSuspectPortCallIds(deps: JobDeps): Promise<{
+  ids: Set<string> | null; warnings: string[];
+}> {
+  const now = deps.now();
+  const fromIso = new Date(now.getTime() - 2 * 864e5).toISOString();
+  const toIso = new Date(now.getTime() + 864e5).toISOString();
+  const headers = {
+    'User-Agent': USER_AGENT,
+    Accept: 'application/json',
+    'Accept-Encoding': 'gzip',
+    'Digitraffic-User': DIGITRAFFIC_USER,
+  };
+  const [pageEta, pageEtd] = await Promise.all([
+    readText(deps, digitrafficPortCallsUrl({ etaFrom: fromIso, etaTo: toIso }), { headers }),
+    readText(deps, digitrafficPortCallsUrl({ etdFrom: fromIso, etdTo: toIso }), { headers }),
+  ]);
+  const warnings: string[] = [];
+  if (!pageEta.ok) warnings.push(`cancel-suspect Portnet ETA: ${pageEta.warning}`);
+  if (!pageEtd.ok) warnings.push(`cancel-suspect Portnet ETD: ${pageEtd.warning}`);
+  let etaJson: unknown = null;
+  let etdJson: unknown = null;
+  let etaParseOk = false;
+  let etdParseOk = false;
+  if (pageEta.ok) {
+    try { etaJson = JSON.parse(pageEta.text); etaParseOk = true; } catch {
+      warnings.push('cancel-suspect Portnet ETA: nieczytelny JSON');
+    }
+  }
+  if (pageEtd.ok) {
+    try { etdJson = JSON.parse(pageEtd.text); etdParseOk = true; } catch {
+      warnings.push('cancel-suspect Portnet ETD: nieczytelny JSON');
+    }
+  }
+  const ids = mergePortCallIdsIfComplete({
+    etaOk: pageEta.ok && etaParseOk,
+    etdOk: pageEtd.ok && etdParseOk,
+    etaJson,
+    etdJson,
+  });
+  if (!ids) {
+    warnings.push('cancel-suspect Portnet: niepełna odpowiedź — bez sygnału zniknięcia');
+  }
+  return { ids, warnings };
+}
+
+/**
+ * BN3 decyzja 61 / 61b — podejrzenie odwołania (Zatoka Fińska).
+ * Podnoszenie: bez ATD i bez ATA; ETA+45…+90 **albo** zniknięcie (dep+45…ETA+90) + AIS w hubie wyjścia.
+ * Keep poza oknem do ATD/ATA / AIS clear (≥3 kn lub poza geofence) / HHL.
+ * F7 #696 r3: otwarte dedupy niezależnie od since; SOG null ≠ clear.
+ */
+async function applyCancelSuspectAis(
+  deps: JobDeps,
+  sinceIso: string,
+  activePortCallIds: Set<string> | null,
+): Promise<{ risks: number; hits: number; warnings: string[]; aisDown: boolean }> {
+  const nowIso = deps.now().toISOString();
+  const nowMs = Date.parse(nowIso);
+  const [vessels, recent] = await Promise.all([
+    deps.store.vessels(), deps.store.sailingsSince(sinceIso),
+  ]);
+  /* F7 r3 B1: otwarte podejrzenia + rejsy poza since — inaczej resolve zamyka po ~24 h. */
+  const openRows = deps.store.openCancelSuspectSailings
+    ? await deps.store.openCancelSuspectSailings()
+    : null;
+  const canSafelyResolve = openRows !== null;
+  const openIds = new Set((openRows ?? []).map((s) => s.id));
+  const bySailing = new Map<string, DbSailing>();
+  for (const s of recent) bySailing.set(s.id, s);
+  for (const s of openRows ?? []) bySailing.set(s.id, s);
+  const existing = [...bySailing.values()];
+  const byId = new Map(vessels.map((v) => [v.id, v]));
+  /** VesselFix | null (pusta/brak) | 'DOWN' (HTTP/zła struktura). */
+  const aisCache = new Map<number, VesselFix | null | 'DOWN'>();
+  const warnings: string[] = [];
+  const keep: string[] = [];
+  let risks = 0;
+  let hits = 0;
+  let aisDown = false;
+  /** Przebieg z ≥1 poprawną odpowiedzią AIS (także puste features) — wolno zamknąć SOURCE_DOWN. */
+  let aisOkSeen = false;
+
+  const aisHeaders = {
+    'User-Agent': USER_AGENT,
+    Accept: 'application/json',
+    'Accept-Encoding': 'gzip',
+    'Digitraffic-User': DIGITRAFFIC_USER,
+  };
+
+  for (const s of existing) {
+    if (!isGulfFerryRoute(s.route)) continue;
+    /* ODWOLANY zamyka; DOPLYNAL bez ATA nie zamyka (F7 r3 61b). */
+    if (s.status === 'ODWOLANY') continue;
+    /* 61b: ATD lub ATA → zamknij podejrzenie (brak w keep). */
+    if (s.actual_arrival_at != null || s.actual_departure_at != null) continue;
+
+    const etaIso = s.delayed_arrival_at ?? s.arrival_at;
+    const trig = cancelSuspectTrigger({
+      etaIso,
+      departureIso: s.departure_at,
+      nowMs,
+      sourceRef: s.source_ref,
+      activePortCallIds,
+    });
+    const open = openIds.has(s.id);
+    /* Poza oknem: tylko utrzymuj / gaś istniejące. */
+    if (!trig.check && !open) continue;
+
+    const v = byId.get(s.vessel_id);
+    if (!v?.mmsi) {
+      warnings.push(`cancel-suspect: brak MMSI ${s.id}`);
+      if (open) keep.push(cancelSuspectRiskDedup(s.id));
+      continue;
+    }
+    let cached = aisCache.get(v.mmsi);
+    if (cached === undefined) {
+      const page = await readText(deps, digitrafficAisUrl(v.mmsi), { headers: aisHeaders });
+      if (!page.ok) {
+        warnings.push(`cancel-suspect AIS ${v.mmsi}: ${page.warning}`);
+        aisCache.set(v.mmsi, 'DOWN');
+        cached = 'DOWN';
+      } else {
+        try {
+          const json = JSON.parse(page.text) as unknown;
+          if (!isDigitrafficAisPayloadOk(json)) {
+            warnings.push(`cancel-suspect AIS ${v.mmsi}: zła struktura`);
+            cached = 'DOWN';
+          } else {
+            aisOkSeen = true;
+            cached = parseDigitrafficLocations(json, v.mmsi) ?? null;
+          }
+        } catch {
+          warnings.push(`cancel-suspect AIS ${v.mmsi}: nieczytelny JSON`);
+          cached = 'DOWN';
+        }
+        aisCache.set(v.mmsi, cached);
+      }
+    }
+    /* NB2 / B4: awaria lub nieznany stan AIS → keep (nie gaś); DOWN → SOURCE_DOWN. */
+    if (cached === 'DOWN') {
+      aisDown = true;
+      keep.push(cancelSuspectRiskDedup(s.id));
+      continue;
+    }
+    const fix = cached;
+    if (!fix || !isFreshAisFix(fix, nowIso)) {
+      keep.push(cancelSuspectRiskDedup(s.id));
+      continue;
+    }
+    /* F7 r3 B2: clear tylko poza geofence albo SOG ≥ 3; null/1 kn w porcie → keep. */
+    if (aisClearsCancelSuspect(fix, s.route)) continue;
+
+    keep.push(cancelSuspectRiskDedup(s.id));
+    /* DOPLYNAL bez ATA: keep, bez nowego podniesienia. */
+    if (s.status === 'DOPLYNAL') continue;
+    if (!trig.check) continue; /* poza oknem: tylko keep */
+    /* Podnoszenie nadal wymaga SOG≈0 w hubie wyjścia. */
+    if (!isStandingAtDeparturePort(fix, s.route)) continue;
+
+    const depHubs = departureHubsForRoute(s.route);
+    const hub = nearestGulfHub(fix.lat, fix.lon, undefined, depHubs);
+    const reason = trig.due && trig.disappeared ? 'BOTH'
+      : trig.disappeared ? 'PORTCALL_GONE'
+        : 'ETA_GRACE';
+    const risk = cancelSuspectRisk({
+      sailingId: s.id,
+      vessel: v.name,
+      route: s.route,
+      departureAt: s.departure_at,
+      etaIso,
+      reason,
+      hubCode: hub?.code ?? null,
+      sogKn: fix.sogKn,
+      nowIso,
+    });
+    hits += 1;
+    if (await deps.store.raiseRisk(risk)) risks += 1;
+  }
+
+  if (aisDown) {
+    if (await deps.store.raiseRisk(sourceDownRisk(
+      'DIGITRAFFIC_AIS',
+      warnings.length ? warnings.filter((w) => /AIS/i.test(w)) : ['Brak odpowiedzi Digitraffic AIS'],
+      nowIso,
+      DIGITRAFFIC_AIS_LOCATIONS_URL,
+    ))) risks += 1;
+  } else if (aisOkSeen) {
+    /* F7 #696 r2 pkt 5: zamykaj SOURCE_DOWN tylko po realnym, poprawnym odczycie AIS. */
+    await deps.store.resolveRisks('SOURCE_DOWN:DIGITRAFFIC_AIS:');
+  }
+
+  /* F7 r3 B1: bez openCancelSuspectSailings — nie zamykaj niczego (zamiast zamykać wszystko). */
+  if (canSafelyResolve) {
+    if (deps.store.resolveStaleRisks) {
+      await deps.store.resolveStaleRisks(CANCEL_SUSPECT_DEDUP_PREFIX, keep);
+    } else if (!keep.length) {
+      await deps.store.resolveRisks(CANCEL_SUSPECT_DEDUP_PREFIX);
+    }
+  }
+  return { risks, hits, warnings, aisDown };
+}
+
+/**
  * F7 #660: Portnet = FI (HEL/VUO); Ports of Stockholm = SE (STO/KPS) — brak ATA w EE.
  * Po arrival_at + 2 h bez ATA → DOPLYNAL (actual_arrival_at = null). F7 r2: + STO-TLL, KPS-PLD.
+ * F7 #696 r1: nie zamykaj, gdy otwarte podejrzenie odwołania (decyzja 61b — do HHL / ATA).
  */
 async function closeStaleFiToEeWithoutAta(deps: JobDeps, sinceIso: string): Promise<number> {
   const ROUTES = new Set(['HEL-TLL', 'HELA-TLL', 'VUO-MUU', 'STO-TLL', 'KPS-PLD']);
@@ -1273,6 +1492,10 @@ async function closeStaleFiToEeWithoutAta(deps: JobDeps, sinceIso: string): Prom
     if (s.actual_arrival_at != null) continue;
     if (s.source === 'RECZNIE') continue;
     if (Date.parse(s.arrival_at) + 2 * 3600_000 > nowMs) continue;
+    if (deps.store.hasOpenRisk
+      && await deps.store.hasOpenRisk(cancelSuspectRiskDedup(s.id))) {
+      continue;
+    }
     if (await deps.store.updateSailing(s.id, { status: 'DOPLYNAL' })) {
       updated += 1;
       s.status = 'DOPLYNAL';
@@ -1669,6 +1892,14 @@ export async function runFerryPortnet(deps: JobDeps): Promise<JobResult> {
   } else {
     await deps.store.resolveRisks('SOURCE_DOWN:DIGITRAFFIC_PORTCALL:');
   }
+
+  /* BN3 decyzja 61 / F7 #696 r1: podejrzenie PRZED closeStale — otwarte ryzyko blokuje auto-DOPLYNAL (61b). */
+  const portIds = await fetchCancelSuspectPortCallIds(deps);
+  warnings.push(...portIds.warnings);
+  const suspect = await applyCancelSuspectAis(deps, since, portIds.ids);
+  warnings.push(...suspect.warnings);
+  risks += suspect.risks;
+
   const closed = await closeStaleFiToEeWithoutAta(deps, since);
   updated += closed;
   // F7 #660: Port of Tallinn odwołania także co 15 min (dzień + następny).
@@ -1704,7 +1935,7 @@ export async function runFerryPortnet(deps: JobDeps): Promise<JobResult> {
   risks += umg.risks;
 
   return {
-    /* Winter-nav / v2 / UMG: awaria → SOURCE_DOWN / ryzyko, bez wywracania ok Portnet. */
+    /* Winter-nav / v2 / UMG / cancel-suspect: awaria → ryzyko, bez wywracania ok Portnet. */
     job: 'ferry-portnet', mode: 'LIVE', ok: !portnet.fail,
     updated, risks, warnings,
     observations: {
@@ -1714,6 +1945,7 @@ export async function runFerryPortnet(deps: JobDeps): Promise<JobResult> {
       port_call_v2_cancelled_n: String(v2c.count),
       umg_stena_rows: String(umg.rows),
       ...(umg.updated ? { umg_stena_updated: String(umg.updated) } : {}),
+      ...(suspect.hits ? { cancel_suspect_hits: String(suspect.hits) } : {}),
     },
   };
 }

@@ -7457,6 +7457,77 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (odbiór prod):** SELECT `here_road_legs` — **12** / active 12 / `browser_fetch` 5; core bez zmian (3495/12561/3742/18854/19408); BN7 7× null. `here-roads` **#108803** @ 04:49Z ok (0 prób — core świeże; BN7 poza cronem). Komentarz w #667. **Dalej:** BN3 (#573).
 - Bez push na main.
 
+## 2026-11-01 09:10 — #696 F7 r4 POPRAWKI (DP-116 + M1/M12/N11)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne`.
+- Scalanie: F7 r4 BLOKER @ 9189b083 (DP-116 openCancelSuspect bez range) — nie scalać. Bez push na main.
+- **Krok F7 #696 r4:**
+  - **B1/DP-116:** `openCancelSuspectSailings` — `risk_signals` range+order(id); sailings `.in` ≤150; błąd/cap → throw.
+  - Testy store: >1000 dedupów, błąd strony, page cap, batche `.in`.
+  - **M1** zniknięcie+ruch w oknie; **M12** SOG 1,5 kn (mutacja 50 kn); **N11** bez metody → bez resolveStale cancel-suspect.
+  - Spec 61b: ATD/ATA spoza since tylko AIS/ODWOLANY/HHL/UMG.
+  - vitest bn3-cancel-suspect-ais **49**; 691-dp116 (+4 openCancelSuspect) **13**.
+- **Dalej:** push → CI → gotowe do F7 @ sha. Po F7: RSS ERR (+ W64 Yle STOP).
+- Bez push na main.
+
+## 2026-11-01 08:25 — #696 F7 r3 POPRAWKI (B1/B2)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne`.
+- Scalanie: F7 r3 BLOKERY @ 4c74ed17 (B1 since 24 h / B2 SOG null) — nie scalać. CI unit/visual/db ✔ na 4c74ed17. Bez push na main.
+- **Krok F7 #696 r3** (`9189b083`):
+  - **B1:** `openCancelSuspectSailings` — otwarte dedupy + rejsy poza `since` 24 h; bez metody → bez resolveStale.
+  - **B2:** AIS clear tylko poza geofence albo SOG ≥ 3 kn; SOG null / 1 kn w porcie → keep; DOPLYNAL bez ATA nie zamyka.
+  - Spec 61b + PLAN §5; vitest bn3-cancel-suspect-ais **46**.
+- **Dalej:** push → CI → gotowe do F7 @ sha. Po F7: RSS ERR (+ W64 Yle STOP).
+- Bez push na main.
+
+## 2026-11-01 08:10 — #696 F7 r2 POPRAWKI (decyzja 61b)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne`.
+- Scalanie: F7 r2 BLOKERY (NB1/NB2) @ 5dfaea18 — nie scalać. Bez push na main.
+- **Krok F7 #696 r2 / 61b:**
+  - Podnoszenie tylko bez ATD i ATA; okno ETA+45…+**90** min; zniknięcie samodzielne dep+45…ETA+90.
+  - Keep poza oknem do ATD/ATA / świeży AIS poza hubem wyjścia / HHL.
+  - NB2: stary AIS / `features:[]` → keep; `{}` → keep + SOURCE_DOWN; SOURCE_DOWN tylko po poprawnym AIS.
+  - NB1: HEL-TLL z ATD + powrót → bez alarmu, DOPLYNAL działa.
+  - Spec: `docs/handover/BN3_SPECYFIKACJA_61b.md`; decyzja 61b w §5.
+  - vitest bn3-cancel-suspect-ais **38**.
+- **Dalej:** push → CI → gotowe do F7 @ sha. Po F7: RSS ERR (+ W64 Yle STOP).
+- Bez push na main.
+
+## 2026-11-01 07:40 — #696 F7 r1 POPRAWKI (cancel-suspect B1–B6)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne`.
+- Scalanie: brak „F7: gotowe do scalenia” (F7 r1 BLOKERY @ 72e25218). Bez push na main.
+- **Krok F7 #696 r1:**
+  - **B1:** hub tylko portu wyjścia (`departureHubsForRoute`); AIS w porcie docelowym → bez alarmu.
+  - **B2:** AIS ≤ 60 min (`isFreshAisFix`); **B3:** brak SOG ≠ stoi.
+  - **B4:** AIS down → keep dedup + `SOURCE_DOWN:DIGITRAFFIC_AIS` MEDIUM.
+  - **B5:** zniknięcie tylko przy kompletnej puli eta+etd (jak #688); pusta → null.
+  - **B6:** okno ETA+45…+6 h; `applyCancelSuspectAis` **przed** `closeStaleFiToEeWithoutAta`; closeStale nie zamyka przy otwartym podejrzeniu (decyzja 61b).
+  - vitest bn3-cancel-suspect-ais **25** (+ risk-keys).
+  - **Yle RSS:** regulamin wyklucza płatne usługi/aplikacje → STOP W64 przy następnym kroku RSS; ERR do sprawdzenia.
+- **Dalej:** push → CI → gotowe do F7 @ sha. Po F7: RSS ERR (+ W64 Yle STOP).
+- Bez push na main.
+
+## 2026-11-01 07:10 — BN3 cancel-suspect AIS gotowe do F7
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne`.
+- Scalanie: brak otwartego „F7: gotowe do scalenia”. Bez push na main.
+- **Krok BN3 decyzja 61** (`pakiet/bn3-cancel-suspect-ais` @ `23718f3d`): `cancelSuspect.ts` + `applyCancelSuspectAis` w ferry-portnet — ETA+45 bez ATA albo Portnet zniknął (po odejściu) + AIS SOG≈0 w hubie Zatoki → FERRY MEDIUM (`rk_ferry_cancel_suspect`, dedup `FERRY_CANCEL_SUSPECT:AIS:{id}`); bez zmiany statusu; trasy TLL↔HEL / TLLA↔HEL / MUU↔VUO.
+- vitest bn3-cancel-suspect-ais **10**.
+- **Dalej:** push → CI → komentarz gotowe do F7 @ sha. Po F7: RSS ERR/Yle (decyzja 61 pkt 3).
+- Bez push na main.
+
+## 2026-11-01 06:05 — BN3 podejrzenie odwołania 45 min+AIS (po #695)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne`.
+- Scalanie: **#695** już na `main` `6c908ae4`. Bez push na main.
+- **Krok BN3 decyzja 61** (`pakiet/bn3-cancel-suspect-ais`): `cancelSuspect.ts` + `applyCancelSuspectAis` w ferry-portnet — ETA+45 bez ATA albo Portnet zniknął (po odejściu) + AIS SOG≈0 w hubie Zatoki → FERRY MEDIUM (`rk_ferry_cancel_suspect`, dedup `FERRY_CANCEL_SUSPECT:AIS:{id}`); bez zmiany statusu; trasy TLL↔HEL / TLLA↔HEL / MUU↔VUO.
+- vitest bn3-cancel-suspect-ais **10** + bn3-umg-gdynia **17** + risk-keys **10**.
+- **Dalej:** push → CI → gotowe do F7 @ sha. Potem RSS ERR/Yle (decyzja 61 pkt 3).
+- Bez push na main.
+
 ## 2026-11-01 05:25 — #695 F7 r3 testy mutacji (UMG)
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne`.

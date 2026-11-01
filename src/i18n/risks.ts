@@ -123,6 +123,8 @@ const pl: Dict = {
   /* BN3: Digitraffic winter-navigation v2 */
   rk_ferry_winter_nav: 'Żegluga zimowa: {kind} — {port} ({locode}): {summary}',
   rk_ferry_portcall_v2_fihel: 'Digitraffic port-call v2: anulowane wizyty FIHEL — sprawdź odwołania Helsinki',
+  /* BN3 decyzja 61: podejrzenie odwołania (ETA+45 / Portnet + AIS w porcie) */
+  rk_ferry_cancel_suspect: 'Podejrzenie odwołania: {vessel} {dep} — AIS stoi w porcie, brak ATA (HHL)',
   rk_source_down: 'Źródło niedostępne: {source} — HHL weryfikuje ręcznie',
   /* A8: jedna sprawa na źródło z „od kiedy” (`detail.od_kiedy`) */
   rk_source_down_since: 'Źródło niedostępne: {source} od {since} — HHL weryfikuje ręcznie',
@@ -140,6 +142,7 @@ const pl: Dict = {
   rk_src_DFDS_SCHEDULE: 'rozkład promów (DFDS)',
   rk_src_DFDS_STATUS: 'status promów (DFDS)',
   rk_src_DIGITRAFFIC: 'AIS promów (Digitraffic)',
+  rk_src_DIGITRAFFIC_AIS: 'AIS promów Zatoki (Digitraffic)',
   rk_src_DIGITRAFFIC_PORTCALL: 'godziny portowe (Digitraffic Portnet)',
   rk_src_DIGITRAFFIC_VIKING: 'rozkład Viking (Digitraffic Portnet)',
   rk_src_DIGITRAFFIC_WINTER: 'żegluga zimowa (Digitraffic IBNet)',

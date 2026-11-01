@@ -4,11 +4,17 @@
  */
 import { describe, expect, it } from 'vitest';
 import {
+  CANCEL_SUSPECT_RISK_MAX_PAGES,
+  CANCEL_SUSPECT_RISK_PAGE_SIZE,
+  CANCEL_SUSPECT_SAILING_IN_BATCH,
+  fetchOpenCancelSuspectDedupKeysPaged,
+  fetchSailingsByIdsBatched,
   fetchSailingsSincePaged,
   SAILINGS_MAX_PAGES,
   SAILINGS_PAGE_SIZE,
   supabaseStore,
 } from '../supabase/functions/_shared/integrations/store.ts';
+import { cancelSuspectRiskDedup } from '../supabase/functions/_shared/ferry/cancelSuspect.ts';
 import type { DbSailing } from '../supabase/functions/_shared/integrations/sync.ts';
 
 /** Unikalne czasy co 1 h od 2026-11-01 — nie używaj przy remisach (kolizja z godziną 12 = i=12). */
@@ -264,5 +270,108 @@ describe('DP-116 sailingsSince stronicowanie (#691 / F7 #693 r1–r2)', () => {
     expect(got.filter((s) => s.id === 's999').length).toBe(1);
     expect(new Set(got.map((s) => s.id)).size).toBe(got.length);
     expect(got.length).toBe(1500);
+  });
+});
+
+/** F7 #696 r4 / DP-116: openCancelSuspectSailings — atrapa PostgREST risk_signals + sailings.in. */
+function limitingCancelSuspectClient(
+  risks: { id: string; dedup_key: string }[],
+  sailings: DbSailing[],
+  opts?: { failRiskFrom?: number; hardCap?: number },
+) {
+  const hardCap = opts?.hardCap ?? CANCEL_SUSPECT_RISK_PAGE_SIZE;
+  const inBatches: string[][] = [];
+  return {
+    inBatches,
+    from(table: string) {
+      if (table === 'risk_signals') {
+        const api = {
+          select() { return api; },
+          like() { return api; },
+          is() { return api; },
+          order() { return api; },
+          async range(from: number, to: number) {
+            if (opts?.failRiskFrom !== undefined && from === opts.failRiskFrom) {
+              return { data: null, error: { message: 'risk page boom' } };
+            }
+            const sorted = risks.slice().sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
+            const end = Math.min(to + 1, from + hardCap);
+            return { data: sorted.slice(from, end), error: null };
+          },
+        };
+        return api;
+      }
+      if (table === 'sailings') {
+        const api = {
+          select() { return api; },
+          async in(_col: string, vals: string[]) {
+            inBatches.push(vals.slice());
+            const set = new Set(vals);
+            return { data: sailings.filter((s) => set.has(s.id)), error: null };
+          },
+        };
+        return api;
+      }
+      throw new Error(`unexpected table ${table}`);
+    },
+  };
+}
+
+describe('DP-116 openCancelSuspectSailings (#696 r4)', () => {
+  it('>1000 otwartych dedupów → komplet; .in paczki ≤150', async () => {
+    const n = 1205;
+    const risks = Array.from({ length: n }, (_, i) => ({
+      id: `r${String(i).padStart(5, '0')}`,
+      dedup_key: cancelSuspectRiskDedup(`s${i}`),
+    }));
+    const sailings = Array.from({ length: n }, (_, i) => makeRow(i, { id: `s${i}` }));
+    const sb = limitingCancelSuspectClient(risks, sailings);
+    const store = supabaseStore(sb);
+    const got = await store.openCancelSuspectSailings!();
+    expect(got.length).toBe(n);
+    expect(new Set(got.map((s) => s.id)).size).toBe(n);
+    expect(sb.inBatches.length).toBe(Math.ceil(n / CANCEL_SUSPECT_SAILING_IN_BATCH));
+    expect(sb.inBatches.every((b) => b.length <= CANCEL_SUSPECT_SAILING_IN_BATCH)).toBe(true);
+  });
+
+  it('błąd strony risk_signals → throw (bez obcięcia)', async () => {
+    const risks = Array.from({ length: 1205 }, (_, i) => ({
+      id: `r${String(i).padStart(5, '0')}`,
+      dedup_key: cancelSuspectRiskDedup(`s${i}`),
+    }));
+    const sb = limitingCancelSuspectClient(risks, [], { failRiskFrom: 1000 });
+    const store = supabaseStore(sb);
+    await expect(store.openCancelSuspectSailings!()).rejects.toThrow(/cancel-suspect page/);
+  });
+
+  it('fetchOpenCancelSuspectDedupKeysPaged page cap → throw', async () => {
+    const n = CANCEL_SUSPECT_RISK_MAX_PAGES * CANCEL_SUSPECT_RISK_PAGE_SIZE + 10;
+    const risks = Array.from({ length: n }, (_, i) => ({
+      id: `r${String(i).padStart(6, '0')}`,
+      dedup_key: cancelSuspectRiskDedup(`s${i}`),
+    }));
+    const sb = limitingCancelSuspectClient(risks, []);
+    await expect(
+      fetchOpenCancelSuspectDedupKeysPaged(
+        () => sb.from('risk_signals') as never,
+        'FERRY_CANCEL_SUSPECT:%',
+      ),
+    ).rejects.toThrow(/page cap exceeded/);
+  });
+
+  it('fetchSailingsByIdsBatched dzieli .in', async () => {
+    const ids = Array.from({ length: 320 }, (_, i) => `s${i}`);
+    const sailings = ids.map((id, i) => makeRow(i, { id }));
+    const sb = limitingCancelSuspectClient([], sailings);
+    const got = await fetchSailingsByIdsBatched(
+      () => sb.from('sailings') as never,
+      ids,
+    );
+    expect(got.length).toBe(320);
+    expect(sb.inBatches).toEqual([
+      ids.slice(0, 150),
+      ids.slice(150, 300),
+      ids.slice(300),
+    ]);
   });
 });
