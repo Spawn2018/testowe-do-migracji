@@ -1,5 +1,6 @@
 /** AISStream — browser talks ONLY to local proxy. Never put AISSTREAM_API_KEY in client. */
 import { FERRY_VESSELS, type FerryVesselId } from './ferry';
+import type { FerryVoyage } from './bn9c2Ferry';
 
 export interface AisPosition {
   mmsi: string;
@@ -14,6 +15,8 @@ export interface AisPosition {
   source: 'live' | 'seed' | 'db';
   /** #429 C: pozycja szacowana z rozkładu (AIS starszy niż 30 min); `lastAisTs` = ostatni sygnał AIS albo null. */
   estimated?: { lastAisTs: string | null };
+  /** BN9-c2: trwający albo najbliższy rejs statku z `ferry_sailings_map` (trasa w dymku, kierunek bez COG). */
+  voyage?: FerryVoyage;
 }
 
 const MMSI_TO_ID: Record<string, FerryVesselId> = {
@@ -120,6 +123,14 @@ export function subscribeAis(opts: {
   };
 }
 
+const PROD_HUB: {
+  subs: Set<(positions: AisPosition[], mode: AisMode) => void>;
+  last: AisPosition[] | null;
+  stop: (() => void) | null;
+  started: boolean;
+  gen: number;
+} = { subs: new Set(), last: null, stop: null, started: false, gen: 0 };
+
 /**
  * I-2j — jedno wejście dla mapy: produkcja → pozycje z bazy (`vessel_positions`, tryb 'db' albo 'none'),
  * demo → proxy AISStream / pozycje przykładowe (bez zmian). Moduł bazy ładowany leniwie tylko w produkcji.
@@ -130,14 +141,38 @@ export function subscribeFerryPositions(opts: {
 }): () => void {
   // warunek kompilacji (VITE_AUTH_MODE) — paczka demo nie zawiera modułu bazy ani klienta Supabase
   if (import.meta.env.VITE_AUTH_MODE === 'supabase' && opts.prod) {
-    let stop: (() => void) | null = null;
-    let cancelled = false;
-    opts.onUpdate([], 'none');
-    void import('./aisDb').then(({ subscribeAisDb }) => {
-      if (cancelled) return;
-      stop = subscribeAisDb((pos) => opts.onUpdate(pos, pos.length ? 'db' : 'none'));
-    });
-    return () => { cancelled = true; stop?.(); };
+    /* BN9-c2: jedno odpytywanie bazy na wszystkich odbiorców (mapa, widok mapy, pasek „Na promie” w karcie) —
+       kolejny odbiorca dostaje ostatni wynik od razu, bez dodatkowego zapytania. */
+    const hub = PROD_HUB;
+    hub.subs.add(opts.onUpdate);
+    if (hub.last) opts.onUpdate(hub.last, hub.last.length ? 'db' : 'none');
+    else opts.onUpdate([], 'none');
+    if (!hub.started) {
+      hub.started = true;
+      const gen = ++hub.gen;
+      void import('./aisDb').then(({ subscribeAisDb }) => {
+        if (gen !== hub.gen || !hub.subs.size) return;
+        hub.stop = subscribeAisDb((pos) => {
+          hub.last = pos;
+          /* błąd jednego odbiorcy nie odbiera danych pozostałym */
+          for (const cb of [...hub.subs]) {
+            try { cb(pos, pos.length ? 'db' : 'none'); } catch { /* odbiorca sam obsługuje swoje błędy */ }
+          }
+        });
+      }).catch(() => {
+        /* moduł bazy się nie wczytał (np. sieć) — kolejny odbiorca spróbuje ponownie */
+        if (gen === hub.gen) hub.started = false;
+      });
+    }
+    return () => {
+      hub.subs.delete(opts.onUpdate);
+      if (hub.subs.size) return;
+      hub.stop?.();
+      hub.stop = null;
+      hub.last = null;
+      hub.started = false;
+      hub.gen += 1;
+    };
   }
   return subscribeAis({ onUpdate: opts.onUpdate });
 }

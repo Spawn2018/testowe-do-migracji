@@ -49,7 +49,7 @@ function km(lat1: number, lon1: number, lat2: number, lon2: number): number {
   return 12742 * Math.asin(Math.sqrt(a));
 }
 
-function bearing(lat1: number, lon1: number, lat2: number, lon2: number): number {
+export function bearing(lat1: number, lon1: number, lat2: number, lon2: number): number {
   const r = Math.PI / 180;
   const y = Math.sin((lon2 - lon1) * r) * Math.cos(lat2 * r);
   const x = Math.cos(lat1 * r) * Math.sin(lat2 * r) - Math.sin(lat1 * r) * Math.cos(lat2 * r) * Math.cos((lon2 - lon1) * r);

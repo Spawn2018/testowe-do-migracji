@@ -5,7 +5,8 @@
 import { etaDuration } from './etaDuration';
 import type { Load, LoadEvent, Locale, TrackingLinkInfo } from '../types';
 import { t, tp } from '../i18n/messages';
-import { trackingPhase } from './stageTiles';
+import { stageTileOf, trackingPhase } from './stageTiles';
+import { ferryTrackingLines, type FerryTrackInfo } from './bn9c2Ferry';
 import { buildStatusAxis, dayOnly, dayTime, isoMs } from './statusAxis';
 import { hasAwizacja } from './awizacjaState';
 import { trackerKind, trackingNoLink } from './trackerLink';
@@ -51,6 +52,8 @@ export function trackingStateLines(
   nowIso: string,
   orgKind: OrgKind = 'HHL',
   trackingLink: TrackingLinkInfo | null = load.trackingLink ?? null,
+  /** BN9-c2 — dane promu jak w pasku panelu; bez nich (np. PDF bez pozycji AIS) tekst jak dotąd */
+  ferry: FerryTrackInfo | null = null,
 ): { head: string; sub: string } {
   const label = transportLabel(load, orgKind, 'plain');
   const phase = trackingPhase(load, nowIso);
@@ -73,6 +76,9 @@ export function trackingStateLines(
     ].filter(Boolean).join(' · ');
     return { head: `${label} · ${tp(locale, 'p4b_trk_before', { day: dayOnly(load.plannedLoadDate) })}`, sub };
   }
+
+  /* BN9-c2: ten sam tekst „Na promie” co pasek w panelu */
+  if (phase === 'on' && ferry && stageTileOf(load) === 'FERRY') return ferryTrackingLines(ferry, locale, nowIso);
 
   if (phase === 'on') {
     const day = (load.plannedLoadDate ?? '').slice(0, 10);

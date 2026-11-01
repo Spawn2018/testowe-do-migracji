@@ -47,6 +47,7 @@ import { detourLineOk, detourLineTip } from '../../lib/e49Detour';
 import { e49t } from '../../i18n/e49';
 import { lazyRetry } from '../../lib/lazyRetry';
 import { etaDuration } from '../../lib/etaDuration';
+import { ferryMarkerHeading, ferryMarkerName } from '../../lib/bn9c2Ferry';
 
 /* III-5 — odtwarzanie przebiegu z bazy: tylko build Supabase (chunk leniwy); demo bez zmian */
 const TrackReplay = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('./TrackReplay'))) : null;
@@ -760,8 +761,11 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
       for (const p of aisPositions) {
         if (p.source === 'seed') continue;
         if (takenShips.has(vesselKey(p.name))) continue;
-        const heading = typeof p.cog === 'number' ? p.cog : (p.vesselId === liveSail.vessel ? (liveSail.depPort === 'GDN' ? 20 : 200) : 20);
+        /* BN9-c2: bez COG — namiar port wyjścia → port przypłynięcia rejsu (GDN-NYN / GDY-KAA jak dotąd) */
+        const heading = ferryMarkerHeading(p, liveSail);
         const loc = useTowerStore.getState().locale;
+        /* BN9-c2: przy nazwie statku trasa rejsu portami („Tallinn → Helsinki”), gdy rejs jest w `ferry_sailings_map` */
+        const name = ferryMarkerName(p, loc);
         if (p.estimated) {
           /* #429 C: pozycja szacowana z rozkładu — znacznik przerywany, opis z godziną ostatniego AIS */
           const last = p.estimated.lastAisTs;
@@ -772,17 +776,18 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
             icon: ferryDivIcon('#6BA8D6', heading, false, true),
             keyboard: false,
           })
-            .bindTooltip(`${p.name || p.mmsi} · ${est}`, { direction: 'top', offset: [0, -10] })
+            .bindTooltip(esc(`${name} · ${est}`), { direction: 'top', offset: [0, -10] })
             .addTo(layers.ais);
           continue;
         }
         const stale = ferryMarkerTone(p.ts, getNowIso()) === 'stale';
         const when = formatOpsDateTime(p.ts);
-        const tip = stale
-          ? `${p.name || p.mmsi} · ${t(useTowerStore.getState().locale, 'i2_ais_stale').replace('{d}', when)}`
+        /* BN9-c2: nazwa statku (z bazy), trasa i czas jako tekst — bez HTML w dymku */
+        const tip = esc(stale
+          ? `${name} · ${t(loc, 'i2_ais_stale').replace('{d}', when)}`
           : (p.source === 'db'
-            ? `${p.name || p.mmsi} · ${t(useTowerStore.getState().locale, 'i2_ais_read_at').replace('{d}', when)}`
-            : (p.name || p.mmsi));
+            ? `${name} · ${t(loc, 'i2_ais_read_at').replace('{d}', when)}`
+            : name));
         L.marker([p.lat, p.lng], {
           icon: ferryDivIcon(stale ? '#8E9BA6' : '#6BA8D6', heading, stale),
           keyboard: false,

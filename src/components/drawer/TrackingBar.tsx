@@ -9,7 +9,8 @@
 import { etaDuration } from '../../lib/etaDuration';
 import type { Load, LoadEvent, Locale, TrackingLinkInfo } from '../../types';
 import { t, tp } from '../../i18n/messages';
-import { trackingPhase } from '../../lib/stageTiles';
+import { stageTileOf, trackingPhase } from '../../lib/stageTiles';
+import { ferryTrackingLines, type FerryTrackInfo } from '../../lib/bn9c2Ferry';
 import { buildStatusAxis, dayOnly, dayTime, isoMs } from '../../lib/statusAxis';
 import { hasAwizacja } from '../../lib/awizacjaState';
 import { trackerKind } from '../../lib/trackerLink';
@@ -43,6 +44,7 @@ export function TrackingBar({
   locale,
   nowIso,
   trackingLink = null,
+  ferry = null,
 }: {
   load: Load;
   events: readonly LoadEvent[];
@@ -50,6 +52,8 @@ export function TrackingBar({
   nowIso: string;
   /** wyglad/P4-c — link śledzenia z serwera (E44) */
   trackingLink?: TrackingLinkInfo | null;
+  /** BN9-c2 — transport na promie: statek, trasa i pozycja statku (AIS / szacowana / brak); dane podaje panel, bez zapytań */
+  ferry?: FerryTrackInfo | null;
 }) {
   const phase = trackingPhase(load, nowIso);
   const tracker = trackerText(load, locale, trackingLink, nowIso);
@@ -82,6 +86,20 @@ export function TrackingBar({
         <div className="trk-txt">
           <b>{tp(locale, 'p4b_trk_before', { day: dayOnly(load.plannedLoadDate) })}</b>
           <span>{sub}</span>
+        </div>
+      </div>
+    );
+  }
+
+  /* BN9-c2: na promie lokalizator naczepy zwykle milknie — zamiast „ostatnia pozycja 9 h temu” pozycja statku */
+  if (phase === 'on' && ferry && stageTileOf(load) === 'FERRY') {
+    const fl = ferryTrackingLines(ferry, locale, nowIso);
+    return (
+      <div className="trk on is-ferry" data-tracking-bar="on" data-trk-ferry={ferry.pos.kind}>
+        <span className="trk-mk" aria-hidden />
+        <div className="trk-txt">
+          <b>{fl.head}</b>
+          <span>{fl.sub}</span>
         </div>
       </div>
     );

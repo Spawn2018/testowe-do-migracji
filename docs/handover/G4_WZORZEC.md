@@ -281,3 +281,9 @@ Dodane `tests/__screenshots__/rejsy-viking-import-hhl-pl-{1440,390}-light.png` z
 gałąź `wyglad/BN9-c1`, przebieg 41258516039, commit `92f5e60`, artefakt `visual-artifacts`). Pozostałe 15 migawek w artefakcie jest identycznych co do bajtu.
 Migawka samego ekranu importu (Harmonogram › Rejsy, Administrator HHL, demo): podgląd przykładowy (wymyślone rejsy, G-09), zapis nieaktywny z wyjaśnieniem, historia przykładowa.
 Okno wyższe (1440×2200, 390×3400), żeby cały ekran był w kadrze; dolny pasek telefonu ukryty na czas migawki. Wzorca `shots-baseline` nie zmieniano.
+
+## BN9-c2 (01.11.2026) — nowe migawki: pasek śledzenia „Na promie”
+Dodane `tests/__screenshots__/pasek-na-promie-hhl-pl-{1440,390}-light.png` z workflowu `visual` (`update=true`,
+gałąź `wyglad/BN9-c2`, przebieg 41353182007, commit `5b95c69`, artefakt `visual-artifacts`). Pozostałe 17 migawek w artefakcie jest identycznych co do bajtu.
+Migawka samego paska śledzenia w karcie transportu SG-03 (demo, Prom, Nova Star): „Na promie · Nova Star” i „brak pozycji statku · lokalizator naczepy na promie zwykle milknie”
+(w demo pozycje przykładowe nie są pozycją statku). Wzorca `shots-baseline` nie zmieniano.

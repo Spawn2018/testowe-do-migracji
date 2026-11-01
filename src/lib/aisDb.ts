@@ -8,6 +8,7 @@ import { getSupabase } from '../auth/client';
 import type { AisPosition } from './ais';
 import { visibleFerryMarkers, type TrackFix } from './map/draw';
 import { estimateFerryPositions, type SailingMapRow } from './ferry/estimate';
+import { withVoyages } from './bn9c2Ferry';
 
 export interface VesselPositionRow {
   vessel_id: string;
@@ -67,7 +68,9 @@ export async function fetchMapFerryMarkers(): Promise<AisPosition[]> {
   /* 22.10.2026: błąd odczytu = wyjątek — mapa zostawia ostatnie pozycje promów zamiast pustej listy */
   if (res.error || !Array.isArray(res.data)) throw new Error(res.error?.message ?? 'ferry_track_sample: brak danych');
   const sailRows = !sail.error && Array.isArray(sail.data) ? (sail.data as SailingMapRow[]) : [];
-  return withEstimates(markersFromTrack(res.data), sailRows, Date.now());
+  const nowMs = Date.now();
+  /* BN9-c2: rejs statku (trasa portami w dymku, kierunek bez COG) z tych samych wierszy `ferry_sailings_map` */
+  return withVoyages(withEstimates(markersFromTrack(res.data), sailRows, nowMs), sailRows, nowMs);
 }
 
 type TrackRow = {
