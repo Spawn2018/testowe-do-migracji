@@ -1,7 +1,7 @@
 /**
  * BN3 decyzja 61 pkt 3 — RSS ERR (`news.err.ee/rss`) jako potwierdzenie odwołań.
- * F7 #699 r1 / decyzja 80: bez pisemnej zgody ERR źródło **domyślnie wyłączone**
- * (`ERR_RSS_ENABLED` / env). Przy włączonym: filtr → FERRY MEDIUM + sourceUrl.
+ * F7 #699 r2 / decyzja 80: zgoda ERR (właściciel 01.11) → źródło **domyślnie włączone**.
+ * Env `ERR_RSS_ENABLED=0` = wyłącznik awaryjny. Filtr → FERRY MEDIUM + sourceUrl.
  * Bez zmiany statusu. Decyzja 69: bez AUTO ODWOLANY. Yle: STOP W64.
  *
  * Detail ryzyka: tylko tytuł + link + pubDate (bez opisu/leadu — F7 B1).
@@ -15,10 +15,10 @@ export const ERR_RSS_UA =
 export const ERR_ATTRIBUTION = 'Potwierdzenie: ERR (news.err.ee)';
 
 /**
- * Decyzja 80: domyślnie wyłączone do pisemnej zgody ERR (regulamin info.err.ee/982667).
- * Włączenie: env `ERR_RSS_ENABLED=1` albo zmiana stałej po zgodzie właściciela.
+ * Decyzja 80 (F7 #699 r2): domyślnie włączone po zgodzie ERR (właściciel 01.11).
+ * Wyłączenie awaryjne: env `ERR_RSS_ENABLED=0` / `false` / `off` / `no`.
  */
-export const ERR_RSS_ENABLED = false;
+export const ERR_RSS_ENABLED = true;
 
 /** Limit odpowiedzi RSS (bajty znaków UTF-16 ≈ górny szacunek) — F7 #699. */
 export const ERR_RSS_MAX_CHARS = 1_500_000;

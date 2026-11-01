@@ -2869,7 +2869,7 @@ export async function runFerryStatus(deps: JobDeps): Promise<JobResult> {
 
 /**
  * BN3 decyzja 61 pkt 3 / F7 #699 — RSS ERR: filtr → FERRY MEDIUM + sourceUrl.
- * Decyzja 80: domyślnie wyłączone (brak zapytań / ryzyk / SOURCE_DOWN).
+ * Decyzja 80 (r2): domyślnie włączone; env `ERR_RSS_ENABLED=0` → 0 zapytań/ryzyk/SOURCE_DOWN.
  * Decyzja 69: bez AUTO ODWOLANY. Yle niepodłączone (W64 STOP).
  */
 export async function applyErrRssConfirmations(deps: JobDeps, _sinceIso: string): Promise<{

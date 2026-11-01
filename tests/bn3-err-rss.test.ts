@@ -1,6 +1,6 @@
 /**
- * BN3 decyzja 61 pkt 3 / F7 #699 r1 — RSS ERR (news.err.ee); Yle = W64 STOP.
- * Decyzja 80: domyślnie wyłączone do zgody ERR.
+ * BN3 decyzja 61 pkt 3 / F7 #699 r2 — RSS ERR (news.err.ee); Yle = W64 STOP.
+ * Decyzja 80: domyślnie włączone (zgoda ERR); env=0 → wyłącznik awaryjny.
  * Etap: BN3 / #573.
  */
 import { describe, expect, it, vi } from 'vitest';
@@ -108,7 +108,7 @@ function makeStore(opts?: { knownDedup?: Set<string> }) {
   return store as unknown as typeof store & SyncStore;
 }
 
-function depsOf(store: SyncStore, fetchImpl: typeof fetch, env: Record<string, string | undefined> = { ERR_RSS_ENABLED: '1' }): JobDeps {
+function depsOf(store: SyncStore, fetchImpl: typeof fetch, env: Record<string, string | undefined> = {}): JobDeps {
   return {
     now: () => NOW,
     store,
@@ -259,11 +259,15 @@ ${itemXml({
     });
   });
 
-  it('decyzja 80: flaga wyłączona → 0 zapytań, 0 ryzyk', async () => {
+  it('decyzja 80: domyślnie włączone; env=0 → 0 zapytań, 0 ryzyk', async () => {
+    expect(isErrRssEnabled({})).toBe(true);
+    expect(isErrRssEnabled({ ERR_RSS_ENABLED: '1' })).toBe(true);
     const store = makeStore();
     const fetchSpy = vi.fn(async () => new Response(SAMPLE, { status: 200 }));
-    const r = await applyErrRssConfirmations(depsOf(store, fetchSpy, {}));
-    expect(isErrRssEnabled({})).toBe(false);
+    const r = await applyErrRssConfirmations(
+      depsOf(store, fetchSpy, { ERR_RSS_ENABLED: '0' }),
+    );
+    expect(isErrRssEnabled({ ERR_RSS_ENABLED: '0' })).toBe(false);
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(r).toEqual({ hits: 0, risks: 0, warnings: [] });
     expect(store.risks).toHaveLength(0);

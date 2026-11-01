@@ -7457,6 +7457,18 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (odbiór prod):** SELECT `here_road_legs` — **12** / active 12 / `browser_fetch` 5; core bez zmian (3495/12561/3742/18854/19408); BN7 7× null. `here-roads` **#108803** @ 04:49Z ok (0 prób — core świeże; BN7 poza cronem). Komentarz w #667. **Dalej:** BN3 (#573).
 - Bez push na main.
 
+## 2026-11-01 12:40 — #699 F7 r2: ERR RSS domyślnie ON (zgoda właściciela)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE; #697 `do-potwierdzenia`. Bez nowych `pilne`.
+- Scalanie: brak „F7: gotowe do scalenia” po r1 @ b2784c70 (koord. 11:25/11:31: zgoda ERR → default on). Bez push na main.
+- **Krok (F7 r2 / decyzja 80):**
+  - `ERR_RSS_ENABLED = true` (domyślnie włączone po zgodzie ERR);
+  - env `0`/`false`/`off`/`no` = wyłącznik awaryjny → 0 zapytań / 0 ryzyk / 0 SOURCE_DOWN;
+  - W65 zamknięte; decyzja 80 rozstrzygnięta w PLAN §5;
+  - test: default on + env=0 bez fetch.
+- **Dalej:** push → CI → gotowe do F7 @ sha. Po F7: Imperva/tolerancja; SMS DP-125 osobno (#697).
+- Bez push na main.
+
 ## 2026-11-01 12:30 — #699 F7 r1 POPRAWKI (decyzja 80 + B1–B5)
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE; #697 `do-potwierdzenia` (decyzje 73–80 czekają właściciela). Bez nowych `pilne`.
