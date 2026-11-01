@@ -297,8 +297,25 @@ ${itemXml({
     );
     expect(isErrRssEnabled({ ERR_RSS_ENABLED: '0' })).toBe(false);
     expect(fetchSpy).not.toHaveBeenCalled();
-    expect(r).toEqual({ hits: 0, risks: 0, warnings: [] });
+    expect(r).toEqual({ enabled: false, items: 0, hits: 0, risks: 0, warnings: [] });
     expect(store.risks).toHaveLength(0);
+  });
+
+  it('DP-127: liczniki enabled/items/hits (włączony + wyłączony)', async () => {
+    const off = await applyErrRssConfirmations(
+      depsOf(makeStore(), async () => new Response(SAMPLE, { status: 200 }), { ERR_RSS_ENABLED: '0' }),
+    );
+    expect(off).toMatchObject({ enabled: false, items: 0, hits: 0 });
+
+    const on = await applyErrRssConfirmations(
+      depsOf(makeStore(), async () => new Response(SAMPLE, {
+        status: 200,
+        headers: { 'Content-Type': 'application/rss+xml' },
+      })),
+    );
+    expect(on.enabled).toBe(true);
+    expect(on.items).toBeGreaterThan(0);
+    expect(on.hits).toBe(2);
   });
 
   it('struktura zła → SOURCE_DOWN sticky; bez notice ODWOLANY', async () => {
@@ -458,14 +475,19 @@ ${itemXml({
     store.raiseRisk = async () => {
       throw new Error('boom-store');
     };
-    let errRss: { hits: number; risks: number; warnings: string[] } = { hits: 0, risks: 0, warnings: [] };
+    let errRss: { enabled: boolean; items: number; hits: number; risks: number; warnings: string[] } = {
+      enabled: true, items: 0, hits: 0, risks: 0, warnings: [],
+    };
     try {
       errRss = await applyErrRssConfirmations(
         depsOf(store, async () => new Response(SAMPLE, { status: 200 })),
       );
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      errRss = { hits: 0, risks: 0, warnings: [`ERR RSS: wyjątek — ${msg.slice(0, 160)}`] };
+      errRss = {
+        enabled: true, items: 0, hits: 0, risks: 0,
+        warnings: [`ERR RSS: wyjątek — ${msg.slice(0, 160)}`],
+      };
     }
     expect(errRss.warnings[0]).toMatch(/boom-store/);
     expect(errRss.risks).toBe(0);

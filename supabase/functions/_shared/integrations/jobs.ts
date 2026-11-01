@@ -2829,13 +2829,19 @@ export async function runFerryStatus(deps: JobDeps): Promise<JobResult> {
     }
   }
 
-  /* BN3 decyzja 61 pkt 3 / 80: RSS ERR (domyślnie on; env=0 = off). Yle → W64 STOP. */
-  let errRss: { hits: number; risks: number; warnings: string[] } = { hits: 0, risks: 0, warnings: [] };
+  /* BN3 decyzja 61 pkt 3 / 80: RSS ERR (domyślnie on; env=0 = off). Yle → W64 STOP.
+   * DP-127 (#699 odbiór): zawsze liczniki w observations (enabled/items/hits). */
+  let errRss: ErrRssConfirmResult = {
+    enabled: isErrRssEnabled(deps.env), items: 0, hits: 0, risks: 0, warnings: [],
+  };
   try {
     errRss = await applyErrRssConfirmations(deps, since);
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    errRss = { hits: 0, risks: 0, warnings: [`ERR RSS: wyjątek — ${msg.slice(0, 160)}`] };
+    errRss = {
+      enabled: true, items: 0, hits: 0, risks: 0,
+      warnings: [`ERR RSS: wyjątek — ${msg.slice(0, 160)}`],
+    };
   }
   warnings.push(...errRss.warnings);
   risks += errRss.risks;
@@ -2845,7 +2851,9 @@ export async function runFerryStatus(deps: JobDeps): Promise<JobResult> {
     inserted, updated, manualKept, unchanged, unknown, risks, warnings,
     tallink_alert_incomplete: tallinkAlertIncomplete || undefined,
     observations: {
-      ...(errRss.hits ? { err_rss_hits: String(errRss.hits) } : {}),
+      err_rss_enabled: errRss.enabled ? '1' : '0',
+      err_rss_items: String(errRss.items),
+      err_rss_hits: String(errRss.hits),
     },
   };
   // #421 F7: po zmianie statusu odśwież rozkład, ale max raz na 60 min (unikaj 28× Stena / 10 min).
@@ -2867,16 +2875,24 @@ export async function runFerryStatus(deps: JobDeps): Promise<JobResult> {
   return result;
 }
 
+/** DP-127: wynik ERR dla observations ferry-status (enabled / items / hits). */
+export type ErrRssConfirmResult = {
+  enabled: boolean;
+  items: number;
+  hits: number;
+  risks: number;
+  warnings: string[];
+};
+
 /**
  * BN3 decyzja 61 pkt 3 / F7 #699 — RSS ERR: filtr → FERRY MEDIUM + sourceUrl.
  * Decyzja 80 (r2): domyślnie włączone; env `ERR_RSS_ENABLED=0` → 0 zapytań/ryzyk/SOURCE_DOWN.
  * Decyzja 69: bez AUTO ODWOLANY. Yle niepodłączone (W64 STOP).
+ * DP-127: zawsze zwraca enabled + items + hits (odbiór #699: pusty observations).
  */
-export async function applyErrRssConfirmations(deps: JobDeps, _sinceIso: string): Promise<{
-  hits: number; risks: number; warnings: string[];
-}> {
+export async function applyErrRssConfirmations(deps: JobDeps, _sinceIso: string): Promise<ErrRssConfirmResult> {
   if (!isErrRssEnabled(deps.env)) {
-    return { hits: 0, risks: 0, warnings: [] };
+    return { enabled: false, items: 0, hits: 0, risks: 0, warnings: [] };
   }
   const now = deps.now();
   const nowIso = now.toISOString();
@@ -2891,25 +2907,25 @@ export async function applyErrRssConfirmations(deps: JobDeps, _sinceIso: string)
       nowIso,
       ERR_RSS_URL,
     ))) {
-      return { hits: 0, risks: 1, warnings: [page.warning] };
+      return { enabled: true, items: 0, hits: 0, risks: 1, warnings: [page.warning] };
     }
-    return { hits: 0, risks: 0, warnings: [page.warning] };
+    return { enabled: true, items: 0, hits: 0, risks: 0, warnings: [page.warning] };
   }
   if (page.text.length > ERR_RSS_MAX_CHARS) {
     const w = 'ERR RSS: odpowiedź za duża (limit).';
     if (await deps.store.raiseRisk(sourceDownRisk('ERR_RSS', [w], nowIso, ERR_RSS_URL))) {
-      return { hits: 0, risks: 1, warnings: [w] };
+      return { enabled: true, items: 0, hits: 0, risks: 1, warnings: [w] };
     }
-    return { hits: 0, risks: 0, warnings: [w] };
+    return { enabled: true, items: 0, hits: 0, risks: 0, warnings: [w] };
   }
   const parsed = parseErrRss(page.text);
   const warnings = [...parsed.warnings];
   if (parsed.warnings.some((w) => /struktura|pusta odpowiedź|za duża/i.test(w))) {
     /* B4: zamykać SOURCE_DOWN dopiero po udanym parsowaniu — tu awaria. */
     if (await deps.store.raiseRisk(sourceDownRisk('ERR_RSS', parsed.warnings, nowIso, ERR_RSS_URL))) {
-      return { hits: 0, risks: 1, warnings };
+      return { enabled: true, items: 0, hits: 0, risks: 1, warnings };
     }
-    return { hits: 0, risks: 0, warnings };
+    return { enabled: true, items: 0, hits: 0, risks: 0, warnings };
   }
   /* Udane parsowanie (także pusty kanał) → zamknij SOURCE_DOWN. */
   await deps.store.resolveRisks('SOURCE_DOWN:ERR_RSS');
@@ -2932,7 +2948,13 @@ export async function applyErrRssConfirmations(deps: JobDeps, _sinceIso: string)
   if (parsed.items.length > 0 && deps.store.resolveStaleRisks) {
     await deps.store.resolveStaleRisks('FERRY_ERR_RSS:', keep);
   }
-  return { hits: hits.length, risks, warnings };
+  return {
+    enabled: true,
+    items: parsed.items.length,
+    hits: hits.length,
+    risks,
+    warnings,
+  };
 }
 
 /** ferry-ais — AIS-SRC. Stena IRM (co przebieg, bez cache), aisstream (5 MMSI), Digitraffic jako zapas.

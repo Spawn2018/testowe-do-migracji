@@ -7469,6 +7469,17 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Dalej:** DP kolejka BN3 (np. DP-108 ODWOLANY→FERRY_CANCELLED) albo ATD wiarygodne / BN4.
 - Bez push na main.
 
+## 2026-11-01 14:25 — #701 SCALONE; start DP-127 (liczniki ERR)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne`.
+- Scalanie: **#701** `ef613eff` (F7: gotowe do scalenia @ `f5298023`; CI 8/8 ✔). Bez push na main — `deploy-main`.
+- **Krok (DP-127):**
+  - `applyErrRssConfirmations` → `enabled` / `items` / `hits` (+ risks/warnings);
+  - `ferry-status` observations zawsze: `err_rss_enabled`, `err_rss_items`, `err_rss_hits`;
+  - vitest bn3-err-rss **18**; PLAN: BN4 cz.1 SCALONE, DP-127 W TOKU.
+- **Dalej:** push → CI → gotowe do F7. Po F7: BN4 pkt 5 (luka AIS 30 min / `AIS_<port>` / arrival backup).
+- Bez push na main.
+
 ## 2026-11-01 13:55 — #701 F7 r1 B1: mapy portów AIS (Zatoka)
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne`.
