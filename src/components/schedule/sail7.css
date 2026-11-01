@@ -79,7 +79,8 @@
 @media (max-width:768px){
   .vi .btn,.vi .chipbtn,.vi .input{min-height:44px}
   .vi .input{font-size:16px}
-  .vi-field{flex:1 1 100%}
+  /* etykieta nad polem przy lewej krawędzi (reguła telefonu dla label centruje — jak .inv-field, P11 e4) */
+  .vi .vi-field{flex:1 1 100%;align-items:stretch}
   .vi-acts,.vi-acts .btn{flex:1 1 100%}
   .vi-commit-bar .btn,.vi-confirm-acts .btn,.vi-confirm-acts .chipbtn{flex:1 1 100%}
   .vi-howto summary{padding:12px 0}
