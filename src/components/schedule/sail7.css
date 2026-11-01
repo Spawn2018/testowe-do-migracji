@@ -36,7 +36,7 @@
 }
 
 /* BN9-c1 / decyzja 63b: „Wczytaj rozkład Vikinga z pliku” (Harmonogram › Rejsy, Administrator HHL) */
-.vi{display:flex;flex-direction:column;gap:8px}
+.vi{display:flex;flex-direction:column;gap:8px;text-align:left}
 .vi-hd{display:flex;align-items:center;gap:8px}
 .vi-hd h4.sec{margin:0}
 .vi-muted{color:var(--ink-3)}
@@ -82,5 +82,5 @@
   .vi-field{flex:1 1 100%}
   .vi-acts,.vi-acts .btn{flex:1 1 100%}
   .vi-commit-bar .btn,.vi-confirm-acts .btn,.vi-confirm-acts .chipbtn{flex:1 1 100%}
-  .vi-howto summary{min-height:44px;display:flex;align-items:center}
+  .vi-howto summary{padding:12px 0}
 }

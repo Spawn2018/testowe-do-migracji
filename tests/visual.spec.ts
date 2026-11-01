@@ -193,8 +193,13 @@ test.describe('BN9-c1 visual — import rozkładu Vikinga (HHL pl)', () => {
       await page.evaluate(async () => {
         if (document.fonts?.ready) await document.fonts.ready
       })
+      /* cały ekran importu w kadrze: wyższe okno (aplikacja przewija wnętrze, nie stronę) */
+      await page.setViewportSize({ width, height: width < 769 ? 3400 : 2200 })
       await page.waitForTimeout(300)
+      await panel.scrollIntoViewIfNeeded()
       await expect(panel).toHaveScreenshot(file, {
+        /* dolny pasek telefonu (E8) przykrywa treść — poza migawką ekranu */
+        style: 'nav{visibility:hidden !important}',
         maxDiffPixels: 60,
         threshold: 0.28,
         animations: 'disabled',
