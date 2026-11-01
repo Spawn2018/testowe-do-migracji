@@ -2,6 +2,8 @@
  * FERRY-STATUS / BN3 — ręczny komunikat armatora (Polferries, Stena, Tallink, Viking, Eckerö, DFDS).
  * Zapis przez operator_notice_apply: te same skutki co status automatyczny.
  * F7 #680 B4: wybór armatora → lista rejsów tylko tego armatora + p_operator.
+ * BN9-c1: DP-86/DP-87 — lista z `noticeSailingsFor` (bez rejsów z przeszłości); DP-104 — w historii „automatyczny” /
+ * „ręczny” (`source`, 0358) i link do źródła (`source_url`, tylko https, nowa karta).
  */
 import { useEffect, useMemo, useState } from 'react';
 import { getSupabase } from '../auth/client';
@@ -11,16 +13,17 @@ import {
   FERRY_OPERATOR_CODES,
   isFerryOperator,
   operatorName,
-  sailingOfOperator,
   type FerryOperator,
 } from '../lib/ferryCatalog';
 import { fmtDateTime } from '../lib/time';
+import { getNow } from '../lib/frozenNow';
+import { noticeIsAuto, noticeSailingsFor, noticeSourceHref, noticeSourcePl } from '../lib/operatorNotices';
 import { useTowerStore } from '../store/useTowerStore';
 
 type Kind = 'ODWOLANY' | 'OPOZNIONY' | 'ZMIANA_GODZINY';
 
 
-interface NoticeRow {
+export interface NoticeRow {
   id: string;
   sailing_id: string;
   operator: string;
@@ -28,6 +31,41 @@ interface NoticeRow {
   new_departure: string | null;
   note: string | null;
   created_at: string;
+  /** 0358: AUTO (odczyt automatyczny) albo RECZNIE (formularz) */
+  source?: string | null;
+  /** 0358: adres źródła przy AUTO */
+  source_url?: string | null;
+}
+
+/** DP-104: historia komunikatów — rodzaj, armator, źródło (automatyczny / ręczny + link https), treść, kiedy. */
+export function NoticeHistory({ rows }: { rows: readonly NoticeRow[] }) {
+  if (rows.length === 0) return null;
+  return (
+    <table style={{ width: '100%', fontSize: 13, marginTop: 8 }} data-notice-history>
+      <tbody>
+        {rows.map((h) => {
+          const href = noticeSourceHref(h.source_url);
+          return (
+            <tr key={h.id} data-notice-row={h.id}>
+              <td>{noticeKindPl(h.kind)}</td>
+              <td>{isFerryOperator(h.operator) ? operatorName(h.operator) : h.operator}</td>
+              <td data-notice-source={noticeIsAuto(h.source) ? 'AUTO' : 'RECZNIE'}>
+                <span className={`pill ${noticeIsAuto(h.source) ? 'p-sea' : 'p-plan'}`}>{noticeSourcePl(h.source)}</span>
+                {href ? (
+                  <>
+                    {' '}
+                    <a href={href} target="_blank" rel="noopener noreferrer" data-notice-link>źródło</a>
+                  </>
+                ) : null}
+              </td>
+              <td>{h.note ?? '—'}</td>
+              <td className="num">{fmtDateTime(h.created_at)}</td>
+            </tr>
+          );
+        })}
+      </tbody>
+    </table>
+  );
 }
 
 export function OperatorNoticeForm() {
@@ -42,16 +80,9 @@ export function OperatorNoticeForm() {
   const [busy, setBusy] = useState(false);
   const [history, setHistory] = useState<NoticeRow[]>([]);
 
-  const upcoming = useMemo(() => {
-    if (!operator) return [];
-    return [...sailings]
-      .filter((s) => {
-        const named = isFerryOperator(s.source) ? s.source : s.operator;
-        return sailingOfOperator({ route: s.route, operator: named }, operator);
-      })
-      .sort((a, b) => Date.parse(effDeparture(a)) - Date.parse(effDeparture(b)))
-      .slice(0, 40);
-  }, [sailings, operator]);
+  /* DP-87: „teraz” z dokładnością do minuty — rejs, który odszedł, znika z listy */
+  const nowMin = Math.floor(getNow().getTime() / 60_000);
+  const upcoming = useMemo(() => noticeSailingsFor(sailings, operator, nowMin * 60_000), [sailings, operator, nowMin]);
 
   useEffect(() => {
     if (sailingId && !upcoming.some((s) => s.id === sailingId)) setSailingId('');
@@ -62,7 +93,7 @@ export function OperatorNoticeForm() {
     if (!sb) return;
     const { data } = await sb
       .from('operator_notices')
-      .select('id,sailing_id,operator,kind,new_departure,note,created_at')
+      .select('id,sailing_id,operator,kind,new_departure,note,created_at,source,source_url')
       .order('created_at', { ascending: false })
       .limit(8);
     setHistory((data ?? []) as NoticeRow[]);
@@ -167,20 +198,7 @@ export function OperatorNoticeForm() {
         <button type="button" disabled={busy || !operator} onClick={() => void submit()}>Zapisz komunikat</button>
         {msg ? <div className="note" data-notice-msg>{msg}</div> : null}
       </div>
-      {history.length > 0 ? (
-        <table style={{ width: '100%', fontSize: 13, marginTop: 8 }}>
-          <tbody>
-            {history.map((h) => (
-              <tr key={h.id}>
-                <td>{noticeKindPl(h.kind)}</td>
-                <td>{isFerryOperator(h.operator) ? operatorName(h.operator) : h.operator}</td>
-                <td>{h.note ?? '—'}</td>
-                <td className="num">{fmtDateTime(h.created_at)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      ) : null}
+      <NoticeHistory rows={history} />
     </div>
   );
 }
