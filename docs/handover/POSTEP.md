@@ -7469,6 +7469,28 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Dalej:** DP kolejka BN3 (np. DP-108 ODWOLANY→FERRY_CANCELLED) albo ATD wiarygodne / BN4.
 - Bez push na main.
 
+## 2026-11-01 13:55 — #701 F7 r1 B1: mapy portów AIS (Zatoka)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne`.
+- Scalanie: **#701** F7 r1 BLOKER @ `bed9fc86` (fałszywe opóźnienia Zatoki vs GDN/NYN) — poprawki w tym PR; bez scalenia. Bez push na main.
+- **Krok (F7 r1 B1):**
+  - `ROUTE_AIS_PORTS` + `AIS_PORT_COORDS` (HEL/HELA, TLL/TLLA, MUU, VUO, PLD, KPS, STO, GDN, GDY, NYN, KAA);
+  - `departurePortForRoute` / `arrivalPortForRoute` → `null` bez mapy (nigdy domyślny GDN/NYN);
+  - `aisDepartureDelayMin` + geofence #421 tylko przy hubie; Zatoka: obs z SOG, nie `interpretFix(NYN)`;
+  - vitest bn4-ais: XPRS TLLA-HEL 20 kn → brak `AIS_DEP_DELAY`; trasa XXX → null.
+- **Dalej:** push → CI → gotowe do F7 @ sha. Po F7: luka AIS 30 min / `AIS_<port>` / arrival backup.
+- Bez push na main.
+
+## 2026-11-01 13:35 — #699 SCALONE; start BN4 AIS
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE; #697 — właściciel 73–78 OK, **79 bez SMS** (DP-125 ANULOWANE), 80 zgoda ERR. Bez nowych `pilne`.
+- Scalanie: **#699** `40141ff4` (F7: gotowe do scalenia @ `700b070a`; CI 8/8 ✔). `deploy-main` w toku (Edge+Vercel). Bez push na main.
+- **Krok (docs + BN4 start):**
+  - PLAN §4: BN3 SCALONE; DP-125 ANULOWANE; **DP-126** (F7 r3 nieblokujące); W64 zamknięte (76 A); decyzje 76/79/80; sekcja **BN4** W TOKU;
+  - kod BN4: `BALTIC_BBOXES` (PL/SE + Zatoka 59–60,5°N / 17,5–26°E); `isTrackedMmsi` = MMSI z `vessels` (Digitraffic+aisstream); vitest `bn4-ais` + ais-polf bbox.
+- **Dalej:** push → CI → gotowe do F7; po F7: luka AIS 30 min / mapy portów / `AIS_<port>` / arrival backup.
+- Bez push na main.
+
 ## 2026-11-01 13:10 — #699 F7 r2 POPRAWKI (R2-B1 + filtr)
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE; #697 `do-potwierdzenia`. Bez nowych `pilne`.
