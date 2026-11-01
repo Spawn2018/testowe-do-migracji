@@ -2482,6 +2482,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 02.11.2026 00:00 | #715 SCALONE `c02ac887` / **0372**+**0373**; #717 SCALONE `ae308fce`; start DP-139+140 **0374**; #718 BN7 wpisane §4; ZASADY #713 pkt 3–4 | pętla / F7 #715 |
 | 02.11.2026 00:15 | DP-139+140 PR #719 `59cedb41` (**0374** + alias `victoria 1` + analiza DP-140); komentarz #718; czekam F7 | pętla |
 | 02.11.2026 00:34 | #719 SCALONE `eddc4bae` / **0374** (F7: gotowe @ ebc05bbd); DP-140 = 28 przeterminowanych rejsów (F7); #720 BN8 wpisane §4; start BN5 **0375** | pętla / F7 #719 |
+| 02.11.2026 00:45 | BN5 cz.1 (#714): **0375** + mapowanie korytarzy bałtyckich + job 5×; #720 w §4; bez F7 jeszcze | pętla / BN5 |
 | 31.10.2026 — | Decyzja 73: TLLA-HEL ETA−150 min / HELA-TLL ETD+160 min (fixture Cargo; nocny 165 min OK). Decyzja 74: `sailings.source_ref` 0359; Digitraffic `digitraffic:portcall:<id>:<route>`; HTML/RECZNIE/DANE_STARTOWE wygrywają; #685-b RPC zastępuje digitraffic:% w ±3 h | F7 #688 r1–r4 |
 | 31.10.2026 — | F7 #683 nieblokujące (osobna poprawka): Scheduler grudzień + „on 2 January” → rok bieżący, ciche wygaśnięcie; Alert INFO bez ryzyka/historii — świadomie | F7 #683 r7 |
 | 31.10.2026 — | F7 #683 r8 nieblokujące (osobno): Alert poza Schedulerem obok Schedulera; sprzeczne bloki (resume→cofnięcie auto); rok przy długim oknie Schedulera; mutanty M10/M15–M17/M22 świadomie bez testów | F7 #683 r8 |

@@ -1,15 +1,14 @@
 
-## 2026-11-02 01:00 — BN5 cz.1: korytarze bałtyckie (**0375**); #719 SCALONE; #720 w planie
+## 2026-11-02 00:45 — BN5 cz.1 PR: korytarze bałtyckie (**0375**)
 
-- Skrzynka: #720 BN8 wpisane §4 (BN8a/BN8b, DP-143/144); #714/#716/#718 w planie; #550 WSTRZYMANE; #608 w planie. Bez nowego `pilne` aktywnego.
-- Scalanie: #719 SCALONE `eddc4bae` / **0374** (F7: gotowe @ ebc05bbd). Brak otwartego PR z F7.
-- **Krok:** start BN5 (#714) `pakiet/bn5-baltic-marine-weather`:
-  - **0375** CHECK `marine_conditions` + seed `BALTIC_GULF_FI` / `PLD_KPS` / `TLL_STO`;
-  - mapowanie po `family_key`; trasa nieznana → `null` (bez GDN-NYN);
-  - `ferry-weather` zapisuje 5 korytarzy; SOURCE_DOWN tylko gdy FMI+DMI padną;
-  - vitest `bn5-marine-corridors`; ferry-status oczekuje 5 korytarzy;
-  - F7 #719: analiza floty MMSI → DP-139; DP-140 = 28 przeterminowanych rejsów (w kolejce).
-- **Dalej:** cz.2 SMHI snow1g / NaN; cz.3 FERRY_ICE; push → CI → F7.
+- Skrzynka: #720 BN8 wpisane §4 (BN8a/BN8b, DP-143/144); #714/#716/#718 w planie; #550 WSTRZYMANE; #608 w planie. Bez nowego `pilne`.
+- Scalanie: brak otwartego PR z F7. #719 już na `main` (`eddc4bae`).
+- **Krok:** BN5 cz.1 (#714) `pakiet/bn5-baltic-marine-weather`:
+  - **0375** CHECK + seed `BALTIC_GULF_FI` / `PLD_KPS` / `TLL_STO`;
+  - `marineCorridorForRoute` / `marinePointsForRoute` po `family_key`; nieznana → `null`;
+  - `ferry-weather` → 5 korytarzy; SOURCE_DOWN tylko FMI+DMI; trasa bez mapy bez ryzyka;
+  - vitest `bn5-marine-corridors` + regresja integrations; ferry-status 5 korytarzy.
+- **Dalej:** push → CI → F7; potem cz.2 SMHI snow1g/NaN → cz.3 FERRY_ICE.
 - Bez push na main.
 
 ## 2026-11-02 00:15 — DP-139+140 PR #719 (`59cedb41`)
