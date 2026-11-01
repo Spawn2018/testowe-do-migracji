@@ -2609,5 +2609,67 @@ chk "BN1 648: HHL_ADMIN aal2 ferry_route_set_active true → t" \
   "select active from ferry_routes where code='TLLA-HEL'" t
 q "update security_flags set enabled=false where key='MFA_HHL_ADMIN'" >/dev/null
 
+# ---------------------------------------------------------------------------
+# DP-131: FERRY + GPS ≤3 km port wyjścia po ATD/ATA → HIGH (bez zmiany statusu)
+# Przypadek 01.11: GDN-NYN ATA 10:45Z, GPS ~0,2 km Gdańsk do 12:12Z.
+# ---------------------------------------------------------------------------
+S131=77777777-0000-0000-0000-00000000131a
+L131=55555555-0000-0000-0000-00000000131a
+L131b=55555555-0000-0000-0000-00000000131b
+V131=66666666-0000-0000-0000-00000000131a
+q "insert into vessels (id, name, operator) values
+ ('$V131', 'M/F Wawel 131', 'Polferries')
+ on conflict (id) do nothing" >/dev/null
+chk "DP-131: fikstura rejsu GDN-NYN (ATA 10:45Z)" \
+  "insert into sailings (id, project_id, vessel_id, route, departure_at, arrival_at,
+    actual_departure_at, actual_arrival_at, status, source) values
+   ('$S131', '$P', '$V131', 'GDN-NYN',
+    '2026-11-01 08:00+00', '2026-11-01 10:45+00',
+    '2026-11-01 08:05+00', '2026-11-01 10:45+00', 'DOPLYNAL', 'POLFERRIES')
+   returning (id is not null)" t
+mk $L131 A131 "'HHL/A131'" "'SCX/A131'" FERRY "'$S131'"
+q "insert into load_events (load_id, event_type, occurred_at) values
+ ('$L131','MILESTONE_LOADED','2026-10-31 08:00+00')" >/dev/null
+# ~0,2 km od GDN (54.40372, 18.68130) — lekki offset szerokości
+q "insert into positions (load_id, ts, geom_raw, source) values
+ ('$L131', '2026-11-01 12:12+00',
+  st_setsrid(st_makepoint(18.68130, 54.40550), 4326), 'TELEMATICS_API')" >/dev/null
+q "select public.detect_ferry_gps_stuck_at_departure('2026-11-01 12:15+00')" >/dev/null
+chk "DP-131: GPS 0,2 km Gdańsk po ATA → FERRY_STUCK_DEP HIGH" \
+  "select count(*)||'/'||max(severity::text)||'/'||max(title_key)
+     from risk_signals
+    where load_id='$L131' and dedup_key like 'FERRY_STUCK_DEP:%' and resolved_at is null" \
+  "1/HIGH/rk_ferry_not_departed"
+chk "DP-131: status nadal FERRY (bez zmiany)" "$(st $L131)" FERRY
+q "select public.detect_ferry_gps_stuck_at_departure('2026-11-01 12:20+00')" >/dev/null
+chk "DP-131: drugi przebieg — jedno ryzyko (dedup)" \
+  "$(rk $L131 FERRY_STUCK_DEP)" 1
+# Pozycja >3 km od GDN → zamknięcie
+q "insert into positions (load_id, ts, geom_raw, source) values
+ ('$L131', '2026-11-01 13:00+00',
+  st_setsrid(st_makepoint(18.68130, 54.45000), 4326), 'TELEMATICS_API')" >/dev/null
+q "select public.detect_ferry_gps_stuck_at_departure('2026-11-01 13:05+00')" >/dev/null
+chk "DP-131: GPS >3 km → ryzyko zamknięte" \
+  "select count(*) from risk_signals
+    where load_id='$L131' and dedup_key like 'FERRY_STUCK_DEP:%' and resolved_at is null" 0
+# Przed ATD/ATA — bez alarmu
+S131b=77777777-0000-0000-0000-00000000131b
+chk "DP-131: fikstura bez ATD/ATA" \
+  "insert into sailings (id, project_id, vessel_id, route, departure_at, arrival_at,
+    actual_departure_at, actual_arrival_at, status, source) values
+   ('$S131b', '$P', '$V131', 'GDN-NYN',
+    '2026-11-02 08:00+00', '2026-11-02 10:45+00',
+    null, null, 'W_REJSIE', 'POLFERRIES')
+   returning (id is not null)" t
+mk $L131b B131 "'HHL/B131'" "'SCX/B131'" FERRY "'$S131b'"
+q "insert into load_events (load_id, event_type, occurred_at) values
+ ('$L131b','MILESTONE_LOADED','2026-11-01 08:00+00');
+ insert into positions (load_id, ts, geom_raw, source) values
+ ('$L131b', '2026-11-02 09:00+00',
+  st_setsrid(st_makepoint(18.68130, 54.40550), 4326), 'TELEMATICS_API')" >/dev/null
+q "select public.detect_ferry_gps_stuck_at_departure('2026-11-02 09:15+00')" >/dev/null
+chk "DP-131: bez ATD/ATA → 0 FERRY_STUCK_DEP" \
+  "$(rk $L131b FERRY_STUCK_DEP)" 0
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

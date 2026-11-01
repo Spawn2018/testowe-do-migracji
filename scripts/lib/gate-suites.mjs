@@ -13,7 +13,7 @@ const ROOT = resolve(import.meta.dirname, '../..');
 /** Oczekiwane OK na lokalnym Postgresie (gate.sh). */
 export const EXPECTED_LOCAL = {
   security: 495, // #662-b: +1 maska URL/token w audit_log; #662 +8 → 494
-  status: 505, // DP-130: +3 jawny DOPLYNAL bez ATA / ATA null / ATD→W_REJSIE; było 502 (#648 F7 #659)
+  status: 512, // DP-131: +7 FERRY+GPS ≤3 km / dedup / resolve / bez ATD; było 505 (DP-130)
   storage: 37,
   money: 191, // #409 F7: +3 owner_note allowlista (SCX/KSH false, HHL true); było 188 (+5 fuel_basis)
   release: 146,

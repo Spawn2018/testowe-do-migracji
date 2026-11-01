@@ -7469,6 +7469,17 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Dalej:** DP kolejka BN3 (np. DP-108 ODWOLANY→FERRY_CANCELLED) albo ATD wiarygodne / BN4.
 - Bez push na main.
 
+## 2026-11-01 16:15 — #704 SCALONE; start DP-131 (FERRY+GPS port wyjścia)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne`.
+- Scalanie: **#704** `68421fbb` (F7: gotowe do scalenia @ `8b9eff3d`; CI unit/visual/db ✔). Bez push na main — `deploy-main` (0364).
+- **Krok (DP-131):**
+  - migracja **0365**: `detect_ferry_gps_stuck_at_departure` — FERRY + GPS ≤3 km od `ferry_ports` portu wyjścia po ATD/ATA → HIGH `rk_ferry_not_departed` / dedup `FERRY_STUCK_DEP:{load}:{sailing}`; bez zmiany statusu; resolve przy wyjściu ze statusu FERRY lub GPS >3 km; cron `tower-prom-opoznienie` (+ overdue);
+  - `status.sh` +7 (EXPECTED **512**); risks.sh baseline 9 kluczy (+`rk_ferry_not_departed`); i18n PL;
+  - PLAN: DP-130 SCALONE, DP-131 W TOKU.
+- **Dalej:** push → CI → gotowe do F7. Po F7: BN4 pkt 8 (luka AIS / `AIS_<port>` / arrival backup).
+- Bez push na main.
+
 ## 2026-11-01 15:55 — #704 CI db FAIL → source TALLINK + ID 704/705
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne`.
