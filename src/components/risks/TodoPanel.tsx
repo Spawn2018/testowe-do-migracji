@@ -186,9 +186,16 @@ export function TodoPanel({ role, kind, locale, phone, nowIso, loads, risks, geo
     return next;
   });
 
+  const sailings = useTowerStore((s) => s.sailings);
+  const routeBySailing = useMemo(() => {
+    const m = new Map<string, string>();
+    for (const s of sailings) m.set(s.id, String(s.route));
+    return m;
+  }, [sailings]);
   const ctx: CardCtx = {
     role, locale, phone, nowIso,
     loadOf: (id) => loadById.get(id),
+    routeOf: (sid) => (sid ? routeBySailing.get(sid) ?? null : null),
     assignOn: assign != null && me != null,
     assignee: assigneeOf,
     me,

@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import { isOperatorOutboundRoute, routeEnds, routeShortLabel, waterTrackOf } from '../src/lib/ferryCatalog';
 import { ferryRouteLabel } from '../src/lib/portName';
 import { crossingLine, nearestCrossingByOperator } from '../src/lib/sailings';
-import { routeStatusLabel, statusLabel } from '../src/lib/statusLabel';
+import { routeStageLabel, routeStatusLabel, statusLabel } from '../src/lib/statusLabel';
 import { extraWaterTracksFor } from '../src/lib/map/ferryLines';
 import type { Sailing } from '../src/types';
 
@@ -41,6 +41,19 @@ describe('BN9-b — ekrany Korytarza bałtyckiego', () => {
       expect(routeStatusLabel(st, undefined, 'pl', 'GDN-NYN')).toBe(statusLabel(st, undefined, 'pl'));
       expect(routeStatusLabel(st, undefined, 'pl', null)).toBe(statusLabel(st, undefined, 'pl'));
     }
+  });
+
+  /* DP-137 / F7 #708: enum IN_TRANSIT_SE i synthetic_port_se zostają; UI FI ≠ „Droga SE”. */
+  it('DP-137: IN_TRANSIT_SE / Port SE na trasie FI → Droga do placu / Port przypłynięcia', () => {
+    expect(routeStatusLabel('IN_TRANSIT_SE', 'SE_ROAD', 'pl', 'TLL-HEL')).toBe('Droga do placu');
+    expect(routeStatusLabel('IN_TRANSIT_SE', 'SE_ROAD', 'pl', 'MUU-VUO')).toBe('Droga do placu');
+    expect(routeStatusLabel('IN_TRANSIT_SE', undefined, 'pl', 'TLLA-HEL')).toBe('Droga do placu');
+    expect(routeStatusLabel('IN_TRANSIT_PL', 'TO_PORT', 'pl', 'TLL-HEL')).toBe('Droga do portu');
+    expect(routeStatusLabel('AT_PORT_SE', 'APPROACH', 'pl', 'MUU-VUO')).toBe('Port przypłynięcia — Vuosaari');
+    expect(routeStatusLabel('IN_TRANSIT_SE', 'SE_ROAD', 'pl', 'GDN-NYN')).toBe('Droga SE');
+    expect(routeStageLabel('SE_ROAD', 'pl', 'TLL-HEL')).toBe('Droga do placu');
+    expect(routeStageLabel('APPROACH', 'pl', 'TLL-HEL')).toBe('Port przypłynięcia — Helsinki');
+    expect(routeStageLabel('SE_ROAD', 'pl', 'GDN-NYN')).toBe('Droga SE');
   });
 
   it('mapa: tory nowych przepraw zawsze w warstwie promu, Terminal A na torze Tallinn–Helsinki', () => {

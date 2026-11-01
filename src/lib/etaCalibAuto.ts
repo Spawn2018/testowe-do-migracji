@@ -27,6 +27,7 @@ export const SEGMENT_SHORT: Readonly<Record<string, string>> = {
   PL_ROAD_GDY: 'Droga PL (Gdynia)',
   PORT_CHECKIN: 'odprawa',
   CROSSING_DEFAULT: 'rejs',
+  /* DP-137: kody SE_* jak enum IN_TRANSIT_SE; status FI w UI = routeStatusLabel (25A). */
   SE_ROAD: 'Droga SE',
   SE_ROAD_KAA: 'Droga SE (Karlskrona)',
   /* #619 / 27B:C: osobny odcinek kalibracji — wariant śródlądowy Karlskrona → Boden */

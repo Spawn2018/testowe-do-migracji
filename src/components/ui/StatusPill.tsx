@@ -1,5 +1,5 @@
 import type { CorridorStage, Load, LoadStatus } from '../../types';
-import { routeStatusLabel, stageOnlyLabel } from '../../lib/statusLabel';
+import { routeStageLabel, routeStatusLabel } from '../../lib/statusLabel';
 import { statusMarkers } from '../../lib/stageTiles';
 import { t } from '../../i18n/messages';
 import { statusTone } from '../../lib/status';
@@ -39,7 +39,8 @@ export function StatusPill({
   /* wyglad/P4 (E25, L7): „Opóźniony” i „Cichy” to oznaczenia obok statusu, nie status — w pigułce nazwa etapu */
   const flagOnly = (status === 'DELAYED' || status === 'SILENT') && !!stage;
   const tone = flagOnly ? 'ok' : statusTone(status);
-  return <span className={`pill ${TONE_PILL[tone]}`}>{flagOnly ? stageOnlyLabel(stage!, locale) : routeStatusLabel(status, stage, locale, route)}</span>;
+  /* DP-137: Opóźniony/Cichy na trasie FI — „Droga do placu”, nie „Droga SE” (25A). */
+  return <span className={`pill ${TONE_PILL[tone]}`}>{flagOnly ? routeStageLabel(stage!, locale, route) : routeStatusLabel(status, stage, locale, route)}</span>;
 }
 
 /**

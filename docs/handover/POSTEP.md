@@ -1,4 +1,34 @@
 
+## 2026-11-01 23:55 — #715 F7 r2: DP-138 B1/B2/N1 + brak STATUS
+
+- Skrzynka: #713/#714/#716 wpisane; #550 WSTRZYMANE. #717 wygląd bez F7.
+- Scalanie: #715 F7 r2 **niegotowe** @ `a235864a` — poprawki w toku (bez scalenia).
+- **Krok:** 0373 B1 coalesce(ATA, STATUS→AT_PORT); B2 bez alter CHECK; N1 restore geofence; L138d ATA null bez STATUS → false; ZASADY #713; status EXPECTED **570**.
+- **Dalej:** push → CI → gotowe do F7. Po F7: BN5 (#714).
+- Bez push na main.
+
+## 2026-11-01 23:05 — DP-137+138 w #715 (#713); skrzynka #713/#714/#716
+
+- Skrzynka: #713/#714/#716 wpisane §4; #608 w planie; #550 WSTRZYMANE. Bez nowych pilne.
+- Scalanie: #712 SCALONE. #715 CI DP-137 zielone @ `eb8c78d9` — **bez** F7 „gotowe do scalenia”; doklejono DP-138 (#713).
+- **Krok:**
+  - DP-137 (**0372**): etykiety FI 25A + assign SE-only (już w PR).
+  - DP-138 (**0373**): `apply_ferry_ais_arrival_backup` — ATA/`p_ts` także dla AT_PORT→IN_TRANSIT_SE; fixture …0138; status EXPECTED **566** (+8).
+  - PLAN: łączenie DP, BN5 (#714), BN6 (#716).
+- **Dalej:** push → CI → gotowe do F7. Po F7: BN5 (#714).
+- Bez push na main.
+
+## 2026-11-01 22:25 — DP-137: etykiety FI + assign SE-only (**0372**)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych pilne.
+- Scalanie: #712 SCALONE `4b9384dd` / **0371** (F7: gotowe @ 555a8b85).
+- **Krok (DP-137):**
+  - potwierdzenie 25A: enum `IN_TRANSIT_SE` / `synthetic_port_se` zostają; UI `routeStatusLabel` / `routeStageLabel` → „Droga do placu” (nie „Droga SE”); StatusPill, StatusChangeModal, TodoCard;
+  - **0372**: `sailing_mismatch_assign` — `apply_ferry_se_from_position` tylko przy lądzie SE; FI → `apply_ferry_ais_arrival_backup`;
+  - testy: bn9b DP-137; status EXPECTED **558** (+2).
+- **Dalej:** push → CI → gotowe do F7. Po F7: DP-138 → BN5.
+- Bez push na main.
+
 ## 2026-11-01 21:52 — DP-136: FIX fixture UUID/vessel + timeout (#712)
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych pilne.

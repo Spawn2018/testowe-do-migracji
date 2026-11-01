@@ -1486,6 +1486,7 @@ q "insert into load_events (load_id, event_type, occurred_at) values ('$L557d','
 pos $L557d 59.00 17.90 "2026-10-11 07:30+00"
 chk "#557 PR2: ≥2 km SE, strefa OFF → IN_TRANSIT_SE" "$(st $L557d)" IN_TRANSIT_SE
 # F7 r3 pkt 1: Port SE + ≥2 km (strefa OFF) → Droga SE
+# DP-138: ATA/p_ts — 07:45 > ATA 06:00 (S557a), stała data OK.
 pos $L557a 59.00 17.90 "2026-10-11 07:45+00"
 chk "#557 PR2: Port SE + ≥2 km OFF → IN_TRANSIT_SE" "$(st $L557a)" IN_TRANSIT_SE
 # strefa ON: pas 0,8–2 km bez zmian (0298 histereza) — backup return
@@ -2882,6 +2883,83 @@ q "insert into load_events (load_id, event_type, occurred_at) values
     ('$L136w', '2026-10-13 08:00+00', st_setsrid(st_makepoint(25.0, 60.05), 4326), 'TELEMATICS_API')" >/dev/null
 chk "DP-136: zatoka FI nie liczy się jako ląd (propose null)" \
   "select (public.sailing_mismatch_propose_id('$L136w') is null)" t
+
+# DP-137: assign — se_from_position tylko przy lądzie SE; FI → AIS backup (powód z „FI”).
+chk "DP-137: assign se_from_position tylko po sweden_land" \
+  "select pg_get_functiondef('public.sailing_mismatch_assign(uuid,uuid)'::regprocedure) ~ 'v_on_se is true'" t
+chk "DP-137: TLL-HEL STATUS_AUTO powod z FI (nie trasie SE)" \
+  "select (coalesce(payload->>'powod','') like '%FI%' and coalesce(payload->>'powod','') not like '%trasie SE%') from load_events where load_id='$L367h' and event_type='STATUS_AUTO' and coalesce(payload->>'powod','') like '%promie%' order by occurred_at desc limit 1" t
+
+# DP-138 (F7 #708 / F7 #715 r2): AT_PORT → IN_TRANSIT_SE — świeżość vs ATA lub STATUS→AT_PORT.
+# Własny vessel …0138; daty 05–08.11; UUID …138*. Bez alter sailings_route_check (B2).
+# Zajęte L xx (skrót): 0a–0f,1a–1e, d0/d1, e1–ef, f0, … — nie używać.
+L138a=55555555-0000-0000-0000-00000000138a
+L138b=55555555-0000-0000-0000-00000000138b
+L138c=55555555-0000-0000-0000-00000000138c
+L138d=55555555-0000-0000-0000-00000000138d
+V138=66666666-0000-0000-0000-000000000138
+S138a=77777777-0000-0000-0000-00000000138a
+S138b=77777777-0000-0000-0000-00000000138b
+S138c=77777777-0000-0000-0000-00000000138c
+S138d=77777777-0000-0000-0000-00000000138d
+q "insert into vessels (id, name, operator) values
+    ('$V138', 'M/F DP-138', 'Tallink')
+   on conflict (id) do nothing;
+   insert into sailings (id,project_id,vessel_id,route,departure_at,arrival_at,
+    actual_departure_at,actual_arrival_at,status,source) values
+    ('$S138a','$P','$V138','TLL-HEL',
+     '2026-11-05 06:00+00','2026-11-05 08:30+00',
+     '2026-11-05 06:00+00','2026-11-05 08:30+00','DOPLYNAL','TALLINK'),
+    ('$S138b','$P','$V138','TLL-HEL',
+     '2026-11-06 06:00+00','2026-11-06 08:30+00',
+     '2026-11-06 06:00+00','2026-11-06 08:30+00','DOPLYNAL','TALLINK'),
+    ('$S138c','$P','$V138','TLL-HEL',
+     '2026-11-07 06:00+00','2026-11-07 08:30+00',
+     '2026-11-07 06:00+00',null,'W_REJSIE','TALLINK'),
+    ('$S138d','$P','$V138','TLL-HEL',
+     '2026-11-08 06:00+00','2026-11-08 08:30+00',
+     '2026-11-08 06:00+00',null,'W_REJSIE','TALLINK')" >/dev/null
+chk "DP-138: fixture sailings S138a/b/c/d" \
+  "select count(*) from sailings where id in ('$S138a','$S138b','$S138c','$S138d')" 4
+mk $L138a A138 "'HHL/A138'" "'SCX/A138'" AT_PORT_NYNASHAMN "'$S138a'"
+mk $L138b B138 "'HHL/B138'" "'SCX/B138'" AT_PORT_NYNASHAMN "'$S138b'"
+mk $L138c C138 "'HHL/C138'" "'SCX/C138'" AT_PORT_NYNASHAMN "'$S138c'"
+mk $L138d D138 "'HHL/D138'" "'SCX/D138'" AT_PORT_NYNASHAMN "'$S138d'"
+q "insert into load_events (load_id, event_type, occurred_at, payload) values
+    ('$L138a','MILESTONE_LOADED','2026-11-04 08:00+00','{}'::jsonb),
+    ('$L138b','MILESTONE_LOADED','2026-11-05 08:00+00','{}'::jsonb),
+    ('$L138c','MILESTONE_LOADED','2026-11-06 08:00+00','{}'::jsonb),
+    ('$L138c','STATUS_AUTO','2026-11-07 08:45+00',
+      jsonb_build_object('to','AT_PORT_NYNASHAMN','from','FERRY')),
+    ('$L138d','MILESTONE_LOADED','2026-11-07 08:00+00','{}'::jsonb)" >/dev/null
+chk "DP-138: fixture loads AT_PORT" \
+  "select count(*) from loads where id in ('$L138a','$L138b','$L138c','$L138d') and status='AT_PORT_NYNASHAMN'" 4
+# N1: wyłącz tylko aktywne; przywróć wyłącznie te id
+OFF138=$(q "with u as (
+  update public.geofences set active = false
+   where project_id = '$P' and kind = 'PORT_IN' and country in ('SE', 'FI') and active
+  returning id)
+  select coalesce(string_agg(id::text, ','), '') from u")
+# Ląd FI ≥2 km (60.28/24.95) — ten sam punkt co BN4
+chk "DP-138: AT_PORT p_ts < ATA → false" \
+  "select public.apply_ferry_ais_arrival_backup('$L138a', 60.28, 24.95, '2026-11-05 08:00+00')" f
+chk "DP-138: AT_PORT po starym p_ts bez zmiany" "$(st $L138a)" AT_PORT_NYNASHAMN
+chk "DP-138: AT_PORT p_ts > ATA → true" \
+  "select public.apply_ferry_ais_arrival_backup('$L138b', 60.28, 24.95, '2026-11-06 09:30+00')" t
+chk "DP-138: AT_PORT świeży → IN_TRANSIT_SE" "$(st $L138b)" IN_TRANSIT_SE
+chk "DP-138: ATA null p_ts przed wejściem → false" \
+  "select public.apply_ferry_ais_arrival_backup('$L138c', 60.28, 24.95, '2026-11-07 08:00+00')" f
+chk "DP-138: ATA null przed wejściem — status" "$(st $L138c)" AT_PORT_NYNASHAMN
+chk "DP-138: ATA null p_ts po wejściu → true" \
+  "select public.apply_ferry_ais_arrival_backup('$L138c', 60.28, 24.95, '2026-11-07 09:30+00')" t
+chk "DP-138: ATA null po wejściu → IN_TRANSIT_SE" "$(st $L138c)" IN_TRANSIT_SE
+chk "DP-138: ATA null bez STATUS → false" \
+  "select public.apply_ferry_ais_arrival_backup('$L138d', 60.28, 24.95, '2026-11-08 09:30+00')" f
+chk "DP-138: ATA null bez STATUS — status" "$(st $L138d)" AT_PORT_NYNASHAMN
+if [ -n "$OFF138" ]; then
+  q "update public.geofences set active = true
+      where id = any(string_to_array('$OFF138', ',')::uuid[])" >/dev/null
+fi
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

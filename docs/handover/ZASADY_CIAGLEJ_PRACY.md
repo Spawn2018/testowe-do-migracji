@@ -39,6 +39,11 @@ Sprawdzenie: `gh issue view <n> --json author,labels,comments` → `author.login
 
 **Każda** drobna poprawka i każda uwaga „nieblokujące / na później / następny PR” trafia do PLAN §4 (podsekcja „Rejestr drobnych poprawek (DP)”) z numerem `DP-n`, źródłem, właścicielem, etapem i stanem. Nic nie może przepaść ani zostać okrojone. W tym samym przebiegu dopisz pozycję do rejestru (commit docs na gałęzi PR albo `docs/*`). Pozycji DP nie zamykasz bez commitu realizującego albo decyzji właściciela. Stan DP sprawdzasz przy każdym przejściu do następnego etapu.
 
+## Łączenie drobnych DP i fixture (#713, od 01.11.2026)
+
+1. **Łączenie:** 2–3 drobne DP z tego samego obszaru (ten sam etap / te same pliki) w jeden PR — osobne commity, osobne testy, jedna migracja gdy się da. Pierwsze zastosowanie: DP-137+138 w #715.
+2. **Unikalne fixture w `tests/db/status.sh`:** własny vessel i własne UUID z numerem DP; daty spoza zakresów już używanych; po każdym `insert` fixture — asercja `count(*)`; opcjonalnie komentarz zajętych `L xx` / vesseli. Bez `alter table` zmieniającego CHECK schematu pod test.
+
 ## Zakazy pętli
 
 - bez `git push` na `main`;

@@ -14,7 +14,7 @@ import { riskText, t } from '../../i18n/messages';
 import { decText } from '../../i18n/decisions';
 import { rt, rtHas, rtn, rtp } from '../../i18n/p6';
 import { formatListDateTime, formatPlNumber } from '../../lib/format';
-import { statusLabel } from '../../lib/statusLabel';
+import { routeStatusLabel } from '../../lib/statusLabel';
 import { stripTransportPrefix, transportLabel } from '../../lib/transportName';
 import { durText } from '../../lib/p5Fees';
 import { AUTO_RISK_CODES, autoRiskLabel, type AutoRiskCode } from '../../lib/sailings';
@@ -33,6 +33,8 @@ export interface CardCtx {
   phone: boolean;
   nowIso: string;
   loadOf: (id: string) => Load | undefined;
+  /** DP-137: kod trasy rejsu — etykiety FI zamiast „Droga SE” (25A). */
+  routeOf?: (sailingId: string | null | undefined) => string | null;
   /** przydział podłączony (demo albo wykonawca) */
   assignOn: boolean;
   assignee: (issueId: string) => CasePerson | null;
@@ -128,8 +130,9 @@ function loadLine(load: Load, ctx: CardCtx): string {
   const loadDay = load.plannedLoadDate ? dm(load.plannedLoadDate) : '—';
   const past = !!load.plannedLoadDate && Date.parse(`${load.plannedLoadDate.slice(0, 10)}T23:59:59Z`) < Date.parse(ctx.nowIso)
     && ['PLANNED', 'RESOURCES_PENDING', 'DOC_MISSING', 'READY'].includes(load.status);
+  const route = ctx.routeOf?.(load.sailingId) ?? null;
   return rtp(ctx.locale, 'p6_load_dates', {
-    status: statusLabel(load.status, load.stage, ctx.locale),
+    status: routeStatusLabel(load.status, load.stage, ctx.locale, route),
     load: loadDay,
     late: past ? rt(ctx.locale, 'p6_load_late') : '',
     deliver: load.plannedDeliverDate ? dm(load.plannedDeliverDate) : '—',
