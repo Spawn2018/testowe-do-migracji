@@ -32,7 +32,7 @@ import {
 export { DIGITRAFFIC_USER };
 import {
   PORT_CALL_V2_CANCELLED_URL, WINTER_NAV_LOCATIONS_URL,
-  parseWinterNavigationLocations, portCallV2CancelledAppearedRisk, portCallV2CancelledHasFihel,
+  parseWinterNavigationLocations, portCallV2CancelledHasFihel,
   winterNavIceRisk,
 } from '../ferry/winterNavigation.ts';
 import {
@@ -1686,13 +1686,14 @@ export async function runFerryPortnet(deps: JobDeps): Promise<JobResult> {
   warnings.push(...winter.warnings);
   risks += winter.risks;
 
-  /* BN3 pkt 7: obserwacja port-call/v2/visits?status=cancelled — zgłoś gdy FIHEL się pojawi. */
+  /* BN3 pkt 7 / F7 #694 R1-B1: sonda v2 cancelled — tylko observations (bez ryzyka). */
   const v2c = await observePortCallV2Cancelled(deps, now);
   warnings.push(...v2c.warnings);
   risks += v2c.risks;
 
   return {
-    /* Winter-nav / v2 cancelled: awaria → SOURCE_DOWN / ryzyko, bez wywracania ok Portnet. */
+    /* Winter-nav / v2: awaria → SOURCE_DOWN / ryzyko, bez wywracania ok Portnet.
+     * Urząd Morski Gdynia (zapas Stena) — osobny krok po F7 (PLAN pkt 7 „dalej”). */
     job: 'ferry-portnet', mode: 'LIVE', ok: !portnet.fail,
     updated, risks, warnings,
     observations: {
@@ -1753,8 +1754,11 @@ async function applyWinterNavigation(deps: JobDeps, nowIso: string): Promise<{
   return { hits: parsed.hits.length, risks, warnings, fail: false };
 }
 
-/** BN3: obserwacja cancelled v2 FIHEL — ryzyko gdy pojawią się anulowane wizyty. */
-async function observePortCallV2Cancelled(deps: JobDeps, nowIso: string): Promise<{
+/**
+ * BN3 / F7 #694 R1-B1: sonda port-call v2 cancelled FIHEL — tylko observations.
+ * Żywy endpoint → HTTP 400; właściwy filtr/endpoint → DP-121 (po BN3 cz. 4).
+ */
+async function observePortCallV2Cancelled(deps: JobDeps, _nowIso: string): Promise<{
   count: number; fihel: boolean; risks: number; warnings: string[];
 }> {
   const page = await readText(deps, PORT_CALL_V2_CANCELLED_URL, {
@@ -1765,21 +1769,16 @@ async function observePortCallV2Cancelled(deps: JobDeps, nowIso: string): Promis
       'Digitraffic-User': DIGITRAFFIC_USER,
     },
   });
+  /* HTTP ≠ OK (dziś 400): bez ostrzeżenia co przebieg i bez ryzyka. */
   if (!page.ok) {
-    return { count: 0, fihel: false, risks: 0, warnings: [`port-call v2 cancelled: ${page.warning}`] };
+    return { count: 0, fihel: false, risks: 0, warnings: [] };
   }
   let json: unknown;
   try { json = JSON.parse(page.text); } catch {
     return { count: 0, fihel: false, risks: 0, warnings: ['port-call v2 cancelled: nieczytelny JSON'] };
   }
   const obs = portCallV2CancelledHasFihel(json);
-  let risks = 0;
-  if (obs.hasFihel) {
-    if (await deps.store.raiseRisk(portCallV2CancelledAppearedRisk(obs.count, nowIso))) risks = 1;
-  } else {
-    await deps.store.resolveRisks('FERRY_PORTCALL_V2_CANCELLED:FIHEL:');
-  }
-  return { count: obs.count, fihel: obs.hasFihel, risks, warnings: obs.warnings };
+  return { count: obs.count, fihel: obs.hasFihel, risks: 0, warnings: obs.warnings };
 }
 
 

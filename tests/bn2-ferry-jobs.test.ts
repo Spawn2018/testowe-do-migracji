@@ -108,6 +108,13 @@ class MemStore implements SyncStore {
     this.risks = this.risks.filter((r) => !r.dedup.startsWith(prefix));
     return hit.length;
   }
+  /** F7 #694 R1-B3 — zamykanie nieaktualnych FERRY_WINTER:*. */
+  async resolveStaleRisks(prefix: string, keep: string[]) {
+    const keepSet = new Set(keep);
+    const hit = this.risks.filter((r) => r.dedup.startsWith(prefix) && !keepSet.has(r.dedup));
+    this.risks = this.risks.filter((r) => !(r.dedup.startsWith(prefix) && !keepSet.has(r.dedup)));
+    return hit.length;
+  }
   async latestPositions() { return []; }
   async lastRun(job: string) { return this.runs.filter((r) => r.job === job).at(-1)?.at ?? null; }
   async recordRun(job: string, ok: boolean, result: JobResult) {

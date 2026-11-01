@@ -1224,6 +1224,8 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-117 | Cursor | `route-check/index.ts` `loads` `.limit(500)` bez sortu/filtra statusu — przy >500 transportach losowy dobór | F7 #693 r1 | ferry / route-check | w kolejce |
 | DP-118 | Cursor | `store.resolveStaleRisks` — `risk_signals` bez limitu (`max_rows`) → część nieaktualnych ryzyk niezamknięta | F7 #693 r1 | BN3 / ryzyka | w kolejce |
 | DP-119 | Cursor | Front `documents`/`invoices` bez `range` (max_rows); RPC zwracające zbiory też `max_rows` (`latest_vehicle_positions` itd.) | F7 #693 r1 | front / API | w kolejce |
+| DP-120 | Cursor | Ryzyko zimowe liczone „teraz”, nie na dzień rejsu, i bez klasy lodowej statku — ograniczenie w dniu rejsu + porównanie z klasą lodową `vessels` (ro-pax 1A Super zwykle spełnia „I 2000”); objaśnienie kodu IBNet po polsku | F7 #694 r1 | BN3 / winter-nav | w kolejce |
+| DP-121 | Cursor | Digitraffic `port-call/v2/visits?status=cancelled&locode=FIHEL` → HTTP 400; właściwy endpoint + filtr MMSI/IMO naszych ± okno rejsu + dedup bez daty (F7 #694 nazwał „DP-119” — numer zajęty) | F7 #694 r1 | BN3 / Portnet | w kolejce (po BN3 cz. 4) |
 | DP-99 | Cursor | `operatorFromSailingSource` fallback MUU-VUO → VIKING (prod tylko ECKERO), domyślnie TALLINK → z `data-company` ts.ee albo `ferry_route_operators` (DP-1) | F7 #683 | BN3 | w kolejce |
 | DP-100 | Cursor | dedup AUTO tylko aplikacyjny → partial unique index `(sailing_id, kind) where source='AUTO'` albo `.neq('status','ODWOLANY')` w update | F7 #683 | BN3 | w kolejce |
 | DP-101 | Cursor | `insertOperatorNotice` z `must()` po zmianie statusu — przy błędzie wpis nie powstanie nigdy (kolejność / transakcja) | F7 #683 | BN3 | w kolejce |
@@ -1299,7 +1301,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 7. **#685** decyzja 63 (rozkład Viking) — zaraz po #683; poniżej.
 8. BN4…BN10 — jak #573 (AIS, pogoda, drogi LT/LV/EE/FI, HERE, statusy/ETA, ekrany, odbiór 48 h).
 
-### BN3 · Opóźnienia i odwołania nowych armatorów — W TOKU (po wycinkach 1–3; ~~#685~~ / ~~#691~~ SCALONE; winter-nav/MMSI W TOKU `pakiet/bn3-winter-nav-mmsi`)
+### BN3 · Opóźnienia i odwołania nowych armatorów — W TOKU (po wycinkach 1–3; ~~#685~~ / ~~#691~~ / ~~#692~~ SCALONE; winter-nav/MMSI PR #694 F7 r1)
 Źródło: #573 + komentarze BN3 31.10 (spec + decyzje 57–61). Po #667; DP-21 → #666 (63b).
 ~~Wycinek 1~~ SCALONE (#680 `8100f685` / **0356**): decyzja 60 + ręczny komunikat 6 armatorów (`p_operator`, formularz).
 ~~Wycinek 2~~ SCALONE (#682 `a9c396d7` / **0357** + F7 r1–r2): DFDS remark/ETA + Portnet ATA + SOURCE_DOWN MEDIUM (**decyzja 67**).
@@ -1310,9 +1312,9 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 4. Odwołanie: ~~ts.ee / Tallink Alert (decyzja 59 + **68**, F7 #683)~~; ~~DFDS cancel → NIEZNANY (F7 B3)~~; podejrzenie 45 min+AIS → FERRY MEDIUM — dalej.
 5. `operator_notices`: ~~ręczny 6 armatorów (0356)~~; ~~`source` AUTO/RECZNIE + URL (**0358**)~~; ~~**decyzja 69** AUTO tylko przy ODWOLANY~~; ~~front BN9-c1 (#692)~~.
 6. ~~SOURCE_DOWN: TALLINK/DFDS/ECKERO/DIGITRAFFIC (+ *_SCHEDULE) = MEDIUM~~ (wycinek 2 + **decyzja 67** F7 #682, uzasadnienie §5); Viking bez SourceId statusu.
-7. Digitraffic winter-navigation (**W TOKU** `pakiet/bn3-winter-nav-mmsi` / **0361** + ferry-portnet); Urząd Morski Gdynia (zapas Stena) — dalej; port-call v2 cancelled FIHEL (obserwacja w tym samym PR).
+7. Digitraffic winter-navigation (**PR #694** `pakiet/bn3-winter-nav-mmsi` / **0361** + F7 r1: locode z tras, bez ryzyka v2 cancelled → **DP-121**; testy joba); Urząd Morski Gdynia (zapas Stena) — dalej; sonda v2 cancelled = observations.
 8. ~~MMSI XPRS/Finbo/Finlandia/MyStar/Megastar~~ (**0361**, vessel-details 01.11); ~~DP-11~~ (RPC przed seedem); ~~DP-1~~ (BN1 0339/0344).
-9. Testy: ~~DFDS remark / Portnet ATA / F7 B5 wycinek 2~~; ~~ts.ee/Alert (F7 #683 B5)~~; ~~winter-nav / DP-11~~; Imperva; tolerancja; RECZNIE; ODWOLANY→FERRY_CANCELLED — część dalej.
+9. Testy: ~~DFDS remark / Portnet ATA / F7 B5 wycinek 2~~; ~~ts.ee/Alert (F7 #683 B5)~~; ~~winter-nav / DP-11 / F7 #694 R1-B3~~; Imperva; tolerancja; RECZNIE; ODWOLANY→FERRY_CANCELLED — część dalej.
 10. ~~Role komunikatu: HHL_ADMIN + CARRIER_DISPATCH (SCX); KSH odmowa~~ (F7 #680).
 
 ### #687 · DP-114 Tallink HEL–TLL 404 + niepełna pula Alert — SCALONE (`5fc7d4a0` / PR #689)
@@ -2362,6 +2364,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 01.11.2026 02:05 | #693 F7 r1 POPRAWKI: R1-B1 żywe testy atrapy; R1-B2 page cap throw; dedupe id; DP-117/118/119 | pętla |
 | 01.11.2026 02:45 | #693 SCALONE `67b3af12` (F7: gotowe @ ec403152); start BN3 winter-nav/MMSI `pakiet/bn3-winter-nav-mmsi` / **0361** | pętla |
 | 01.11.2026 03:12 | #692 SCALONE `b24b95ba` (F7: gotowe @ bcd068c1; DP-86/87/104 DONE); #694 unit FAIL PL-T „cancelled” → tekst PL bez EN | pętla |
+| 01.11.2026 03:45 | #694 F7 r1 POPRAWKI: R1-B1 bez ryzyka v2 cancelled (HTTP 400); R1-B2 locode z tras; R1-B3 testy joba; DP-120/121 | pętla |
 | 31.10.2026 — | Decyzja 73: TLLA-HEL ETA−150 min / HELA-TLL ETD+160 min (fixture Cargo; nocny 165 min OK). Decyzja 74: `sailings.source_ref` 0359; Digitraffic `digitraffic:portcall:<id>:<route>`; HTML/RECZNIE/DANE_STARTOWE wygrywają; #685-b RPC zastępuje digitraffic:% w ±3 h | F7 #688 r1–r4 |
 | 31.10.2026 — | F7 #683 nieblokujące (osobna poprawka): Scheduler grudzień + „on 2 January” → rok bieżący, ciche wygaśnięcie; Alert INFO bez ryzyka/historii — świadomie | F7 #683 r7 |
 | 31.10.2026 — | F7 #683 r8 nieblokujące (osobno): Alert poza Schedulerem obok Schedulera; sprzeczne bloki (resume→cofnięcie auto); rok przy długim oknie Schedulera; mutanty M10/M15–M17/M22 świadomie bez testów | F7 #683 r8 |

@@ -1,7 +1,8 @@
 /**
- * BN3 (#573) — Digitraffic winter-navigation v2 (IBNet) + obserwacja port-call v2 cancelled.
+ * BN3 (#573) — Digitraffic winter-navigation v2 (IBNet) + lekka obserwacja port-call v2 cancelled.
  * GET …/locations → ograniczenia lodowe / zawieszenia portów tras → ryzyko FERRY MEDIUM.
  * Licencja CC BY 4.0 (Fintraffic Digitraffic). Nagłówek Digitraffic-User + gzip.
+ * F7 #694 r1: bez ryzyka z v2 cancelled (DP-121); locode tylko z tras korytarza.
  */
 import type { RiskInput } from '../integrations/sync.ts';
 
@@ -12,11 +13,14 @@ export const WINTER_NAV_ATTRIBUTION =
 export const PORT_CALL_V2_CANCELLED_URL =
   'https://meri.digitraffic.fi/api/port-call/v2/visits?status=cancelled&locode=FIHEL';
 
-/** UN/LOCODE portów tras BN1–BN3. Vuosaari → FIHEL; Paldiski = EEPLA (EEPLD zapas). */
+/**
+ * UN/LOCODE portów tras korytarza (ferryCatalog / ferry_ports).
+ * F7 #694 R1-B2: bez SEMMA / LTKLJ / LVRIX (spoza tras).
+ */
 export const WINTER_NAV_WATCHED_LOCODES = [
-  'FIHEL', 'EETLL', 'EEMUG', 'EEPLA', 'EEPLD',
-  'SEKPS', 'SESTO', 'SEKAA', 'SENYN', 'SEMMA',
-  'PLGDY', 'PLGDN', 'LTKLJ', 'LVRIX',
+  'FIHEL', 'EETLL', 'EEMUG', 'EEPLA',
+  'SEKPS', 'SESTO', 'SEKAA', 'SENYN',
+  'PLGDY', 'PLGDN',
 ] as const;
 
 export type WinterNavHitKind = 'RESTRICTION' | 'SUSPENSION';
@@ -182,7 +186,10 @@ export interface PortCallV2CancelledProbe {
   warnings: string[];
 }
 
-/** Obserwacja: dziś FIHEL cancelled zwykle `[]`/`{}`; zgłoś gdy pojawią się wizyty. */
+/**
+ * F7 #694 R1-B1: tylko sonda na observations — bez ryzyka.
+ * Nieznana struktura → count 0 + jedno ostrzeżenie (nie count=1).
+ */
 export function portCallV2CancelledHasFihel(json: unknown): PortCallV2CancelledProbe {
   const warnings: string[] = [];
   if (json == null) {
@@ -208,26 +215,7 @@ export function portCallV2CancelledHasFihel(json: unknown): PortCallV2CancelledP
     count = o.portCalls.length;
   } else {
     warnings.push(`port-call v2 cancelled FIHEL: nieznane klucze ${keys.slice(0, 8).join(',')}`);
-    count = 1;
+    count = 0;
   }
   return { hasFihel: count > 0, count, warnings };
-}
-
-export function portCallV2CancelledAppearedRisk(count: number, nowIso: string): RiskInput {
-  return {
-    kind: 'FERRY',
-    severity: 'MEDIUM',
-    title: `Digitraffic port-call v2: anulowane wizyty FIHEL (${count}) — sprawdź odwołania Viking/Tallink/Eckerö`,
-    titleKey: 'rk_ferry_portcall_v2_fihel',
-    params: { count: String(count), locode: 'FIHEL' },
-    detail: {
-      zrodlo: 'DIGITRAFFIC_PORTCALL_V2',
-      locode: 'FIHEL',
-      status: 'cancelled',
-      count,
-      czas: nowIso,
-    },
-    dedup: `FERRY_PORTCALL_V2_CANCELLED:FIHEL:${nowIso.slice(0, 10)}`,
-    sourceUrl: PORT_CALL_V2_CANCELLED_URL,
-  };
 }
