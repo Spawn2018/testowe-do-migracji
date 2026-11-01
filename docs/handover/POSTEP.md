@@ -1,4 +1,15 @@
 
+## 2026-11-01 23:05 — DP-137+138 w #715 (#713); skrzynka #713/#714/#716
+
+- Skrzynka: #713/#714/#716 wpisane §4; #608 w planie; #550 WSTRZYMANE. Bez nowych pilne.
+- Scalanie: #712 SCALONE. #715 CI DP-137 zielone @ `eb8c78d9` — **bez** F7 „gotowe do scalenia”; doklejono DP-138 (#713).
+- **Krok:**
+  - DP-137 (**0372**): etykiety FI 25A + assign SE-only (już w PR).
+  - DP-138 (**0373**): `apply_ferry_ais_arrival_backup` — ATA/`p_ts` także dla AT_PORT→IN_TRANSIT_SE; fixture …0138; status EXPECTED **566** (+8).
+  - PLAN: łączenie DP, BN5 (#714), BN6 (#716).
+- **Dalej:** push → CI → gotowe do F7. Po F7: BN5 (#714).
+- Bez push na main.
+
 ## 2026-11-01 22:25 — DP-137: etykiety FI + assign SE-only (**0372**)
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych pilne.

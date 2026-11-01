@@ -1486,7 +1486,8 @@ q "insert into load_events (load_id, event_type, occurred_at) values ('$L557d','
 pos $L557d 59.00 17.90 "2026-10-11 07:30+00"
 chk "#557 PR2: ≥2 km SE, strefa OFF → IN_TRANSIT_SE" "$(st $L557d)" IN_TRANSIT_SE
 # F7 r3 pkt 1: Port SE + ≥2 km (strefa OFF) → Droga SE
-pos $L557a 59.00 17.90 "2026-10-11 07:45+00"
+# DP-138: AT_PORT→IN_TRANSIT wymaga GPS_FRESH_MIN względem now() — nie stała data.
+q "select process_position('$L557a', 59.00, 17.90, now())" >/dev/null
 chk "#557 PR2: Port SE + ≥2 km OFF → IN_TRANSIT_SE" "$(st $L557a)" IN_TRANSIT_SE
 # strefa ON: pas 0,8–2 km bez zmian (0298 histereza) — backup return
 q "update geofences set active = true
@@ -2888,6 +2889,60 @@ chk "DP-137: assign se_from_position tylko po sweden_land" \
   "select pg_get_functiondef('public.sailing_mismatch_assign(uuid,uuid)'::regprocedure) ~ 'v_on_se is true'" t
 chk "DP-137: TLL-HEL STATUS_AUTO powod z FI (nie trasie SE)" \
   "select (coalesce(payload->>'powod','') like '%FI%' and coalesce(payload->>'powod','') not like '%trasie SE%') from load_events where load_id='$L367h' and event_type='STATUS_AUTO' and coalesce(payload->>'powod','') like '%promie%' order by occurred_at desc limit 1" t
+
+# DP-138 (F7 #708 / #713): AT_PORT → IN_TRANSIT_SE wymaga ATA i p_ts > ATA.
+# Własny vessel …0138; daty 05–06.11 (poza zakresami BN4/DP-136); UUID …138*.
+# Zajęte L xx (skrót): 0a–0f,1a–1e, d0/d1, e1–ef, f0, … — nie używać.
+L138a=55555555-0000-0000-0000-00000000138a
+L138b=55555555-0000-0000-0000-00000000138b
+L138c=55555555-0000-0000-0000-00000000138c
+V138=66666666-0000-0000-0000-000000000138
+S138a=77777777-0000-0000-0000-00000000138a
+S138b=77777777-0000-0000-0000-00000000138b
+S138c=77777777-0000-0000-0000-00000000138c
+q "insert into vessels (id, name, operator) values
+    ('$V138', 'M/F DP-138', 'Tallink')
+   on conflict (id) do nothing;
+   alter table public.sailings drop constraint if exists sailings_route_check;
+   insert into sailings (id,project_id,vessel_id,route,departure_at,arrival_at,
+    actual_departure_at,actual_arrival_at,status,source) values
+    ('$S138a','$P','$V138','TLL-HEL',
+     '2026-11-05 06:00+00','2026-11-05 08:30+00',
+     '2026-11-05 06:00+00','2026-11-05 08:30+00','DOPLYNAL','TALLINK'),
+    ('$S138b','$P','$V138','TLL-HEL',
+     '2026-11-06 06:00+00','2026-11-06 08:30+00',
+     '2026-11-06 06:00+00','2026-11-06 08:30+00','DOPLYNAL','TALLINK'),
+    ('$S138c','$P','$V138','TLL-HEL',
+     '2026-11-07 06:00+00','2026-11-07 08:30+00',
+     '2026-11-07 06:00+00',null,'W_REJSIE','TALLINK')" >/dev/null
+chk "DP-138: fixture sailings S138a/b/c" \
+  "select count(*) from sailings where id in ('$S138a','$S138b','$S138c')" 3
+mk $L138a A138 "'HHL/A138'" "'SCX/A138'" AT_PORT_NYNASHAMN "'$S138a'"
+mk $L138b B138 "'HHL/B138'" "'SCX/B138'" AT_PORT_NYNASHAMN "'$S138b'"
+mk $L138c C138 "'HHL/C138'" "'SCX/C138'" AT_PORT_NYNASHAMN "'$S138c'"
+q "insert into load_events (load_id, event_type, occurred_at) values
+    ('$L138a','MILESTONE_LOADED','2026-11-04 08:00+00'),
+    ('$L138b','MILESTONE_LOADED','2026-11-05 08:00+00'),
+    ('$L138c','MILESTONE_LOADED','2026-11-06 08:00+00')" >/dev/null
+chk "DP-138: fixture loads AT_PORT" \
+  "select count(*) from loads where id in ('$L138a','$L138b','$L138c') and status='AT_PORT_NYNASHAMN'" 3
+q "update public.geofences set active = false
+    where project_id = '$P' and kind = 'PORT_IN' and country in ('SE', 'FI')" >/dev/null
+# Ląd FI ≥2 km (60.28/24.95) — ten sam punkt co BN4
+chk "DP-138: AT_PORT p_ts < ATA → false" \
+  "select public.apply_ferry_ais_arrival_backup('$L138a', 60.28, 24.95, '2026-11-05 08:00+00')" f
+chk "DP-138: AT_PORT po starym p_ts bez zmiany" "$(st $L138a)" AT_PORT_NYNASHAMN
+chk "DP-138: AT_PORT p_ts > ATA → true" \
+  "select public.apply_ferry_ais_arrival_backup('$L138b', 60.28, 24.95, '2026-11-06 09:30+00')" t
+chk "DP-138: AT_PORT świeży → IN_TRANSIT_SE" "$(st $L138b)" IN_TRANSIT_SE
+chk "DP-138: AT_PORT ATA null → false" \
+  "select public.apply_ferry_ais_arrival_backup('$L138c', 60.28, 24.95, '2026-11-07 09:30+00')" f
+chk "DP-138: AT_PORT ATA null status bez zmian" "$(st $L138c)" AT_PORT_NYNASHAMN
+q "update public.geofences set active = true
+    where project_id = '$P' and kind = 'PORT_IN' and country in ('SE', 'FI')" >/dev/null
+q "alter table public.sailings drop constraint if exists sailings_route_check;
+   alter table public.sailings add constraint sailings_route_check
+     check (route ~ '^[A-Z][A-Z0-9_-]{0,62}$');" >/dev/null
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]
