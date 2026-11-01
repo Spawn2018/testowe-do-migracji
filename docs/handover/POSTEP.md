@@ -1,3 +1,11 @@
+
+## 2026-11-01 21:52 — DP-136: FIX fixture UUID/vessel + timeout (#712)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych pilne.
+- Scalanie: PR #712 — db FAIL 553/1; unit/visual OK. Brak F7 gotowe do scalenia.
+- **Krok:** kolizja L f0 / vessel+departure → L d0/d1 + V136; +2 chk fixture; EXPECTED 556; timeout R1-B2 60 s.
+- **Dalej:** push → CI → gotowe do F7. Po F7: DP-137 → DP-138 → BN5.
+- Bez push na main.
 # POSTEP â rejestr zlecenia koÅcowego
 
 Å¹rÃ³dÅo ID: `docs/handover/ZLECENIE_FINAL.md` Â§12 (**51 pozycji**) + Aneks 1 (AN1 Â· M10 Â· M11) + Aneks 2 (AN2 Â· M12) = **56 pozycji**.  

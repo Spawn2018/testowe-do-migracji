@@ -228,6 +228,7 @@ describe('DP-116 sailingsSince stronicowanie (#691 / F7 #693 r1–r2)', () => {
     expect(got.every((s) => s.source === 'VIKING' || s.source === 'RECZNIE')).toBe(true);
   });
 
+  // ~51k wierszy × Fisher–Yates na stronę — na Windows w pełnym suite >15 s (pre-push DP-136).
   it('R1-B2: przekroczenie limitu stron → sailings page cap exceeded', async () => {
     const n = SAILINGS_MAX_PAGES * SAILINGS_PAGE_SIZE + 1500;
     const all = Array.from({ length: n }, (_, i) => makeRow(i));
@@ -235,7 +236,7 @@ describe('DP-116 sailingsSince stronicowanie (#691 / F7 #693 r1–r2)', () => {
     await expect(
       fetchSailingsSincePaged(() => sb.from('sailings') as never, makeRow(0).departure_at),
     ).rejects.toThrow(/sailings page cap exceeded/);
-  }, 15_000);
+  }, 60_000);
 
   it('R2: dedupe po id przy wstawce między stronami (przesunięcie offsetu)', async () => {
     /* Strona 0: s0…s999. Między zapytaniami wstawka na początku → strona 1 z offset 1000
