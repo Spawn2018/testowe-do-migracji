@@ -28,6 +28,49 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
     async sailingsSince(fromIso: string) {
       return must(await sb.from('sailings').select(SAILING_COLS).gte('departure_at', fromIso).order('departure_at'), 'sailings') as DbSailing[];
     },
+    /**
+     * F7 #690 R2-B4 / 63c: max(departure_at) VIKING source_ref null > now.
+     * F7 r3: bez viking_schedule_imports.to_at (przerwany import wyciszał SOURCE_DOWN).
+     */
+    async maxVikingFileDepartureAt(nowIso: string) {
+      const sail = must(
+        await sb.from('sailings')
+          .select('departure_at')
+          .eq('source', 'VIKING')
+          .is('source_ref', null)
+          .gt('departure_at', nowIso)
+          .order('departure_at', { ascending: false })
+          .limit(1),
+        'sailings max viking file',
+      ) as { departure_at: string }[];
+      return sail[0]?.departure_at ?? null;
+    },
+    /**
+     * F7 #690 R2-B4: rejsy VIKING+RECZNIE od fromIso ze stronicowaniem (import pliku).
+     * F7 r3: .order('id') — stabilny range.
+     */
+    async sailingsForVikingFileImport(fromIso: string) {
+      const pageSize = 1000;
+      const out: DbSailing[] = [];
+      let from = 0;
+      for (;;) {
+        const r = must(
+          await sb.from('sailings')
+            .select(SAILING_COLS)
+            .gte('departure_at', fromIso)
+            .in('source', ['VIKING', 'RECZNIE'])
+            .order('departure_at')
+            .order('id')
+            .range(from, from + pageSize - 1),
+          'sailings viking import page',
+        ) as DbSailing[];
+        out.push(...r);
+        if (r.length < pageSize) break;
+        from += pageSize;
+        if (from > 50_000) break;
+      }
+      return out;
+    },
     async insertSailings(rows: SailingInsert[]) {
       // unikalność (statek, odejście): istniejący wiersz zostaje — plan i tak aktualizuje go osobno
       must(await sb.from('sailings').upsert(rows, { onConflict: 'vessel_id,departure_at', ignoreDuplicates: true }), 'sailings insert');
