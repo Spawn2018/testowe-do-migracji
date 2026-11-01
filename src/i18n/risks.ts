@@ -32,6 +32,8 @@ const pl: Dict = {
   rk_ferry_overdue: 'Transport nadal w statusie „Prom”, choć {vessel} miał przypłynąć {arr}',
   /* #557 PR2 F7 r3: po dopłynięciu AIS — osobny klucz (nie „miał przypłynąć”) */
   rk_ferry_check_after_arrival: 'Sprawdź {code} po dopłynięciu ({vessel}, {arr})',
+  /* DP-131 / F7 #703: FERRY + GPS ≤3 km port wyjścia po ATD/ATA */
+  rk_ferry_not_departed: 'Transport nie wypłynął? — sprawdź {code}',
   rk_sailing_mismatch: 'Auto w SE, a przypisany rejs jeszcze nie wypłynął',
   rk_sailing_cancelled: 'Rejs {vessel} z {dep} odwołany — transport wymaga nowego rejsu',
   rk_missed_sailing: 'Brak potwierdzenia pozycją, że transport był w porcie PL w chwili odejścia rejsu {vessel} {dep}',
