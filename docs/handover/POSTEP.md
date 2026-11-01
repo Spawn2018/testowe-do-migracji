@@ -7469,6 +7469,17 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Dalej:** DP kolejka BN3 (np. DP-108 ODWOLANY→FERRY_CANCELLED) albo ATD wiarygodne / BN4.
 - Bez push na main.
 
+## 2026-11-01 15:25 — #703 SCALONE; start DP-130 (+ DP-131 w planie)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE; komentarz #703 → **DP-131** wpisane (po DP-130, osobny mały PR).
+- Scalanie: **#703** `d8708766` (F7: gotowe @ `03ff7c23`; CI unit/visual/db ✔). Bez push na main — `deploy-main`.
+- **Krok (DP-130):**
+  - migracja **0364**: trigger `sailings_set_status_from_actual` — jawny DOPLYNAL przy ATA null zostaje; porządek W_REJSIE >3 h po ETA (HEL-TLL/HELA-TLL/STO-TLL/KAA-GDY, bez transportów, próg 80);
+  - `status.sh` +3 (EXPECTED **505**); vitest `dp130-doplynal-ata-null` 4;
+  - PLAN: DP-128 SCALONE, DP-130 W TOKU, DP-131 w kolejce.
+- **Dalej:** push → CI → gotowe do F7. Po F7: DP-131 → BN4 pkt 8 (luka AIS / `AIS_<port>` / arrival backup).
+- Bez push na main.
+
 ## 2026-11-01 15:00 — #703 F7 r2 POPRAWKI (DP-128 B1/P1/P2 + DP-130)
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE (`pilne`, nic nie budować). Bez nowych `pilne`.
