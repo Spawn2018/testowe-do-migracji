@@ -7469,6 +7469,17 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Dalej:** DP kolejka BN3 (np. DP-108 ODWOLANY→FERRY_CANCELLED) albo ATD wiarygodne / BN4.
 - Bez push na main.
 
+## 2026-11-01 20:05 — DP-133 osobny cron GPS stuck (**0369**)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne`.
+- Scalanie: **#709** `7db16a87` (F7: gotowe @ `584d5861`). Bez push na main — `deploy-main`.
+- **Krok (DP-133 / 0369):**
+  - `tower-prom-opoznienie` → tylko `detect_ferry_overdue`;
+  - nowy `tower-prom-gps-port` (*/10) → `detect_ferry_gps_stuck_at_departure` (osobna transakcja);
+  - status EXPECTED **546** (+2); testy chk cron w `status.sh`.
+- **Dalej:** CI → gotowe do F7. Po F7: DP-134/135 → DP-136…138 → BN5.
+- Bez push na main.
+
 ## 2026-11-01 19:35 — #708 SCALONE; start BN9-c2 (aisDb / Q-18 Bałtyk)
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE.

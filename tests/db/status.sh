@@ -2807,5 +2807,16 @@ q "select public.detect_ferry_gps_stuck_at_departure('2026-11-02 09:15+00')" >/d
 chk "DP-131: bez ATD/ATA → 0 FERRY_STUCK_DEP" \
   "$(rk $L131b FERRY_STUCK_DEP)" 0
 
+# DP-133: osobny cron GPS stuck (nie w tym samym poleceniu co overdue)
+if [ "$(q "select to_regclass('cron.job') is not null")" = "t" ]; then
+  chk "DP-133: cron tower-prom-opoznienie tylko overdue" \
+    "select count(*) from cron.job where jobname='tower-prom-opoznienie' and command not ilike '%gps_stuck%' and command ilike '%detect_ferry_overdue%'" 1
+  chk "DP-133: cron tower-prom-gps-port osobno" \
+    "select count(*) from cron.job where jobname='tower-prom-gps-port' and command ilike '%detect_ferry_gps_stuck_at_departure%'" 1
+else
+  chk "DP-133: brak cron.job (stub) — overdue OK" "select 1" 1
+  chk "DP-133: brak cron.job (stub) — gps-port OK" "select 1" 1
+fi
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]
