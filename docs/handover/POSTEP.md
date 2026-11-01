@@ -7457,6 +7457,14 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (odbiór prod):** SELECT `here_road_legs` — **12** / active 12 / `browser_fetch` 5; core bez zmian (3495/12561/3742/18854/19408); BN7 7× null. `here-roads` **#108803** @ 04:49Z ok (0 prób — core świeże; BN7 poza cronem). Komentarz w #667. **Dalej:** BN3 (#573).
 - Bez push na main.
 
+## 2026-11-01 12:00 — BN3 RSS ERR: stub integracji + pusty kanał OK
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne`.
+- Scalanie: brak PR z „F7: gotowe do scalenia” po ostatnim commicie. Bez push na main.
+- **Krok:** `edcf75dd` — pusty kanał RSS ≠ SOURCE_DOWN; `integrations.test.ts` — domyślny pusty feed `news.err.ee/rss` (ferry-status bez fałszywego ERR_RSS). vitest integrations+bn3-err-rss+risk-keys **59/59**.
+- **Dalej:** push → CI → gotowe do F7 @ sha. Po F7: Imperva/tolerancja albo DP; SMS DP-125 osobno (#697).
+- Bez push na main.
+
 ## 2026-11-01 11:50 — BN3 RSS ERR (decyzja 61 pkt 3; Yle = W64 STOP)
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne`.
