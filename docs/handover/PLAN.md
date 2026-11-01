@@ -1228,11 +1228,8 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-127 | Cursor | Odbiór #699: `ferry-status` observations puste — dodać `err_rss_enabled` / `err_rss_items` / `err_rss_hits` (bez migracji) | #699 odbiór / F7 #701 | BN3 / ERR RSS | SCALONE #702 `483a7ce8` |
 | DP-128 | Cursor | ATA/ATD z AIS tylko przy przejściu geofence (F7 r2: para ≤20 min, histereza 3/4 km, pas 3–4 pomijany, stronicowanie); korekta ATA XPRS HELA-TLL (`dd177080…` → W_REJSIE do DP-130) | F7 #702 / #703 r2 | BN4 / AIS | SCALONE #703 `d8708766` / **0363** |
 | DP-130 | Cursor | Trigger 0264 cofa DOPLYNAL→W_REJSIE przy ATA null (23 rejsy utknięte: HEL-TLL 15, HELA-TLL 6, STO-TLL 1, KAA-GDY 1); trigger nie nadpisuje jawnego DOPLYNAL; migracja porządkująca; testy db+unit | F7 #703 r2 | BN4 / sailings | SCALONE #704 `68421fbb` / **0364** |
-| DP-133 | Cursor | `detect_ferry_gps_stuck_at_departure` i `detect_ferry_overdue` w jednym cronie — wyjątek w nowej funkcji wycofuje tę samą transakcję; osobny job albo blok exception | F7 #705 | BN4 / cron | w kolejce |
-| DP-134 | Cursor | `ferry_sailings_map` filtr `fr.active` — wyłączenie trasy w trakcie rejsu z ładunkami usuwa rejs z mapy; join bez `fr.active` na mapie | F7 #706 r1 | BN4 / map | w kolejce |
-| DP-135 | Cursor | Test behawioralny SQL `ferry_sailings_map` zamiast samego grepa w `status.sh` | F7 #706 r1 | BN4 / testy | w kolejce |
+| DP-133 | Cursor | `detect_ferry_gps_stuck_at_departure` i `detect_ferry_overdue` w jednym cronie — wyjątek w nowej funkcji wycofuje tę samą transakcję; osobny job albo blok exception | F7 #705 | BN4 / cron | W TOKU (**0369** `tower-prom-gps-port`) |
 | DP-131 | Cursor | Alarm HIGH gdy transport status FERRY („na promie”), a telematyka stoi ≤3 km od portu wyjścia po ATD/ATA rejsu (dedup per transport+rejs; bez zmiany statusu); przypadek 01.11 GDN-NYN ATA 10:45Z / GPS 0,2 km Gdańsk do 12:12Z | F7 #703 komentarz 01.11 15:02 | BN4 / ferry+GPS | SCALONE #705 `aa6ab71c` / **0365** |
-| DP-133 | Cursor | `detect_ferry_gps_stuck_at_departure` i `detect_ferry_overdue` w jednym cronie — wyjątek w nowej funkcji wycofuje tę samą transakcję; osobny job albo blok exception | F7 #705 | BN4 / cron | w kolejce |
 | DP-134 | Cursor | `ferry_sailings_map` filtr `fr.active` — wyłączenie trasy w trakcie rejsu z ładunkami usuwa rejs z mapy; join bez `fr.active` na mapie | F7 #706 r1 | BN4 / map | w kolejce |
 | DP-135 | Cursor | Test behawioralny SQL `ferry_sailings_map` zamiast samego grepa w `status.sh` | F7 #706 r1 | BN4 / testy | w kolejce |
 | DP-136 | Cursor | Przepięcie rejsu (0344) patrzy tylko na `sweden_land_geom` — dodać FI / `finland_land_geom` | F7 #708 r1 | BN4 / ferry | w kolejce |
@@ -1302,7 +1299,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 ### BN9 — część na produkcji; ekrany zależne od danych (BN9-c*)
 Źródło: #671. BN9-a (#575) i BN9-b (#670) na produkcji. Zostają (koordynator, `wyglad/*`, zaraz po swoim etapie):
 - **BN9-c1** — ~~SCALONE~~ (#692 `b24b95ba`: ekran importu Vikinga + DP-86/87/104); komunikaty i ręczny komunikat w Ryzykach — część w BN3;
-- **BN9-c2** po BN4 — **W TOKU** (`pakiet/bn9-c2-ferry-vessels-baza`): Cursor — Q-18 EE/FI/STO/KPS + `aisDb` `vesselId`=`vessels.id` (bez listy demo); koordynator (`wyglad/*`) — markery, pozycja szacowana, pasek śledzenia;
+- **BN9-c2** po BN4 — Cursor ~~SCALONE~~ (#709 `7db16a87`: Q-18 EE/FI/STO/KPS + `aisDb` `vesselId`=`vessels.id`); koordynator (`wyglad/*`) — markery, pozycja szacowana, pasek śledzenia;
 - **BN9-c3** po BN5 — pogoda morska Kokpit/Ryzyka;
 - **BN9-c4** po BN6 — Ryzyka › Drogi LT/LV/EE/FI;
 - **BN9-c5** po BN7/#667 — pomarańczowe linie (odbiór ekranami);
@@ -1317,7 +1314,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 5. ~~**DP-21**~~ przeniesione do #666 (decyzja 63b) — parser pliku właściciela (F7 #680).
 6. ~~**BN3**~~ — **SCALONE** (wycinki + #699 RSS ERR `40141ff4`) — poniżej; DP kolejka / ATD wiarygodne dalej.
 7. ~~**#685** decyzja 63~~ — SCALONE (poniżej).
-8. ~~**BN4**~~ — SCALONE (#701…#708 / **0363–0368**); ~~pkt 8 cz.2~~ SCALONE (#708 `cb28f06f` / **0368**). **W TOKU:** front `FERRY_VESSELS`→baza (**BN9-c2**, `pakiet/bn9-c2-ferry-vessels-baza`) → BN5…BN10 jak #573.
+8. ~~**BN4**~~ — SCALONE (#701…#708 / **0363–0368**); ~~pkt 8 cz.2~~ SCALONE (#708 `cb28f06f` / **0368**); ~~BN9-c2 Cursor~~ SCALONE (#709 `7db16a87`). **W TOKU:** **DP-133** (**0369**) → DP-134/135 → DP-136…138 → BN5…BN10 jak #573 (+ wygląd BN9-c2 koordynator).
 
 ### BN3 · Opóźnienia i odwołania nowych armatorów — SCALONE (po wycinkach 1–3; ~~#685~~ / ~~#691~~ / ~~#692~~ / ~~#694~~ / ~~#695~~ / ~~#696~~ / ~~#686~~ / ~~#699~~; DP kolejka / ATD wiarygodne dalej)
 Źródło: #573 + komentarze BN3 31.10 (spec + decyzje 57–61). Po #667; DP-21 → #666 (63b).
@@ -1347,7 +1344,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 5. ~~**DP-128**~~ SCALONE (#703 `d8708766` / **0363**) — ATA/ATD AIS×geofence (pas 3–4 km pomijany); korekta XPRS HELA-TLL.
 6. ~~**DP-130**~~ SCALONE (#704 `68421fbb` / **0364**) — trigger nie cofa jawnego DOPLYNAL przy ATA null; migracja 23+ rejsów W_REJSIE; testy status + vitest.
 7. ~~**DP-131**~~ SCALONE (#705 `aa6ab71c` / **0365**) — ryzyko HIGH gdy FERRY a GPS ≤3 km od portu wyjścia po ATD/ATA; dedup; bez zmiany statusu; cron `tower-prom-opoznienie`.
-8. ~~**cz.1**~~ SCALONE (#706 `3c0b76ee` / **0366**). ~~Hotfix~~ SCALONE (#707 `bc7998ff` / **0367**). ~~**cz.2**~~ SCALONE (#708 `cb28f06f` / **0368**): FI+STO/KPS arrival backup; outbound+PL↔SE; brzeg FI; Kapellskär; status **544**. **Dalej:** BN9-c2 `FERRY_VESSELS`→baza.
+8. ~~**cz.1**~~ SCALONE (#706 `3c0b76ee` / **0366**). ~~Hotfix~~ SCALONE (#707 `bc7998ff` / **0367**). ~~**cz.2**~~ SCALONE (#708 `cb28f06f` / **0368**): FI+STO/KPS arrival backup; outbound+PL↔SE; brzeg FI; Kapellskär; status **544**. ~~BN9-c2 Cursor~~ SCALONE (#709). **Dalej:** DP-133…135 (cron/mapa) → DP-136…138 → BN5.
 
 ### #687 · DP-114 Tallink HEL–TLL 404 + niepełna pula Alert — SCALONE (`5fc7d4a0` / PR #689)
 Źródło: #687 (Spawn2018, `dla-cursora`). Po #683 prod: `TALLINK_HEL_TLL_URL` `/en/helsinki-tallinn` → HTTP 404; reguła 72 traci połowę puli.
@@ -2444,6 +2441,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 01.11.2026 19:00 | #708 CI status 538/6: TLL-STO/PLD-KPS kolidowały z BN1 NYN-GDN/GDN-NYN → 16:20/18:20; DP-116 timeout 15 s | pętla / F7 #708 |
 | 01.11.2026 19:25 | #708 SCALONE `cb28f06f` / **0368** (F7: gotowe @ 1217fc3d); start BN9-c2 `FERRY_VESSELS`→baza | pętla / F7 #708 |
 | 01.11.2026 19:35 | BN9-c2 krok 1: Q-18 EE/FI/STO/KPS; aisDb vesselId=`vessels.id`; vitest bmapa/i2j/w-prom | pętla / BN9-c2 |
+| 01.11.2026 20:05 | #709 SCALONE `7db16a87`; DP-133 **0369** `tower-prom-gps-port` (osobny cron GPS stuck) | pętla / DP-133 |
 | 31.10.2026 — | Decyzja 73: TLLA-HEL ETA−150 min / HELA-TLL ETD+160 min (fixture Cargo; nocny 165 min OK). Decyzja 74: `sailings.source_ref` 0359; Digitraffic `digitraffic:portcall:<id>:<route>`; HTML/RECZNIE/DANE_STARTOWE wygrywają; #685-b RPC zastępuje digitraffic:% w ±3 h | F7 #688 r1–r4 |
 | 31.10.2026 — | F7 #683 nieblokujące (osobna poprawka): Scheduler grudzień + „on 2 January” → rok bieżący, ciche wygaśnięcie; Alert INFO bez ryzyka/historii — świadomie | F7 #683 r7 |
 | 31.10.2026 — | F7 #683 r8 nieblokujące (osobno): Alert poza Schedulerem obok Schedulera; sprzeczne bloki (resume→cofnięcie auto); rok przy długim oknie Schedulera; mutanty M10/M15–M17/M22 świadomie bez testów | F7 #683 r8 |
