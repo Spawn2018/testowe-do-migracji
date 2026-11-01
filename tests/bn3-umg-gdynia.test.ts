@@ -183,9 +183,9 @@ describe('BN3 UMG × ferry-portnet', () => {
       'statki-w-porcie': UMG_IN,
     }));
     expect(r.ok).toBe(true);
-    expect(Number(r.observations?.umg_stena_rows ?? 0)).toBeGreaterThanOrEqual(1);
+    expect(Number(r.observations?.umg_stena_rows ?? 0)).toBe(3);
     expect(st.sailings.find((s) => s.id === 'kaa-ebba')).toMatchObject({
-      status: 'DOPLYNAL', actual_arrival_at: expect.stringMatching(/^2026-10-31T/),
+      status: 'DOPLYNAL', actual_arrival_at: '2026-10-31T07:50:00.000Z',
     });
     expect(st.sailings.find((s) => s.id === 'gdy-este')).toMatchObject({
       status: 'W_REJSIE', actual_departure_at: expect.stringMatching(/^2026-10-31T/),
