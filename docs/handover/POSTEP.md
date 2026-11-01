@@ -7457,6 +7457,18 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (odbiór prod):** SELECT `here_road_legs` — **12** / active 12 / `browser_fetch` 5; core bez zmian (3495/12561/3742/18854/19408); BN7 7× null. `here-roads` **#108803** @ 04:49Z ok (0 prób — core świeże; BN7 poza cronem). Komentarz w #667. **Dalej:** BN3 (#573).
 - Bez push na main.
 
+## 2026-11-01 13:35 — #699 SCALONE; DP-125 ANULOWANE; W64 zamknięte (#697)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE; #697 — odpowiedź właściciela 01.11 11:24/11:25 wpisana. Bez nowych `pilne`.
+- Scalanie: #699 SCALONE `40141ff4` (F7: gotowe do scalenia @ `700b070a`, CI unit/db/visual zielone). Bez push na main.
+- **Krok (docs / #697):**
+  - PLAN §4 BN3: ~~RSS ERR #699~~ SCALONE; Imperva/tolerancja oznaczone jako pokryte wcześniejszymi testami; dalej DP-108 / ATD / DP kolejka / BN4;
+  - DP-125 **ANULOWANE** (właściciel: „79: bez SMS” — nie robić PR SMS);
+  - W64 **zamknięte** (decyzja 76 A); decyzje **77** (UMG), **78** (lód), **79** (bez SMS) w §5; 73–78/80 potwierdzone;
+  - POSTEP + §8.
+- **Dalej:** DP kolejka BN3 (np. DP-108 ODWOLANY→FERRY_CANCELLED) albo ATD wiarygodne / BN4.
+- Bez push na main.
+
 ## 2026-11-01 13:10 — #699 F7 r2 POPRAWKI (R2-B1 + filtr)
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE; #697 `do-potwierdzenia`. Bez nowych `pilne`.
