@@ -7457,6 +7457,18 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (odbiór prod):** SELECT `here_road_legs` — **12** / active 12 / `browser_fetch` 5; core bez zmian (3495/12561/3742/18854/19408); BN7 7× null. `here-roads` **#108803** @ 04:49Z ok (0 prób — core świeże; BN7 poza cronem). Komentarz w #667. **Dalej:** BN3 (#573).
 - Bez push na main.
 
+## 2026-11-01 05:25 — #695 F7 r3 testy mutacji (UMG)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne`.
+- Scalanie: brak „F7: gotowe do scalenia” (F7 r3 @ 12e51aa5 — kod OK, 3 testy). CI @ 12e51aa5 unit/db/visual ✔. Bez push na main.
+- **Krok F7 #695 r3 (tylko testy):**
+  1. przyszłe ETD +60 przy działającym Stena → `delayed_departure` bez zmian;
+  2. 2×OK + 1×503 → `SOURCE_DOWN:UMG_GDY` zostaje otwarte (mutacja `okPages === 0`);
+  3. RECZNIE + STENA_STATUS down + ETA +60 → bez `delayed_arrival`.
+  - vitest bn3-umg-gdynia **17**.
+- **Dalej:** push → CI → gotowe do F7 @ sha. Po F7: podejrzenie 45 min+AIS (decyzja 61).
+- Bez push na main.
+
 ## 2026-11-01 05:10 — #695 F7 r2 POPRAWKI (UMG B2/B4)
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne`.

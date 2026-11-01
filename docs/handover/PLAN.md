@@ -2368,6 +2368,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 01.11.2026 04:10 | #694 SCALONE `ef89f5d3` (F7: gotowe @ e22ad036); start BN3 UMG Gdynia `pakiet/bn3-umg-gdynia` | pętla |
 | 01.11.2026 04:55 | #695 F7 r1 POPRAWKI: B1 przyszłe ETD→delayed; B2 ETA+próg; B3 tr[^>]*> + SOURCE_DOWN tylko 3×OK; vitest 12 | pętla |
 | 01.11.2026 05:10 | #695 F7 r2 POPRAWKI: B2 delayed_* tylko przy SOURCE_DOWN:STENA_STATUS (+ aktualizacja własnej); B4 past ETD→actual tylko gdy „w porcie” OK; vitest 14 | pętla |
+| 01.11.2026 05:25 | #695 F7 r3: 3 testy mutacji (przyszłe ETD bez down; 2OK+503 SOURCE_DOWN; RECZNIE+ETA przy down); vitest 17 | pętla |
 | 31.10.2026 — | Decyzja 73: TLLA-HEL ETA−150 min / HELA-TLL ETD+160 min (fixture Cargo; nocny 165 min OK). Decyzja 74: `sailings.source_ref` 0359; Digitraffic `digitraffic:portcall:<id>:<route>`; HTML/RECZNIE/DANE_STARTOWE wygrywają; #685-b RPC zastępuje digitraffic:% w ±3 h | F7 #688 r1–r4 |
 | 31.10.2026 — | F7 #683 nieblokujące (osobna poprawka): Scheduler grudzień + „on 2 January” → rok bieżący, ciche wygaśnięcie; Alert INFO bez ryzyka/historii — świadomie | F7 #683 r7 |
 | 31.10.2026 — | F7 #683 r8 nieblokujące (osobno): Alert poza Schedulerem obok Schedulera; sprzeczne bloki (resume→cofnięcie auto); rok przy długim oknie Schedulera; mutanty M10/M15–M17/M22 świadomie bez testów | F7 #683 r8 |

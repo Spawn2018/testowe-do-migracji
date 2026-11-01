@@ -2,6 +2,7 @@
  * BN3 pkt 7 — Urząd Morski Gdynia: zapas ETA/ATA/ETD Stena GDY↔KAA.
  * F7 #695 r1: B1 przyszłe ETD; B3 tr[^>]*> + SOURCE_DOWN tylko po 3×OK.
  * F7 #695 r2: B2 delayed tylko przy SOURCE_DOWN:STENA_STATUS; B4 past ETD wymaga OK „w porcie”.
+ * F7 #695 r3: mutacje — przyszłe ETD bez down; częściowy SOURCE_DOWN; RECZNIE+ETA przy down.
  */
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -457,5 +458,66 @@ describe('BN3 UMG × ferry-portnet', () => {
       'statki-w-porcie': UMG_IN,
     }));
     expect(st2.risks.filter((r) => r.dedup.startsWith('SOURCE_DOWN:UMG_GDY'))).toHaveLength(0);
+  });
+
+  /* F7 #695 r3 — mutacje przeżyte w r2: 3 testy bez zmian w kodzie produkcyjnym. */
+  it('F7 r3: przyszłe ETD +60 min przy działającym Stena → delayed_departure bez zmian', async () => {
+    const st = new MemStore();
+    st.sailings.push({
+      id: 'gdy-este-fut-ok', vessel_id: ESTE, route: 'GDY-KAA',
+      departure_at: '2026-10-31T17:00:00.000Z', arrival_at: '2026-10-31T21:00:00.000Z',
+      delayed_departure_at: null, delayed_arrival_at: null,
+      actual_departure_at: null, actual_arrival_at: null,
+      status: 'ZAPLANOWANY', source: 'STENA',
+    });
+    const futureEtd = UMG_ETD.replace('31.10.2026 10:00:00', '31.10.2026 19:00:00');
+    await runFerryPortnet(deps(st, {
+      'port-calls': PORTNET,
+      'statki-spodziewane': EMPTY_TABLE,
+      'statki-wychodzace': futureEtd,
+      'statki-w-porcie': EMPTY_TABLE,
+    }));
+    const s = st.sailings.find((x) => x.id === 'gdy-este-fut-ok')!;
+    expect(s.delayed_departure_at).toBeNull();
+    expect(s.actual_departure_at).toBeNull();
+    expect(s.status).toBe('ZAPLANOWANY');
+  });
+
+  it('F7 r3: 2 strony OK + 1×503 → SOURCE_DOWN UMG_GDY otwarte (nie zamykane)', async () => {
+    const st = new MemStore();
+    st.risks.push({
+      kind: 'INTEGRATION', severity: 'MEDIUM', title: 'x', titleKey: 'rk_x',
+      params: {}, detail: {}, dedup: 'SOURCE_DOWN:UMG_GDY:old',
+    });
+    /* okPages=2 (nie 0) — mutacja `okPages === 0` błędnie zamknęłaby ryzyko. */
+    await runFerryPortnet(deps(st, {
+      'port-calls': PORTNET,
+      'statki-spodziewane': UMG_ETA,
+      'statki-wychodzace': UMG_ETD,
+      'statki-w-porcie': 503,
+    }));
+    expect(st.risks.some((r) => r.dedup.startsWith('SOURCE_DOWN:UMG_GDY'))).toBe(true);
+  });
+
+  it('F7 r3: RECZNIE + STENA_STATUS down + ETA +60 → delayed_arrival bez zmian', async () => {
+    const st = new MemStore();
+    st.risks.push({
+      kind: 'INTEGRATION', severity: 'MEDIUM', title: 'Stena status', titleKey: 'rk_source_down',
+      params: {}, detail: {}, dedup: 'SOURCE_DOWN:STENA_STATUS:x',
+    });
+    st.sailings.push({
+      id: 'kaa-spir-recz', vessel_id: SPIR, route: 'KAA-GDY',
+      departure_at: '2026-10-31T08:00:00.000Z', arrival_at: '2026-10-31T12:00:00.000Z',
+      delayed_departure_at: null, delayed_arrival_at: null,
+      actual_departure_at: null, actual_arrival_at: null,
+      status: 'ZAPLANOWANY', source: 'RECZNIE',
+    });
+    await runFerryPortnet(deps(st, {
+      'port-calls': PORTNET,
+      'statki-spodziewane': UMG_ETA,
+      'statki-wychodzace': EMPTY_TABLE,
+      'statki-w-porcie': EMPTY_TABLE,
+    }));
+    expect(st.sailings.find((s) => s.id === 'kaa-spir-recz')?.delayed_arrival_at).toBeNull();
   });
 });
