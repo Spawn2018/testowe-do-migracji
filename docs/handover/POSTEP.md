@@ -7471,18 +7471,6 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Dalej:** push → CI → gotowe do F7 @ sha. Po F7: Imperva/tolerancja albo DP z kolejki; SMS DP-125 osobno (#697).
 - Bez push na main.
 
-## 2026-11-01 10:55 — #698 SCALONE; start BN3 RSS ERR (+ W64 Yle STOP)
-
-- Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne`.
-- Scalanie: **#698 SCALONE** merge `d0dacf4b` (F7: gotowe do scalenia @ `5efbae88`). Bez push na main.
-- **Krok BN3 decyzja 61 pkt 3** (`pakiet/bn3-rss-err-yle-stop`):
-  - RSS ERR `news.err.ee/rss` w `ferry-status`: filtr (Viking/XPRS/Finbo/Eckerö/Tallink + tühist/peru/cancel*) → FERRY MEDIUM + `sourceUrl`/cytat (regulamin ERR: tytuł+≤5 zdań+link).
-  - **Decyzja 69:** bez AUTO `operator_notices` ODWOLANY z prasy (historia = ryzyko z dowodem); bez zmiany statusu rejsu.
-  - SOURCE_DOWN:ERR_RSS przy awarii/strukturze; **Yle niepodłączone** (W64 STOP — regulamin płatnych app).
-  - vitest bn3-err-rss + risk-keys.
-- **Dalej:** push → CI → gotowe do F7. Potem Imperva/tolerancja / DP-125 SMS (#697) / reszta BN3.
-- Bez push na main.
-
 ## 2026-11-01 10:50 — #698 F7 r2 POPRAWKI (B-r2-1 / B-r2-2 / asercja)
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne`.
