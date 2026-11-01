@@ -7469,6 +7469,19 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Dalej:** DP kolejka BN3 (np. DP-108 ODWOLANY→FERRY_CANCELLED) albo ATD wiarygodne / BN4.
 - Bez push na main.
 
+## 2026-11-01 15:00 — #703 F7 r2 POPRAWKI (DP-128 B1/P1/P2 + DP-130)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE (`pilne`, nic nie budować). Bez nowych `pilne`.
+- Scalanie: **#703** F7 r2 BLOKER @ `0e0353e5` — nie scalać; poprawki w tym PR. Bez push na main.
+- **Krok (F7 r2):**
+  - **B1** ATD: p_in = ostatnia ≤3 km, p_out = pierwsza późniejsza >4 km; pas 3–4 km pomijany (gęsty tor co 1 min GDY/GDN/TLLA @ 8/12/17 kn);
+  - **P1** ATA: analogicznie — lastClear (>4 km lub SOG≥3), pas bez SOG nie blokuje (NYN 17 kn bez `sog_kn`);
+  - **P2** **0363**: `status_note` — W_REJSIE zostaje (0264 cofa closeStale DOPLYNAL) do **DP-130**;
+  - **DP-130** w rejestrze / BN4 pkt 6 (po #703): trigger + 23 rejsy;
+  - vitest `dp128-geofence-transition` (+ gęste tory); decyzja 81 przyjęta właścicielem 14:45.
+- **Dalej:** push → CI → gotowe do F7. Po F7: DP-130 → BN4 pkt 7 (luka AIS / `AIS_<port>` / arrival backup).
+- Bez push na main.
+
 ## 2026-11-01 14:45 — #703 F7 r1 POPRAWKI (DP-128 geofence)
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE (`pilne`, nic nie budować). Bez nowych `pilne`.

@@ -1,6 +1,7 @@
 /**
- * DP-128 F7 r1: ATD/ATA z AIS tylko przy przejściu geofence z histerezą i luką ≤20 min.
- * Świadomy skutek (decyzja 81): przerwa sygnału >20 min przy nabrzeżu → brak godziny zamiast zgadywania.
+ * DP-128 F7 r2: ATD/ATA z AIS tylko przy przejściu geofence z histerezą i luką ≤20 min.
+ * Pas 3–4 km pomijany (nie przerywa pary). Świadomy skutek (decyzja 81): przerwa
+ * sygnału >20 min przy nabrzeżu → brak godziny zamiast zgadywania.
  */
 
 export type GeofencePos = {
@@ -47,10 +48,15 @@ export function hubBbox(hub: { lat: number; lon: number }, queryKm = GEOFENCE_QU
   };
 }
 
+function isClearOutside(dKm: number, sogKn: number | null): boolean {
+  if (dKm > GEOFENCE_OUT_KM) return true;
+  return sogKn != null && Number.isFinite(sogKn) && sogKn >= GEOFENCE_CLEAR_SOG_KN;
+}
+
 /**
- * ATD: najpóźniejsza para kolejnych pozycji p_in (≤3 km) → p_out (>4 km),
- * z p_out.t − p_in.t ≤ 20 min. Czas = p_in.t.
- * `rows` — pozycje w okolicy hubu od since; kolejność dowolna.
+ * ATD: p_in = ostatnia pozycja ≤3 km, p_out = pierwsza późniejsza >4 km,
+ * bez pozycji ≤3 km pomiędzy (pas 3–4 km pomijany). p_out.t − p_in.t ≤ 20 min.
+ * Czas = p_in.t. `rows` — pozycje w okolicy hubu od since; kolejność dowolna.
  */
 export function findAtdTransitionIso(
   rows: GeofencePos[],
@@ -60,24 +66,34 @@ export function findAtdTransitionIso(
     .filter((r) => Number.isFinite(Date.parse(r.observed_at)))
     .slice()
     .sort((a, b) => a.observed_at.localeCompare(b.observed_at));
+  let lastIn: GeofencePos | null = null;
   let best: string | null = null;
-  for (let i = 0; i < sorted.length - 1; i++) {
-    const pin = sorted[i]!;
-    const pout = sorted[i + 1]!;
-    const dIn = haversineKm(pin.lat, pin.lon, hub.lat, hub.lon);
-    const dOut = haversineKm(pout.lat, pout.lon, hub.lat, hub.lon);
-    if (dIn > GEOFENCE_IN_KM) continue;
-    if (dOut <= GEOFENCE_OUT_KM) continue;
-    const gap = Date.parse(pout.observed_at) - Date.parse(pin.observed_at);
-    if (gap < 0 || gap > GEOFENCE_PAIR_MAX_MS) continue;
-    best = new Date(pin.observed_at).toISOString();
+  for (const row of sorted) {
+    const d = haversineKm(row.lat, row.lon, hub.lat, hub.lon);
+    if (d <= GEOFENCE_IN_KM) {
+      lastIn = row;
+      continue;
+    }
+    if (d <= GEOFENCE_OUT_KM) {
+      /* Pas 3–4 km: pomijaj — nie przerywa pary, nie jest p_out. */
+      continue;
+    }
+    /* d > 4 km = p_out */
+    if (lastIn) {
+      const gap = Date.parse(row.observed_at) - Date.parse(lastIn.observed_at);
+      if (gap >= 0 && gap <= GEOFENCE_PAIR_MAX_MS) {
+        best = new Date(lastIn.observed_at).toISOString();
+      }
+      lastIn = null;
+    }
   }
   return best;
 }
 
 /**
- * ATA: najwcześniejsza pozycja ciągłej serii w porcie (≤3 km), której poprzednia
- * jest ≤20 min wcześniej, ma >4 km albo SOG ≥3 kn. Czas = p_in.t.
+ * ATA: najwcześniejsza pozycja ciągłej serii w porcie (≤3 km), przed którą
+ * ostatnia pozycja z SOG ≥3 albo >4 km (pas 3–4 bez SOG pomijany), bez ≤3 km
+ * pomiędzy, w ≤20 min. Czas = p_in.t.
  */
 export function findAtaTransitionIso(
   rows: GeofencePos[],
@@ -87,21 +103,25 @@ export function findAtaTransitionIso(
     .filter((r) => Number.isFinite(Date.parse(r.observed_at)))
     .slice()
     .sort((a, b) => a.observed_at.localeCompare(b.observed_at));
-  for (let i = 1; i < sorted.length; i++) {
-    const prev = sorted[i - 1]!;
-    const pin = sorted[i]!;
-    const dIn = haversineKm(pin.lat, pin.lon, hub.lat, hub.lon);
-    if (dIn > GEOFENCE_IN_KM) continue;
-    /* Ciągła seria: poprzednia też w porcie → to nie jest początek wejścia. */
-    const dPrev = haversineKm(prev.lat, prev.lon, hub.lat, hub.lon);
-    if (dPrev <= GEOFENCE_IN_KM) continue;
-    const gap = Date.parse(pin.observed_at) - Date.parse(prev.observed_at);
-    if (gap < 0 || gap > GEOFENCE_PAIR_MAX_MS) continue;
-    const sog = prev.sog_kn;
-    const clear = dPrev > GEOFENCE_OUT_KM
-      || (sog != null && Number.isFinite(sog) && sog >= GEOFENCE_CLEAR_SOG_KN);
-    if (!clear) continue;
-    return new Date(pin.observed_at).toISOString();
+  let lastClear: GeofencePos | null = null;
+  for (const row of sorted) {
+    const d = haversineKm(row.lat, row.lon, hub.lat, hub.lon);
+    if (d <= GEOFENCE_IN_KM) {
+      if (lastClear) {
+        const gap = Date.parse(row.observed_at) - Date.parse(lastClear.observed_at);
+        if (gap >= 0 && gap <= GEOFENCE_PAIR_MAX_MS) {
+          return new Date(row.observed_at).toISOString();
+        }
+      }
+      /* W porcie bez ważnej pary — dalsze punkty serii nie są początkiem wejścia. */
+      lastClear = null;
+      continue;
+    }
+    if (isClearOutside(d, row.sog_kn)) {
+      lastClear = row;
+      continue;
+    }
+    /* Pas 3–4 km bez SOG≥3: pomijaj — lastClear zostaje. */
   }
   return null;
 }

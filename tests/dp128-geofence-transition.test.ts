@@ -1,6 +1,6 @@
 /**
- * DP-128 F7 r1 — przejście geofence ATD/ATA (histereza 3/4 km, luka ≤20 min, stronicowanie).
- * Etap: BN4 / AIS; źródło F7 #703 r1 B1–B4.
+ * DP-128 F7 r2 — przejście geofence ATD/ATA (histereza 3/4 km, luka ≤20 min,
+ * pas 3–4 km pomijany, stronicowanie). Etap: BN4 / AIS; źródło F7 #703 r2 B1/P1/P2.
  */
 import { describe, expect, it } from 'vitest';
 import {
@@ -19,6 +19,7 @@ import { AIS_PORT_COORDS } from '../supabase/functions/_shared/ferry/digitraffic
 
 const GDN = AIS_PORT_COORDS.GDN;
 const GDY = AIS_PORT_COORDS.GDY;
+const NYN = AIS_PORT_COORDS.NYN;
 const TLLA = AIS_PORT_COORDS.TLLA;
 const HEL = AIS_PORT_COORDS.HEL;
 const HELA = AIS_PORT_COORDS.HELA;
@@ -32,6 +33,56 @@ function pos(
 /** Punkt ~distKm na N od hubu (przybliżenie 1° ≈ 111 km). */
 function northOf(hub: { lat: number; lon: number }, distKm: number) {
   return { lat: hub.lat + distKm / 111, lon: hub.lon };
+}
+
+/**
+ * Realny tor wyjścia: postój w hubie, potem ruch co 1 min z danym SOG (kn)
+ * radialnie na N — gęste pozycje w pasie 3–4 km (F7 r2 B1).
+ */
+function denseOutboundTrack(
+  hub: { lat: number; lon: number },
+  t0Iso: string,
+  sogKn: number,
+  opts?: { dwellMin?: number; outToKm?: number; withSog?: boolean },
+): GeofencePos[] {
+  const dwellMin = opts?.dwellMin ?? 3;
+  const outToKm = opts?.outToKm ?? 6;
+  const withSog = opts?.withSog !== false;
+  const t0 = Date.parse(t0Iso);
+  const kmPerMin = (sogKn * 1.852) / 60;
+  const rows: GeofencePos[] = [];
+  for (let m = 0; m < dwellMin; m++) {
+    rows.push(pos(new Date(t0 + m * 60_000).toISOString(), hub.lat, hub.lon, 0));
+  }
+  let dist = 0;
+  let m = dwellMin;
+  while (dist < outToKm) {
+    dist = Math.min(outToKm, dist + kmPerMin);
+    const p = northOf(hub, dist);
+    rows.push(pos(
+      new Date(t0 + m * 60_000).toISOString(),
+      p.lat,
+      p.lon,
+      withSog ? sogKn : null,
+    ));
+    m += 1;
+  }
+  return rows;
+}
+
+/** Oczekiwany ATD: ostatnia pozycja ≤3 km przed pierwszą >4 km. */
+function expectedAtdFromTrack(
+  rows: GeofencePos[],
+  hub: { lat: number; lon: number },
+): string | null {
+  const sorted = rows.slice().sort((a, b) => a.observed_at.localeCompare(b.observed_at));
+  let lastIn: string | null = null;
+  for (const r of sorted) {
+    const d = haversineKm(r.lat, r.lon, hub.lat, hub.lon);
+    if (d <= GEOFENCE_IN_KM) lastIn = new Date(r.observed_at).toISOString();
+    else if (d > GEOFENCE_OUT_KM && lastIn) return lastIn;
+  }
+  return null;
 }
 
 describe('DP-128 geofenceTransition — pure', () => {
@@ -94,6 +145,57 @@ describe('DP-128 geofenceTransition — pure', () => {
       pos('2026-09-24T19:30:00.000Z', mid.lat, mid.lon, 5),
       pos('2026-09-24T19:36:00.000Z', GDN.lat, GDN.lon, 0),
     ], GDN)).toBe('2026-09-24T19:36:00.000Z');
+  });
+
+  it('B1 ATD: gęsty tor co 1 min (pas 3–4 km) — GDY/GDN/TLLA przy 8/12/17 kn', () => {
+    for (const [hub, label] of [[GDY, 'GDY'], [GDN, 'GDN'], [TLLA, 'TLLA']] as const) {
+      for (const sog of [8, 12, 17]) {
+        const rows = denseOutboundTrack(hub, '2026-10-22T08:00:00.000Z', sog);
+        const midCount = rows.filter((r) => {
+          const d = haversineKm(r.lat, r.lon, hub.lat, hub.lon);
+          return d > GEOFENCE_IN_KM && d <= GEOFENCE_OUT_KM;
+        }).length;
+        expect(midCount, `${label} ${sog} kn pas 3–4`).toBeGreaterThan(0);
+        expect(findAtdTransitionIso(rows, hub), `${label} ${sog} kn`).toBe(
+          expectedAtdFromTrack(rows, hub),
+        );
+      }
+    }
+  });
+
+  it('P1 ATA: NYN 17 kn bez sog_kn — pas 3–4 km nie blokuje wejścia', () => {
+    const out = northOf(NYN, 6);
+    const mid = northOf(NYN, 3.5);
+    const rows = [
+      pos('2026-09-25T06:00:00.000Z', out.lat, out.lon, null),
+      pos('2026-09-25T06:05:00.000Z', mid.lat, mid.lon, null), /* pas bez SOG */
+      pos('2026-09-25T06:10:00.000Z', NYN.lat, NYN.lon, 0),
+    ];
+    expect(findAtaTransitionIso(rows, NYN)).toBe('2026-09-25T06:10:00.000Z');
+  });
+
+  it('P1 ATA: gęste wejście co 1 min bez sog w pasie 3–4 — GDN/NYN/HEL', () => {
+    for (const hub of [GDN, NYN, HEL]) {
+      const t0 = Date.parse('2026-09-25T08:00:00.000Z');
+      const rows: GeofencePos[] = [];
+      /* Zbliżanie z 6 km do 0, co 1 min, bez sog_kn — kilka punktów w pasie 3–4. */
+      for (let i = 0; i <= 12; i++) {
+        const dist = 6 - i * 0.5;
+        const p = dist <= 0 ? hub : northOf(hub, dist);
+        rows.push(pos(new Date(t0 + i * 60_000).toISOString(), p.lat, p.lon, null));
+      }
+      const midCount = rows.filter((r) => {
+        const d = haversineKm(r.lat, r.lon, hub.lat, hub.lon);
+        return d > GEOFENCE_IN_KM && d <= GEOFENCE_OUT_KM;
+      }).length;
+      expect(midCount).toBeGreaterThan(0);
+      const firstIn = rows.find((r) =>
+        haversineKm(r.lat, r.lon, hub.lat, hub.lon) <= GEOFENCE_IN_KM
+      )!;
+      expect(findAtaTransitionIso(rows, hub)).toBe(
+        new Date(firstIn.observed_at).toISOString(),
+      );
+    }
   });
 });
 

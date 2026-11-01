@@ -1,9 +1,10 @@
--- DP-128 (F7 #703 r1 B4): ręczna korekta ATA Viking XPRS HELA-TLL 01.11 —
+-- DP-128 (F7 #703 r2 P2): ręczna korekta ATA Viking XPRS HELA-TLL 01.11 —
 -- actual_arrival_at z AIS bez przejścia przez geofence (pierwszy sygnał już w TLLA).
--- Czyścimy tylko ATA. Trigger 0264 (ATD jest, ATA null) ustawi W_REJSIE —
--- nie wymuszamy DOPLYNAL. Później closeStaleFiToEeWithoutAta zamknie rejs
--- jako DOPLYNAL bez ATA (ETA+2h minęło, brak otwartego podejrzenia).
--- Idempotentne: tylko gdy ATA = znany fałszywy znacznik AIS.
+-- Czyścimy tylko ATA. Trigger 0264 (ATD jest, ATA null) ustawi / utrzyma W_REJSIE.
+-- closeStaleFiToEeWithoutAta może zapisać DOPLYNAL, ale trigger 0264 przy ATD
+-- i ATA null cofa status z powrotem do W_REJSIE — rejs zostaje W_REJSIE do DP-130
+-- (naprawa triggera / porządek 23 rejsów). Idempotentne: tylko gdy ATA = znany
+-- fałszywy znacznik AIS.
 
 begin;
 
@@ -55,8 +56,8 @@ begin
       'cleared_actual_arrival_at', v_ata,
       'status_before', v_status,
       'status_after', coalesce(v_status_after, 'W_REJSIE'),
-      'status_note', 'W_REJSIE po czyszczeniu ATA (trigger 0264); DOPLYNAL przez closeStaleFiToEeWithoutAta',
-      'reason', 'AIS ATA bez przejścia geofence (DP-128 F7 r1 B4)'
+      'status_note', 'W_REJSIE po czyszczeniu ATA (trigger 0264); closeStale DOPLYNAL cofany przez 0264 do W_REJSIE — zostaje do DP-130',
+      'reason', 'AIS ATA bez przejścia geofence (DP-128 F7 r2 P2)'
     )
   );
 
