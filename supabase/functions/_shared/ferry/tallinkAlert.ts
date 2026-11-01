@@ -23,7 +23,9 @@
  *   stron) obowiązuje **najnowszy** (`dateStart`+`timeStart`, brak `timeStart`=00:00); bez grupowania
  *   po dniach okna (R12-B2). Starsze bez auto; remis / zła data / brak `dateStart` → ryzyko bez auto.
  *   72a (łagodna): przyszły klucz poza wyborem tylko gdy jest już opublikowany Alert; gdy wszystkie
- *   bloki przyszłe — ranking wśród nich (wczesne ogłoszenie). Potem #686 cofnie status przy sprostowaniu.
+ *   bloki przyszłe — ranking wśród nich (wczesne ogłoszenie). #686: najnowszy wzorzec przywrócenia
+ *   (will operate as planned/scheduled | has been reinstated | is no longer cancelled) → cofnięcie
+ *   AUTO ODWOLANY Tallink; RECZNIE/inne źródło → ryzyko MEDIUM bez cofnięcia.
  *   72b: `data-analytics-group` w cudzysłowie lub bez; kampania tylko `(?<![\w-])type=campaign` (nie data-type);
  *   luźny Alert (także obok Schedulera) / kampania z treścią serwisową → brak auto dla wszystkich.
  *   72c: zdegradowany Alert zawsze podnosi ryzyko (nawet gdy inny wygrał auto).
@@ -31,7 +33,8 @@
  *   zdublowanym atrybucie; dedupe po surowym `full` (R12-B3).
  * F7 R13: luźny Alert obok Schedulera zatruwa; `(?<![\w-])type`; kampania-serwisowa (CANCEL/RESUME/statek/
  *   sailing/correction…); invalid_date testy ≤ dziś + kalendarz 11-31.
- * Decyzja 69: wpis AUTO w operator_notices tylko przy ODWOLANY; przy ryzyku historią jest samo ryzyko.
+ * Decyzja 69: wpis AUTO w operator_notices tylko przy ODWOLANY (i #686 PRZYWROCONY);
+ *   przy ryzyku historią jest samo ryzyko.
  * Kampanie pomijane. User-Agent uczciwy; bez obchodzenia.
  */
 import type { FerryRoute } from './polferries.ts';
@@ -101,7 +104,9 @@ const MONTH_NAMES =
 const CANCEL_RE = /\b(cancel(?:led|ed)?|call(?:ed)?\s+off|will\s+not\s+(?:sail|operate|depart)|odwo[lł]an|anulowan|tühistatud|tühistamine)\b/i;
 const SUSPEND_SAILING_RE = /\bsuspended\b/i;
 const SAILING_CTX_RE = /\b(sailing|departure|departing|voyage|vessel|route|ferry|shuttle)\b/i;
-const RESUME_RE = /\b(?:is\s+not\s+cancel|not\s+cancelled|not\s+canceled|resum(?:e|es|ed|ing)|returns?\s+to|back\s+in\s+service|operates\s+as\s+planned)\b/i;
+const RESUME_RE = /\b(?:is\s+not\s+cancel|not\s+cancelled|not\s+canceled|is\s+no\s+longer\s+cancelled|is\s+no\s+longer\s+canceled|has\s+been\s+reinstated|resum(?:e|es|ed|ing)|returns?\s+to|back\s+in\s+service|operates\s+as\s+planned|will\s+operate\s+as\s+(?:planned|scheduled))\b/i;
+/** #686 / decyzja 72 cz. 2: sufiks przywrócenia (ścisła allowlista jak 68). */
+const RESTORE_TAIL = String.raw`(?:will\s+operate\s+as\s+(?:planned|scheduled)|has\s+been\s+reinstated|is\s+no\s+longer\s+cancel(?:led|ed))\.?`;
 /** F7 #683 R13-B2 / 72b: kampania tylko `type=`, nie `data-type` (`\b` łapie po `-`). */
 const CAMPAIGN_TYPE_RE = /(?<![\w-])type\s*=\s*(["'])campaign\1/i;
 /** F7 #683 R13-B1: cudzysłów `"`/`'` albo bez cudzysłowu. */
@@ -129,6 +134,8 @@ export interface TallinkAlert {
   multiTime: boolean;
   /** F7 #683 R5: auto-ODWOLANY tylko przy ścisłym wzorcu zdania (allowlist). */
   autoCancelOk: boolean;
+  /** #686: auto-przywrócenie tylko przy ścisłym wzorcu zdania (allowlist restore). */
+  autoRestoreOk: boolean;
   routes: FerryRoute[];
   /** Okno Scheduler (wyświetlanie CMS) — tylko do odrzucania wygasłych (R3-B1). */
   windowStartYmd: string | null;
@@ -580,6 +587,76 @@ export function autoCancelFromCancelSentence(
   return hits[0]!;
 }
 
+/**
+ * #686: zdanie przywrócenia — ta sama rama co cancel (statek + HH:MM + from/to + data),
+ * sufiks: will operate as planned|scheduled | has been reinstated | is no longer cancelled.
+ */
+function matchStrictAutoRestoreSentence(sent: string, year: number): AutoCancelFields | null {
+  const s = sent.trim().replace(/\s+/g, ' ');
+  const ship = SHIP_NAME_ALT;
+  const port = PORT_NAME_ALT;
+  const date = DATE_CAPTURE;
+  const patterns: RegExp[] = [
+    new RegExp(
+      String.raw`^(?:The\s+)?(${ship})\s+(\d{1,2}):(\d{2})\s+(?:departure|sailing)\s+from\s+(${port})\s+to\s+(${port})\s+on\s+(?:today,?\s+)?${date}\s+${RESTORE_TAIL}$`,
+      'i',
+    ),
+    new RegExp(
+      String.raw`^(?:The\s+)?(${ship})\s+(\d{1,2}):(\d{2})\s+(?:departure|sailing)\s+on\s+(?:today,?\s+)?${date}\s+from\s+(${port})\s+to\s+(${port})\s+${RESTORE_TAIL}$`,
+      'i',
+    ),
+    new RegExp(
+      String.raw`^(?:today,?\s+)?${date},?\s+(?:the\s+)?(${ship})\s+(\d{1,2}):(\d{2})\s+(?:departure|sailing)\s+from\s+(${port})\s+to\s+(${port})\s+${RESTORE_TAIL}$`,
+      'i',
+    ),
+  ];
+  for (let i = 0; i < patterns.length; i++) {
+    const m = s.match(patterns[i]!);
+    if (!m) continue;
+    if (i === 0) {
+      const vessel = mapShipAlias(m[1]!);
+      const hm = `${String(Number(m[2])).padStart(2, '0')}:${m[3]}`;
+      const route = routeFromPorts(m[4]!, m[5]!);
+      const ymd = ymdFromDateParts(m[6]!, m[7]!, m[8], year);
+      if (!vessel || !route) return null;
+      return { startYmd: ymd, endYmd: ymd, hm, vessel, routes: [route] };
+    }
+    if (i === 1) {
+      const vessel = mapShipAlias(m[1]!);
+      const hm = `${String(Number(m[2])).padStart(2, '0')}:${m[3]}`;
+      const ymd = ymdFromDateParts(m[4]!, m[5]!, m[6], year);
+      const route = routeFromPorts(m[7]!, m[8]!);
+      if (!vessel || !route) return null;
+      return { startYmd: ymd, endYmd: ymd, hm, vessel, routes: [route] };
+    }
+    const ymd = ymdFromDateParts(m[1]!, m[2]!, m[3], year);
+    const vessel = mapShipAlias(m[4]!);
+    const hm = `${String(Number(m[5])).padStart(2, '0')}:${m[6]}`;
+    const route = routeFromPorts(m[7]!, m[8]!);
+    if (!vessel || !route) return null;
+    return { startYmd: ymd, endYmd: ymd, hm, vessel, routes: [route] };
+  }
+  return null;
+}
+
+/** #686: cała treść = jedno zdanie przywrócenia (+ opcjonalnie przeprosiny z 68). */
+export function autoRestoreFromRestoreSentence(
+  text: string,
+  year: number,
+): AutoCancelFields | null {
+  const hits: AutoCancelFields[] = [];
+  for (const sent of alertSentences(text)) {
+    const hit = matchStrictAutoRestoreSentence(sent, year);
+    if (hit) {
+      hits.push(hit);
+      continue;
+    }
+    if (!isNeutralApologySentence(sent)) return null;
+  }
+  if (hits.length !== 1) return null;
+  return hits[0]!;
+}
+
 /** Data i opcjonalna godzina z treści Alertu (B2). R2-B2: wiele HH:MM/dat → multiTime. */
 export function parseAlertContentDates(
   text: string,
@@ -680,26 +757,37 @@ export function parseTallinkAlerts(
     const auto = (allowAutoCancel && !filterReject && kind === 'ODWOLANY')
       ? autoCancelFromCancelSentence(text, yearHint)
       : null;
+    const restore = (allowAutoCancel && !filterReject && kind === 'INFO' && !auto)
+      ? autoRestoreFromRestoreSentence(text, yearHint)
+      : null;
     let autoCancelOk = auto != null;
+    let autoRestoreOk = restore != null;
+    const fields = autoCancelOk ? auto! : (autoRestoreOk ? restore! : null);
     const multiTime = !autoCancelOk && kind === 'ODWOLANY'
       ? true
-      : (content?.multiTime ?? false);
-    const endForExpiry = auto?.endYmd || content?.endYmd
+      : (!autoRestoreOk && kind === 'INFO' && RESUME_RE.test(text) && !fields
+        ? true
+        : (content?.multiTime ?? false));
+    const endForExpiry = fields?.endYmd || content?.endYmd
       || (dateEnd && isValidYmd(dateEnd) ? dateEnd : null);
     if (!text) filterReject = filterReject ?? 'empty';
     if (endForExpiry && isValidYmd(endForExpiry) && endForExpiry < today) {
       filterReject = filterReject ?? 'expired';
     }
-    if (filterReject) autoCancelOk = false;
+    if (filterReject) {
+      autoCancelOk = false;
+      autoRestoreOk = false;
+    }
 
     alerts.push({
       kind,
       text: text.slice(0, 800),
-      vessel: autoCancelOk ? auto!.vessel : null,
+      vessel: fields ? fields.vessel : null,
       multiVessel: false,
-      multiTime: filterReject && kind === 'ODWOLANY' ? true : multiTime,
+      multiTime: filterReject && (kind === 'ODWOLANY' || autoRestoreOk) ? true : multiTime,
       autoCancelOk,
-      routes: autoCancelOk ? auto!.routes : [],
+      autoRestoreOk,
+      routes: fields ? fields.routes : [],
       windowStartYmd: dateStart,
       windowEndYmd: dateEnd,
       windowTimeStart: timeNorm.hm,
@@ -709,9 +797,9 @@ export function parseTallinkAlerts(
       rawFull: rawFull.replace(/\s+/g, ' ').trim(),
       filterReject,
       suppressedByNewer: false,
-      contentStartYmd: autoCancelOk ? (auto?.startYmd ?? null) : null,
-      contentEndYmd: autoCancelOk ? (auto?.endYmd ?? null) : null,
-      contentHm: autoCancelOk ? (auto?.hm ?? null) : null,
+      contentStartYmd: fields ? fields.startYmd : null,
+      contentEndYmd: fields ? fields.endYmd : null,
+      contentHm: fields ? fields.hm : null,
       sourceUrl: pageUrl,
     });
   };
@@ -766,7 +854,8 @@ export function dedupeTallinkAlerts(alerts: TallinkAlert[]): TallinkAlert[] {
       continue;
     }
     prev.autoCancelOk = prev.autoCancelOk && a.autoCancelOk;
-    if (!prev.autoCancelOk) {
+    prev.autoRestoreOk = prev.autoRestoreOk && a.autoRestoreOk;
+    if (!prev.autoCancelOk && !prev.autoRestoreOk) {
       prev.vessel = null;
       prev.routes = [];
       prev.contentStartYmd = null;
@@ -781,6 +870,7 @@ export function dedupeTallinkAlerts(alerts: TallinkAlert[]): TallinkAlert[] {
 
 function demoteAlert(a: TallinkAlert): void {
   a.autoCancelOk = false;
+  a.autoRestoreOk = false;
   a.suppressedByNewer = true;
   a.vessel = null;
   a.routes = [];
@@ -851,6 +941,13 @@ export function applyNewestAlertWins(alerts: TallinkAlert[], now: Date = new Dat
     return;
   }
   const winner = winners[0]!;
+  // #686: najnowszy wzorzec przywrócenia wygrywa — starsze cancel bez auto.
+  if (winner.autoRestoreOk && !winner.filterReject) {
+    for (const a of pool) {
+      if (a !== winner) demoteAlert(a);
+    }
+    return;
+  }
   // Najnowszy niewzorcowy (Correction / zła allowlista) → bez ODWOLANY ze starszych.
   if (winner.kind !== 'ODWOLANY' || !winner.autoCancelOk || winner.filterReject) {
     for (const a of pool) demoteAlert(a);
@@ -926,4 +1023,48 @@ export function matchTallinkAlertSailings(
   if (only.status === 'ODWOLANY') return { kind: 'already_cancelled', sailing: only };
   if (only.source === 'RECZNIE') return { kind: 'manual_only', sailing: only };
   return { kind: 'match', sailing: only };
+}
+
+export type TallinkRestoreMatch =
+  | { kind: 'restore'; sailing: TallinkAlertMatchCandidate }
+  | { kind: 'not_cancelled'; sailing: TallinkAlertMatchCandidate }
+  | { kind: 'ambiguous'; candidates: TallinkAlertMatchCandidate[] }
+  | { kind: 'beyond_horizon' }
+  | { kind: 'none' };
+
+/**
+ * #686: dopasowanie przywrócenia — ta sama jednoznaczność co cancel (statek/trasa/data/HH:MM).
+ */
+export function matchTallinkRestoreSailings(
+  alert: TallinkAlert,
+  sailings: TallinkAlertMatchCandidate[],
+): TallinkRestoreMatch {
+  if (!alert.autoRestoreOk || alert.multiVessel || alert.multiTime) {
+    return { kind: 'ambiguous', candidates: [] };
+  }
+  if (!alert.contentStartYmd) return { kind: 'ambiguous', candidates: [] };
+
+  const start = alert.contentStartYmd;
+  if (alert.vessel) {
+    const vesselSails = sailings.filter((s) => s.vesselName === alert.vessel);
+    if (vesselSails.length > 0) {
+      const lastMs = Math.max(...vesselSails.map((s) => Date.parse(s.departureAt)));
+      const lastYmd = tallinnYmdHm(new Date(lastMs).toISOString()).ymd;
+      if (start > lastYmd) return { kind: 'beyond_horizon' };
+    }
+  }
+
+  const pool = sailings.filter((s) => {
+    if (alert.vessel && s.vesselName !== alert.vessel) return false;
+    if (alert.routes.length && !alert.routes.includes(s.route as FerryRoute)) return false;
+    if (!departureMatchesAlert(s.departureAt, alert)) return false;
+    if (!alert.vessel && alert.routes.length === 0) return false;
+    return true;
+  });
+
+  if (pool.length === 0) return { kind: 'none' };
+  if (pool.length > 1) return { kind: 'ambiguous', candidates: pool };
+  const only = pool[0]!;
+  if (only.status !== 'ODWOLANY') return { kind: 'not_cancelled', sailing: only };
+  return { kind: 'restore', sailing: only };
 }

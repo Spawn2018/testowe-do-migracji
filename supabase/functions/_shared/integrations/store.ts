@@ -7,9 +7,22 @@ import type { VesselFix } from '../ferry/digitraffic.ts';
 import {
   CANCEL_SUSPECT_DEDUP_PREFIX, sailingIdFromCancelSuspectDedup,
 } from '../ferry/cancelSuspect.ts';
+import {
+  filterLoadsReassignedFromSailing,
+  loadIdsFromSailingCancelledDedups,
+  sailingCancelledRiskLike,
+} from '../ferry/tallinkRestore.ts';
 import type { DbSailing, RiskInput, SailingInsert, SailingPatch, VesselRow } from './sync.ts';
 import { ROAD_LEGS } from '../here/refreshRoadLegs.ts';
 import { legDefFromRow } from '../here/legDefFromRow.ts';
+
+export {
+  filterLoadsReassignedFromSailing,
+  isTallinkAlertAutoCancel,
+  loadIdsFromSailingCancelledDedups,
+  restoreStatusAfterCancel,
+  sailingCancelledRiskLike,
+} from '../ferry/tallinkRestore.ts';
 
 // deno-lint-ignore no-explicit-any
 type Client = any;
@@ -24,6 +37,66 @@ export const CANCEL_SUSPECT_RISK_PAGE_SIZE = SAILINGS_PAGE_SIZE;
 export const CANCEL_SUSPECT_RISK_MAX_PAGES = SAILINGS_MAX_PAGES;
 /** F7 #696 r4: `.in('id', …)` w paczkach — unikaj za długiego URL. */
 export const CANCEL_SUSPECT_SAILING_IN_BATCH = 150;
+/** #686 F7 B3: ryzyka SAILING_CANCELLED dla jednego rejsu — ten sam limit stron. */
+export const SAILING_CANCELLED_RISK_PAGE_SIZE = SAILINGS_PAGE_SIZE;
+export const SAILING_CANCELLED_RISK_MAX_PAGES = SAILINGS_MAX_PAGES;
+export const SAILING_CANCELLED_LOAD_IN_BATCH = CANCEL_SUSPECT_SAILING_IN_BATCH;
+
+type SailingCancelledRiskPageQuery = {
+  select: (cols: string) => SailingCancelledRiskPageQuery;
+  like: (col: string, val: string) => SailingCancelledRiskPageQuery;
+  is: (col: string, val: null) => SailingCancelledRiskPageQuery;
+  order: (col: string, opts?: { ascending?: boolean }) => SailingCancelledRiskPageQuery;
+  range: (from: number, to: number) => Promise<{
+    data: { id: string; load_id: string | null; dedup_key: string | null }[] | null;
+    error: { message: string } | null;
+  }>;
+};
+
+/**
+ * #686 F7 B3 / DP-116: ryzyka SAILING_CANCELLED:%:{sailingId} ze stronicowaniem.
+ * openOnly=true → tylko unresolved (resolve); false → także zamknięte (B2 przepięcia / expire).
+ */
+export async function fetchSailingCancelledRiskRowsPaged(
+  fromTable: () => SailingCancelledRiskPageQuery,
+  sailingId: string,
+  opts?: {
+    openOnly?: boolean;
+    pageSize?: number;
+    must?: <T>(r: { data: T; error: { message: string } | null }, what: string) => T;
+  },
+): Promise<{ id: string; load_id: string | null; dedup_key: string | null }[]> {
+  const pageSize = opts?.pageSize ?? SAILING_CANCELLED_RISK_PAGE_SIZE;
+  const mustFn = opts?.must ?? (<T>(r: { data: T; error: { message: string } | null }, what: string): T => {
+    if (r.error) throw new Error(`${what}: ${r.error.message}`);
+    return r.data;
+  });
+  const like = sailingCancelledRiskLike(sailingId);
+  const out: { id: string; load_id: string | null; dedup_key: string | null }[] = [];
+  const seen = new Set<string>();
+  let from = 0;
+  for (;;) {
+    if (from >= SAILING_CANCELLED_RISK_MAX_PAGES * pageSize) {
+      throw new Error('sailing-cancelled risk page cap exceeded');
+    }
+    let q = fromTable()
+      .select('id,load_id,dedup_key')
+      .like('dedup_key', like);
+    if (opts?.openOnly) q = q.is('resolved_at', null);
+    const r = mustFn(
+      await q.order('id').range(from, from + pageSize - 1),
+      'risk_signals sailing-cancelled page',
+    ) as { id: string; load_id: string | null; dedup_key: string | null }[];
+    for (const row of r) {
+      if (seen.has(row.id)) continue;
+      seen.add(row.id);
+      out.push(row);
+    }
+    if (r.length < pageSize) break;
+    from += pageSize;
+  }
+  return out;
+}
 
 type SailingsPageQuery = {
   select: (cols: string) => SailingsPageQuery;
@@ -255,7 +328,7 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
     async insertOperatorNotice(row: {
       sailingId: string;
       operator: string;
-      kind: 'ODWOLANY' | 'OPOZNIONY' | 'ZMIANA_GODZINY';
+      kind: 'ODWOLANY' | 'OPOZNIONY' | 'ZMIANA_GODZINY' | 'PRZYWROCONY';
       note?: string | null;
       sourceUrl?: string | null;
       newDeparture?: string | null;
@@ -274,6 +347,92 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
         'operator_notices insert AUTO',
       ) as { id: string } | null;
       return r?.id ?? null;
+    },
+    /** #686 F7 B1: ostatni ODWOLANY (+ source_url) — Tallink Alert vs ts.ee. */
+    async latestCancelNotice(sailingId: string) {
+      const rows = must(
+        await sb.from('operator_notices')
+          .select('source,operator,source_url')
+          .eq('sailing_id', sailingId)
+          .eq('kind', 'ODWOLANY')
+          .order('created_at', { ascending: false })
+          .limit(1),
+        'operator_notices latestCancel',
+      ) as { source: string; operator: string; source_url: string | null }[];
+      const row = rows[0];
+      if (!row) return null;
+      return { source: row.source, operator: row.operator, sourceUrl: row.source_url };
+    },
+    /** #686 F7 B3: SAILING_CANCELLED:%:{sailingId} → resolve (stronicowanie). */
+    async resolveSailingCancelledRisks(sailingId: string) {
+      const rows = await fetchSailingCancelledRiskRowsPaged(
+        () => sb.from('risk_signals') as SailingCancelledRiskPageQuery,
+        sailingId,
+        { openOnly: true, must },
+      );
+      const drop = rows.map((r) => r.id);
+      if (!drop.length) return 0;
+      let n = 0;
+      for (let i = 0; i < drop.length; i += SAILING_CANCELLED_LOAD_IN_BATCH) {
+        const batch = drop.slice(i, i + SAILING_CANCELLED_LOAD_IN_BATCH);
+        const updated = must(
+          await sb.from('risk_signals').update({ resolved_at: new Date().toISOString() })
+            .in('id', batch).is('resolved_at', null).select('id'),
+          'risk_signals resolve sailing cancelled',
+        ) as unknown[];
+        n += updated.length;
+      }
+      return n;
+    },
+    /** #686 F7 B3: decyzje FERRY_CANCELLED z ryzyk tego rejsu → EXPIRED (filtr w SQL). */
+    async expireFerryCancelledDecisions(sailingId: string) {
+      const risks = await fetchSailingCancelledRiskRowsPaged(
+        () => sb.from('risk_signals') as SailingCancelledRiskPageQuery,
+        sailingId,
+        { must },
+      );
+      const riskIds = risks.map((r) => r.id);
+      if (!riskIds.length) return 0;
+      let n = 0;
+      for (let i = 0; i < riskIds.length; i += SAILING_CANCELLED_LOAD_IN_BATCH) {
+        const batch = riskIds.slice(i, i + SAILING_CANCELLED_LOAD_IN_BATCH);
+        const updated = must(
+          await sb.from('decisions').update({
+            status: 'EXPIRED',
+            expired_reason: 'nieaktualna — rejs przywrócony (Tallink Alert AUTO)',
+            updated_at: new Date().toISOString(),
+          })
+            .in('risk_id', batch)
+            .in('status', ['NEW', 'ASSIGNED', 'SNOOZED'])
+            .select('id'),
+          'decisions expire ferry cancelled',
+        ) as unknown[];
+        n += updated.length;
+      }
+      return n;
+    },
+    /**
+     * #686 F7 B2: transporty z SAILING_CANCELLED (także zamkniętych po decision_resolve),
+     * które już nie mają tego sailing_id — bez cofania przypisań.
+     */
+    async reassignedLoadsAfterCancel(sailingId: string) {
+      const risks = await fetchSailingCancelledRiskRowsPaged(
+        () => sb.from('risk_signals') as SailingCancelledRiskPageQuery,
+        sailingId,
+        { must },
+      );
+      const loadIds = loadIdsFromSailingCancelledDedups(risks);
+      if (!loadIds.length) return [];
+      const loads: { id: string; sailing_id: string | null }[] = [];
+      for (let i = 0; i < loadIds.length; i += SAILING_CANCELLED_LOAD_IN_BATCH) {
+        const batch = loadIds.slice(i, i + SAILING_CANCELLED_LOAD_IN_BATCH);
+        const chunk = must(
+          await sb.from('loads').select('id,sailing_id').in('id', batch),
+          'loads reassigned after cancel',
+        ) as { id: string; sailing_id: string | null }[];
+        loads.push(...chunk);
+      }
+      return filterLoadsReassignedFromSailing(loadIds, loads, sailingId);
     },
     async raiseRisk(r: RiskInput & { loadId?: string }) {
       const res = await sb.rpc('raise_integration_risk', {
