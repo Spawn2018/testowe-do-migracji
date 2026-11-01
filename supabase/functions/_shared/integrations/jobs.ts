@@ -1767,12 +1767,15 @@ async function applyWinterNavigation(deps: JobDeps, nowIso: string): Promise<{
 
 /**
  * BN3: UMG Gdynia — zapas ATA (KAA-GDY) / ETD (GDY-KAA) / ETA→delayed_arrival (KAA-GDY).
- * Tylko gdy primary (Stena/Portnet) nie ustawił actual_*; ±3 h; RECZNIE/ODWOLANY jak Portnet.
+ * Tylko gdy primary (Stena/Portnet/AIS) nie ustawił actual_*; ±3 h; RECZNIE/ODWOLANY jak Portnet.
+ * F7 #695 r1: przyszłe ETD → delayed_departure (próg); ETA tylko przy pustym delayed + próg;
+ * SOURCE_DOWN zamykane wyłącznie gdy wszystkie 3 strony OK.
  */
 async function applyUmgdyStenaBackup(deps: JobDeps, sinceIso: string): Promise<{
   updated: number; rows: number; risks: number; warnings: string[];
 }> {
   const nowIso = deps.now().toISOString();
+  const nowMs = Date.parse(nowIso);
   const headers = { 'User-Agent': UMG_UA, Accept: 'text/html,application/xhtml+xml' };
   const pages: { url: string; kind: UmgKind }[] = [
     { url: UMG_EXPECTED_URL, kind: 'ETA' },
@@ -1782,7 +1785,8 @@ async function applyUmgdyStenaBackup(deps: JobDeps, sinceIso: string): Promise<{
   const warnings: string[] = [];
   const allRows: UmgShipRow[] = [];
   let okPages = 0;
-  let structureFail = 0;
+  const umgStructureFail = (ws: string[]) =>
+    ws.some((w) => /struktura|pusta tabela/i.test(w));
   for (const p of pages) {
     const page = await readText(deps, p.url, { headers });
     if (!page.ok) {
@@ -1791,23 +1795,22 @@ async function applyUmgdyStenaBackup(deps: JobDeps, sinceIso: string): Promise<{
     }
     const parsed = parseUmgdyGdyniaHtml(page.text, p.kind);
     warnings.push(...parsed.warnings);
-    if (parsed.warnings.some((w) => /struktura/i.test(w))) structureFail += 1;
-    else okPages += 1;
+    if (umgStructureFail(parsed.warnings)) continue;
+    okPages += 1;
     allRows.push(...parsed.rows);
   }
-  if (okPages === 0) {
+  /* F7 #695 r1 B3: zamykać SOURCE_DOWN tylko gdy wszystkie 3 strony OK. */
+  let risks = 0;
+  if (okPages < pages.length) {
     await deps.store.raiseRisk(sourceDownRisk(
       'UMG_GDY',
       warnings.length ? warnings : ['Brak odpowiedzi Urzędu Morskiego Gdynia'],
       nowIso,
       UMG_IN_PORT_URL,
     ));
-    return { updated: 0, rows: 0, risks: 1, warnings };
-  }
-  await deps.store.resolveRisks('SOURCE_DOWN:UMG_GDY:');
-  if (structureFail === pages.length) {
-    await deps.store.raiseRisk(sourceDownRisk('UMG_GDY', warnings, nowIso, UMG_IN_PORT_URL));
-    return { updated: 0, rows: 0, risks: 1, warnings };
+    risks = 1;
+  } else {
+    await deps.store.resolveRisks('SOURCE_DOWN:UMG_GDY:');
   }
 
   const candidates = stenaUmgCandidates(allRows);
@@ -1815,6 +1818,12 @@ async function applyUmgdyStenaBackup(deps: JobDeps, sinceIso: string): Promise<{
   const byName = new Map(vessels.map((v) => [v.name, v.id]));
   const existing = await deps.store.sailingsSince(sinceIso);
   const WINDOW_MS = 3 * 3600_000;
+  const delayMin = deps.store.ferryPortDelayMin
+    ? await deps.store.ferryPortDelayMin()
+    : FERRY_PORT_DELAY_MIN_DEFAULT;
+  const delayMinMs = Math.max(0, delayMin) * 60_000;
+  /* Statki nadal na liście „w porcie” — past ETD nie może stać się actual. */
+  const inPortNames = new Set(allRows.filter((r) => r.kind === 'ATA').map((r) => r.vessel));
   let updated = 0;
 
   for (const c of candidates) {
@@ -1827,8 +1836,21 @@ async function applyUmgdyStenaBackup(deps: JobDeps, sinceIso: string): Promise<{
       const pool = existing.filter((s) =>
         s.vessel_id === vesselId
         && s.route === 'KAA-GDY'
-        && s.actual_arrival_at == null);
+        && s.actual_arrival_at == null
+        && s.status !== 'ODWOLANY');
       const pick = pickUniqueInWindow(pool, t, (s) => Date.parse(s.arrival_at), WINDOW_MS);
+      if (pick.kind === 'ambiguous') {
+        warnings.push(`UMG ATA niejednoznaczna: ${c.vessel} KAA-GDY (±3 h, ${pick.items.length} rejsy)`);
+        if (await deps.store.raiseRisk({
+          kind: 'FERRY', severity: 'MEDIUM',
+          title: `UMG: niejednoznaczne dopasowanie ATA ${c.vessel} — bez zmiany, do weryfikacji HHL`,
+          titleKey: 'rk_ferry_status_unknown',
+          params: { vessel: c.vessel, dep: c.atUtc.slice(0, 16) },
+          detail: { zrodlo: 'UMG_GDY', statek: c.vessel, ata: c.atUtc, rejsy: pick.items.length },
+          dedup: `FERRY_UNKNOWN:UMG_ATA:${vesselId}:${c.atUtc}`,
+        })) risks += 1;
+        continue;
+      }
       if (pick.kind !== 'hit') continue;
       const hit = pick.item;
       const patch = sailingActualPatch(hit, { actual_arrival_at: c.atUtc }, 'DOPLYNAL');
@@ -1841,11 +1863,57 @@ async function applyUmgdyStenaBackup(deps: JobDeps, sinceIso: string): Promise<{
     }
 
     if (c.kind === 'ETD') {
+      /* F7 #695 r1 B1: przyszłe ETD nigdy do actual_* ani statusu — najwyżej delayed_departure. */
+      if (t > nowMs) {
+        const pool = existing.filter((s) =>
+          s.vessel_id === vesselId
+          && s.route === 'GDY-KAA'
+          && s.actual_departure_at == null
+          && s.delayed_departure_at == null
+          && s.source !== 'RECZNIE'
+          && s.status !== 'ODWOLANY');
+        const pick = pickUniqueInWindow(pool, t, (s) => Date.parse(s.departure_at), WINDOW_MS);
+        if (pick.kind === 'ambiguous') {
+          warnings.push(`UMG ETD niejednoznaczna: ${c.vessel} GDY-KAA (±3 h, ${pick.items.length} rejsy)`);
+          if (await deps.store.raiseRisk({
+            kind: 'FERRY', severity: 'MEDIUM',
+            title: `UMG: niejednoznaczne dopasowanie ETD ${c.vessel} — bez zmiany, do weryfikacji HHL`,
+            titleKey: 'rk_ferry_status_unknown',
+            params: { vessel: c.vessel, dep: c.atUtc.slice(0, 16) },
+            detail: { zrodlo: 'UMG_GDY', statek: c.vessel, etd: c.atUtc, rejsy: pick.items.length },
+            dedup: `FERRY_UNKNOWN:UMG_ETD:${vesselId}:${c.atUtc}`,
+          })) risks += 1;
+          continue;
+        }
+        if (pick.kind !== 'hit') continue;
+        const hit = pick.item;
+        if (t - Date.parse(hit.departure_at) < delayMinMs) continue;
+        if (await deps.store.updateSailing(hit.id, { delayed_departure_at: c.atUtc })) {
+          updated += 1;
+          hit.delayed_departure_at = c.atUtc;
+        }
+        continue;
+      }
+      /* ETD z przeszłości → actual tylko gdy statek już nie jest „w porcie”. */
+      if (inPortNames.has(c.vessel)) continue;
       const pool = existing.filter((s) =>
         s.vessel_id === vesselId
         && s.route === 'GDY-KAA'
-        && s.actual_departure_at == null);
+        && s.actual_departure_at == null
+        && s.status !== 'ODWOLANY');
       const pick = pickUniqueInWindow(pool, t, (s) => Date.parse(s.departure_at), WINDOW_MS);
+      if (pick.kind === 'ambiguous') {
+        warnings.push(`UMG ETD niejednoznaczna: ${c.vessel} GDY-KAA (±3 h, ${pick.items.length} rejsy)`);
+        if (await deps.store.raiseRisk({
+          kind: 'FERRY', severity: 'MEDIUM',
+          title: `UMG: niejednoznaczne dopasowanie ETD ${c.vessel} — bez zmiany, do weryfikacji HHL`,
+          titleKey: 'rk_ferry_status_unknown',
+          params: { vessel: c.vessel, dep: c.atUtc.slice(0, 16) },
+          detail: { zrodlo: 'UMG_GDY', statek: c.vessel, etd: c.atUtc, rejsy: pick.items.length },
+          dedup: `FERRY_UNKNOWN:UMG_ETD:${vesselId}:${c.atUtc}`,
+        })) risks += 1;
+        continue;
+      }
       if (pick.kind !== 'hit') continue;
       const hit = pick.item;
       const patch = sailingActualPatch(hit, { actual_departure_at: c.atUtc }, 'W_REJSIE');
@@ -1857,18 +1925,31 @@ async function applyUmgdyStenaBackup(deps: JobDeps, sinceIso: string): Promise<{
       continue;
     }
 
-    /* ETA — zapas delayed_arrival na KAA-GDY (bez actual, bez RECZNIE). */
+    /* F7 #695 r1 B2: ETA zapas — tylko pusty delayed_arrival + próg; bez wypierania armatora. */
     if (c.kind === 'ETA') {
       const pool = existing.filter((s) =>
         s.vessel_id === vesselId
         && s.route === 'KAA-GDY'
         && s.actual_arrival_at == null
+        && s.delayed_arrival_at == null
         && s.source !== 'RECZNIE'
         && s.status !== 'ODWOLANY');
       const pick = pickUniqueInWindow(pool, t, (s) => Date.parse(s.arrival_at), WINDOW_MS);
+      if (pick.kind === 'ambiguous') {
+        warnings.push(`UMG ETA niejednoznaczna: ${c.vessel} KAA-GDY (±3 h, ${pick.items.length} rejsy)`);
+        if (await deps.store.raiseRisk({
+          kind: 'FERRY', severity: 'MEDIUM',
+          title: `UMG: niejednoznaczne dopasowanie ETA ${c.vessel} — bez zmiany, do weryfikacji HHL`,
+          titleKey: 'rk_ferry_status_unknown',
+          params: { vessel: c.vessel, dep: c.atUtc.slice(0, 16) },
+          detail: { zrodlo: 'UMG_GDY', statek: c.vessel, eta: c.atUtc, rejsy: pick.items.length },
+          dedup: `FERRY_UNKNOWN:UMG_ETA:${vesselId}:${c.atUtc}`,
+        })) risks += 1;
+        continue;
+      }
       if (pick.kind !== 'hit') continue;
       const hit = pick.item;
-      if (hit.delayed_arrival_at === c.atUtc) continue;
+      if (t - Date.parse(hit.arrival_at) < delayMinMs) continue;
       if (await deps.store.updateSailing(hit.id, { delayed_arrival_at: c.atUtc })) {
         updated += 1;
         hit.delayed_arrival_at = c.atUtc;
@@ -1879,7 +1960,7 @@ async function applyUmgdyStenaBackup(deps: JobDeps, sinceIso: string): Promise<{
   if (candidates.length) {
     warnings.push(`${UMG_ATTRIBUTION}: ${candidates.length} Stena`);
   }
-  return { updated, rows: candidates.length, risks: 0, warnings };
+  return { updated, rows: candidates.length, risks, warnings };
 }
 
 /**

@@ -1,5 +1,6 @@
 /**
  * BN3 pkt 7 — Urząd Morski Gdynia: zapas ETA/ATA/ETD Stena GDY↔KAA.
+ * F7 #695 r1: B1 przyszłe ETD; B2 ETA+próg; B3 tr[^>]*> + SOURCE_DOWN tylko po 3×OK.
  */
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -48,11 +49,14 @@ class MemStore implements SyncStore {
   async updateSailing(id: string, patch: SailingPatch) {
     const s = this.sailings.find((x) => x.id === id);
     if (!s) return false;
-    const { actual_departure_at, actual_arrival_at, delayed_arrival_at, ...rest } = patch;
+    const {
+      actual_departure_at, actual_arrival_at, delayed_arrival_at, delayed_departure_at, ...rest
+    } = patch;
     if (Object.keys(rest).length && s.source !== 'RECZNIE') Object.assign(s, rest);
     if (actual_departure_at !== undefined) s.actual_departure_at = actual_departure_at;
     if (actual_arrival_at !== undefined) s.actual_arrival_at = actual_arrival_at;
     if (delayed_arrival_at !== undefined) s.delayed_arrival_at = delayed_arrival_at;
+    if (delayed_departure_at !== undefined) s.delayed_departure_at = delayed_departure_at;
     return true;
   }
   async sailingAssignedLoadCount() { return 0; }
@@ -122,6 +126,27 @@ function deps(store: MemStore, pages: Record<string, string | number>, now = NOW
   return { store, fetch: f, env: {}, now: () => now };
 }
 
+const EMPTY_TABLE = `<!DOCTYPE html><html><body>
+<h2>Port Gdynia</h2>
+<table class="table table-striped"><thead><tr>
+<th>Call ID</th><th>Nazwa statku</th><th>IMO</th><th>Agent</th><th>ATA (LT)</th><th>Nabrzeże</th>
+</tr></thead><tbody></tbody></table>
+</body></html>`;
+
+const TR_ATTR_ATA = `<!DOCTYPE html><html><body>
+<h2>Port Gdynia</h2>
+<table class="table table-striped">
+<thead><tr class="head">
+<th>Call ID</th><th>Nazwa statku</th><th>IMO</th><th>Agent</th><th>ATA (LT)</th><th>Nabrzeże</th>
+</tr></thead>
+<tbody>
+<tr class="odd">
+<td>7377814</td><td>STENA EBBA</td><td>9863003</td><td>Stena</td>
+<td>31.10.2026 08:50:00</td><td>Polskie</td>
+</tr>
+</tbody></table>
+</body></html>`;
+
 describe('BN3 UMG Gdynia parser', () => {
   it('extractPortGdyniaHtml pomija Gdańsk', () => {
     const sec = extractPortGdyniaHtml(UMG_IN);
@@ -148,10 +173,19 @@ describe('BN3 UMG Gdynia parser', () => {
     expect(stenaUmgCandidates(eta)).toHaveLength(1);
     expect(stenaUmgCandidates([{ ...eta[0]!, note: 'Klaipeda' }])).toHaveLength(0);
   });
+
+  it('F7 B3: <tr class=…> czyta wiersze; pusta tabela → ostrzeżenie struktury', () => {
+    const withAttr = parseUmgdyGdyniaHtml(TR_ATTR_ATA, 'ATA');
+    expect(withAttr.rows).toHaveLength(1);
+    expect(withAttr.warnings.filter((w) => /struktura|pusta/i.test(w))).toHaveLength(0);
+    const empty = parseUmgdyGdyniaHtml(EMPTY_TABLE, 'ATA');
+    expect(empty.rows).toHaveLength(0);
+    expect(empty.warnings.some((w) => /pusta tabela/i.test(w))).toBe(true);
+  });
 });
 
 describe('BN3 UMG × ferry-portnet', () => {
-  it('ATA Ebba → actual_arrival KAA-GDY; ETD Estelle → actual_departure GDY-KAA; ETA Spirit → delayed', async () => {
+  it('ATA Ebba → actual KAA-GDY; past ETD Estelle (nie w porcie) → actual GDY-KAA; ETA Spirit +próg → delayed', async () => {
     const st = new MemStore();
     st.sailings.push(
       {
@@ -163,14 +197,15 @@ describe('BN3 UMG × ferry-portnet', () => {
       },
       {
         id: 'gdy-este', vessel_id: ESTE, route: 'GDY-KAA',
-        departure_at: '2026-10-31T18:00:00.000Z', arrival_at: '2026-10-31T22:00:00.000Z',
+        departure_at: '2026-10-31T09:00:00.000Z', arrival_at: '2026-10-31T13:00:00.000Z',
         delayed_departure_at: null, delayed_arrival_at: null,
         actual_departure_at: null, actual_arrival_at: null,
         status: 'ZAPLANOWANY', source: 'STENA',
       },
       {
         id: 'kaa-spir', vessel_id: SPIR, route: 'KAA-GDY',
-        departure_at: '2026-10-31T10:00:00.000Z', arrival_at: '2026-10-31T13:00:00.000Z',
+        /* ETA fixture = 13:00Z; plan 12:00 → opóźnienie 60 min ≥ 15. */
+        departure_at: '2026-10-31T08:00:00.000Z', arrival_at: '2026-10-31T12:00:00.000Z',
         delayed_departure_at: null, delayed_arrival_at: null,
         actual_departure_at: null, actual_arrival_at: null,
         status: 'ZAPLANOWANY', source: 'STENA',
@@ -193,6 +228,119 @@ describe('BN3 UMG × ferry-portnet', () => {
     expect(st.sailings.find((s) => s.id === 'kaa-spir')?.delayed_arrival_at).toBe('2026-10-31T13:00:00.000Z');
   });
 
+  it('F7 B1: przyszłe ETD → delayed_departure (≥ próg), bez actual / W_REJSIE', async () => {
+    const st = new MemStore();
+    st.sailings.push({
+      id: 'gdy-este-fut', vessel_id: ESTE, route: 'GDY-KAA',
+      departure_at: '2026-10-31T17:00:00.000Z', arrival_at: '2026-10-31T21:00:00.000Z',
+      delayed_departure_at: null, delayed_arrival_at: null,
+      actual_departure_at: null, actual_arrival_at: null,
+      status: 'ZAPLANOWANY', source: 'STENA',
+    });
+    /* ETD 19:00 LT CET = 18:00Z; NOW 12:00Z → przyszłość; opóźnienie vs plan 60 min. */
+    const futureEtd = UMG_ETD.replace('31.10.2026 10:00:00', '31.10.2026 19:00:00');
+    await runFerryPortnet(deps(st, {
+      'port-calls': PORTNET,
+      'statki-spodziewane': EMPTY_TABLE,
+      'statki-wychodzace': futureEtd,
+      'statki-w-porcie': EMPTY_TABLE,
+    }));
+    const s = st.sailings.find((x) => x.id === 'gdy-este-fut')!;
+    expect(s.actual_departure_at).toBeNull();
+    expect(s.status).toBe('ZAPLANOWANY');
+    expect(s.delayed_departure_at).toMatch(/^2026-10-31T18:00:00/);
+  });
+
+  it('F7 B2: ETA = plan (< próg) nie zapisuje delayed; istniejący delayed armatora nietknięty', async () => {
+    const st = new MemStore();
+    st.sailings.push(
+      {
+        id: 'kaa-spir-eq', vessel_id: SPIR, route: 'KAA-GDY',
+        departure_at: '2026-10-31T10:00:00.000Z', arrival_at: '2026-10-31T13:00:00.000Z',
+        delayed_departure_at: null, delayed_arrival_at: null,
+        actual_departure_at: null, actual_arrival_at: null,
+        status: 'ZAPLANOWANY', source: 'STENA',
+      },
+      {
+        id: 'kaa-spir-arm', vessel_id: SPIR, route: 'KAA-GDY',
+        departure_at: '2026-10-31T16:00:00.000Z', arrival_at: '2026-10-31T19:00:00.000Z',
+        delayed_departure_at: null, delayed_arrival_at: '2026-10-31T19:30:00.000Z',
+        actual_departure_at: null, actual_arrival_at: null,
+        status: 'ZAPLANOWANY', source: 'STENA',
+      },
+    );
+    await runFerryPortnet(deps(st, {
+      'port-calls': PORTNET,
+      'statki-spodziewane': UMG_ETA,
+      'statki-wychodzace': EMPTY_TABLE,
+      'statki-w-porcie': EMPTY_TABLE,
+    }));
+    expect(st.sailings.find((s) => s.id === 'kaa-spir-eq')?.delayed_arrival_at).toBeNull();
+    expect(st.sailings.find((s) => s.id === 'kaa-spir-arm')?.delayed_arrival_at)
+      .toBe('2026-10-31T19:30:00.000Z');
+  });
+
+  it('pierwszeństwo: ATA/ETD/ETA pomija gdy actual już jest (Portnet/AIS/armator)', async () => {
+    const st = new MemStore();
+    st.sailings.push(
+      {
+        id: 'kaa-ebba', vessel_id: EBBA, route: 'KAA-GDY',
+        departure_at: '2026-10-31T04:00:00.000Z', arrival_at: '2026-10-31T07:50:00.000Z',
+        delayed_departure_at: null, delayed_arrival_at: null,
+        actual_departure_at: '2026-10-31T04:05:00.000Z',
+        actual_arrival_at: '2026-10-31T07:40:00.000Z',
+        status: 'DOPLYNAL', source: 'STENA',
+      },
+      {
+        id: 'gdy-este', vessel_id: ESTE, route: 'GDY-KAA',
+        departure_at: '2026-10-31T09:00:00.000Z', arrival_at: '2026-10-31T13:00:00.000Z',
+        delayed_departure_at: null, delayed_arrival_at: null,
+        actual_departure_at: '2026-10-31T09:05:00.000Z', actual_arrival_at: null,
+        status: 'W_REJSIE', source: 'STENA',
+      },
+    );
+    await runFerryPortnet(deps(st, {
+      'port-calls': PORTNET,
+      'statki-spodziewane': UMG_ETA,
+      'statki-wychodzace': UMG_ETD,
+      'statki-w-porcie': UMG_IN,
+    }));
+    expect(st.sailings.find((s) => s.id === 'kaa-ebba')?.actual_arrival_at)
+      .toBe('2026-10-31T07:40:00.000Z');
+    expect(st.sailings.find((s) => s.id === 'gdy-este')?.actual_departure_at)
+      .toBe('2026-10-31T09:05:00.000Z');
+  });
+
+  it('RECZNIE: ETA nie nadpisuje; ATA ustawia tylko actual bez statusu', async () => {
+    const st = new MemStore();
+    st.sailings.push(
+      {
+        id: 'kaa-ebba-r', vessel_id: EBBA, route: 'KAA-GDY',
+        departure_at: '2026-10-31T04:00:00.000Z', arrival_at: '2026-10-31T07:50:00.000Z',
+        delayed_departure_at: null, delayed_arrival_at: null,
+        actual_departure_at: '2026-10-31T04:05:00.000Z', actual_arrival_at: null,
+        status: 'W_REJSIE', source: 'RECZNIE',
+      },
+      {
+        id: 'kaa-spir-r', vessel_id: SPIR, route: 'KAA-GDY',
+        departure_at: '2026-10-31T08:00:00.000Z', arrival_at: '2026-10-31T12:00:00.000Z',
+        delayed_departure_at: null, delayed_arrival_at: null,
+        actual_departure_at: null, actual_arrival_at: null,
+        status: 'ZAPLANOWANY', source: 'RECZNIE',
+      },
+    );
+    await runFerryPortnet(deps(st, {
+      'port-calls': PORTNET,
+      'statki-spodziewane': UMG_ETA,
+      'statki-wychodzace': EMPTY_TABLE,
+      'statki-w-porcie': UMG_IN,
+    }));
+    expect(st.sailings.find((s) => s.id === 'kaa-ebba-r')).toMatchObject({
+      status: 'W_REJSIE', actual_arrival_at: '2026-10-31T07:50:00.000Z',
+    });
+    expect(st.sailings.find((s) => s.id === 'kaa-spir-r')?.delayed_arrival_at).toBeNull();
+  });
+
   it('wszystkie UMG 503 → SOURCE_DOWN UMG_GDY MEDIUM; ok Portnet bez zmian', async () => {
     const st = new MemStore();
     const r = await runFerryPortnet(deps(st, {
@@ -203,5 +351,35 @@ describe('BN3 UMG × ferry-portnet', () => {
     const down = st.risks.filter((x) => x.dedup.startsWith('SOURCE_DOWN:UMG_GDY'));
     expect(down).toHaveLength(1);
     expect(down[0]!.severity).toBe('MEDIUM');
+  });
+
+  it('F7 B3: pusta tabela / częściowy 503 → SOURCE_DOWN; zamknięcie tylko po 3×OK', async () => {
+    const st = new MemStore();
+    st.risks.push({
+      kind: 'INTEGRATION', severity: 'MEDIUM', title: 'x', titleKey: 'rk_x',
+      params: {}, detail: {}, dedup: 'SOURCE_DOWN:UMG_GDY:old',
+    });
+    /* 2×503 + 1 pusta → nie zamykać. */
+    await runFerryPortnet(deps(st, {
+      'port-calls': PORTNET,
+      'statki-spodziewane': 503,
+      'statki-wychodzace': 503,
+      'statki-w-porcie': EMPTY_TABLE,
+    }));
+    expect(st.risks.some((r) => r.dedup.startsWith('SOURCE_DOWN:UMG_GDY'))).toBe(true);
+
+    /* Pełny powrót 3×OK → zamknięcie. */
+    const st2 = new MemStore();
+    st2.risks.push({
+      kind: 'INTEGRATION', severity: 'MEDIUM', title: 'x', titleKey: 'rk_x',
+      params: {}, detail: {}, dedup: 'SOURCE_DOWN:UMG_GDY:old',
+    });
+    await runFerryPortnet(deps(st2, {
+      'port-calls': PORTNET,
+      'statki-spodziewane': UMG_ETA,
+      'statki-wychodzace': UMG_ETD,
+      'statki-w-porcie': UMG_IN,
+    }));
+    expect(st2.risks.filter((r) => r.dedup.startsWith('SOURCE_DOWN:UMG_GDY'))).toHaveLength(0);
   });
 });

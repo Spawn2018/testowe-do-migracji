@@ -7457,6 +7457,19 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (odbiór prod):** SELECT `here_road_legs` — **12** / active 12 / `browser_fetch` 5; core bez zmian (3495/12561/3742/18854/19408); BN7 7× null. `here-roads` **#108803** @ 04:49Z ok (0 prób — core świeże; BN7 poza cronem). Komentarz w #667. **Dalej:** BN3 (#573).
 - Bez push na main.
 
+## 2026-11-01 04:55 — #695 F7 r1 POPRAWKI (UMG B1–B3)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne`.
+- Scalanie: brak „F7: gotowe do scalenia” (F7 r1 BLOKERY @ 03:49Z). Bez push na main.
+- **Krok F7 #695 r1:**
+  - **B1:** przyszłe ETD → tylko `delayed_departure_at` (≥ `FERRY_PORT_DELAY_MIN`); past ETD → `actual` tylko gdy statek nie jest na liście „w porcie”.
+  - **B2:** ETA zapas tylko przy pustym `delayed_arrival_at` + próg; bez wypierania armatora.
+  - **B3:** `<tr[^>]*>`; pusta tabela / brak nagłówków = awaria; SOURCE_DOWN zamykane tylko przy 3×OK.
+  - Nieblokujące: ambiguous→MEDIUM; pule bez ODWOLANY; komentarz „Poprzedni port”.
+  - vitest bn3-umg-gdynia **12**.
+- **Dalej:** push → CI → gotowe do F7 @ sha. Po F7: podejrzenie 45 min+AIS (decyzja 61).
+- Bez push na main.
+
 ## 2026-11-01 04:15 — BN3 UMG Gdynia (po #694)
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne`.

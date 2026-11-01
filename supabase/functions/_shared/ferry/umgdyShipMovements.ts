@@ -33,7 +33,10 @@ export interface UmgShipRow {
   imo: number | null;
   /** Czas zdarzenia w UTC. */
   atUtc: string;
-  /** Poprzedni / ostatni port albo nabrzeże (surowy tekst). */
+  /**
+   * Surowy tekst z ostatniej kolumny: nabrzeże (w porcie),
+   * poprzedni port (spodziewane / wychodzące — na stronie „wychodzące” nagłówek to „Poprzedni port”).
+   */
   note: string | null;
 }
 
@@ -100,13 +103,18 @@ export function parseUmgdyGdyniaHtml(html: string, kind: UmgKind): UmgParseResul
     warnings.push('Struktura UMG zmieniona: brak tabeli desktopowej Port Gdynia.');
     return { rows, warnings };
   }
-  const trs = [...table[0]!.matchAll(/<tr>([\s\S]*?)<\/tr>/gi)];
+  /* F7 #695 r1 B3: <tr class=…> też; brak nagłówków / pusta tabela = awaria struktury. */
+  const trs = [...table[0]!.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/gi)];
   let dataRows = 0;
+  let hasHeader = false;
   for (const tr of trs) {
     const cells = [...tr[1]!.matchAll(/<t[dh][^>]*>([\s\S]*?)<\/t[dh]>/gi)]
       .map((c) => stripTags(c[1]!));
     if (cells.length < 5) continue;
-    if (/^call\s*id$/i.test(cells[0]!) || /nazwa\s*statku/i.test(cells[1] ?? '')) continue;
+    if (/^call\s*id$/i.test(cells[0]!) || /nazwa\s*statku/i.test(cells[1] ?? '')) {
+      hasHeader = true;
+      continue;
+    }
     dataRows += 1;
     const vessel = mapStenaVessel(cells[1]!, cells[2] ?? '');
     if (!vessel) continue;
@@ -124,6 +132,9 @@ export function parseUmgdyGdyniaHtml(html: string, kind: UmgKind): UmgParseResul
       atUtc,
       note: cells[5]?.trim() || null,
     });
+  }
+  if (!hasHeader) {
+    warnings.push('Struktura UMG zmieniona: brak nagłówków kolumn Port Gdynia.');
   }
   if (dataRows === 0) {
     warnings.push('UMG Port Gdynia: pusta tabela (brak wierszy).');
