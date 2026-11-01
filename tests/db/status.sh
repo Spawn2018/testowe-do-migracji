@@ -2384,6 +2384,26 @@ chk "BN1: ferry_sailings_map z ferry_ports" \
 # BN4 pkt 8 / 0366: bez coalesce do GDN/NYN — tylko join ferry_routes
 chk "BN4: ferry_sailings_map bez domyslnego GDN" \
   "select pg_get_functiondef('public.ferry_sailings_map()'::regprocedure) not like '%coalesce(fr.port_from%'" t
+# DP-134/135 (F7 #706 r1): mapa bez fr.active + test behawioralny (nie sam grep)
+chk "DP-134: ferry_sailings_map join bez fr.active" \
+  "select (pg_get_functiondef('public.ferry_sailings_map()'::regprocedure) like '%join ferry_routes fr on fr.code = s.route%'
+     and pg_get_functiondef('public.ferry_sailings_map()'::regprocedure) not like '%join ferry_routes fr on fr.code = s.route and fr.active%')::text" t
+S134=77777777-0000-0000-0000-00000000134a
+# departure_at unikalne vs inne rejsy Wawel w oknie ±6 h (unique vessel+departure)
+q "insert into sailings (id,project_id,vessel_id,route,departure_at,arrival_at,status,source) values
+    ('$S134','$P','66666666-0000-0000-0000-000000000001','GDN-NYN',
+     now() - interval '73 minutes', now() + interval '5 hours 17 minutes','W_REJSIE','POLFERRIES');" >/dev/null
+chk "DP-135: mapa widzi rejs przy active=true" \
+  "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+   select count(*)::text from ferry_sailings_map() where sailing_id='$S134'; commit" 1
+q "update ferry_routes set active=false where code='GDN-NYN'" >/dev/null
+chk "DP-134: mapa widzi rejs po active=false" \
+  "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+   select count(*)::text from ferry_sailings_map() where sailing_id='$S134'; commit" 1
+q "update ferry_routes set active=true where code='GDN-NYN';
+   delete from sailings where id='$S134'" >/dev/null
+chk "DP-134: GDN-NYN przywrócone active" \
+  "select active from ferry_routes where code='GDN-NYN'" t
 chk "BN1: promote outbound ze słownika" \
   "select pg_get_functiondef('public.promote_ferry_departures(timestamptz)'::regprocedure) like '%ferry_route_is_outbound%'" t
 chk "BN1: apply_geofence_status pomija REMOVED" \
