@@ -17,7 +17,22 @@ describe('I-2j — pozycje promów z bazy', () => {
     expect(p.map((x) => [x.name, x.lat, x.ts, x.source])).toEqual([
       ['M/F Nova Star', 58.7, '2026-09-27T18:10:00Z', 'db'], ['M/F Wawel', 55.0, '2026-09-27T16:00:00Z', 'db'],
     ]);
+    /* BN9-c2: vesselId zawsze = vessels.id z bazy (bez mapowania FERRY_VESSELS / WAW|NS). */
+    expect(p.map((x) => x.vesselId)).toEqual(['ns', 'waw']);
     expect(latestReadAt(p)).toBe('2026-09-27T18:10:00Z');
+  });
+  it('BN9-c2: MMSI spoza listy demo → vesselId = vessels.id (nie WAW)', () => {
+    const megastar = { name: 'Megastar', mmsi: 276829000 };
+    const p = latestPerVessel([row('uuid-megastar', '2026-11-01T12:00:00Z', 59.9, megastar)]);
+    expect(p).toHaveLength(1);
+    expect(p[0].vesselId).toBe('uuid-megastar');
+    expect(p[0].name).toBe('Megastar');
+    expect(p[0].vesselId).not.toBe('WAW');
+  });
+  it('BN9-c2: aisDb bez importu listy demo (vesselId = vessels.id)', () => {
+    const src = readFileSync('src/lib/aisDb.ts', 'utf8');
+    expect(src).not.toMatch(/from '\.\/ferry'/);
+    expect(src).toContain('vesselId: r.vessel_id');
   });
   it('brak wierszy → pusta lista i brak czasu (UI: „brak źródła danych”)', () => {
     expect(latestPerVessel([])).toEqual([]);

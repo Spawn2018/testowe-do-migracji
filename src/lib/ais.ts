@@ -3,7 +3,8 @@ import { FERRY_VESSELS, type FerryVesselId } from './ferry';
 
 export interface AisPosition {
   mmsi: string;
-  vesselId: FerryVesselId;
+  /** Demo: WAW/NS. Produkcja (aisDb): `vessels.id` (uuid) — bez podstawiania FERRY_VESSELS[0]. */
+  vesselId: string;
   name: string;
   lng: number;
   lat: number;

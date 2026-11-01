@@ -91,6 +91,14 @@ describe('withEstimates', () => {
     const out = withEstimates([], [row({ departed_at: '2026-10-22T16:10:00Z', ais_observed_at: null, ais_lat: null, ais_lon: null })], at('2026-10-23T01:00:00Z'));
     expect(out).toHaveLength(1);
     expect(out[0].estimated?.lastAisTs).toBeNull();
+    expect(out[0].vesselId).toBe('v-ns');
+  });
+
+  it('BN9-c2: Megastar TLL-HEL — szacunek z vessel_id bazy, bez FERRY_VESSELS', () => {
+    const out = withEstimates([], [rowTllHel({ departed_at: '2026-11-01T08:05:00Z', ais_observed_at: null, ais_lat: null, ais_lon: null })], at('2026-11-01T09:00:00Z'));
+    expect(out).toHaveLength(1);
+    expect(out[0]).toMatchObject({ vesselId: 'v-mega', name: 'M/F Megastar', mmsi: '276829000' });
+    expect(out[0].estimated).toEqual({ lastAisTs: null });
   });
 });
 

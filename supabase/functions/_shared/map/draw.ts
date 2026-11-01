@@ -371,19 +371,36 @@ export function h6Requests(flagFromDb: boolean, hasDims: boolean): boolean {
   return enabled && flagFromDb && hasDims;
 }
 
+/**
+ * Q-18 / BN9-c2: strona przeprawy.
+ * `dep` = port wyjścia (PL, EE); `arr` = port przypłynięcia (SE, FI).
+ * Nazwy faz `pl-port` / `se-port` / `to-se` / `to-pl` zostają (kompatybilność testów PL↔SE).
+ */
+export type PortSide = 'dep' | 'arr';
+
 export interface PortZone {
-  id: 'GDN' | 'GDY' | 'NYN' | 'KAA';
-  country: 'PL' | 'SE';
+  id: string;
+  country: 'PL' | 'SE' | 'EE' | 'FI';
+  /** strona Q-18: wyjście vs przypłynięcie */
+  side: PortSide;
   lat: number;
   lng: number;
   radiusKm: number;
 }
 
 export const PORT_ZONES: readonly PortZone[] = [
-  { id: 'GDN', country: 'PL', lat: 54.4, lng: 18.67, radiusKm: 6 },
-  { id: 'GDY', country: 'PL', lat: 54.533, lng: 18.55, radiusKm: 5 },
-  { id: 'NYN', country: 'SE', lat: 58.912, lng: 17.955, radiusKm: 4 },
-  { id: 'KAA', country: 'SE', lat: 56.161, lng: 15.586, radiusKm: 4 },
+  { id: 'GDN', country: 'PL', side: 'dep', lat: 54.4, lng: 18.67, radiusKm: 6 },
+  { id: 'GDY', country: 'PL', side: 'dep', lat: 54.533, lng: 18.55, radiusKm: 5 },
+  { id: 'NYN', country: 'SE', side: 'arr', lat: 58.912, lng: 17.955, radiusKm: 4 },
+  { id: 'KAA', country: 'SE', side: 'arr', lat: 56.161, lng: 15.586, radiusKm: 4 },
+  /* BN9-c2 (#573): Estonia → FI/SE — te same reguły widoczności co PL→SE */
+  { id: 'TLL', country: 'EE', side: 'dep', lat: 59.443, lng: 24.77, radiusKm: 5 },
+  { id: 'MUU', country: 'EE', side: 'dep', lat: 59.497, lng: 24.96, radiusKm: 5 },
+  { id: 'PLD', country: 'EE', side: 'dep', lat: 59.335, lng: 24.083, radiusKm: 5 },
+  { id: 'HEL', country: 'FI', side: 'arr', lat: 60.153, lng: 24.915, radiusKm: 5 },
+  { id: 'VUO', country: 'FI', side: 'arr', lat: 60.206, lng: 25.19, radiusKm: 5 },
+  { id: 'STO', country: 'SE', side: 'arr', lat: 59.35, lng: 18.105, radiusKm: 5 },
+  { id: 'KPS', country: 'SE', side: 'arr', lat: 59.721, lng: 19.065, radiusKm: 4 },
 ];
 
 export function zoneAt(lat: number, lng: number): PortZone | null {
@@ -413,19 +430,18 @@ export interface TrackFix {
 export type FerryPhase = 'unknown' | 'pl-port' | 'to-se' | 'se-port' | 'to-pl';
 
 /**
- * Q-18 (reguła poprawiona 05.10.2026 07:16, zastępuje regułę z 04.10).
- * WIDOCZNY: w strefie portu w Polsce (Gdańsk, Gdynia), w rejsie z Polski do Szwecji
- * i w strefie portu w Szwecji (Nynäshamn, Karlskrona).
- * ZNIKA: po wyjściu ze strefy portu w Szwecji (rejs do Polski); wraca po wejściu w strefę portu w Polsce.
+ * Q-18 (reguła poprawiona 05.10.2026 07:16; BN9-c2 — także EE→FI/SE).
+ * WIDOCZNY: w porcie wyjścia (PL/EE), w rejsie wyjazdowym i w porcie przypłynięcia (SE/FI).
+ * ZNIKA: po wyjściu z portu przypłynięcia (powrót); wraca po wejściu w port wyjścia.
  * Kierunek z ostatniej strefy, którą prom opuścił. Gdy w historii (48 h) nie ma żadnej strefy:
- * zapas z kursu ostatniej pozycji (północna połowa róży = do Szwecji), bez kursu — niewidoczny.
+ * zapas z kursu ostatniej pozycji (północna połowa róży = wyjazd), bez kursu — niewidoczny.
  */
 export function ferryPhase(history: readonly TrackFix[]): FerryPhase {
   const sorted = [...history].sort((a, b) => Date.parse(a.ts) - Date.parse(b.ts));
   let phase: FerryPhase = 'unknown';
   for (const fix of sorted) {
     const z = zoneAt(fix.lat, fix.lng);
-    if (z) phase = z.country === 'PL' ? 'pl-port' : 'se-port';
+    if (z) phase = z.side === 'dep' ? 'pl-port' : 'se-port';
     else if (phase === 'pl-port') phase = 'to-se';
     else if (phase === 'se-port') phase = 'to-pl';
   }

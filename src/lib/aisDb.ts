@@ -1,11 +1,11 @@
 /**
- * I-2j — pozycje promów z bazy (`vessel_positions`, zapis: zadanie ferry-ais → Digitraffic, CC BY 4.0).
+ * I-2j / BN9-c2 — pozycje promów z bazy (`vessel_positions`, zapis: zadanie ferry-ais → Digitraffic, CC BY 4.0).
  * Tylko build produkcyjny (Supabase). Mapa pokazuje ostatnią pozycję każdego statku z czasem sygnału AIS;
  * brak wierszy = „brak źródła danych”. Nigdy pozycji przykładowych.
+ * Statki z tabeli `vessels` (uuid + nazwa + MMSI) — bez hardcoded listy demo WAW|NS.
  */
 import { getSupabase } from '../auth/client';
 import type { AisPosition } from './ais';
-import { FERRY_VESSELS } from './ferry';
 import { visibleFerryMarkers, type TrackFix } from './map/draw';
 import { estimateFerryPositions, type SailingMapRow } from './ferry/estimate';
 
@@ -30,11 +30,10 @@ export function latestPerVessel(rows: readonly VesselPositionRow[]): AisPosition
     .sort((a, b) => (a.vessels?.name ?? '').localeCompare(b.vessels?.name ?? ''))
     .map((r) => {
       const mmsi = r.vessels?.mmsi != null ? String(r.vessels.mmsi) : '';
-      const known = FERRY_VESSELS.find((v) => v.mmsi === mmsi);
       return {
         mmsi,
-        vesselId: known?.id ?? FERRY_VESSELS[0].id,
-        name: r.vessels?.name ?? known?.name ?? mmsi,
+        vesselId: r.vessel_id,
+        name: r.vessels?.name ?? mmsi,
         lat: r.lat,
         lng: r.lon,
         sog: r.sog_kn ?? undefined,
@@ -58,7 +57,7 @@ export async function fetchVesselPositions(): Promise<AisPosition[]> {
   return latestPerVessel((res.data ?? []) as unknown as VesselPositionRow[]);
 }
 
-/** Odświeżanie co 2 min. Q-18 (05.10 07:16): widoczny w porcie PL, w rejsie PL→SE i w porcie SE; znika w rejsie SE→PL. */
+/** Odświeżanie co 2 min. Q-18 (05.10 07:16 + BN9-c2 EE/FI): widoczny w porcie wyjścia, w rejsie wyjazdowym i w porcie przypłynięcia; znika w powrocie. */
 export async function fetchMapFerryMarkers(): Promise<AisPosition[]> {
   const sb = await getSupabase();
   const [res, sail] = await Promise.all([
@@ -82,18 +81,17 @@ type TrackRow = {
   sog_kn: number | null;
 };
 
-/** #429 C: prom w rejsie PL→SE bez świeżego AIS — punkt z rozkładu zamiast (albo zamiast braku) ostatniej pozycji. */
+/** #429 C: prom w rejsie wyjazdowym bez świeżego AIS — punkt z rozkładu zamiast (albo zamiast braku) ostatniej pozycji. */
 export function withEstimates(markers: AisPosition[], sailRows: readonly SailingMapRow[], nowMs: number): AisPosition[] {
   const est = estimateFerryPositions(sailRows, nowMs);
   if (!est.length) return markers;
   const out = markers.slice();
   for (const e of est) {
-    const known = FERRY_VESSELS.find((v) => v.mmsi === e.mmsi);
     const i = out.findIndex((m) => (e.mmsi && m.mmsi === e.mmsi) || (!!e.name && m.name === e.name));
     const base: AisPosition = i >= 0 ? out[i] : {
       mmsi: e.mmsi,
-      vesselId: known?.id ?? FERRY_VESSELS[0].id,
-      name: e.name || known?.name || e.mmsi,
+      vesselId: e.vesselId || e.mmsi || e.name,
+      name: e.name || e.mmsi,
       lat: e.lat,
       lng: e.lng,
       ts: e.lastAisTs ?? new Date(nowMs).toISOString(),
@@ -117,11 +115,10 @@ function markersFromTrack(data: unknown[]): AisPosition[] {
   return visibleFerryMarkers(fixes).map((v) => {
     const r = rows.find((x) => x.vessel_id === v.id && x.observed_at === v.ts);
     const mmsi = r?.mmsi != null ? String(r.mmsi) : '';
-    const known = FERRY_VESSELS.find((vessel) => vessel.mmsi === mmsi);
     return {
       mmsi,
-      vesselId: known?.id ?? FERRY_VESSELS[0].id,
-      name: r?.name ?? known?.name ?? mmsi,
+      vesselId: v.id,
+      name: r?.name ?? mmsi,
       lat: v.lat,
       lng: v.lng,
       sog: r?.sog_kn ?? undefined,
