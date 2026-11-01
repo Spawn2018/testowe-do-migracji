@@ -1790,6 +1790,31 @@ describe('BN3 #686 Tallink restore', () => {
     )).toBeNull();
   });
 
+  it('F7 r2: restore wygrywa nad starszym cancel — autoCancelOk=0; dwa przebiegi bez migania', async () => {
+    const html = wrapTwoAlertsTimed(
+      `<CwsP>${CANCEL}</CwsP>`, '08:00', `<CwsP>${RESTORE}</CwsP>`, '12:00', '2026-10-31',
+    );
+    // Mutacja M11: wybór najstarszego → cancel.autoCancelOk true → pada.
+    const alerts = finalizeTallinkAlertsForStatus(
+      parseTallinkAlerts(html, TALLINK_HOME(), NOW).alerts,
+    );
+    expect(alerts.filter((a) => a.autoCancelOk)).toHaveLength(0);
+    expect(alerts.some((a) => a.autoRestoreOk)).toBe(true);
+
+    const pages = {
+      'tallink.com': html, 'ts.ee': 503, portsofstockholm: 503, 'port-calls': 503,
+    };
+    const st = new MemStore();
+    st.sailings.push(odSailing());
+    st.notices.push(tallinkCancelNotice('s-od'));
+    await runFerryStatus(deps(st, pages, NOW));
+    expect(st.sailings[0]!.status).toBe('ZAPLANOWANY');
+    // Drugi przebieg: ten sam HTML (starszy cancel + nowszy restore) — bez cofnięcia do ODWOLANY.
+    await runFerryStatus(deps(st, pages, NOW));
+    expect(st.sailings[0]!.status).toBe('ZAPLANOWANY');
+    expect(st.notices.filter((n) => n.kind === 'ODWOLANY')).toHaveLength(1);
+  });
+
   it('F7 B1: Tallink Alert → przywrócenie + zamknięcie SAILING_CANCELLED; ts.ee → MEDIUM', async () => {
     const html = wrapTwoAlertsTimed(
       `<CwsP>${CANCEL}</CwsP>`, '08:00', `<CwsP>${RESTORE}</CwsP>`, '12:00', '2026-10-31',
@@ -1822,6 +1847,25 @@ describe('BN3 #686 Tallink restore', () => {
     expect(stTs.sailings[0]!.status).toBe('ODWOLANY');
     expect(stTs.notices.every((n) => n.kind !== 'PRZYWROCONY')).toBe(true);
     expect(stTs.risks.some((r) => r.titleKey === 'rk_tallink_alert_restore_manual')).toBe(true);
+  });
+
+  it('F7 r2 B-r2-1: updateSailing false → PRZYWROCONY zostaje, bez zamknięcia ryzyk / INFO', async () => {
+    const html = wrapAlertTimed(RESTORE, '2026-10-31', '12:00');
+    const st = new MemStore();
+    st.failStatusUpdate = true;
+    st.sailings.push(odSailing());
+    st.notices.push(tallinkCancelNotice('s-od'));
+    st.risks.push({
+      kind: 'FERRY', severity: 'HIGH', title: 'odwolany', titleKey: 'rk_sailing_cancelled',
+      params: {}, detail: {}, dedup: 'SAILING_CANCELLED:load-a:s-od', loadId: 'load-a',
+    });
+    await runFerryStatus(deps(st, {
+      'tallink.com': html, 'ts.ee': 503, portsofstockholm: 503,
+    }, NOW));
+    expect(st.sailings[0]!.status).toBe('ODWOLANY');
+    expect(st.notices.some((n) => n.kind === 'PRZYWROCONY')).toBe(true);
+    expect(st.risks.some((r) => r.dedup.startsWith('SAILING_CANCELLED:'))).toBe(true);
+    expect(st.risks.every((r) => r.titleKey !== 'rk_tallink_alert_restored')).toBe(true);
   });
 
   it('F7 B2: przepięcie po zamkniętym SAILING_CANCELLED; OPOZNIONY przy delayed_*', async () => {
@@ -2176,6 +2220,8 @@ class MemStore implements SyncStore {
   runs: { job: string; at: string; ok: boolean; result: JobResult }[] = [];
   /** @deprecated F7 B2 — użyj risks + loadSailings; zostawione tylko gdy puste. */
   reassigned: string[] = [];
+  /** F7 #698 r2 B-r2-1: symulacja wyścigu HHL (updateSailing → false). */
+  failStatusUpdate = false;
   n = 0;
   async projectId() { return 'p1'; }
   async vessels() {
@@ -2198,6 +2244,7 @@ class MemStore implements SyncStore {
     const s = this.sailings.find((x) => x.id === id);
     if (!s) return false;
     if (s.source === 'RECZNIE' && patch.status) return false;
+    if (this.failStatusUpdate && patch.status) return false;
     Object.assign(s, patch);
     return true;
   }

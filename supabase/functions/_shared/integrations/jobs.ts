@@ -2682,11 +2682,14 @@ export async function runFerryStatus(deps: JobDeps): Promise<JobResult> {
                 sourceUrl: alert.sourceUrl,
               });
             }
-            if (await deps.store.updateSailing(match.id, { status: target })) {
-              updated += 1;
-              match.status = target;
-              if (row) row.status = target;
+            // F7 #698 r2 B-r2-1: bez zamknięcia ryzyk / INFO, gdy update padł (np. HHL → RECZNIE).
+            // Wpis PRZYWROCONY przed statusem zostaje; kolejny przebieg dokończy albo podniesie ryzyko.
+            if (!(await deps.store.updateSailing(match.id, { status: target }))) {
+              continue;
             }
+            updated += 1;
+            match.status = target;
+            if (row) row.status = target;
             if (deps.store.resolveSailingCancelledRisks) {
               await deps.store.resolveSailingCancelledRisks(match.id);
             }

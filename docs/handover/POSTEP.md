@@ -7457,6 +7457,19 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (odbiór prod):** SELECT `here_road_legs` — **12** / active 12 / `browser_fetch` 5; core bez zmian (3495/12561/3742/18854/19408); BN7 7× null. `here-roads` **#108803** @ 04:49Z ok (0 prób — core świeże; BN7 poza cronem). Komentarz w #667. **Dalej:** BN3 (#573).
 - Bez push na main.
 
+## 2026-11-01 10:50 — #698 F7 r2 POPRAWKI (B-r2-1 / B-r2-2 / asercja)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne`.
+- Scalanie: F7 r2 BLOKERY @ f342d65f — nie scalać. Bez push na main.
+- **Krok F7 #698 r2:**
+  - **B-r2-1:** `updateSailing === false` → `continue` (PRZYWROCONY zostaje; bez zamknięcia ryzyk / INFO).
+  - **B-r2-2:** testy `supabaseStore(fakeSb)` — `latestCancelNotice`/`source_url`, reassigned (także zamknięte + `loads.sailing_id`), resolve openOnly + expire like.
+  - **Asercja:** restore wygrywa → `autoCancelOk` length 0; dwa przebiegi bez migania statusu (M11).
+  - Rejestr: **DP-124** = UMG pusta godzina ATA; SMS przywrócony → **DP-125** (osobny PR; #697).
+  - vitest bn3-tallink-alert + helpers **77**.
+- **Dalej:** push → CI → gotowe do F7 @ sha. Po F7: RSS ERR (+ W64 Yle STOP); SMS DP-125 osobno.
+- Bez push na main.
+
 ## 2026-11-01 10:25 — #698 F7 r1 POPRAWKI (B1–B3 + pkt 1–6)
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne`.
@@ -7466,9 +7479,9 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
   - **B2:** przepięcia z SAILING_CANCELLED także zamkniętych + `load.sailing_id`.
   - **B3/DP-116:** `SAILING_CANCELLED:%:{id}` + stronicowanie (resolve / expire / reassigned).
   - pkt 1–6: OPOZNIONY przy `delayed_*`; RECZNIE; brak notice; kolejność PRZYWROCONY→status→ryzyka; 72c `restore_check`; i18n incomplete/beyond/check.
-  - **DP-124:** SMS „prom przywrócony” (decyzja 79) — osobny PR po scaleniu #698.
+  - SMS „prom przywrócony” (decyzja 79) — **DP-125** (wcześniej błędnie DP-124).
   - vitest bn3-tallink-alert **66** + helpers **6** (= **72**; B1–B3, page cap, negatywy incomplete/HTML/beyond/poison).
-- **Dalej:** push → CI → gotowe do F7 @ sha. Po F7: RSS ERR (+ W64 Yle STOP); SMS DP-124 osobno.
+- **Dalej:** push → CI → gotowe do F7 @ sha. Po F7: RSS ERR (+ W64 Yle STOP); SMS DP-125 osobno.
 - Bez push na main.
 
 ## 2026-11-01 08:45 — #696 SCALONE; start #686 Tallink restore

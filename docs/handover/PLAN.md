@@ -1222,7 +1222,8 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-115 | Cursor | `stenaIrmBackoffUntilMs` — stan w pamięci modułu (jak dawny streak Tallink); ocenić persist / Edge cold start | F7 #689 r1 | BN3 / AIS | w kolejce |
 | DP-116 | Cursor | `max_rows=1000` obcina odczyty rejsów (2119 na prod) — przegląd innych jobów ferry + stronicowanie / agregaty; F7 #696 r4: też `openCancelSuspectSailings` (risk_signals range+order, sailings.in ≤150) | F7 #690 r2 / #691 / #696 r4 | BN3 / ferry | SCALONE #693 sailings; cancel-suspect w #696 |
 | DP-123 | Cursor | mutacja „zniknięcie bez wymogu stoi” przeżywa w wąskim przypadku (SOG 0,5–3 kn w geofence + Portnet zniknął) — brakuje testu; kod OK | F7 #696 r4 | BN3 / cancel-suspect | w kolejce |
-| DP-124 | Cursor | SMS „prom przywrócony” dla kierowców po auto-ODWOLANY (decyzja koordynatora 79; bez przepiętych) — osobny PR po #698 | F7 #698 r1 pkt 7 | BN3 / #686 | w kolejce |
+| DP-124 | Cursor | UMG: pusta godzina ATA — nie traktować jako ATA (wpis koordynatora 01.11) | F7 #695 / koord. 01.11 | BN3 / UMG | w kolejce |
+| DP-125 | Cursor | SMS „prom przywrócony” dla kierowców po auto-ODWOLANY (decyzja koordynatora 79; bez przepiętych) — osobny PR po #698; czeka potwierdzenie właściciela (#697) | F7 #698 r2 | BN3 / #686 | w kolejce |
 | DP-117 | Cursor | `route-check/index.ts` `loads` `.limit(500)` bez sortu/filtra statusu — przy >500 transportach losowy dobór | F7 #693 r1 | ferry / route-check | w kolejce |
 | DP-118 | Cursor | `store.resolveStaleRisks` — `risk_signals` bez limitu (`max_rows`) → część nieaktualnych ryzyk niezamknięta | F7 #693 r1 | BN3 / ryzyka | w kolejce |
 | DP-119 | Cursor | Front `documents`/`invoices` bez `range` (max_rows); RPC zwracające zbiory też `max_rows` (`latest_vehicle_positions` itd.) | F7 #693 r1 | front / API | w kolejce |
@@ -1312,7 +1313,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 1. ~~**60** Tallink poza PLD–KPS~~ — baza już tylko DFDS; front `ferryCatalog` bez TALLINK; test bn9a.
 2. Źródła → update — ~~**DFDS remark**~~; ~~Portnet ATA~~; ~~ts.ee Lisainfo / Tallink Alert (F7 #683)~~; Digitraffic Viking near (#685-a).
 3. ~~Opóźnienie: ATA − arrival; `FERRY_PORT_DELAY_MIN` z `app_parameters` (zapas 15)~~ (**0357** + Portnet + store F7 B1); ~~ATD 13–19 min przed planem bez delayed (DP-94)~~; ATD tylko gdy wiarygodne — dalej.
-4. Odwołanie: ~~ts.ee / Tallink Alert (decyzja 59 + **68**, F7 #683)~~; ~~DFDS cancel → NIEZNANY (F7 B3)~~; ~~podejrzenie 45 min+AIS → FERRY MEDIUM~~ (decyzja **61**/**61b**, #696 SCALONE `02f3ca21`); **#686** decyzja 72 cz. 2 — auto-przywrócenie (PR #698, F7 r1 POPRAWKI: B1 Tallink Alert `source_url`, B2 przepięcia po zamkniętych ryzykach, B3 filtr DP-116, status OPOZNIONY/ZAPLANOWANY, 72c restore_check) — W TOKU.
+4. Odwołanie: ~~ts.ee / Tallink Alert (decyzja 59 + **68**, F7 #683)~~; ~~DFDS cancel → NIEZNANY (F7 B3)~~; ~~podejrzenie 45 min+AIS → FERRY MEDIUM~~ (decyzja **61**/**61b**, #696 SCALONE `02f3ca21`); **#686** decyzja 72 cz. 2 — auto-przywrócenie (PR #698, F7 r2 POPRAWKI: B-r2-1 updateSailing false→continue; B-r2-2 supabaseStore fakeSb; asercja restore/M11; DP-125 SMS) — W TOKU.
 5. `operator_notices`: ~~ręczny 6 armatorów (0356)~~; ~~`source` AUTO/RECZNIE + URL (**0358**)~~; ~~**decyzja 69** AUTO tylko przy ODWOLANY~~; ~~front BN9-c1 (#692)~~; **PRZYWROCONY** (**0362** / #686); RSS ERR / Yle (decyzja 61 pkt 3) — dalej (Yle: STOP regulamin płatnych app → W64).
 6. ~~SOURCE_DOWN: TALLINK/DFDS/ECKERO/DIGITRAFFIC (+ *_SCHEDULE) = MEDIUM~~ (wycinek 2 + **decyzja 67** F7 #682, uzasadnienie §5); Viking bez SourceId statusu.
 7. ~~Digitraffic winter-navigation~~ (**#694** `ef89f5d3` / **0361** + F7 r1: locode z tras, bez ryzyka v2 cancelled → **DP-121**); ~~Urząd Morski Gdynia (zapas Stena)~~ (**#695** `6c908ae4`); sonda v2 cancelled = observations.
@@ -2382,7 +2383,8 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 01.11.2026 08:25 | #696 F7 r3 POPRAWKI: B1 openCancelSuspect poza since; B2 AIS clear ≥3 kn / poza geofence, SOG null=keep; DOPLYNAL bez ATA nie zamyka; vitest **46** @ `9189b083` | pętla |
 | 01.11.2026 09:10 | #696 F7 r4 POPRAWKI: DP-116 openCancelSuspect (range+order, `.in`≤150, throw); M1/M12/N11; spec ATD/ATA spoza since; vitest bn3-cancel **49** + dp116 openCancel | pętla |
 | 01.11.2026 08:34 | #696 SCALONE `02f3ca21` (F7: gotowe do scalenia @ d7932909); DP-123 w rejestrze; start #686 Tallink restore `pakiet/bn3-686-tallink-restore` / **0362** | pętla / F7 #696 |
-| 01.11.2026 10:25 | #698 F7 r1 POPRAWKI: B1 source_url tallink.com; B2 przepięcia po zamkniętych; B3 filtr+page; OPOZNIONY/RECZNIE/72c/i18n; DP-124 SMS osobno | pętla |
+| 01.11.2026 10:25 | #698 F7 r1 POPRAWKI: B1 source_url tallink.com; B2 przepięcia po zamkniętych; B3 filtr+page; OPOZNIONY/RECZNIE/72c/i18n; SMS → DP-125 | pętla |
+| 01.11.2026 10:50 | #698 F7 r2 POPRAWKI: B-r2-1 updateSailing false; B-r2-2 supabaseStore; restore/M11; DP-124 UMG / DP-125 SMS | pętla |
 | 31.10.2026 — | Decyzja 73: TLLA-HEL ETA−150 min / HELA-TLL ETD+160 min (fixture Cargo; nocny 165 min OK). Decyzja 74: `sailings.source_ref` 0359; Digitraffic `digitraffic:portcall:<id>:<route>`; HTML/RECZNIE/DANE_STARTOWE wygrywają; #685-b RPC zastępuje digitraffic:% w ±3 h | F7 #688 r1–r4 |
 | 31.10.2026 — | F7 #683 nieblokujące (osobna poprawka): Scheduler grudzień + „on 2 January” → rok bieżący, ciche wygaśnięcie; Alert INFO bez ryzyka/historii — świadomie | F7 #683 r7 |
 | 31.10.2026 — | F7 #683 r8 nieblokujące (osobno): Alert poza Schedulerem obok Schedulera; sprzeczne bloki (resume→cofnięcie auto); rok przy długim oknie Schedulera; mutanty M10/M15–M17/M22 świadomie bez testów | F7 #683 r8 |
