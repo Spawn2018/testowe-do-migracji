@@ -1710,9 +1710,8 @@ export async function runFerryPortnet(deps: JobDeps): Promise<JobResult> {
       ...(winter.hits ? { winter_hits: String(winter.hits) } : {}),
       ...(v2c.fihel ? { port_call_v2_fihel_cancelled: '1' } : {}),
       port_call_v2_cancelled_n: String(v2c.count),
-      ...(umg.rows ? { umg_stena_rows: String(umg.rows) } : {}),
-      ...(umg.updated ? { umg_stena_updated: String(umg.updated) } : {}),
       umg_stena_rows: String(umg.rows),
+      ...(umg.updated ? { umg_stena_updated: String(umg.updated) } : {}),
     },
   };
 }
