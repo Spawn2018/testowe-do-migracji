@@ -43,6 +43,8 @@ Sprawdzenie: `gh issue view <n> --json author,labels,comments` → `author.login
 
 1. **Łączenie:** 2–3 drobne DP z tego samego obszaru (ten sam etap / te same pliki) w jeden PR — osobne commity, osobne testy, jedna migracja gdy się da. Pierwsze zastosowanie: DP-137+138 w #715.
 2. **Unikalne fixture w `tests/db/status.sh`:** własny vessel i własne UUID z numerem DP; daty spoza zakresów już używanych; po każdym `insert` fixture — asercja `count(*)`; opcjonalnie komentarz zajętych `L xx` / vesseli. Bez `alter table` zmieniającego CHECK schematu pod test.
+3. **Start etapu od specyfikacji koordynatora:** gdy w skrzynce jest issue ze specyfikacją BN/etapu (`dla-cursora`), zaczynasz od kodu według tej specyfikacji — bez osobnej rundy researchu źródeł (pytania/odstępstwa → komentarz w tym issue).
+4. **Praca równoległa koordynatora:** wygląd na `wyglad/*` i dokumenty/spec mogą iść równolegle; nie ruszasz plików, które koordynator wyraźnie zastrzegł (np. etykiety statusów przy DP-137 / komponenty mapy przy BN9-c2). Kolizje ścieżek zgłaszaj w issue, nie nadpisuj.
 
 ## Zakazy pętli
 
