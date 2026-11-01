@@ -3230,7 +3230,7 @@ export async function runFerryAis(deps: JobDeps): Promise<JobResult> {
       }
     }
 
-    /* BN4: INFO AIS_<port> — postój w hubie docelowym (≤3 km, SOG<3). NYN/KAA jak wcześniej; HEL/STO/KPS/VUO/… */
+    /* BN4 F7 #706 r1: INFO AIS_<port> tylko z transportami (B1) i po ATA geofence (B2 / DP-128). */
     {
       const arr = arrivalPortForRoute(s.route);
       const hub = arr ? portCoords(arr) : null;
@@ -3240,26 +3240,31 @@ export async function runFerryAis(deps: JobDeps): Promise<JobResult> {
         && distanceKm(fix.lat, fix.lon, hub.lat, hub.lon) <= 3
         && (fix.sogKn ?? 0) < 3;
       const portLabel = arr ? AIS_ARRIVAL_PORT_LABEL[arr] : null;
-      if (inArr && arr && portLabel) {
-        const titleKey = arr === 'NYN' ? 'rk_ais_arrived'
-          : arr === 'KAA' ? 'rk_ais_arrived_kaa'
-            : 'rk_ais_arrived_at';
-        const params = (arr === 'NYN' || arr === 'KAA')
-          ? { vessel: v.name }
-          : { vessel: v.name, port: portLabel };
-        const ok = await deps.store.raiseRisk({
-          kind: 'FERRY', severity: 'INFO',
-          title: `AIS: ${v.name} w porcie ${portLabel} — potwierdzenie przypłynięcia (informacja)`,
-          titleKey, params,
-          detail: {
-            sailing_id: s.id, statek: v.name, port: arr, pozycja: [fix.lat, fix.lon],
-            sygnal: fix.timestampUtc, zrodlo: fix.source ?? 'DIGITRAFFIC', atrybucja: DIGITRAFFIC_ATTRIBUTION,
-            obs,
-          },
-          dedup: `AIS_${arr}:${s.id}`,
-          sourceUrl: 'https://www.digitraffic.fi/en/marine-traffic/',
-        });
-        if (ok) risks++;
+      if (inArr && arr && portLabel && s.actual_arrival_at != null) {
+        const assigned = deps.store.sailingAssignedLoadCount
+          ? await deps.store.sailingAssignedLoadCount(s.id)
+          : 0;
+        if (assigned > 0) {
+          const titleKey = arr === 'NYN' ? 'rk_ais_arrived'
+            : arr === 'KAA' ? 'rk_ais_arrived_kaa'
+              : 'rk_ais_arrived_at';
+          const params = (arr === 'NYN' || arr === 'KAA')
+            ? { vessel: v.name }
+            : { vessel: v.name, port: portLabel };
+          const ok = await deps.store.raiseRisk({
+            kind: 'FERRY', severity: 'INFO',
+            title: `AIS: ${v.name} w porcie ${portLabel} — potwierdzenie przypłynięcia (informacja)`,
+            titleKey, params,
+            detail: {
+              sailing_id: s.id, statek: v.name, port: arr, pozycja: [fix.lat, fix.lon],
+              sygnal: fix.timestampUtc, zrodlo: fix.source ?? 'DIGITRAFFIC', atrybucja: DIGITRAFFIC_ATTRIBUTION,
+              obs,
+            },
+            dedup: `AIS_${arr}:${s.id}`,
+            sourceUrl: 'https://www.digitraffic.fi/en/marine-traffic/',
+          });
+          if (ok) risks++;
+        }
       }
     }
   }

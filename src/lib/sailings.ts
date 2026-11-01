@@ -173,7 +173,8 @@ export function autoRiskCode(kind: string, dedupKey: string | null | undefined):
   if (k.startsWith('FERRY_OVERDUE:')) return 'FERRY_OVERDUE';
   if (k.startsWith('SOURCE_DOWN:')) return 'SOURCE_DOWN';
   if (k.startsWith('FERRY_UNKNOWN:')) return 'FERRY_UNKNOWN';
-  if (k.startsWith('AIS_NYN:')) return 'AIS_NYN';
+  /* F7 #706 nieblokujące: KAA + porty bałtyckie (ten sam kod etykiety AIS). */
+  if (/^AIS_(NYN|KAA|HEL|HELA|VUO|STO|KPS):/.test(k)) return 'AIS_NYN';
   return undefined;
 }
 

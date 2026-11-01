@@ -90,6 +90,9 @@ describe('M10 dane z bazy', () => {
     expect(autoRiskCode('FERRY', 'MISSED_SAILING:x:s')).toBe('MISSED_SAILING');
     expect(autoRiskCode('FERRY', 'SAILING_CANCELLED:x:s')).toBe('SAILING_CANCELLED');
     expect(autoRiskCode('FERRY', 'FERRY_OVERDUE:x:s')).toBe('FERRY_OVERDUE');
+    expect(autoRiskCode('FERRY', 'AIS_NYN:s1')).toBe('AIS_NYN');
+    expect(autoRiskCode('FERRY', 'AIS_KAA:s1')).toBe('AIS_NYN');
+    expect(autoRiskCode('FERRY', 'AIS_HEL:s1')).toBe('AIS_NYN');
     expect(autoRiskCode('FERRY', null)).toBeUndefined();
     const r = riskFromRow({ id: 'r', load_id: 'l', kind: 'AUTO_STATUS', severity: 'HIGH', title: 't', detail: {}, detected_at: NOW, dedup_key: 'AUTOSTATUS:l:FERRY' }, NOW);
     expect(r).toMatchObject({ type: 'OPS', code: 'AUTO_STATUS' });

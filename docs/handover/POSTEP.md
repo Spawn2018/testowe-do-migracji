@@ -7469,6 +7469,18 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Dalej:** DP kolejka BN3 (np. DP-108 ODWOLANY→FERRY_CANCELLED) albo ATD wiarygodne / BN4.
 - Bez push na main.
 
+## 2026-11-01 17:35 — PILNE hotfix #706 F7 r1 B1+B2 (AIS_<port>)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE. **PILNE** z komentarza #706 16:24Z (scalenie bez F7).
+- Przyczyna: #706 `3c0b76ee` scalone mimo blokerów F7 r1 (B1 INFO bez transportów; B2 INFO bez ATA geofence). Naruszenie procedury — odnotowane w PLAN §4/§8.
+- **Krok (hotfix, przed arrival backup):**
+  - Edge: INFO `AIS_<port>` tylko gdy `sailingAssignedLoadCount > 0` (wszystkie porty w tym NYN/KAA) **oraz** `actual_arrival_at` (geofence);
+  - migracja **0367**: resolve INFO HEL/HELA/STO/KPS/VUO bez transportów;
+  - vitest bn4-ais F7 r1 (B1/B2/M5/M6/M9) + integrations NYN z loadCount; `autoRiskCode` KAA/HEL…;
+  - rejestr: **DP-133** (cron), **DP-134** (`fr.active` mapa), **DP-135** (SQL test mapy).
+- **Dalej:** push → CI → gotowe do F7. Po F7: arrival backup FI/SE → BN9-c2 / BN5.
+- Bez push na main.
+
 ## 2026-11-01 16:50 — #705 SCALONE; start BN4 pkt 8 (szacunek + map + AIS_<port>)
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne`.
