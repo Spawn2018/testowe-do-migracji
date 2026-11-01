@@ -24,13 +24,17 @@ export const POLFERRIES = [
 ] as const;
 
 export const TRACKED_FERRIES = [...POLFERRIES, ...STENA_FERRIES] as const;
+/** Historyczna lista PL/SE (pomiar świeżości 24 h). BN4: śledzenie = każdy `vessels.mmsi`. */
 export const TRACKED_MMSI = new Set<number>(TRACKED_FERRIES.map((v) => v.mmsi));
 export const STENA_IMO = new Set<number>(STENA_FERRIES.map((v) => v.imo));
 export const STENA_MMSI = new Set<number>(STENA_FERRIES.map((v) => v.mmsi));
 
-/** Pięć promów, listy nie rozszerzać. Stena Vision (2023) tu nie wchodzi. */
+/**
+ * BN4 (#573): każdy statek z MMSI w `vessels` (Digitraffic + aisstream).
+ * Wcześniej tylko 5 MMSI PL/SE — Zatoka Fińska nie wchodziła do allow/poll.
+ */
 export function isTrackedMmsi(mmsi: number | null | undefined): boolean {
-  return mmsi != null && TRACKED_MMSI.has(mmsi);
+  return mmsi != null && Number.isFinite(mmsi) && mmsi >= 200_000_000 && mmsi <= 799_999_999;
 }
 
 const SOURCE_RANK = { STENA: 3, AISSTREAM: 2, DIGITRAFFIC: 1 } as const;

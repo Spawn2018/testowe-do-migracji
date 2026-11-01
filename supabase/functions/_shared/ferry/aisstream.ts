@@ -11,8 +11,14 @@
 import type { VesselFix } from './digitraffic.ts';
 
 export const AISSTREAM_URL = 'wss://stream.aisstream.io/v0/stream';
-/** Porty Gdańsk, Gdynia, Karlskrona, Nynäshamn i morze między nimi. */
-export const BALTIC_BBOX: [[number, number], [number, number]] = [[54.0, 15.2], [59.3, 19.9]];
+/** Porty Gdańsk, Gdynia, Karlskrona, Nynäshamn i morze między nimi (AIS-SRC). */
+export const BALTIC_BBOX_SOUTH: [[number, number], [number, number]] = [[54.0, 15.2], [59.3, 19.9]];
+/** Zatoka Fińska + Morze Alandzkie (BN4 / #573): 59,0–60,5°N, 17,5–26,0°E. */
+export const BALTIC_BBOX_GULF: [[number, number], [number, number]] = [[59.0, 17.5], [60.5, 26.0]];
+/** Subskrypcja aisstream: PL/SE + Zatoka (BN4). */
+export const BALTIC_BBOXES: readonly [[number, number], [number, number]][] = [BALTIC_BBOX_SOUTH, BALTIC_BBOX_GULF];
+/** Jedna ramka obejmująca oba bboxy (testy / kompatybilność). */
+export const BALTIC_BBOX: [[number, number], [number, number]] = [[54.0, 15.2], [60.5, 26.0]];
 export const AIS_POSITION_TYPES = ['PositionReport', 'StandardClassBPositionReport', 'ExtendedClassBPositionReport'] as const;
 
 /** "2026-10-05 05:19:10.554119198 +0000 UTC" albo ISO → ISO UTC (ms). Nieczytelny → null. */
@@ -109,7 +115,7 @@ export async function collectAisstreamFixes(
       stats.opened = true;
       ws.send(JSON.stringify({
         APIKey: apiKey,
-        BoundingBoxes: [BALTIC_BBOX],
+        BoundingBoxes: [...BALTIC_BBOXES],
         FiltersShipMMSI: [...allow],
         FilterMessageTypes: [...AIS_POSITION_TYPES],
       }));

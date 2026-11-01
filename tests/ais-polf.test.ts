@@ -89,7 +89,11 @@ describe('AIS-POLF — ramki aisstream', () => {
     expect(ws.binaryType).toBe('arraybuffer');
     const sub = JSON.parse(ws.sent[0]);
     expect(sub.FiltersShipMMSI).toEqual(['311852000', '311000787']);
-    expect(sub.BoundingBoxes[0]).toEqual([[54.0, 15.2], [59.3, 19.9]]);
+    // BN4: PL/SE + Zatoka Fińska (dwa bboxy).
+    expect(sub.BoundingBoxes).toEqual([
+      [[54.0, 15.2], [59.3, 19.9]],
+      [[59.0, 17.5], [60.5, 26.0]],
+    ]);
     expect(fixes.map((f) => f.mmsi).sort()).toEqual([311000787, 311852000]);
   });
 

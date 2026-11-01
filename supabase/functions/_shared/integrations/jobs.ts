@@ -2980,6 +2980,7 @@ async function readStenaIrm(deps: JobDeps, nowMs: number): Promise<{ fixes: Vess
 export async function runFerryAis(deps: JobDeps): Promise<JobResult> {
   const nowD = deps.now(); const now = nowD.toISOString();
   const [vessels, sailings] = await Promise.all([deps.store.vessels(), deps.store.sailingsSince(new Date(nowD.getTime() - 2 * 864e5).toISOString())]);
+  // BN4: śledzenie z `vessels` (MMSI / Stena IMO) — nie z zamkniętej listy 5 MMSI.
   const tracked = vessels.filter((v) => isTrackedMmsi(v.mmsi) || (v.imo != null && STENA_IMO.has(v.imo)));
   const eff = (s: DbSailing) => ({
     dep: Date.parse(s.actual_departure_at ?? s.delayed_departure_at ?? s.departure_at),
@@ -3029,7 +3030,6 @@ export async function runFerryAis(deps: JobDeps): Promise<JobResult> {
       try {
         const fixes = await deps.collectAisstream();
         for (const fix of fixes) {
-          if (!isTrackedMmsi(fix.mmsi)) continue;
           const v = tracked.find((x) => x.mmsi === fix.mmsi);
           if (v) pushFix(v.id, { ...fix, source: 'AISSTREAM' });
         }
@@ -3213,7 +3213,7 @@ export async function runFerryAis(deps: JobDeps): Promise<JobResult> {
 
 /** ferry-ais-listen — AIS-POLF (05.10). Nasłuch aisstream co minutę przez ~50 s (limit ścienny funkcji Edge
  *  150 s; statek przy nabrzeżu nadaje co 3 min, więc 8 s w ferry-ais prawie nigdy go nie łapało).
- *  Zapis każdej odebranej pozycji pięciu promów ze źródłem AISSTREAM. Bez filtra Q-18, obie strony. */
+ *  Zapis pozycji ze źródłem AISSTREAM dla wszystkich `vessels` z MMSI (BN4). Bez filtra Q-18. */
 export const AIS_LISTEN_DEFAULT_MS = 50_000;
 export function aisListenMs(raw: string | undefined): number {
   const n = Number(raw);
