@@ -30,6 +30,9 @@ import { defaultVessel, vesselOperator, VESSELS_FALLBACK } from '../lib/vesselGr
 import { useVesselGroups } from '../lib/useVesselGroups';
 import { emptyRowsKey, manualRouteError, sailingFocusPlan, sailingLineOptions, showRouteUnknown, vesselSelectKey } from '../lib/sailingsForm';
 import { vesselsLoader } from '../lib/vesselsLoad';
+import { VikingImportPanel } from '../components/schedule/VikingImportPanel';
+import { demoVikingImportApi, type VikingImportApi } from '../lib/vikingImport';
+import { isPreviewReadOnly } from '../lib/prodFacade';
 
 export function SailingsPanel({ phone = false, onShowLoads }: { phone?: boolean; onShowLoads?: (sailingId: string) => void }) {
   const role = useTowerStore((s) => s.role);
@@ -46,6 +49,17 @@ export function SailingsPanel({ phone = false, onShowLoads }: { phone?: boolean;
   const canEditSailings = PROD_BUILD
     ? getAuthProfile()?.role === 'HHL_ADMIN'
     : role === 'HHL' && accountRole(role) !== 'HHL_OPS';
+
+  /* BN9-c1 / decyzja 63b: import rozkładu Vikinga z pliku — to samo prawo co „Dodaj rejs” (Administrator HHL);
+     serwer dodatkowo wymaga 2FA i odrzuca Podgląd (403). Produkcja: moduł serwera ładowany dopiero po otwarciu (I-2). */
+  const [vikingOpen, setVikingOpen] = useState(false);
+  const [vikingApi, setVikingApi] = useState<VikingImportApi | null>(PROD_BUILD ? null : demoVikingImportApi);
+  useEffect(() => {
+    if (!vikingOpen || vikingApi || import.meta.env.VITE_AUTH_MODE !== 'supabase') return;
+    let cancelled = false;
+    void import('../lib/vikingImportApi').then((m) => { if (!cancelled) setVikingApi(m.createVikingImportApi()); });
+    return () => { cancelled = true; };
+  }, [vikingOpen, vikingApi]);
 
   /* E30 pkt 7: domyślnie przyszłe i tylko do Szwecji */
   const [future, setFuture] = useState(true);
@@ -169,11 +183,34 @@ export function SailingsPanel({ phone = false, onShowLoads }: { phone?: boolean;
           </select>
         <div className="spacer" />
         {canEditSailings ? (
+          <button
+            type="button"
+            className="chipbtn"
+            data-sail-viking
+            aria-expanded={vikingOpen}
+            onClick={() => setVikingOpen((v) => !v)}
+          >
+            Wczytaj rozkład Vikinga
+          </button>
+        ) : null}
+        {canEditSailings ? (
           <button type="button" className="btn" data-sail-new onClick={() => { setAdding((v) => !v); setErr(null); }}>
             {t(locale, 'sail_add')}
           </button>
         ) : null}
       </div>
+
+      {canEditSailings && vikingOpen ? (
+        <VikingImportPanel
+          api={vikingApi}
+          demo={!PROD_BUILD}
+          readOnly={isPreviewReadOnly({ viewRole: role })}
+          nowIso={now}
+          locale={locale}
+          phone={phone}
+          onClose={() => setVikingOpen(false)}
+        />
+      ) : null}
 
       {canEditSailings && adding ? (
         <form

@@ -34,3 +34,54 @@
   .sv-bar .chipbtn,.sv-bar .btn{min-height:44px}
   .sv-bar .btn{font-size:14px}
 }
+
+/* BN9-c1 / decyzja 63b: „Wczytaj rozkład Vikinga z pliku” (Harmonogram › Rejsy, Administrator HHL) */
+.vi{display:flex;flex-direction:column;gap:8px;text-align:left}
+.vi-hd{display:flex;align-items:center;gap:8px}
+.vi-hd h4.sec{margin:0}
+.vi-muted{color:var(--ink-3)}
+.vi-lead{margin:0;font-size:13px}
+.vi-howto{font-size:13px;color:var(--ink-2)}
+.vi-howto summary{cursor:pointer;font-weight:600;color:var(--sea)}
+.vi-howto ol{margin:6px 0;padding-left:20px}
+.vi-howto p{margin:4px 0 0}
+.vi-pick{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:flex-end}
+.vi-field{display:flex;flex-direction:column;gap:3px;font-size:12.5px;color:var(--ink-3);min-width:0}
+.vi-field:first-child{flex:1 1 260px}
+.vi-field .input{min-width:0;max-width:100%}
+.vi-acts{display:flex;gap:8px}
+.vi .btn:disabled{background:var(--rule);border-color:var(--rule);color:var(--ink-3);cursor:not-allowed}
+.vi-err{margin:0}
+.vi-preview{display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--rule-2);padding-top:8px}
+.vi-preview h4.sec{margin:0}
+.vi-counts{display:flex;flex-wrap:wrap;gap:8px}
+.vi-count{border:1px solid var(--rule);padding:6px 10px;display:flex;flex-direction:column;min-width:120px;flex:1 1 120px}
+.vi-count b{font:700 20px var(--font-cond);font-variant-numeric:tabular-nums}
+.vi-count span{font-size:12.5px;color:var(--ink-3)}
+.vi-warn{margin:0;padding:6px 10px 6px 26px;background:var(--amber-bg);color:var(--amber-ink);font-size:13px}
+.vi-sec h5{margin:4px 0;font-size:13px;font-weight:600;color:var(--ink-2)}
+.vi-tbl td{vertical-align:top}
+.vi-tbl td.vi-time{white-space:nowrap;font-variant-numeric:tabular-nums}
+.vi-tbl td.vi-why{color:var(--ink-2)}
+.vi-more{color:var(--ink-3);font-size:12.5px}
+.vi-cards{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.vi-card{border:1px solid var(--rule);padding:6px 10px;display:flex;flex-direction:column;gap:2px;font-size:14px}
+.vi-card b{font-variant-numeric:tabular-nums}
+.vi-commit-bar,.vi-confirm-acts{padding:8px 0 0;background:none;border:0}
+.vi-confirm{border:1px solid var(--amber);background:var(--amber-bg);padding:8px 10px}
+.vi-confirm p{margin:0}
+.vi-done{margin:0}
+.vi-done .vi-warn{margin-top:6px}
+.vi-hist{border-top:1px solid var(--rule-2);padding-top:8px}
+.vi-hist h4.sec{margin:0 0 6px}
+.vi-hist-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.vi-hist-row{display:flex;flex-direction:column;gap:2px;font-size:13px;border-left:3px solid var(--rule);padding-left:8px}
+@media (max-width:768px){
+  .vi .btn,.vi .chipbtn,.vi .input{min-height:44px}
+  .vi .input{font-size:16px}
+  /* etykieta nad polem przy lewej krawędzi (reguła telefonu dla label centruje — jak .inv-field, P11 e4) */
+  .vi .vi-field{flex:1 1 100%;align-items:stretch}
+  .vi-acts,.vi-acts .btn{flex:1 1 100%}
+  .vi-commit-bar .btn,.vi-confirm-acts .btn,.vi-confirm-acts .chipbtn{flex:1 1 100%}
+  .vi-howto summary{padding:12px 0}
+}

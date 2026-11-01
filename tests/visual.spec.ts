@@ -163,3 +163,47 @@ test.describe('C2.4 visual smoke (HHL pl 1920)', () => {
     })
   }
 })
+
+/* BN9-c1 / decyzja 63b — Harmonogram › Rejsy › „Wczytaj rozkład Vikinga z pliku” (Administrator HHL).
+   Demo: podgląd przykładowy (wymyślone rejsy, G-09), zapis nieaktywny z wyjaśnieniem. Migawka samego ekranu importu,
+   komputer 1440 i telefon 390. Plik: wycinek struktury strony Viking Cargo z testów BN2 (bez danych osobowych). */
+const VIKING_FIXTURE = 'tests/fixtures/viking-cargo-helsinki-tallinn-sample.html'
+test.describe('BN9-c1 visual — import rozkładu Vikinga (HHL pl)', () => {
+  test.describe.configure({ mode: 'serial' })
+
+  for (const width of [1440, 390]) {
+    const file = `rejsy-viking-import__hhl__pl__${width}__light.png`
+    test(file, async ({ page }) => {
+      await page.emulateMedia({ reducedMotion: 'reduce' })
+      await gotoFrozen(page, width)
+      await setRole(page, 'HHL')
+      await setTheme(page, 'light', 'dark')
+      await page.evaluate((now) => { location.hash = `#/harmonogram?now=${encodeURIComponent(now)}` }, FROZEN_NOW)
+      await page.locator('[data-sched-tab="sailings"]').click()
+      await expect(page.locator('[data-sailings]')).toBeVisible()
+      await page.locator('[data-sail-viking]').click()
+      const panel = page.locator('[data-viking-import]')
+      await expect(panel).toBeVisible()
+      await expect(panel.locator('[data-vi-history] [data-vi-hist]')).toHaveCount(2)
+      await panel.locator('[data-vi-file]').setInputFiles(VIKING_FIXTURE)
+      await expect(panel.locator('[data-vi-file-ok]')).toBeVisible()
+      await panel.locator('[data-vi-preview]').click()
+      await expect(panel.locator('[data-vi-plan]')).toBeVisible()
+      await expect(panel.locator('[data-vi-commit]')).toBeDisabled()
+      await page.evaluate(async () => {
+        if (document.fonts?.ready) await document.fonts.ready
+      })
+      /* cały ekran importu w kadrze: wyższe okno (aplikacja przewija wnętrze, nie stronę) */
+      await page.setViewportSize({ width, height: width < 769 ? 3400 : 2200 })
+      await page.waitForTimeout(300)
+      await panel.scrollIntoViewIfNeeded()
+      await expect(panel).toHaveScreenshot(file, {
+        /* dolny pasek telefonu (E8) przykrywa treść — poza migawką ekranu */
+        style: 'nav{visibility:hidden !important}',
+        maxDiffPixels: 60,
+        threshold: 0.28,
+        animations: 'disabled',
+      })
+    })
+  }
+})
