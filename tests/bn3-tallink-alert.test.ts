@@ -275,92 +275,6 @@ describe('BN3 Tallink Alert', () => {
   });
 });
 
-describe('BN3 Tallink Alert — #686 przywrócenie (decyzja 72 cz. 2)', () => {
-  const RESTORE =
-    'The MyStar 16:30 departure from Tallinn to Helsinki on 2 November will operate as planned.';
-  const CANCEL =
-    'The MyStar 16:30 departure from Tallinn to Helsinki on 2 November is cancelled.';
-
-  it('autoRestoreFromRestoreSentence — wzorzec + przeprosiny; niewzorcowe → null', () => {
-    expect(autoRestoreFromRestoreSentence(RESTORE, 2026)).toMatchObject({
-      vessel: 'M/F MyStar', hm: '16:30', startYmd: '2026-11-02', routes: ['TLL-HEL'],
-    });
-    expect(autoRestoreFromRestoreSentence(
-      `${RESTORE} We apologise for any inconvenience.`,
-      2026,
-    )).toMatchObject({ hm: '16:30' });
-    expect(autoRestoreFromRestoreSentence(
-      'The MyStar 16:30 departure from Tallinn to Helsinki on 2 November will operate.',
-      2026,
-    )).toBeNull();
-    expect(autoRestoreFromRestoreSentence(
-      'Correction: the departure will operate as planned.',
-      2026,
-    )).toBeNull();
-  });
-
-  it('najnowszy restore wygrywa nad cancel; match ODWOLANY → restore', () => {
-    const html = wrapTwoAlertsTimed(
-      `<CwsP>${CANCEL}</CwsP>`,
-      '08:00',
-      `<CwsP>${RESTORE}</CwsP>`,
-      '10:00',
-      '2026-11-02',
-    );
-    const parsed = parseTallinkAlerts(html, TALLINK_HOME(), NOW);
-    const fin = finalizeTallinkAlertsForStatus(parsed.alerts, NOW);
-    const winner = fin.find((a) => a.autoRestoreOk);
-    expect(winner).toBeTruthy();
-    expect(fin.some((a) => a.autoCancelOk)).toBe(false);
-    const hit = matchTallinkRestoreSailings(winner!, [{
-      id: 's1', vesselName: 'M/F MyStar', route: 'TLL-HEL',
-      departureAt: '2026-11-02T14:30:00.000Z', status: 'ODWOLANY', source: 'TALLINK',
-    }]);
-    expect(hit.kind).toBe('restore');
-  });
-
-  it('runFerryStatus: AUTO ODWOLANY → restore → ZAPLANOWANY + PRZYWROCONY; RECZNIE → MEDIUM', async () => {
-    const restoreHtml = padTallinkPage(wrapAlertTimed(RESTORE, '2026-11-02', '12:00'));
-    const pages = { 'tallink.com': restoreHtml, 'ts.ee': 503, portsofstockholm: 503, 'port-calls': 503 };
-
-    const st = new MemStore();
-    st.sailings.push({
-      id: 's-ok', vessel_id: MYST, route: 'TLL-HEL',
-      departure_at: '2026-11-02T14:30:00.000Z', arrival_at: '2026-11-02T16:30:00.000Z',
-      delayed_departure_at: null, delayed_arrival_at: null,
-      actual_departure_at: null, actual_arrival_at: null,
-      status: 'ODWOLANY', source: 'TALLINK',
-    });
-    st.notices.push({
-      sailingId: 's-ok', kind: 'ODWOLANY', source: 'AUTO', operator: 'TALLINK',
-    });
-    st.risks.push({
-      kind: 'FERRY', severity: 'HIGH', title: 'x', titleKey: 'rk_sailing_cancelled',
-      params: {}, detail: {}, dedup: 'SAILING_CANCELLED:load1:s-ok',
-    });
-    await runFerryStatus(deps(st, pages, NOW));
-    expect(st.sailings.find((s) => s.id === 's-ok')!.status).toBe('ZAPLANOWANY');
-    expect(st.notices.some((n) => n.kind === 'PRZYWROCONY')).toBe(true);
-    expect(st.risks.some((r) => r.dedup.startsWith('SAILING_CANCELLED:'))).toBe(false);
-    expect(st.risks.some((r) => r.titleKey === 'rk_tallink_alert_restored')).toBe(true);
-
-    const man = new MemStore();
-    man.sailings.push({
-      id: 's-man', vessel_id: MYST, route: 'TLL-HEL',
-      departure_at: '2026-11-02T14:30:00.000Z', arrival_at: '2026-11-02T16:30:00.000Z',
-      delayed_departure_at: null, delayed_arrival_at: null,
-      status: 'ODWOLANY', source: 'TALLINK',
-    });
-    man.notices.push({
-      sailingId: 's-man', kind: 'ODWOLANY', source: 'RECZNIE', operator: 'TALLINK',
-    });
-    await runFerryStatus(deps(man, pages, NOW));
-    expect(man.sailings.find((s) => s.id === 's-man')!.status).toBe('ODWOLANY');
-    expect(man.notices.some((n) => n.kind === 'PRZYWROCONY')).toBe(false);
-    expect(man.risks.some((r) => r.titleKey === 'rk_tallink_alert_restore_manual')).toBe(true);
-  });
-});
-
 describe('BN3 Tallink Alert — runFerryStatus (F7 B5)', () => {
   it('F7 #689 R1-B1: isTallinkAlertHtmlUsable — Imperva / krótki HTML → nieOK; Cws+Footer → OK', () => {
     expect(isTallinkAlertHtmlUsable('<html></html>').ok).toBe(false);
@@ -1855,15 +1769,18 @@ describe('BN3 #686 Tallink restore', () => {
 
   it('najnowszy restore wygrywa nad starszym cancel; RECZNIE → ryzyko bez cofnięcia', async () => {
     // NOW = 12:00Z ≈ 14:00 Tallinn — oba timeStart ≤ teraz (72a: przyszły klucz poza wyborem).
-    const html =
-      `<Scheduler dateStart="2026-10-31" timeStart="08:00" dateEnd="2026-11-03">` +
-      `<CwsSection data-analytics-group="Alert"><CwsP>${CANCEL}</CwsP></CwsSection></Scheduler>` +
-      `<Scheduler dateStart="2026-10-31" timeStart="12:00" dateEnd="2026-11-03">` +
-      `<CwsSection data-analytics-group="Alert"><CwsP>${RESTORE}</CwsP></CwsSection></Scheduler>`;
-    const alerts = finalizeTallinkAlertsForStatus(
-      parseTallinkAlerts(wrapRendered(html), TALLINK_HOME(), NOW).alerts, NOW,
+    // dateStart = dziś (nie przyszła data odejścia) — jak wrapAlertTimed w innych testach #686.
+    const html = wrapTwoAlertsTimed(
+      `<CwsP>${CANCEL}</CwsP>`,
+      '08:00',
+      `<CwsP>${RESTORE}</CwsP>`,
+      '12:00',
+      '2026-10-31',
     );
-    const winner = alerts.find((a) => a.autoRestoreOk)!;
+    const alerts = finalizeTallinkAlertsForStatus(
+      parseTallinkAlerts(html, TALLINK_HOME(), NOW).alerts, NOW,
+    );
+    const winner = alerts.find((a) => a.autoRestoreOk);
     expect(winner).toBeTruthy();
     expect(alerts.filter((a) => a.autoCancelOk)).toHaveLength(0);
 
@@ -1878,7 +1795,7 @@ describe('BN3 #686 Tallink restore', () => {
       sailingId: 's-od', kind: 'ODWOLANY', source: 'AUTO', operator: 'TALLINK',
     });
     await runFerryStatus(deps(st, {
-      'tallink.com': wrapRendered(html), 'ts.ee': 503, portsofstockholm: 503,
+      'tallink.com': html, 'ts.ee': 503, portsofstockholm: 503, 'port-calls': 503,
     }, NOW));
     expect(st.sailings[0]!.status).toBe('ZAPLANOWANY');
     expect(st.notices.some((n) => n.kind === 'PRZYWROCONY')).toBe(true);
@@ -1895,7 +1812,7 @@ describe('BN3 #686 Tallink restore', () => {
       sailingId: 's-od', kind: 'ODWOLANY', source: 'RECZNIE', operator: 'TALLINK',
     });
     await runFerryStatus(deps(stRecz, {
-      'tallink.com': wrapRendered(html), 'ts.ee': 503, portsofstockholm: 503,
+      'tallink.com': html, 'ts.ee': 503, portsofstockholm: 503, 'port-calls': 503,
     }, NOW));
     expect(stRecz.sailings[0]!.status).toBe('ODWOLANY');
     expect(stRecz.notices.every((n) => n.kind !== 'PRZYWROCONY')).toBe(true);
