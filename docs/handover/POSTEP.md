@@ -7476,7 +7476,7 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (F7 #708 r1):**
   - B1: kraj tylko `ferry_route_is_outbound` + wyjątek rodziny PL→SE (NYN-GDN); powroty HEL-TLL/HELA-TLL/VUO-MUU/STO-TLL/KPS-PLD → false;
   - B2: `finland_land_geom` brzeg ~60.15 z wcięciami; Kapellskär ≤19.10; woda zatoki/KPS poza;
-  - testy status **540** (+27 vs 513); DP-136…138 w rejestrze.
+  - testy status **544** (+31 vs 513; B1 ląd+port wyjścia); DP-136…138 w rejestrze.
 - **Dalej:** push → CI → gotowe do F7 @ nowy sha. Po F7: BN9-c2 / BN5.
 - Bez push na main.
 

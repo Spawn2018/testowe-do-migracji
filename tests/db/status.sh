@@ -2548,19 +2548,27 @@ chk "BN4: TLL-STO → IN_TRANSIT_SE" "$(st $L367s)" IN_TRANSIT_SE
 chk "BN4: PLD-KPS Kapellskär → AIS backup true" \
   "select public.apply_ferry_ais_arrival_backup('$L367k', 59.75, 18.95, '2026-10-15 05:00+00')" t
 chk "BN4: PLD-KPS → IN_TRANSIT_SE" "$(st $L367k)" IN_TRANSIT_SE
-# B1: trasy powrotne (port_to poza SE/FI) — ląd/port wyjścia → false
+# B1: trasy powrotne (port_to poza SE/FI) — ląd i port wyjścia → false
 chk "BN4 B1: HEL-TLL ląd HEL → false" \
   "select public.apply_ferry_ais_arrival_backup('$L367r1', 60.28, 24.95, '2026-10-14 09:00+00')" f
 chk "BN4 B1: HEL-TLL port HEL → false" \
   "select public.apply_ferry_ais_arrival_backup('$L367r1', 60.15400, 24.91400, '2026-10-14 09:00+00')" f
 chk "BN4 B1: HELA-TLL ląd HEL → false" \
   "select public.apply_ferry_ais_arrival_backup('$L367r2', 60.28, 24.95, '2026-10-14 10:00+00')" f
+chk "BN4 B1: HELA-TLL port HEL → false" \
+  "select public.apply_ferry_ais_arrival_backup('$L367r2', 60.15400, 24.91400, '2026-10-14 10:00+00')" f
 chk "BN4 B1: VUO-MUU ląd VUO → false" \
   "select public.apply_ferry_ais_arrival_backup('$L367r3', 60.28, 25.20, '2026-10-14 10:30+00')" f
+chk "BN4 B1: VUO-MUU port VUO → false" \
+  "select public.apply_ferry_ais_arrival_backup('$L367r3', 60.21200, 25.19500, '2026-10-14 10:30+00')" f
 chk "BN4 B1: STO-TLL ląd STO → false" \
   "select public.apply_ferry_ais_arrival_backup('$L367r4', 59.40, 18.00, '2026-10-15 07:00+00')" f
+chk "BN4 B1: STO-TLL port STO → false" \
+  "select public.apply_ferry_ais_arrival_backup('$L367r4', 59.35000, 18.10000, '2026-10-15 07:00+00')" f
 chk "BN4 B1: KPS-PLD ląd KPS → false" \
   "select public.apply_ferry_ais_arrival_backup('$L367r5', 59.75, 18.95, '2026-10-15 05:00+00')" f
+chk "BN4 B1: KPS-PLD port KPS → false" \
+  "select public.apply_ferry_ais_arrival_backup('$L367r5', 59.72300, 19.06600, '2026-10-15 05:00+00')" f
 chk "BN4 B1: HEL-TLL status bez zmian" "$(st $L367r1)" FERRY
 chk "BN4 B1: STO-TLL status bez zmian" "$(st $L367r4)" FERRY
 q "update public.geofences set active = true
