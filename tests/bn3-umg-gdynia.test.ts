@@ -160,8 +160,8 @@ describe('BN3 UMG × ferry-portnet', () => {
     const r = await runFerryPortnet(deps(st, {
       'port-calls': PORTNET,
       'statki-spodziewane': UMG_ETA,
-      'ruch-statkow/statki-wychodzace': UMG_ETD,
-      'ruch-statkow/': UMG_IN,
+      'statki-wychodzace': UMG_ETD,
+      'statki-w-porcie': UMG_IN,
     }));
     expect(r.ok).toBe(true);
     expect(Number(r.observations?.umg_stena_rows ?? 0)).toBeGreaterThanOrEqual(1);

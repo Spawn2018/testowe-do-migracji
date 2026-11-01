@@ -7457,12 +7457,12 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (odbiór prod):** SELECT `here_road_legs` — **12** / active 12 / `browser_fetch` 5; core bez zmian (3495/12561/3742/18854/19408); BN7 7× null. `here-roads` **#108803** @ 04:49Z ok (0 prób — core świeże; BN7 poza cronem). Komentarz w #667. **Dalej:** BN3 (#573).
 - Bez push na main.
 
-## 2026-11-01 04:10 — #694 SCALONE; start BN3 UMG Gdynia
+## 2026-11-01 04:15 — BN3 UMG Gdynia (po #694)
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne`.
-- Scalanie: **#694 SCALONE** `ef89f5d3` (F7: gotowe do scalenia @ `e22ad036`; CI unit/db/visual ✔). Bez push na main.
-- **Krok BN3 pkt 7 UMG:** `umgdyShipMovements.ts` + `applyUmgdyStenaBackup` w ferry-portnet (ATA→KAA-GDY, ETD→GDY-KAA, ETA→delayed); SOURCE_DOWN `UMG_GDY` MEDIUM; vitest bn3-umg-gdynia **6**.
-- **Dalej:** push → CI → gotowe do F7 @ sha. Potem podejrzenie 45 min+AIS.
+- Scalanie: **#694** już na `main` `ef89f5d3`. Bez push na main.
+- **Krok BN3 pkt 7 UMG:** `umgdyShipMovements.ts` + `applyUmgdyStenaBackup` w ferry-portnet (ATA→KAA-GDY, ETD→GDY-KAA, ETA→delayed); URL `statki-w-porcie`/`spodziewane`/`wychodzace`; SOURCE_DOWN `UMG_GDY` MEDIUM; vitest bn3-umg-gdynia **6** (+ winter-nav/risk-keys/bn2 89).
+- **Dalej:** push → CI → gotowe do F7 @ sha. Po F7: podejrzenie 45 min+AIS (decyzja 61).
 - Bez push na main.
 
 ## 2026-11-01 03:45 — #694 F7 r1 POPRAWKI (winter-nav)

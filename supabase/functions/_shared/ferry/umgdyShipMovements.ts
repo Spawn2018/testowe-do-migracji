@@ -11,7 +11,7 @@ import { STENA_FERRIES } from './stenaAis.ts';
 export const UMG_EXPECTED_URL =
   'https://www.umgdy.gov.pl/bezpieczenstwo-morskie/ruch-statkow/statki-spodziewane/';
 export const UMG_IN_PORT_URL =
-  'https://www.umgdy.gov.pl/bezpieczenstwo-morskie/ruch-statkow/';
+  'https://www.umgdy.gov.pl/bezpieczenstwo-morskie/ruch-statkow/statki-w-porcie/';
 export const UMG_OUTGOING_URL =
   'https://www.umgdy.gov.pl/bezpieczenstwo-morskie/ruch-statkow/statki-wychodzace/';
 export const UMG_UA = 'Watch Tower (https://tower.log-mar.pl; ferry backup Stena Gdynia)';
