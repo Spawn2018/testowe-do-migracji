@@ -20,6 +20,7 @@ const SHIP: Record<string, string> = {
   megastar: 'M/F Megastar',
   mystar: 'M/F MyStar',
   'victoria i': 'M/F Victoria I',
+  'victoria 1': 'M/F Victoria I',
   victoria: 'M/F Victoria I',
   'baltic queen': 'M/F Baltic Queen',
   'sirena seaways': 'M/F Sirena Seaways',

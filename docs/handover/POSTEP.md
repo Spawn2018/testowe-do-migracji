@@ -1,4 +1,14 @@
 
+## 2026-11-02 00:15 — DP-139+140 PR #719 (`59cedb41`)
+
+- Skrzynka: #713/#714/#716/#718 w planie (komentarz #718); #550 WSTRZYMANE; #608 w planie. Bez nowego `pilne`.
+- Scalanie: brak PR z F7 „gotowe do scalenia”. #715/`#717` na `main`.
+- **Krok:** PR #719 `pakiet/dp139-140-victoria-sirena-mmsi` @ `59cedb41`:
+  - **0374** Victoria I `276519000`/`9281281`, Sirena `277569000`/`9212163`; alias `victoria 1`; vitest 2.
+  - DP-140: flota 0347 bez dalszych null MMSI; fixture Baltic Queen nieblokujące.
+- **Dalej:** CI → F7. Po F7: BN5 (#714).
+- Bez push na main.
+
 ## 2026-11-01 23:55 — #715 F7 r2: DP-138 B1/B2/N1 + brak STATUS
 
 - Skrzynka: #713/#714/#716 wpisane; #550 WSTRZYMANE. #717 wygląd bez F7.
