@@ -1672,6 +1672,18 @@ Bez ekranów Opcji (te w P10b, po P3).
 | W63b | #637: wartość `SHAREPOINT_FILE_MODE` dokładnie `test` (+ Redeploy tylko gdy runtime nie widzi sekretu). Po `write_test_ok_at` właściciel zmienia `SHAREPOINT_FILE_MODE` na `prod` (albo usuwa sekret) — dopiero potem zakolejkowanie aktywnych. Import off. | #637 | **zamknięte 29.10.2026 14:20** — runtime `mode=test` (redeploy zbędny); dalej fix (a) + cykl |
 | W63c | #637: zamknąć plik testowy SharePoint — **anulowane** (właściciel 29.10 15:13: współedycja; zapis bez zamykania → #645 workbook). | #637 / #645 | **anulowane 29.10.2026 15:13** |
 
+**DP-116 / #691 — miejsca i skutek `max_rows=1000` (nie W*):**
+| Miejsce | Skutek bez stronicowania | Stan |
+|---|---|---|
+| `store.sailingsSince` → ferry-schedule / applySailings (wszystkie armatory) | update/insert poza pierwszymi 1000 pomijane → nieaktualny rozkład | **naprawione** `fetchSailingsSincePaged` |
+| Digitraffic Viking (#688) przez `sailingsSince` | duplikaty / brak usunięć w ±3 h | **naprawione** (ten sam helper) |
+| ferry-status / Tallink Alert / Portnet / DFDS remark | brak dopasowania poza 1000 | **naprawione** |
+| ferry-weather | niepełna lista rejsów | **naprawione** |
+| cron 63c fallback `sailingsSince` | błędne pokrycie SOURCE_DOWN | **naprawione**; prod używa `maxVikingFileDepartureAt` |
+| `sailingsForVikingFileImport` / `maxVikingFileDepartureAt` | — | OK już w #690 |
+| front `fetchAllSailings` | — | OK (F7 #539) |
+| `loads`/`positions` w store (filtry + limit 1 / head) | przy <1000 aktywnych brak ryzyka | bez zmian |
+
 ### Decyzje koordynatora (lista poranna — nie czekają na właściciela)
 | Nr | Co | Stan |
 |---|---|---|
