@@ -7467,7 +7467,7 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
   - **B3/DP-116:** `SAILING_CANCELLED:%:{id}` + stronicowanie (resolve / expire / reassigned).
   - pkt 1–6: OPOZNIONY przy `delayed_*`; RECZNIE; brak notice; kolejność PRZYWROCONY→status→ryzyka; 72c `restore_check`; i18n incomplete/beyond/check.
   - **DP-124:** SMS „prom przywrócony” (decyzja 79) — osobny PR po scaleniu #698.
-  - vitest bn3-tallink-alert **67** (+ negatywy incomplete/HTML/beyond/poison) + helpers **5** (= **72**).
+  - vitest bn3-tallink-alert **66** + helpers **6** (= **72**; B1–B3, page cap, negatywy incomplete/HTML/beyond/poison).
 - **Dalej:** push → CI → gotowe do F7 @ sha. Po F7: RSS ERR (+ W64 Yle STOP); SMS DP-124 osobno.
 - Bez push na main.
 
