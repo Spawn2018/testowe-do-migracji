@@ -358,6 +358,13 @@ const pl: Dict = {
   /* przegląd 18.10 (D29): data usunięcia jeszcze przed nami */
   p4b_trk_after_purge_future: 'zostanie usunięty {day} (30 dni po dostawie)',
   p4b_trk_cancelled: 'Anulowany — śledzenie wyłączone',
+  /* BN9-c2 (#573): pasek śledzenia na promie — pozycja statku zamiast milczącego lokalizatora naczepy */
+  bn9c2_trk_ferry: 'Na promie',
+  bn9c2_trk_ferry_ais: 'pozycja statku z AIS {ago}',
+  bn9c2_trk_ferry_est: 'pozycja szacowana z rozkładu · ostatni AIS {t}',
+  bn9c2_trk_ferry_est_none: 'pozycja szacowana z rozkładu · brak AIS',
+  bn9c2_trk_ferry_none: 'brak pozycji statku',
+  bn9c2_trk_ferry_note: 'lokalizator naczepy na promie zwykle milknie',
   p4b_trk_nolink: 'Śledzenie wyłączone — brak linku śledzenia',
   p4b_trk_nolink_sub: 'lokalizacja, ślad i ETA działają tylko z linkiem śledzenia · link dodaje przewoźnik albo Administrator HHL w awizacji',
   p4b_ago_now: 'przed chwilą',
@@ -782,6 +789,19 @@ const pl: Dict = {
   pl_deepl_warn: 'Zużycie DeepL powyżej 80% limitu miesięcznego.',
   pl_deepl_full: 'Limit DeepL wyczerpany — opisy z kodów, teksty czekają w kolejce.',
   pl_show_original: 'Pokaż oryginał',
+};
+
+/**
+ * BN9-c2 — teksty paska „Na promie” po angielsku. Panel jest po polsku (8A, 17.10: słownik EN tylko dla aplikacji
+ * kierowcy, `I18N_ALL.en === DRIVER_EN`), więc tłumaczenie czeka gotowe na włączenie EN w panelu (klucze jak w PL).
+ */
+export const BN9C2_EN: Readonly<Record<string, string>> = {
+  bn9c2_trk_ferry: 'On ferry',
+  bn9c2_trk_ferry_ais: 'vessel position from AIS {ago}',
+  bn9c2_trk_ferry_est: 'position estimated from schedule · last AIS {t}',
+  bn9c2_trk_ferry_est_none: 'position estimated from schedule · no AIS',
+  bn9c2_trk_ferry_none: 'no vessel position',
+  bn9c2_trk_ferry_note: 'trailer tracker usually goes silent on board',
 };
 
 /** PL-T (ANEKS 3 §3) — pełne słowniki do testu pisowni. */

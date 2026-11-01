@@ -15,7 +15,11 @@ import { deliveredCheckResolve } from '../../lib/deliveredCheckResolve';
 import { lazyRetry } from '../../lib/lazyRetry';
 import { useEtaWx } from '../../lib/e49WxSource';
 import { buildStatusAxis } from '../../lib/statusAxis';
-import { trackingPhase } from '../../lib/stageTiles';
+import { stageTileOf, trackingPhase } from '../../lib/stageTiles';
+import { subscribeFerryPositions, type AisPosition } from '../../lib/ais';
+import { ferryTrackInfo } from '../../lib/bn9c2Ferry';
+import { vesselKeyOf } from '../../lib/vesselGroups';
+import { ferryRouteLabel } from '../../lib/portName';
 import { useIsPhone } from '../../lib/useIsPhone';
 import { getNow } from '../../lib/frozenNow';
 import { delayMinutesVsPlan } from '../../lib/time';
@@ -187,6 +191,30 @@ export function LoadDrawer() {
   const [dcBusy, setDcBusy] = useState(false);
   /* wyglad/E49: linie wiatru / postoju / śliskości / objazdu w ETA (produkcja: `etaDetail.weather`; demo dociągane) */
   const etaWx = useEtaWx(load, loads, nowIso);
+  /* BN9-c2 (#573): na promie pasek śledzenia pokazuje pozycję statku — z tej samej subskrypcji AIS co mapa
+     (w produkcji jedno odpytywanie bazy na wszystkich odbiorców); rejs przypięty do ładunku daje statek i trasę */
+  const onFerry = !!load && trackingPhase(load, nowIso) === 'on' && stageTileOf(load) === 'FERRY';
+  const [ferryPos, setFerryPos] = useState<AisPosition[]>([]);
+  useEffect(() => {
+    if (!onFerry) { setFerryPos([]); return undefined; }
+    /* pozycje przykładowe (seed) nie są pozycją statku — jak na mapie (I-2e) */
+    return subscribeFerryPositions({ prod: PROD_BUILD, onUpdate: (pos, mode) => setFerryPos(mode === 'seed' ? [] : pos) });
+  }, [onFerry]);
+  const ferryTrack = useMemo(() => {
+    if (!load || !onFerry) return null;
+    /* rejs przypięty do ładunku; bez przypięcia — rejs tego statku o godzinie z rezerwacji (jak znacznik na mapie) */
+    const sail = load.sailingId
+      ? sailings.find((x) => x.id === load.sailingId)
+      : load.ferry.vessel
+        ? sailings.find((x) => vesselKeyOf(x.vessel) === vesselKeyOf(load.ferry.vessel) && x.departureAt === load.ferry.departureAt)
+        : undefined;
+    return ferryTrackInfo({
+      vessel: sail?.vessel ?? load.ferry.vessel ?? null,
+      routeText: sail?.route ? ferryRouteLabel(locale, sail.route) || null : null,
+      positions: ferryPos,
+      locale,
+    });
+  }, [load, onFerry, sailings, ferryPos, locale]);
 
   if (!load) return null;
 
@@ -318,7 +346,7 @@ export function LoadDrawer() {
         </div>
 
         {/* E27 pkt 5 (E1-2): pasek śledzenia nad zakładkami */}
-        <TrackingBar load={load} events={loadEvents} locale={locale} nowIso={nowIso} trackingLink={trackingLink} />
+        <TrackingBar load={load} events={loadEvents} locale={locale} nowIso={nowIso} trackingLink={trackingLink} ferry={ferryTrack} />
 
         {/* wyglad/P5-c (E10, axe): zakładki jako lista zakładek — `aria-selected` dozwolone tylko przy roli „tab” */}
         <div className="dtabs" role="tablist" aria-label={transportLabel(load, role, 'plain')}>

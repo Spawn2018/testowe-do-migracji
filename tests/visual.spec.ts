@@ -207,3 +207,38 @@ test.describe('BN9-c1 visual — import rozkładu Vikinga (HHL pl)', () => {
     })
   }
 })
+
+/* BN9-c2 (#573) — karta transportu na promie: pasek śledzenia „Na promie · statek · trasa” z pozycją statku
+   zamiast milczącego lokalizatora naczepy. Demo (SG-03, Nova Star): pozycje przykładowe nie są pozycją statku,
+   więc pasek mówi „brak pozycji statku”. Migawka samego paska, komputer 1440 i telefon 390. */
+test.describe('BN9-c2 visual — pasek śledzenia na promie (HHL pl)', () => {
+  test.describe.configure({ mode: 'serial' })
+
+  for (const width of [1440, 390]) {
+    const file = `pasek-na-promie__hhl__pl__${width}__light.png`
+    test(file, async ({ page }) => {
+      await page.emulateMedia({ reducedMotion: 'reduce' })
+      await gotoFrozen(page, width)
+      await setRole(page, 'HHL')
+      await setTheme(page, 'light', 'dark')
+      await navTo(page, 'sched')
+      await page.evaluate(() => {
+        const el = [...document.querySelectorAll('[data-load]')].find((r) => /\bSG-03\b/.test(r.textContent ?? '')) as HTMLElement | undefined
+        if (!el) throw new Error('brak wiersza SG-03')
+        el.click()
+      })
+      const bar = page.locator('.drawer [data-tracking-bar]')
+      await expect(bar).toHaveAttribute('data-trk-ferry', 'none')
+      await expect(bar).toContainText('Na promie')
+      await page.evaluate(async () => {
+        if (document.fonts?.ready) await document.fonts.ready
+      })
+      await page.waitForTimeout(300)
+      await expect(bar).toHaveScreenshot(file, {
+        maxDiffPixels: 60,
+        threshold: 0.28,
+        animations: 'disabled',
+      })
+    })
+  }
+})
