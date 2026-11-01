@@ -126,16 +126,21 @@ export function isStandingAtDeparturePort(
   return hubs.some((h) => distanceKm(fix.lat, fix.lon, h.lat, h.lon) <= radiusKm);
 }
 
-/** @deprecated F7 #696 r1 — używaj `isStandingAtDeparturePort`. Zostawione pod stare importy testów. */
+/**
+ * SOG≈0 w podanych hubach. Job woła z `(fix, undefined, undefined, depHubs)` —
+ * jawne `undefined` nie bierze defaultów parametrów → `??` poniżej (F7 #696 r1).
+ */
 export function isStandingInGulfPort(
   fix: Pick<VesselFix, 'lat' | 'lon' | 'sogKn'>,
-  maxSogKn = CANCEL_SUSPECT_MAX_SOG_KN,
-  radiusKm = CANCEL_SUSPECT_RADIUS_KM,
+  maxSogKn?: number,
+  radiusKm?: number,
   hubs: readonly { lat: number; lon: number }[] = GULF_PORT_HUBS,
 ): boolean {
+  const sogMax = maxSogKn ?? CANCEL_SUSPECT_MAX_SOG_KN;
+  const rad = radiusKm ?? CANCEL_SUSPECT_RADIUS_KM;
   if (fix.sogKn == null || !Number.isFinite(fix.sogKn)) return false;
-  if (fix.sogKn > maxSogKn) return false;
-  return hubs.some((h) => distanceKm(fix.lat, fix.lon, h.lat, h.lon) <= radiusKm);
+  if (fix.sogKn > sogMax) return false;
+  return hubs.some((h) => distanceKm(fix.lat, fix.lon, h.lat, h.lon) <= rad);
 }
 
 /** true gdy now ∈ [ETA + graceMin, ETA + windowAfterEtaH]. */
