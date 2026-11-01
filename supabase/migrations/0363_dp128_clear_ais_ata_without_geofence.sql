@@ -1,6 +1,8 @@
--- DP-128 (F7 #702): ręczna korekta ATA Viking XPRS HELA-TLL 01.11 —
+-- DP-128 (F7 #703 r1 B4): ręczna korekta ATA Viking XPRS HELA-TLL 01.11 —
 -- actual_arrival_at z AIS bez przejścia przez geofence (pierwszy sygnał już w TLLA).
--- Status DOPLYNAL zostaje (rejs dopłynął; ATA niepewne — jak DOPLYNAL bez ATA).
+-- Czyścimy tylko ATA. Trigger 0264 (ATD jest, ATA null) ustawi W_REJSIE —
+-- nie wymuszamy DOPLYNAL. Później closeStaleFiToEeWithoutAta zamknie rejs
+-- jako DOPLYNAL bez ATA (ETA+2h minęło, brak otwartego podejrzenia).
 -- Idempotentne: tylko gdy ATA = znany fałszywy znacznik AIS.
 
 begin;
@@ -10,6 +12,7 @@ declare
   v_id uuid := 'dd177080-621e-4322-8399-23b827a33e1b';
   v_ata timestamptz;
   v_status text;
+  v_status_after text;
   v_prev text;
 begin
   select s.actual_arrival_at, s.status::text
@@ -30,6 +33,16 @@ begin
   v_prev := current_setting('tower.bulk_quiet', true);
   perform set_config('tower.bulk_quiet', 'on', true);
 
+  update public.sailings
+     set actual_arrival_at = null,
+         updated_at = now()
+   where id = v_id
+     and actual_arrival_at = timestamptz '2026-11-01 12:18:52.731+00';
+
+  select s.status::text into v_status_after
+    from public.sailings s
+   where s.id = v_id;
+
   insert into public.audit_log (user_id, action, entity, entity_id, new_value)
   values (
     null,
@@ -41,17 +54,11 @@ begin
       'vessel', 'M/F Viking XPRS',
       'cleared_actual_arrival_at', v_ata,
       'status_before', v_status,
-      'status_after', 'DOPLYNAL',
-      'reason', 'AIS ATA bez przejścia geofence (DP-128)'
+      'status_after', coalesce(v_status_after, 'W_REJSIE'),
+      'status_note', 'W_REJSIE po czyszczeniu ATA (trigger 0264); DOPLYNAL przez closeStaleFiToEeWithoutAta',
+      'reason', 'AIS ATA bez przejścia geofence (DP-128 F7 r1 B4)'
     )
   );
-
-  update public.sailings
-     set actual_arrival_at = null,
-         status = 'DOPLYNAL',
-         updated_at = now()
-   where id = v_id
-     and actual_arrival_at = timestamptz '2026-11-01 12:18:52.731+00';
 
   perform set_config('tower.bulk_quiet', coalesce(v_prev, ''), true);
 end

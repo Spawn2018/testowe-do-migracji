@@ -311,11 +311,19 @@ export interface SyncStore {
   latestVesselObserved?(): Promise<{ vesselId: string; observedAt: string }[]>;
   /** AIS-POLF: ostatnia pozycja AISSTREAM każdego statku od sinceIso (zapis: ferry-ais-listen co minutę). */
   latestAisstreamFixes?(sinceIso: string): Promise<{ vesselId: string; fix: VesselFix }[]>;
-  /** #421 F7: ostatnia pozycja w strefie portu (promień km) → observed_at; do godziny wypłynięcia. */
-  lastPortPosition?(vesselId: string, hub: { lat: number; lon: number }, radiusKm: number): Promise<string | null>;
   /**
-   * DP-128: czas wejścia w geofence portu — pierwsza pozycja ≤ radiusKm po pozycji poza hubem,
-   * obie po `sinceIso` (zwykle actual/plan wypłynięcia). Brak przejścia → null (nie ustawiamy ATA).
+   * DP-128 F7 r1: ATD — para p_in (≤3 km) → p_out (>4 km) w ≤20 min od `sinceIso`
+   * (zwykle max(plan−2h, prevArr)). Brak pary → null.
+   */
+  lastPortPosition?(
+    vesselId: string,
+    hub: { lat: number; lon: number },
+    radiusKm: number,
+    sinceIso: string,
+  ): Promise<string | null>;
+  /**
+   * DP-128 F7 r1: ATA — pierwsze wejście ≤3 km po poprzedniej (>4 km lub SOG≥3) w ≤20 min,
+   * od `sinceIso` (depRef). Brak przejścia → null.
    */
   firstPortEntryAfter?(
     vesselId: string,
@@ -3141,7 +3149,7 @@ export async function runFerryAis(deps: JobDeps): Promise<JobResult> {
     }
     observations[v.name] = obs;
 
-    // #421 F7 + DP-128: ATD tylko po wyjściu z geofence (lastPortPosition); bez zapasu 3–10 km z samego fix.
+    // #421 F7 + DP-128 F7 r1: ATD tylko przy parze geofence ≤20 min (histereza 3/4 km).
     // BN4 F7 #701: bez mapy portu wyjścia — bez geofence (nigdy GDN dla TLLA-HEL).
     if (s.actual_departure_at == null) {
       const ageMin = (Date.parse(now) - Date.parse(fix.timestampUtc)) / 60_000;
@@ -3154,9 +3162,12 @@ export async function runFerryAis(deps: JobDeps): Promise<JobResult> {
           .map((x) => x.actual_arrival_at!)
           .sort()
           .at(-1) ?? null;
+        const plan2h = new Date(Date.parse(s.departure_at) - 2 * 3600_000).toISOString();
+        const sinceIso = prevArr != null && prevArr > plan2h ? prevArr : plan2h;
         let depAt: string | null = null;
-        if (moving && dist > 3 && deps.store.lastPortPosition) {
-          depAt = await deps.store.lastPortPosition(v.id, depHub, 3);
+        /* Histereza OUT: próba ATD gdy bieżący fix >4 km. */
+        if (moving && dist > 4 && deps.store.lastPortPosition) {
+          depAt = await deps.store.lastPortPosition(v.id, depHub, 3, sinceIso);
           if (depAt != null && !acceptActualDepartureAt(depAt, s.departure_at, nowD.getTime(), prevArr)) {
             depAt = null;
           }
@@ -3173,12 +3184,12 @@ export async function runFerryAis(deps: JobDeps): Promise<JobResult> {
             departures++;
             observations[`${v.name}:DEP`] = `WYPŁYNĄŁ_${depAt}`;
           }
-        } else if (moving && dist > 3 && dist <= 10) {
-          observations[`${v.name}:DEP`] = 'BEZ_GEOFENCE_WYJSCIA';
+        } else if (moving && dist > 4) {
+          observations[`${v.name}:DEP`] = 'BEZ_PRZEJSCIA_GEOFENCE';
         }
       }
     }
-    // #421 F7 r2 + DP-128: ATA tylko po wejściu w geofence (outside→inside po depRef).
+    // #421 F7 r2 + DP-128 F7 r1: ATA tylko przy wejściu z poprzednią ≤20 min (poza lub SOG≥3).
     if (s.actual_arrival_at == null) {
       const ageMin = (Date.parse(now) - Date.parse(fix.timestampUtc)) / 60_000;
       const arrHub = portCoords(arrPort);
@@ -3191,7 +3202,7 @@ export async function runFerryAis(deps: JobDeps): Promise<JobResult> {
             arrAt = await deps.store.firstPortEntryAfter(v.id, arrHub, 3, depRef);
           }
           if (arrAt == null) {
-            observations[`${v.name}:ARR`] = 'BEZ_GEOFENCE_WEJSCIA';
+            observations[`${v.name}:ARR`] = 'BEZ_PRZEJSCIA_GEOFENCE';
           } else if (Date.parse(arrAt) > Date.parse(depRef)) {
             const ok = await deps.store.updateSailing(s.id, {
               actual_arrival_at: arrAt,

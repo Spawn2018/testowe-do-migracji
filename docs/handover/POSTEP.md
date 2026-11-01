@@ -7469,6 +7469,18 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Dalej:** DP kolejka BN3 (np. DP-108 ODWOLANY→FERRY_CANCELLED) albo ATD wiarygodne / BN4.
 - Bez push na main.
 
+## 2026-11-01 14:45 — #703 F7 r1 POPRAWKI (DP-128 geofence)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE (`pilne`, nic nie budować). Bez nowych `pilne`.
+- Scalanie: **#703** F7 r1 BLOKERY @ `52fc8f4a` — poprawki w tym PR; bez scalenia. CI poprzedniego SHA zielone. Bez push na main.
+- **Krok (F7 r1 B1–B4):**
+  - `geofenceTransition.ts`: ATD para p_in≤3 → p_out>4 w ≤20 min; ATA wejście po poprzedniej >4 km lub SOG≥3; zapytanie 15 km + stronicowanie (DP-116); błąd strony → throw;
+  - obserwacja `BEZ_PRZEJSCIA_GEOFENCE`; decyzja **81** w PLAN §5;
+  - **0363**: czyści ATA; `status_after` = W_REJSIE (trigger 0264); DOPLYNAL przez closeStale;
+  - vitest `dp128-geofence-transition` + ferry-ais fokus; PLAN DP-128 / BN4 pkt 5.
+- **Dalej:** push → CI → gotowe do F7. Po F7: BN4 pkt 6 (luka AIS / `AIS_<port>` / arrival backup).
+- Bez push na main.
+
 ## 2026-11-01 14:10 — #702 SCALONE; start DP-128 (AIS×geofence)
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne`.
