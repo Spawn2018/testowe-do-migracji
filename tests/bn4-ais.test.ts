@@ -54,6 +54,23 @@ const XPRS_AIS = JSON.stringify({
   }],
 });
 
+/** Megastar stojący w Helsinki West Harbour (HEL) — SOG≈0. */
+const MEGA_AT_HEL = JSON.stringify({
+  type: 'FeatureCollection',
+  features: [{
+    type: 'Feature',
+    mmsi: 276829000,
+    geometry: { type: 'Point', coordinates: [24.914, 60.154] },
+    properties: {
+      mmsi: 276829000,
+      sog: 0.2,
+      cog: 0,
+      navStat: 1,
+      timestampExternal: Date.parse('2026-11-01T10:00:00.000Z'),
+    },
+  }],
+});
+
 class Mem {
   vesselPositions: { vesselId: string; lat: number; lon: number; source?: string }[] = [];
   risks: { dedup: string; title?: string }[] = [];
@@ -153,6 +170,20 @@ describe('BN4 F7 #701 r1 B1 — mapy portów (bez domyślnego GDN/NYN)', () => {
       { mmsi: 1, lat: 59.85, lon: 24.9, sogKn: 20, cog: null, navStat: null, timestampUtc: '2026-11-01T10:00:00Z' },
       '2026-11-01T10:05:00Z', '2026-11-01T12:00:00Z', 'XXX-YYY',
     )).toBeNull();
+  });
+
+  it('BN4 pkt 8: Megastar TLL-HEL w hubie HEL → INFO AIS_HEL', async () => {
+    const st = new Mem();
+    st.sailings.push({
+      id: 's-mega-hel', vessel_id: MEGA, route: 'TLL-HEL',
+      departure_at: '2026-11-01T08:00:00Z', arrival_at: '2026-11-01T10:00:00Z',
+      delayed_departure_at: null, delayed_arrival_at: null,
+      actual_departure_at: '2026-11-01T08:05:00Z', actual_arrival_at: null,
+      status: 'W_REJSIE', source: 'TALLINK',
+    });
+    const r = await runFerryAis(deps(st, { 'digitraffic.fi': MEGA_AT_HEL }));
+    expect(r.ok).toBe(true);
+    expect(st.risks.some((x) => x.dedup === 'AIS_HEL:s-mega-hel')).toBe(true);
   });
 
   it('Viking XPRS TLLA-HEL na morzu 20 kn → brak opóźnienia II-9 i brak delayed_*', async () => {

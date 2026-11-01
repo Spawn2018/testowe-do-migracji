@@ -194,6 +194,8 @@ const pl: Dict = {
   rk_flow_slow: '{code}: ruch {kmh} km/h wobec {free} km/h swobodnie przy pozycji auta',
   rk_ais_arrived: 'AIS: {vessel} w porcie Nynäshamn — potwierdzenie przypłynięcia (informacja)',
   rk_ais_arrived_kaa: 'AIS: {vessel} w porcie Karlskrona — potwierdzenie przypłynięcia (informacja)',
+  /* BN4: HEL / STO / KPS / VUO / HELA — ten sam wzór INFO co NYN/KAA */
+  rk_ais_arrived_at: 'AIS: {vessel} w porcie {port} — potwierdzenie przypłynięcia (informacja)',
   // --- baner promowy kokpitu HHL
   rk_banner_title: 'Rejs {day} zagrożony.',
   rk_banner_body: 'Prognoza fali {wave} m i porywy {wind} m/s w oknie odejścia ({vessel}). {loads} do tego rejsu. Panel alternatyw w zakładce Ryzyka.',

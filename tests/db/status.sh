@@ -2381,6 +2381,9 @@ chk "BN1: brak outbound HEL-TLL" \
   "select public.ferry_route_is_outbound('HEL-TLL')" f
 chk "BN1: ferry_sailings_map z ferry_ports" \
   "select pg_get_functiondef('public.ferry_sailings_map()'::regprocedure) like '%ferry_ports%'" t
+# BN4 pkt 8 / 0366: bez coalesce do GDN/NYN — tylko join ferry_routes
+chk "BN4: ferry_sailings_map bez domyslnego GDN" \
+  "select pg_get_functiondef('public.ferry_sailings_map()'::regprocedure) not like '%coalesce(fr.port_from%'" t
 chk "BN1: promote outbound ze słownika" \
   "select pg_get_functiondef('public.promote_ferry_departures(timestamptz)'::regprocedure) like '%ferry_route_is_outbound%'" t
 chk "BN1: apply_geofence_status pomija REMOVED" \
