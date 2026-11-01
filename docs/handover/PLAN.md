@@ -1327,7 +1327,7 @@ DP-98 DONE; DP-114 DONE; DP-115 (Stena IRM backoff) w kolejce.
 3. **#685-c (63c)** — w b: apply i cron zamykają / nie wystawiają `SOURCE_DOWN:VIKING_SCHEDULE` przy pokryciu **od teraz** ≥ 30 d (kompletny plik + próg 50%; `maxVikingFileDepartureAt`).
 Kolejność: a → b(+c). DP-21 w #685-b. **Wdrożenie:** **0360** przed Edge `viking-schedule-import` (deploy-main).
 
-### #691 · DP-116: `max_rows=1000` obcina odczyty rejsów — W TOKU (`pakiet/691-dp116-max-rows`)
+### #691 · DP-116: `max_rows=1000` obcina odczyty rejsów — W TOKU (`pakiet/691-dp116-sailings-paging`)
 Źródło: #691 (Spawn2018; F7 #690 r2). Prod 01.11: **2119** rejsów od wczoraj; PostgREST `max_rows=1000`.
 1. **Inwentarz (skutek bez stronicowania):** `store.sailingsSince` ← `applySailings` / ferry-schedule (Polferries/Stena/Tallink/Eckerö/DFDS/Viking HTML) → pominięte update/insert poza pierwszymi 1000; Digitraffic Viking (#688) → duplikaty / brak usunięć; ferry-status / Tallink Alert / Portnet / DFDS remark → brak dopasowania ±3 h; ferry-weather → niepełna lista; cron 63c fallback `sailingsSince` (gdy brak `maxVikingFileDepartureAt`). **Już OK w #690:** `maxVikingFileDepartureAt`, `sailingsForVikingFileImport` (strony). **loads/positions** w store: filtry + `limit 1` / head count — bez ryzyka przy bieżącej skali (<1000 aktywnych).
 2. **Poprawka:** wspólny `fetchSailingsSincePaged` (`range` + `order(id)`); `sailingsSince` i `sailingsForVikingFileImport` przez helper.
