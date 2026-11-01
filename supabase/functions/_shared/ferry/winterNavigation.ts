@@ -95,7 +95,12 @@ export function winterNavIceRisk(hit: WinterNavHit, nowIso: string): RiskInput {
     severity: 'MEDIUM',
     title: `Zima: ${what} ${hit.name} (${hit.locode}) — ${hit.summary}; HHL weryfikuje wpływ na rejsy`,
     titleKey: 'rk_ferry_winter_nav',
-    params: { port: hit.name, locode: hit.locode, text: hit.summary.slice(0, 80) },
+    params: {
+      kind: what,
+      port: hit.name,
+      locode: hit.locode,
+      summary: hit.summary.slice(0, 80),
+    },
     detail: {
       zrodlo: 'DIGITRAFFIC_WINTER',
       locode: hit.locode,
@@ -213,7 +218,7 @@ export function portCallV2CancelledAppearedRisk(count: number, nowIso: string): 
     kind: 'FERRY',
     severity: 'MEDIUM',
     title: `Digitraffic port-call v2: anulowane wizyty FIHEL (${count}) — sprawdź odwołania Viking/Tallink/Eckerö`,
-    titleKey: 'rk_ferry_portcall_v2_cancelled',
+    titleKey: 'rk_ferry_portcall_v2_fihel',
     params: { count: String(count), locode: 'FIHEL' },
     detail: {
       zrodlo: 'DIGITRAFFIC_PORTCALL_V2',

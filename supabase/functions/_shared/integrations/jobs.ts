@@ -1692,7 +1692,8 @@ export async function runFerryPortnet(deps: JobDeps): Promise<JobResult> {
   risks += v2c.risks;
 
   return {
-    job: 'ferry-portnet', mode: 'LIVE', ok: !portnet.fail && !winter.fail,
+    /* Winter-nav / v2 cancelled: awaria → SOURCE_DOWN / ryzyko, bez wywracania ok Portnet. */
+    job: 'ferry-portnet', mode: 'LIVE', ok: !portnet.fail,
     updated, risks, warnings,
     observations: {
       ...(closed ? { closed_without_ata: String(closed) } : {}),

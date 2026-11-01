@@ -140,6 +140,13 @@ function deps(store: MemStore, pages: Record<string, string | number>, now = NOW
     if (url.includes('ts.ee') || url.includes('portsofstockholm')) {
       return new Response('niedostepne', { status: 503 });
     }
+    /* BN3: winter-nav / port-call v2 — domyślnie puste (bez aktywnych ograniczeń). */
+    if (url.includes('winter-navigation')) {
+      return new Response(JSON.stringify({ type: 'FeatureCollection', features: [] }), { status: 200 });
+    }
+    if (url.includes('port-call/v2')) {
+      return new Response('[]', { status: 200 });
+    }
     throw new Error(`nieoczekiwane zapytanie: ${url}`);
   }) as typeof fetch;
   return { store, fetch: f, env: {}, now: () => now };
