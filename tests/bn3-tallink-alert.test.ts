@@ -1854,10 +1854,11 @@ describe('BN3 #686 Tallink restore', () => {
   });
 
   it('najnowszy restore wygrywa nad starszym cancel; RECZNIE → ryzyko bez cofnięcia', async () => {
+    // NOW = 12:00Z ≈ 14:00 Tallinn — oba timeStart ≤ teraz (72a: przyszły klucz poza wyborem).
     const html =
       `<Scheduler dateStart="2026-10-31" timeStart="08:00" dateEnd="2026-11-03">` +
       `<CwsSection data-analytics-group="Alert"><CwsP>${CANCEL}</CwsP></CwsSection></Scheduler>` +
-      `<Scheduler dateStart="2026-10-31" timeStart="18:00" dateEnd="2026-11-03">` +
+      `<Scheduler dateStart="2026-10-31" timeStart="12:00" dateEnd="2026-11-03">` +
       `<CwsSection data-analytics-group="Alert"><CwsP>${RESTORE}</CwsP></CwsSection></Scheduler>`;
     const alerts = finalizeTallinkAlertsForStatus(
       parseTallinkAlerts(wrapRendered(html), TALLINK_HOME(), NOW).alerts, NOW,
@@ -1902,7 +1903,8 @@ describe('BN3 #686 Tallink restore', () => {
   });
 
   it('przywrócenie bez ODWOLANY → brak zmian; przepięcie → MEDIUM + status i tak ZAPLANOWANY', async () => {
-    const html = wrapAlertTimed(RESTORE, '2026-11-02', '12:00');
+    // dateStart = dziś (opublikowany); 12:00 < 14:00 Tallinn (NOW).
+    const html = wrapAlertTimed(RESTORE, '2026-10-31', '12:00');
     const st = new MemStore();
     st.sailings.push({
       id: 's-ok', vessel_id: MYST, route: 'TLL-HEL',
