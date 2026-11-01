@@ -7457,6 +7457,18 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (odbiór prod):** SELECT `here_road_legs` — **12** / active 12 / `browser_fetch` 5; core bez zmian (3495/12561/3742/18854/19408); BN7 7× null. `here-roads` **#108803** @ 04:49Z ok (0 prób — core świeże; BN7 poza cronem). Komentarz w #667. **Dalej:** BN3 (#573).
 - Bez push na main.
 
+## 2026-11-01 01:05 — #685-b F7 r3: testy mutacji + drobne (PR #690)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE; #685 W TOKU (b / PR #690). Bez nowych `pilne`.
+- Scalanie: F7 r3 **POPRAWKI** @ `fe4ce5d4` (CI unit/db/visual ✔). Brak „F7: gotowe do scalenia”. Bez push na main.
+- **Krok F7 #690 r3:**
+  - testy: filtr pary (trasa,statek); filtr dni trasy; niepełny plik + horyzont >30 → bez resolve SOURCE_DOWN; podgląd = plan zapisu bez mutacji; Edge mfaErr→403 / !commit bez record;
+  - 63c apply **≥ 30 d** (jak cron); `maxVikingFileDepartureAt` bez `imports.to_at`; `.order('id')` przy stronicowaniu; i18n `{vessel}`; bez duplikatu MemStore;
+  - PLAN §4/§8: niepełny plik może pośrednio zamknąć SOURCE_DOWN przez cron — akceptowane;
+  - vitest 685b **23**.
+- **Dalej:** push → CI → gotowe do F7 @ sha. Ekran BN9-c1 — koordynator.
+- Bez push na main.
+
 ## 2026-11-01 00:45 — #685-b F7 r2 POPRAWKI B1–B4 (PR #690)
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE; #685 W TOKU (b / PR #690). Bez nowych `pilne`.

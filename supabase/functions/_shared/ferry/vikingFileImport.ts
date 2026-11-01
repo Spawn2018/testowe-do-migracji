@@ -36,8 +36,8 @@ export interface VikingFileImportStore {
    */
   sailingsSince(fromIso: string): Promise<DbSailing[]>;
   /**
-   * F7 #690 R2-B4 / 63c: max(departure_at) VIKING source_ref null, departure > now
-   * (+ ewentualnie max viking_schedule_imports.to_at). Bez limitu wierszy.
+   * F7 #690 R2-B4 / 63c: max(departure_at) VIKING source_ref null, departure > now.
+   * F7 r3: bez imports.to_at. Bez limitu wierszy.
    */
   maxVikingFileDepartureAt?(nowIso: string): Promise<string | null>;
   insertSailings(rows: SailingInsert[]): Promise<void>;
@@ -607,10 +607,10 @@ export async function applyVikingFileSchedule(
   } else {
     coverage = vikingScheduleCoverageDaysFromNow(live.filter((s) => !gone.has(s.id)), nowMs);
   }
-  /* F7 R2-B3: apply zamyka przy coverage > 30 (cron nadal ≥ 30). */
+  /* F7 #690 r3: apply i cron spójnie ≥ 30 d („>” w r2 było mutacją do zabicia). */
   if (
     cleanThresholdPassed
-    && coverage > VIKING_FILE_COVERAGE_DAYS_CLOSE
+    && coverage >= VIKING_FILE_COVERAGE_DAYS_CLOSE
   ) {
     await store.resolveRisks('SOURCE_DOWN:VIKING_SCHEDULE:');
     stats.sourceDownClosed = true;

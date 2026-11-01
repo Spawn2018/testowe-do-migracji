@@ -29,8 +29,8 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
       return must(await sb.from('sailings').select(SAILING_COLS).gte('departure_at', fromIso).order('departure_at'), 'sailings') as DbSailing[];
     },
     /**
-     * F7 #690 R2-B4 / 63c: max(departure_at) VIKING source_ref null > now
-     * (+ max viking_schedule_imports.to_at). Bez limitu max_rows=1000.
+     * F7 #690 R2-B4 / 63c: max(departure_at) VIKING source_ref null > now.
+     * F7 r3: bez viking_schedule_imports.to_at (przerwany import wyciszał SOURCE_DOWN).
      */
     async maxVikingFileDepartureAt(nowIso: string) {
       const sail = must(
@@ -43,22 +43,11 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
           .limit(1),
         'sailings max viking file',
       ) as { departure_at: string }[];
-      const imp = must(
-        await sb.from('viking_schedule_imports').select('to_at')
-          .not('to_at', 'is', null)
-          .gt('to_at', nowIso)
-          .order('to_at', { ascending: false })
-          .limit(1),
-        'viking_schedule_imports coverage max',
-      ) as { to_at: string }[];
-      const a = sail[0]?.departure_at ?? null;
-      const b = imp[0]?.to_at ?? null;
-      if (!a) return b;
-      if (!b) return a;
-      return a >= b ? a : b;
+      return sail[0]?.departure_at ?? null;
     },
     /**
      * F7 #690 R2-B4: rejsy VIKING+RECZNIE od fromIso ze stronicowaniem (import pliku).
+     * F7 r3: .order('id') — stabilny range.
      */
     async sailingsForVikingFileImport(fromIso: string) {
       const pageSize = 1000;
@@ -71,6 +60,7 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
             .gte('departure_at', fromIso)
             .in('source', ['VIKING', 'RECZNIE'])
             .order('departure_at')
+            .order('id')
             .range(from, from + pageSize - 1),
           'sailings viking import page',
         ) as DbSailing[];

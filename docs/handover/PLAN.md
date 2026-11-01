@@ -1323,8 +1323,8 @@ DP-98 DONE; DP-114 DONE; DP-115 (Stena IRM backoff) w kolejce.
 Źródło: #685 (Spawn2018, `dla-cursora`; decyzja 63 potwierdzona właścicielem 31.10 09:56). Bez obchodzenia Imperva (cargo/sales 403).
 **Podział PR (prognoza):**
 1. **#685-a (63a)** — ~~SCALONE~~ (`774fd2c0` / PR #688 / **0359**, 31.10.2026 21:31Z; F7: gotowe @ `b31d504e`).
-2. **#685-b (63b)** — W TOKU (PR #690 `pakiet/685b-viking-schedule-import`; **0360** `viking_schedule_import_assert`/`_record` HHL_ADMIN+2FA + projekt `STEGRA_BODEN`; Edge `viking-schedule-import` + `applyVikingFileSchedule` ≠ `applySailings`; F7 r1–r2: ZAPLANOWANY+przyszłe ±3 h; B4 sezon z progiem 50% + pary (trasa,statek)+dni; podgląd z planem; max(departure) bez limitu 1000; parser `&#x2013;`/`li.accordion`; ekran BN9-c1 koordynator).
-3. **#685-c (63c)** — w b: apply zamyka `SOURCE_DOWN:VIKING_SCHEDULE` przy pokryciu **od teraz** > 30 d (kompletny plik + próg 50%); cron nie wystawia przy ≥ 30 d (`maxVikingFileDepartureAt`).
+2. **#685-b (63b)** — W TOKU (PR #690 `pakiet/685b-viking-schedule-import`; **0360** `viking_schedule_import_assert`/`_record` HHL_ADMIN+2FA + projekt `STEGRA_BODEN`; Edge `viking-schedule-import` + `applyVikingFileSchedule` ≠ `applySailings`; F7 r1–r3: ZAPLANOWANY+przyszłe ±3 h; B4 sezon z progiem 50% + pary (trasa,statek)+dni; podgląd z planem; max(departure) bez limitu 1000 / bez imports.to_at; parser `&#x2013;`/`li.accordion`; ekran BN9-c1 koordynator).
+3. **#685-c (63c)** — w b: apply i cron zamykają / nie wystawiają `SOURCE_DOWN:VIKING_SCHEDULE` przy pokryciu **od teraz** ≥ 30 d (kompletny plik + próg 50%; `maxVikingFileDepartureAt`).
 Kolejność: a → b(+c). DP-21 w #685-b. **Wdrożenie:** **0359** na main; **0360** przed Edge `viking-schedule-import`.
 
 ### #662 · PILNE SafeFleet — link tymczasowy (SG-27) — SCALONE (`189688bc` / PR #663 / **0349**); #662-b SCALONE (`1ee855fd` / PR #664 / **0350**, 30.10.2026 12:54Z)
@@ -2332,6 +2332,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 31.10.2026 22:35 | #688 SCALONE `774fd2c0` (F7: gotowe @ b31d504e); start #685-b — 0360 + Edge viking-schedule-import + applyVikingFileSchedule | pętla |
 | 31.10.2026 23:55 | #690 F7 r1 POPRAWKI: B2–B7 (ZAPLANOWANY+przyszłe; sezon; 63c od teraz; limit 3 MB); parser `&#x2013;`/`li.accordion` na pliku właściciela; nullguard 905 | pętla |
 | 01.11.2026 00:35 | #690 F7 r2 POPRAWKI: B1 próg 50%+pary/dni; B2 podgląd z planem; B3 mutacje; B4 max(departure); decyzja 75 (±1 min); DP-116 | pętla |
+| 01.11.2026 01:05 | #690 F7 r3: testy mutacji (para/dni/próg+63c/podgląd/Edge); 63c apply≥30; bez imports.to_at; order(id); {vessel}; niepełny plik może pośrednio zamknąć SOURCE_DOWN przez cron (rejsy wstawione), ryzyko „niepełny plik” zostaje — akceptowane | pętla |
 | 31.10.2026 — | Decyzja 73: TLLA-HEL ETA−150 min / HELA-TLL ETD+160 min (fixture Cargo; nocny 165 min OK). Decyzja 74: `sailings.source_ref` 0359; Digitraffic `digitraffic:portcall:<id>:<route>`; HTML/RECZNIE/DANE_STARTOWE wygrywają; #685-b RPC zastępuje digitraffic:% w ±3 h | F7 #688 r1–r4 |
 | 31.10.2026 — | F7 #683 nieblokujące (osobna poprawka): Scheduler grudzień + „on 2 January” → rok bieżący, ciche wygaśnięcie; Alert INFO bez ryzyka/historii — świadomie | F7 #683 r7 |
 | 31.10.2026 — | F7 #683 r8 nieblokujące (osobno): Alert poza Schedulerem obok Schedulera; sprzeczne bloki (resume→cofnięcie auto); rok przy długim oknie Schedulera; mutanty M10/M15–M17/M22 świadomie bez testów | F7 #683 r8 |

@@ -1,5 +1,5 @@
 /**
- * #685-b / decyzja 63b+74 + #685-c + F7 #690 r1/r2 — applyVikingFileSchedule (≠ applySailings).
+ * #685-b / decyzja 63b+74 + #685-c + F7 #690 r1–r3 — applyVikingFileSchedule (≠ applySailings).
  */
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -521,7 +521,7 @@ describe('#685-b F7 #690 r2', () => {
     expect(committed.inserted).toBe(dry.inserted);
   });
 
-  it('R2-B3: coverage apply >30 d zamyka; +30/+29 nie; Digitraffic nie daje pokrycia', async () => {
+  it('R2-B3/r3: coverage apply ≥30 d zamyka; +30 tak, +29 nie; Digitraffic nie daje pokrycia', async () => {
     const now = new Date('2026-10-31T12:00:00.000Z');
     const st30 = memStore();
     const r30 = await applyVikingFileSchedule(deps(st30, now), [{
@@ -530,7 +530,7 @@ describe('#685-b F7 #690 r2', () => {
       departureUtc: '2026-11-30T12:00:00.000Z',
       arrivalUtc: '2026-11-30T14:00:00.000Z',
     }], { sinceIso: '2026-10-31T00:00:00.000Z', now });
-    expect(r30.sourceDownClosed).toBe(false);
+    expect(r30.sourceDownClosed).toBe(true);
 
     const st29 = memStore();
     const r29 = await applyVikingFileSchedule(deps(st29, now), [{
@@ -540,15 +540,6 @@ describe('#685-b F7 #690 r2', () => {
       arrivalUtc: '2026-11-29T14:00:00.000Z',
     }], { sinceIso: '2026-10-31T00:00:00.000Z', now });
     expect(r29.sourceDownClosed).toBe(false);
-
-    const st31 = memStore();
-    const r31 = await applyVikingFileSchedule(deps(st31, now), [{
-      route: 'TLLA-HEL',
-      vessel: 'M/F Viking XPRS',
-      departureUtc: '2026-12-01T12:00:00.000Z',
-      arrivalUtc: '2026-12-01T14:00:00.000Z',
-    }], { sinceIso: '2026-10-31T00:00:00.000Z', now });
-    expect(r31.sourceDownClosed).toBe(true);
 
     const covDt = vikingScheduleCoverageDaysFromNow([
       sailing({
@@ -626,5 +617,176 @@ describe('#685-b F7 #690 r2', () => {
     expect(vikingImportAssertError('permission denied for function')).toBe(
       'Brak uprawnień do importu',
     );
+  });
+});
+
+describe('#685-b F7 #690 r3', () => {
+  it('R3-1: filtr pary (trasa, statek) — inny statek na trasie zostaje', async () => {
+    const now = new Date('2026-10-31T12:00:00.000Z');
+    const existing = [
+      ...Array.from({ length: 5 }, (_, i) => sailing({
+        id: `xprs-${i}`,
+        vessel_id: VESSEL_XPRS,
+        departure_at: `2026-11-${String(i + 1).padStart(2, '0')}T10:00:00.000Z`,
+        arrival_at: `2026-11-${String(i + 1).padStart(2, '0')}T12:30:00.000Z`,
+      })),
+      ...Array.from({ length: 5 }, (_, i) => sailing({
+        id: `cind-${i}`,
+        vessel_id: VESSEL_CIND,
+        departure_at: `2026-11-${String(i + 1).padStart(2, '0')}T14:00:00.000Z`,
+        arrival_at: `2026-11-${String(i + 1).padStart(2, '0')}T16:30:00.000Z`,
+      })),
+    ];
+    const st = memStore(existing);
+    const file = Array.from({ length: 5 }, (_, i) => ({
+      route: 'TLLA-HEL' as const,
+      vessel: 'M/F Viking XPRS',
+      departureUtc: `2026-11-${String(i + 1).padStart(2, '0')}T10:00:00.000Z`,
+      arrivalUtc: `2026-11-${String(i + 1).padStart(2, '0')}T12:30:00.000Z`,
+    }));
+    await applyVikingFileSchedule(deps(st, now), file, {
+      sinceIso: '2026-10-31T00:00:00.000Z', now,
+    });
+    expect(st.sailings.filter((s) => s.vessel_id === VESSEL_CIND)).toHaveLength(5);
+    expect(st.sailings.filter((s) => s.vessel_id === VESSEL_XPRS).length).toBeGreaterThanOrEqual(5);
+  });
+
+  it('R3-2: filtr dni trasy — dzień bez rejsu w pliku zostaje', async () => {
+    const now = new Date('2026-10-31T12:00:00.000Z');
+    const existing = Array.from({ length: 10 }, (_, i) => sailing({
+      id: `d${i + 1}`,
+      departure_at: `2026-11-${String(i + 1).padStart(2, '0')}T10:00:00.000Z`,
+      arrival_at: `2026-11-${String(i + 1).padStart(2, '0')}T12:30:00.000Z`,
+    }));
+    const st = memStore(existing);
+    /* dni 1–4 i 6–10 (bez dnia 5) */
+    const fileDays = [1, 2, 3, 4, 6, 7, 8, 9, 10];
+    const file = fileDays.map((d) => ({
+      route: 'TLLA-HEL' as const,
+      vessel: 'M/F Viking XPRS',
+      departureUtc: `2026-11-${String(d).padStart(2, '0')}T10:00:00.000Z`,
+      arrivalUtc: `2026-11-${String(d).padStart(2, '0')}T12:30:00.000Z`,
+    }));
+    await applyVikingFileSchedule(deps(st, now), file, {
+      sinceIso: '2026-10-31T00:00:00.000Z', now,
+    });
+    expect(st.sailings.some((s) => s.id === 'd5')).toBe(true);
+  });
+
+  it('R3-3: niepełny plik + horyzont >30 d → SOURCE_DOWN nie zamknięty', async () => {
+    const now = new Date('2026-10-31T12:00:00.000Z');
+    const existing = Array.from({ length: 20 }, (_, i) => {
+      const d = 1 + (i % 20);
+      return sailing({
+        id: `old-${i}`,
+        departure_at: `2026-11-${String(d).padStart(2, '0')}T10:00:00.000Z`,
+        arrival_at: `2026-11-${String(d).padStart(2, '0')}T12:30:00.000Z`,
+      });
+    });
+    const st = memStore(existing);
+    const r = await applyVikingFileSchedule(deps(st, now), [
+      {
+        route: 'TLLA-HEL',
+        vessel: 'M/F Viking XPRS',
+        departureUtc: '2026-11-01T12:00:00.000Z',
+        arrivalUtc: '2026-11-01T14:30:00.000Z',
+      },
+      {
+        route: 'TLLA-HEL',
+        vessel: 'M/F Viking XPRS',
+        departureUtc: '2026-12-05T12:00:00.000Z',
+        arrivalUtc: '2026-12-05T14:30:00.000Z',
+      },
+    ], { sinceIso: '2026-10-31T00:00:00.000Z', now });
+    expect(r.cleanThresholdPassed).toBe(false);
+    expect(r.horizonDays).toBeGreaterThan(VIKING_FILE_COVERAGE_DAYS_CLOSE);
+    expect(r.sourceDownClosed).toBe(false);
+    expect(st.resolved).not.toContain('SOURCE_DOWN:VIKING_SCHEDULE:');
+  });
+
+  it('R3-4: podgląd — sailings/risks bez zmian; dry.plan = commit.plan', async () => {
+    const now = new Date('2026-10-31T12:00:00.000Z');
+    const seed: DbSailing[] = [
+      sailing({
+        id: 'dt-load',
+        departure_at: '2026-11-01T10:00:00.000Z',
+        arrival_at: '2026-11-01T12:00:00.000Z',
+        source_ref: 'digitraffic:portcall:pl:TLLA-HEL',
+      }),
+      sailing({
+        id: 'odw-blk',
+        departure_at: '2026-11-01T16:00:00.000Z',
+        arrival_at: '2026-11-01T18:00:00.000Z',
+        status: 'ODWOLANY',
+        source_ref: 'digitraffic:portcall:od:TLLA-HEL',
+      }),
+      /* Ten sam dzień co plik (01.11), inna godzina → sezon/MISSING z ładunkiem. */
+      sailing({
+        id: 'miss-load',
+        departure_at: '2026-11-01T08:00:00.000Z',
+        arrival_at: '2026-11-01T10:00:00.000Z',
+      }),
+    ];
+    const st = memStore(seed);
+    st.setLoads('dt-load', 1);
+    st.setLoads('miss-load', 1);
+    const file = [
+      {
+        route: 'TLLA-HEL' as const,
+        vessel: 'M/F Viking XPRS',
+        departureUtc: '2026-11-01T10:20:00.000Z',
+        arrivalUtc: '2026-11-01T12:20:00.000Z',
+      },
+      {
+        route: 'TLLA-HEL' as const,
+        vessel: 'M/F Viking XPRS',
+        departureUtc: '2026-11-01T16:15:00.000Z',
+        arrivalUtc: '2026-11-01T18:15:00.000Z',
+      },
+      {
+        route: 'TLLA-HEL' as const,
+        vessel: 'M/F Viking XPRS',
+        departureUtc: '2026-12-05T10:00:00.000Z',
+        arrivalUtc: '2026-12-05T12:30:00.000Z',
+      },
+    ];
+    const snapSail = structuredClone(st.sailings);
+    const snapRisk = [...st.risks];
+    const snapRes = [...st.resolved];
+    const { store: planStore } = planningVikingFileStore(st);
+    const dry = await applyVikingFileSchedule(
+      { store: planStore, now: () => now },
+      file,
+      { sinceIso: '2026-10-31T00:00:00.000Z', now, collectPlan: true },
+    );
+    expect(st.sailings).toEqual(snapSail);
+    expect(st.risks).toEqual(snapRisk);
+    expect(st.resolved).toEqual(snapRes);
+
+    const st2 = memStore(structuredClone(seed));
+    st2.setLoads('dt-load', 1);
+    st2.setLoads('miss-load', 1);
+    const committed = await applyVikingFileSchedule(deps(st2, now), file, {
+      sinceIso: '2026-10-31T00:00:00.000Z', now, collectPlan: true,
+    });
+    expect(dry.plan).toEqual(committed.plan);
+    expect(dry.plan!.to_take_over.length).toBeGreaterThan(0);
+    expect(dry.plan!.blocked.length).toBeGreaterThan(0);
+    expect(dry.plan!.risks.length).toBeGreaterThan(0);
+  });
+
+  it('R3-5 Edge: mfaErr→403; !commit = planStore bez viking_schedule_import_record', () => {
+    const edge = readFileSync('supabase/functions/viking-schedule-import/index.ts', 'utf8');
+    expect(edge).toMatch(/if \(mfaErr\)/);
+    expect(edge).toMatch(/vikingImportAssertError\(mfaErr\.message\)/);
+    expect(edge).toMatch(/,\s*403\)/);
+    expect(edge).toMatch(/if \(!commit\)/);
+    expect(edge).toMatch(/planningVikingFileStore\(store\)/);
+    const previewBlock = edge.slice(
+      edge.indexOf('if (!commit)'),
+      edge.indexOf('const deps: VikingFileImportDeps'),
+    );
+    expect(previewBlock).not.toMatch(/viking_schedule_import_record/);
+    expect(edge).toMatch(/viking_schedule_import_record/);
   });
 });

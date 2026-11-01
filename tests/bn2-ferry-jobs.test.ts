@@ -53,18 +53,7 @@ class MemStore implements SyncStore {
   async sailingsSince(from: string) {
     return this.sailings.filter((s) => s.departure_at >= from).map((s) => ({ ...s }));
   }
-  /** F7 #690 R2-B4 / 63c */
-  async maxVikingFileDepartureAt(nowIso: string) {
-    let max: string | null = null;
-    for (const s of this.sailings) {
-      if (s.source !== 'VIKING') continue;
-      if (s.source_ref != null && s.source_ref !== '') continue;
-      if (s.departure_at <= nowIso) continue;
-      if (!max || s.departure_at > max) max = s.departure_at;
-    }
-    return max;
-  }
-  /** F7 #690 R2-B4 / 63c — max bez limitu 1000. */
+  /** F7 #690 R2-B4 / 63c — max bez limitu 1000 (jedna metoda; F7 r3 bez duplikatu). */
   async maxVikingFileDepartureAt(nowIso: string) {
     let max: string | null = null;
     for (const s of this.sailings) {
