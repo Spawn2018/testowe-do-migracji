@@ -1486,8 +1486,8 @@ q "insert into load_events (load_id, event_type, occurred_at) values ('$L557d','
 pos $L557d 59.00 17.90 "2026-10-11 07:30+00"
 chk "#557 PR2: ≥2 km SE, strefa OFF → IN_TRANSIT_SE" "$(st $L557d)" IN_TRANSIT_SE
 # F7 r3 pkt 1: Port SE + ≥2 km (strefa OFF) → Droga SE
-# DP-138: AT_PORT→IN_TRANSIT wymaga GPS_FRESH_MIN względem now() — nie stała data.
-q "select process_position('$L557a', 59.00, 17.90, now())" >/dev/null
+# DP-138: ATA/p_ts — 07:45 > ATA 06:00 (S557a), stała data OK.
+pos $L557a 59.00 17.90 "2026-10-11 07:45+00"
 chk "#557 PR2: Port SE + ≥2 km OFF → IN_TRANSIT_SE" "$(st $L557a)" IN_TRANSIT_SE
 # strefa ON: pas 0,8–2 km bez zmian (0298 histereza) — backup return
 q "update geofences set active = true
