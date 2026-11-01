@@ -150,7 +150,7 @@ export type SourceId =
   | 'TALLINK_SCHEDULE' | 'TALLINK_STATUS' | 'VIKING_SCHEDULE' | 'ECKERO_SCHEDULE' | 'ECKERO_STATUS'
   | 'DFDS_SCHEDULE' | 'DFDS_STATUS'
   | 'DIGITRAFFIC' | 'DIGITRAFFIC_AIS' | 'DIGITRAFFIC_PORTCALL' | 'DIGITRAFFIC_VIKING' | 'DIGITRAFFIC_WINTER'
-  | 'PORT_TALLINN' | 'PORTS_STOCKHOLM' | 'UMG_GDY'
+  | 'PORT_TALLINN' | 'PORTS_STOCKHOLM' | 'UMG_GDY' | 'ERR_RSS'
   | 'STENA_IRM' | 'TRAFIKVERKET' | 'KPD_GDDKIA' | 'TOMTOM'
   | 'FMI' | 'DMI' | 'SMHI' | 'MARINE_WEATHER'
   | 'HERE_TRAFFIC_PL' | 'HERE_ROADS' | 'EMTRACK_WEB' | 'RIO' | 'KSH_SHAREPOINT';
@@ -168,6 +168,7 @@ const SOURCE_LABEL: Record<SourceId, string> = {
   DIGITRAFFIC_WINTER: 'żegluga zimowa (Digitraffic IBNet)',
   PORT_TALLINN: 'odjazdy/przyjazdy (Port of Tallinn)', PORTS_STOCKHOLM: 'odjazdy/przyjazdy (Ports of Stockholm)',
   UMG_GDY: 'ruch statków Gdynia (Urząd Morski)',
+  ERR_RSS: 'potwierdzenie odwołań (ERR News RSS)',
   STENA_IRM: 'pozycje promów Stena (IRM)', TRAFIKVERKET: 'utrudnienia drogowe SE (Trafikverket)',
   KPD_GDDKIA: 'utrudnienia drogowe PL (KPD GDDKiA)', TOMTOM: 'prędkość ruchu (TomTom — wycofane)',
   FMI: 'pogoda morska (FMI)', DMI: 'pogoda morska (DMI)', SMHI: 'pogoda morska (SMHI)',
@@ -185,7 +186,7 @@ const SOURCE_KIND: Record<SourceId, RiskKind> = {
   ECKERO_SCHEDULE: 'FERRY', ECKERO_STATUS: 'FERRY', DFDS_SCHEDULE: 'FERRY', DFDS_STATUS: 'FERRY',
   DIGITRAFFIC: 'FERRY', DIGITRAFFIC_AIS: 'FERRY', DIGITRAFFIC_PORTCALL: 'FERRY',
   DIGITRAFFIC_VIKING: 'FERRY', DIGITRAFFIC_WINTER: 'FERRY',
-  PORT_TALLINN: 'FERRY', PORTS_STOCKHOLM: 'FERRY', UMG_GDY: 'FERRY',
+  PORT_TALLINN: 'FERRY', PORTS_STOCKHOLM: 'FERRY', UMG_GDY: 'FERRY', ERR_RSS: 'FERRY',
   STENA_IRM: 'FERRY', TRAFIKVERKET: 'ROAD_SE', KPD_GDDKIA: 'ROAD_PL', TOMTOM: 'ROAD_SE',
   FMI: 'FERRY', DMI: 'FERRY', SMHI: 'FERRY', MARINE_WEATHER: 'FERRY',
   HERE_TRAFFIC_PL: 'ROAD_PL', HERE_ROADS: 'JOB_FAILURE',

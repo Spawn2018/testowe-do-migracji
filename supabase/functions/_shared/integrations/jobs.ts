@@ -83,6 +83,10 @@ import {
   tallinkAlertLooksLikeRestore,
 } from '../ferry/tallinkRestore.ts';
 import {
+  ERR_ATTRIBUTION, ERR_RSS_UA, ERR_RSS_URL,
+  errRssCancelRisk, errRssEvidenceNote, filterErrFerryCancel, parseErrRss,
+} from '../ferry/errRss.ts';
+import {
   MARINE_POINTS, SMHI_OCOBS_URL, dmiWamUrl, evaluateMarineWindow, fmiHarmonieUrl, fmiWamUrl,
   marinePointsForRoute, marineWeatherRisk, parseDmiCoverageJson, parseFmiTimeValuePair, parseSmhiOcobs,
   samplesInWindow, type MarineSample, type MarinePointCode,
@@ -2820,10 +2824,18 @@ export async function runFerryStatus(deps: JobDeps): Promise<JobResult> {
     }
   }
 
+  /* BN3 decyzja 61 pkt 3: RSS ERR — potwierdzenie odwołań (bez zmiany statusu). Yle → W64 STOP. */
+  const errRss = await applyErrRssConfirmations(deps, since);
+  warnings.push(...errRss.warnings);
+  risks += errRss.risks;
+
   const result: JobResult = {
     job: 'ferry-status', mode: 'LIVE', ok: !(pfFail && stFail && dfStatusFail),
     inserted, updated, manualKept, unchanged, unknown, risks, warnings,
     tallink_alert_incomplete: tallinkAlertIncomplete || undefined,
+    observations: {
+      ...(errRss.hits ? { err_rss_hits: String(errRss.hits) } : {}),
+    },
   };
   // #421 F7: po zmianie statusu odśwież rozkład, ale max raz na 60 min (unikaj 28× Stena / 10 min).
   if (updated > 0 || inserted > 0) {
@@ -2842,6 +2854,58 @@ export async function runFerryStatus(deps: JobDeps): Promise<JobResult> {
     }
   }
   return result;
+}
+
+/**
+ * BN3 decyzja 61 pkt 3 — RSS ERR: filtr → FERRY MEDIUM + sourceUrl (dowód).
+ * Bez zmiany statusu. Decyzja 69: bez ODWOLANY nie wstawiamy AUTO notice.
+ * Yle niepodłączone (W64 STOP).
+ */
+export async function applyErrRssConfirmations(deps: JobDeps, _sinceIso: string): Promise<{
+  hits: number; risks: number; warnings: string[];
+}> {
+  const nowIso = deps.now().toISOString();
+  const page = await readText(deps, ERR_RSS_URL, {
+    headers: { 'User-Agent': ERR_RSS_UA, Accept: 'application/rss+xml, application/xml, text/xml, */*' },
+  });
+  if (!page.ok) {
+    await deps.store.raiseRisk(sourceDownRisk(
+      'ERR_RSS',
+      [page.warning],
+      nowIso,
+      ERR_RSS_URL,
+    ));
+    return { hits: 0, risks: 1, warnings: [page.warning] };
+  }
+  await deps.store.resolveRisks('SOURCE_DOWN:ERR_RSS:');
+  const parsed = parseErrRss(page.text);
+  const warnings = [...parsed.warnings];
+  if (parsed.warnings.some((w) => /struktura|pusta/i.test(w))) {
+    await deps.store.raiseRisk(sourceDownRisk('ERR_RSS', parsed.warnings, nowIso, ERR_RSS_URL));
+    return { hits: 0, risks: 1, warnings };
+  }
+  const hits = filterErrFerryCancel(parsed.items);
+  if (!hits.length) {
+    return { hits: 0, risks: 0, warnings };
+  }
+  warnings.push(`${ERR_ATTRIBUTION}: ${hits.length} trafień`);
+
+  let risks = 0;
+  const keep: string[] = [];
+  for (const hit of hits) {
+    const risk = errRssCancelRisk(hit);
+    risk.detail = {
+      ...risk.detail,
+      cytat: errRssEvidenceNote(hit),
+    };
+    keep.push(risk.dedup);
+    if (await deps.store.raiseRisk(risk)) risks += 1;
+  }
+
+  if (deps.store.resolveStaleRisks) {
+    await deps.store.resolveStaleRisks('FERRY_ERR_RSS:', keep);
+  }
+  return { hits: hits.length, risks, warnings };
 }
 
 /** ferry-ais — AIS-SRC. Stena IRM (co przebieg, bez cache), aisstream (5 MMSI), Digitraffic jako zapas.
