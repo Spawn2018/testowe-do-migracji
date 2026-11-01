@@ -1,3 +1,11 @@
+
+## 2026-11-01 21:52 — DP-136: FIX fixture UUID/vessel + timeout (#712)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych pilne.
+- Scalanie: PR #712 — db FAIL 553/1; unit/visual OK. Brak F7 gotowe do scalenia.
+- **Krok:** kolizja L f0 / vessel+departure → L d0/d1 + V136; +2 chk fixture; EXPECTED 556; timeout R1-B2 60 s.
+- **Dalej:** push → CI → gotowe do F7. Po F7: DP-137 → DP-138 → BN5.
+- Bez push na main.
 # POSTEP â rejestr zlecenia koÅcowego
 
 Å¹rÃ³dÅo ID: `docs/handover/ZLECENIE_FINAL.md` Â§12 (**51 pozycji**) + Aneks 1 (AN1 Â· M10 Â· M11) + Aneks 2 (AN2 Â· M12) = **56 pozycji**.  
@@ -7467,6 +7475,17 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
   - W64 **zamknięte** (decyzja 76 A); decyzje **77** (UMG), **78** (lód), **79** (bez SMS) w §5; 73–78/80 potwierdzone;
   - POSTEP + §8.
 - **Dalej:** DP kolejka BN3 (np. DP-108 ODWOLANY→FERRY_CANCELLED) albo ATD wiarygodne / BN4.
+- Bez push na main.
+
+## 2026-11-01 21:25 — #711 SCALONE; start DP-136 (**0371**)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne`.
+- Scalanie: **#711** `ac81bdd7` / **0370** (F7: gotowe do scalenia @ `fbde97d2`; CI unit/db/visual ✔). Bez push na main — `deploy-main`.
+- **Krok (DP-136):**
+  - migracja **0371**: `sailing_mismatch_propose_id` / `sailing_mismatch_assign` — ląd SE **lub** FI (`finland_land_geom`);
+  - status EXPECTED **554** (+4): def assign/propose, propose z lądem FI, zatoka FI → null;
+  - PLAN: DP-134/135 SCALONE; DP-136 W TOKU.
+- **Dalej:** push → CI → gotowe do F7. Po F7: DP-137 → DP-138 → BN5.
 - Bez push na main.
 
 ## 2026-11-01 21:00 — #711 F7 r1: status.sh bez `::text` (DP-134)
