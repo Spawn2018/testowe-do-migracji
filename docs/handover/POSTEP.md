@@ -1,15 +1,12 @@
 
-## 2026-11-02 00:10 — DP-139+140 (**0374**) PR
+## 2026-11-02 00:15 — DP-139+140 PR #719 (`59cedb41`)
 
-- Skrzynka: #713/#714/#716/#718 w planie; #550 WSTRZYMANE; #608 w planie. Bez `pilne` poza #550.
-- Scalanie: brak otwartych PR z F7. #715/`#717` już na `main` (`c02ac887` / `ae308fce`).
-- **Krok (DP-139 + analiza DP-140, F7 #715):**
-  - **0374:** `M/F Victoria I` → MMSI `276519000` / IMO `9281281`; `M/F Sirena Seaways` → `277569000` / `9212163` (Digitraffic AIS 01.11).
-  - Alias AIS `victoria 1` w `digitrafficPortCalls` + `portTallinn`.
-  - ZASADY #713 pkt 3–4 (spec koordynatora; praca równoległa bez kolizji).
-  - vitest `tests/dp139-victoria-sirena-mmsi.test.ts` — 2.
-  - **DP-140 analiza:** po 0374 flota 0347 (Megastar/MyStar/Victoria/Baltic Queen/XPRS/Finlandia/Finbo/Sirena) ma MMSI jak Digitraffic; brak dalszych null w tej ósemce. Fixture testów z `276815000` dla Baltic Queen ≠ prod `276779000` — zostaje nieblokujące (osobny DP gdy padnie). Statki spoza 0347 (np. Stena) poza zakresem.
-- **Dalej:** CI → gotowe do F7. Po F7: BN5 (#714).
+- Skrzynka: #713/#714/#716/#718 w planie (komentarz #718); #550 WSTRZYMANE; #608 w planie. Bez nowego `pilne`.
+- Scalanie: brak PR z F7 „gotowe do scalenia”. #715/`#717` na `main`.
+- **Krok:** PR #719 `pakiet/dp139-140-victoria-sirena-mmsi` @ `59cedb41`:
+  - **0374** Victoria I `276519000`/`9281281`, Sirena `277569000`/`9212163`; alias `victoria 1`; vitest 2.
+  - DP-140: flota 0347 bez dalszych null MMSI; fixture Baltic Queen nieblokujące.
+- **Dalej:** CI → F7. Po F7: BN5 (#714).
 - Bez push na main.
 
 ## 2026-11-01 23:55 — #715 F7 r2: DP-138 B1/B2/N1 + brak STATUS
