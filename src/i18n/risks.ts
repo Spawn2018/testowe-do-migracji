@@ -145,6 +145,7 @@ const pl: Dict = {
   rk_src_DIGITRAFFIC_WINTER: 'żegluga zimowa (Digitraffic IBNet)',
   rk_src_PORT_TALLINN: 'odjazdy/przyjazdy (Port of Tallinn)',
   rk_src_PORTS_STOCKHOLM: 'odjazdy/przyjazdy (Ports of Stockholm)',
+  rk_src_UMG_GDY: 'ruch statków Gdynia (Urząd Morski)',
   rk_src_STENA_IRM: 'pozycje promów Stena (IRM)',
   rk_src_TRAFIKVERKET: 'utrudnienia drogowe SE (Trafikverket)',
   rk_src_KPD_GDDKIA: 'utrudnienia drogowe PL (KPD GDDKiA)',

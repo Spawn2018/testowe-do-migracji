@@ -154,6 +154,13 @@ function deps(store: MemStore, pages: Record<string, string | number>, now = NOW
     if (url.includes('port-call/v2')) {
       return new Response('[]', { status: 200 });
     }
+    /* BN3: UMG Gdynia — domyślnie pusta sekcja (bez Stena). */
+    if (url.includes('umgdy.gov.pl')) {
+      return new Response(
+        '<html><body><h2>Port Gdynia</h2><table class="table table-striped"><tr><th>Call ID</th></tr></table></body></html>',
+        { status: 200 },
+      );
+    }
     throw new Error(`nieoczekiwane zapytanie: ${url}`);
   }) as typeof fetch;
   return { store, fetch: f, env: {}, now: () => now };

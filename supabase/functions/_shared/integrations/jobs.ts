@@ -36,6 +36,10 @@ import {
   winterNavIceRisk,
 } from '../ferry/winterNavigation.ts';
 import {
+  UMG_ATTRIBUTION, UMG_EXPECTED_URL, UMG_IN_PORT_URL, UMG_OUTGOING_URL, UMG_UA,
+  parseUmgdyGdyniaHtml, stenaUmgCandidates, type UmgKind, type UmgShipRow,
+} from '../ferry/umgdyShipMovements.ts';
+import {
   PORT_TALLINN_ARRIVALS_URL, PORT_TALLINN_DEPARTURES_URL, PORT_TALLINN_UA,
   parsePortTallinnHtml,
 } from '../ferry/portTallinn.ts';
@@ -1691,9 +1695,14 @@ export async function runFerryPortnet(deps: JobDeps): Promise<JobResult> {
   warnings.push(...v2c.warnings);
   risks += v2c.risks;
 
+  /* BN3 pkt 7: Urząd Morski Gdynia — zapas ETA/ATA/ETD Stena GDY↔KAA. */
+  const umg = await applyUmgdyStenaBackup(deps, since);
+  warnings.push(...umg.warnings);
+  updated += umg.updated;
+  risks += umg.risks;
+
   return {
-    /* Winter-nav / v2: awaria → SOURCE_DOWN / ryzyko, bez wywracania ok Portnet.
-     * Urząd Morski Gdynia (zapas Stena) — osobny krok po F7 (PLAN pkt 7 „dalej”). */
+    /* Winter-nav / v2 / UMG: awaria → SOURCE_DOWN / ryzyko, bez wywracania ok Portnet. */
     job: 'ferry-portnet', mode: 'LIVE', ok: !portnet.fail,
     updated, risks, warnings,
     observations: {
@@ -1701,6 +1710,9 @@ export async function runFerryPortnet(deps: JobDeps): Promise<JobResult> {
       ...(winter.hits ? { winter_hits: String(winter.hits) } : {}),
       ...(v2c.fihel ? { port_call_v2_fihel_cancelled: '1' } : {}),
       port_call_v2_cancelled_n: String(v2c.count),
+      ...(umg.rows ? { umg_stena_rows: String(umg.rows) } : {}),
+      ...(umg.updated ? { umg_stena_updated: String(umg.updated) } : {}),
+      umg_stena_rows: String(umg.rows),
     },
   };
 }
@@ -1752,6 +1764,123 @@ async function applyWinterNavigation(deps: JobDeps, nowIso: string): Promise<{
     await deps.store.resolveRisks('FERRY_WINTER:');
   }
   return { hits: parsed.hits.length, risks, warnings, fail: false };
+}
+
+/**
+ * BN3: UMG Gdynia — zapas ATA (KAA-GDY) / ETD (GDY-KAA) / ETA→delayed_arrival (KAA-GDY).
+ * Tylko gdy primary (Stena/Portnet) nie ustawił actual_*; ±3 h; RECZNIE/ODWOLANY jak Portnet.
+ */
+async function applyUmgdyStenaBackup(deps: JobDeps, sinceIso: string): Promise<{
+  updated: number; rows: number; risks: number; warnings: string[];
+}> {
+  const nowIso = deps.now().toISOString();
+  const headers = { 'User-Agent': UMG_UA, Accept: 'text/html,application/xhtml+xml' };
+  const pages: { url: string; kind: UmgKind }[] = [
+    { url: UMG_EXPECTED_URL, kind: 'ETA' },
+    { url: UMG_IN_PORT_URL, kind: 'ATA' },
+    { url: UMG_OUTGOING_URL, kind: 'ETD' },
+  ];
+  const warnings: string[] = [];
+  const allRows: UmgShipRow[] = [];
+  let okPages = 0;
+  let structureFail = 0;
+  for (const p of pages) {
+    const page = await readText(deps, p.url, { headers });
+    if (!page.ok) {
+      warnings.push(`UMG ${p.kind}: ${page.warning}`);
+      continue;
+    }
+    const parsed = parseUmgdyGdyniaHtml(page.text, p.kind);
+    warnings.push(...parsed.warnings);
+    if (parsed.warnings.some((w) => /struktura/i.test(w))) structureFail += 1;
+    else okPages += 1;
+    allRows.push(...parsed.rows);
+  }
+  if (okPages === 0) {
+    await deps.store.raiseRisk(sourceDownRisk(
+      'UMG_GDY',
+      warnings.length ? warnings : ['Brak odpowiedzi Urzędu Morskiego Gdynia'],
+      nowIso,
+      UMG_IN_PORT_URL,
+    ));
+    return { updated: 0, rows: 0, risks: 1, warnings };
+  }
+  await deps.store.resolveRisks('SOURCE_DOWN:UMG_GDY:');
+  if (structureFail === pages.length) {
+    await deps.store.raiseRisk(sourceDownRisk('UMG_GDY', warnings, nowIso, UMG_IN_PORT_URL));
+    return { updated: 0, rows: 0, risks: 1, warnings };
+  }
+
+  const candidates = stenaUmgCandidates(allRows);
+  const vessels = await deps.store.vessels();
+  const byName = new Map(vessels.map((v) => [v.name, v.id]));
+  const existing = await deps.store.sailingsSince(sinceIso);
+  const WINDOW_MS = 3 * 3600_000;
+  let updated = 0;
+
+  for (const c of candidates) {
+    const vesselId = byName.get(c.vessel);
+    if (!vesselId) continue;
+    const t = Date.parse(c.atUtc);
+    if (!Number.isFinite(t)) continue;
+
+    if (c.kind === 'ATA') {
+      const pool = existing.filter((s) =>
+        s.vessel_id === vesselId
+        && s.route === 'KAA-GDY'
+        && s.actual_arrival_at == null);
+      const pick = pickUniqueInWindow(pool, t, (s) => Date.parse(s.arrival_at), WINDOW_MS);
+      if (pick.kind !== 'hit') continue;
+      const hit = pick.item;
+      const patch = sailingActualPatch(hit, { actual_arrival_at: c.atUtc }, 'DOPLYNAL');
+      if (await deps.store.updateSailing(hit.id, patch)) {
+        updated += 1;
+        hit.actual_arrival_at = c.atUtc;
+        if (hit.source !== 'RECZNIE' && hit.status !== 'ODWOLANY') hit.status = 'DOPLYNAL';
+      }
+      continue;
+    }
+
+    if (c.kind === 'ETD') {
+      const pool = existing.filter((s) =>
+        s.vessel_id === vesselId
+        && s.route === 'GDY-KAA'
+        && s.actual_departure_at == null);
+      const pick = pickUniqueInWindow(pool, t, (s) => Date.parse(s.departure_at), WINDOW_MS);
+      if (pick.kind !== 'hit') continue;
+      const hit = pick.item;
+      const patch = sailingActualPatch(hit, { actual_departure_at: c.atUtc }, 'W_REJSIE');
+      if (await deps.store.updateSailing(hit.id, patch)) {
+        updated += 1;
+        hit.actual_departure_at = c.atUtc;
+        if (hit.source !== 'RECZNIE' && hit.status !== 'ODWOLANY') hit.status = 'W_REJSIE';
+      }
+      continue;
+    }
+
+    /* ETA — zapas delayed_arrival na KAA-GDY (bez actual, bez RECZNIE). */
+    if (c.kind === 'ETA') {
+      const pool = existing.filter((s) =>
+        s.vessel_id === vesselId
+        && s.route === 'KAA-GDY'
+        && s.actual_arrival_at == null
+        && s.source !== 'RECZNIE'
+        && s.status !== 'ODWOLANY');
+      const pick = pickUniqueInWindow(pool, t, (s) => Date.parse(s.arrival_at), WINDOW_MS);
+      if (pick.kind !== 'hit') continue;
+      const hit = pick.item;
+      if (hit.delayed_arrival_at === c.atUtc) continue;
+      if (await deps.store.updateSailing(hit.id, { delayed_arrival_at: c.atUtc })) {
+        updated += 1;
+        hit.delayed_arrival_at = c.atUtc;
+      }
+    }
+  }
+
+  if (candidates.length) {
+    warnings.push(`${UMG_ATTRIBUTION}: ${candidates.length} Stena`);
+  }
+  return { updated, rows: candidates.length, risks: 0, warnings };
 }
 
 /**
