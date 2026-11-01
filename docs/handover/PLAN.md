@@ -1219,7 +1219,10 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-98 | Cursor | `TALLINK_HEL_TLL_URL` zwraca 404 → ostrzeżenie co 10 min — poprawić/usunąć | F7 #683 | BN3 | DONE w #687 (DP-114: nowy URL) |
 | DP-114 | Cursor | Tallink HEL–TLL 404 po #683: nowy URL; niepełna pula → brak auto; streak ≥ 3 SOURCE_DOWN; F7 r1 usable HTML + streak z integration_runs; F7 r2 test markera | #687 / PR #689 | SCALONE `5fc7d4a0` | DONE |
 | DP-115 | Cursor | `stenaIrmBackoffUntilMs` — stan w pamięci modułu (jak dawny streak Tallink); ocenić persist / Edge cold start | F7 #689 r1 | BN3 / AIS | w kolejce |
-| DP-116 | Cursor | `max_rows=1000` obcina odczyty rejsów (2119 na prod) — przegląd innych jobów ferry + stronicowanie / agregaty | F7 #690 r2 / #691 | BN3 / ferry | W TOKU #691: `sailingsSince` + wspólny `fetchSailingsSincePaged`; 63c już w #690 |
+| DP-116 | Cursor | `max_rows=1000` obcina odczyty rejsów (2119 na prod) — przegląd innych jobów ferry + stronicowanie / agregaty | F7 #690 r2 / #691 | BN3 / ferry | W TOKU #691 PR #693: `fetchSailingsSincePaged` + F7 r1 (cap throw, testy żywe) |
+| DP-117 | Cursor | `route-check/index.ts` `loads` `.limit(500)` bez sortu/filtra statusu — przy >500 transportach losowy dobór | F7 #693 r1 | ferry / route-check | w kolejce |
+| DP-118 | Cursor | `store.resolveStaleRisks` — `risk_signals` bez limitu (`max_rows`) → część nieaktualnych ryzyk niezamknięta | F7 #693 r1 | BN3 / ryzyka | w kolejce |
+| DP-119 | Cursor | Front `documents`/`invoices` bez `range` (max_rows); RPC zwracające zbiory też `max_rows` (`latest_vehicle_positions` itd.) | F7 #693 r1 | front / API | w kolejce |
 | DP-99 | Cursor | `operatorFromSailingSource` fallback MUU-VUO → VIKING (prod tylko ECKERO), domyślnie TALLINK → z `data-company` ts.ee albo `ferry_route_operators` (DP-1) | F7 #683 | BN3 | w kolejce |
 | DP-100 | Cursor | dedup AUTO tylko aplikacyjny → partial unique index `(sailing_id, kind) where source='AUTO'` albo `.neq('status','ODWOLANY')` w update | F7 #683 | BN3 | w kolejce |
 | DP-101 | Cursor | `insertOperatorNotice` z `must()` po zmianie statusu — przy błędzie wpis nie powstanie nigdy (kolejność / transakcja) | F7 #683 | BN3 | w kolejce |
@@ -1327,12 +1330,12 @@ DP-98 DONE; DP-114 DONE; DP-115 (Stena IRM backoff) w kolejce.
 3. **#685-c (63c)** — w b: apply i cron zamykają / nie wystawiają `SOURCE_DOWN:VIKING_SCHEDULE` przy pokryciu **od teraz** ≥ 30 d (kompletny plik + próg 50%; `maxVikingFileDepartureAt`).
 Kolejność: a → b(+c). DP-21 w #685-b. **Wdrożenie:** **0360** przed Edge `viking-schedule-import` (deploy-main).
 
-### #691 · DP-116: `max_rows=1000` obcina odczyty rejsów — W TOKU (`pakiet/691-dp116-sailings-paging`)
+### #691 · DP-116: `max_rows=1000` obcina odczyty rejsów — W TOKU (`pakiet/691-dp116-sailings-paging` / PR #693)
 Źródło: #691 (Spawn2018; F7 #690 r2). Prod 01.11: **2119** rejsów od wczoraj; PostgREST `max_rows=1000`.
-1. **Inwentarz (skutek bez stronicowania):** `store.sailingsSince` ← `applySailings` / ferry-schedule (Polferries/Stena/Tallink/Eckerö/DFDS/Viking HTML) → pominięte update/insert poza pierwszymi 1000; Digitraffic Viking (#688) → duplikaty / brak usunięć; ferry-status / Tallink Alert / Portnet / DFDS remark → brak dopasowania ±3 h; ferry-weather → niepełna lista; cron 63c fallback `sailingsSince` (gdy brak `maxVikingFileDepartureAt`). **Już OK w #690:** `maxVikingFileDepartureAt`, `sailingsForVikingFileImport` (strony). **loads/positions** w store: filtry + `limit 1` / head count — bez ryzyka przy bieżącej skali (<1000 aktywnych).
-2. **Poprawka:** wspólny `fetchSailingsSincePaged` (`range` + `order(id)`); `sailingsSince` i `sailingsForVikingFileImport` przez helper.
-3. **Test:** `tests/691-dp116-sailings-page.test.ts` — limitujący klient 1000 vs pełne 1205; filtr sources.
-4. **Odbiór:** SELECT po deploy — brak obcięcia w jobach ferry (liczba rejsów czytanych ≥ COUNT w oknie).
+1. **Inwentarz (skutek bez stronicowania):** `store.sailingsSince` ← `applySailings` / ferry-schedule (Polferries/Stena/Tallink/Eckerö/DFDS/Viking HTML) → pominięte update/insert poza pierwszymi 1000; Digitraffic Viking (#688) → duplikaty / brak usunięć; ferry-status / Tallink Alert / Portnet / DFDS remark → brak dopasowania ±3 h; ferry-weather → niepełna lista; cron 63c fallback `sailingsSince` (gdy brak `maxVikingFileDepartureAt`). **Już OK w #690:** `maxVikingFileDepartureAt`, `sailingsForVikingFileImport` (strony). **loads/positions** w store: filtry + `limit 1` / head count — bez ryzyka przy bieżącej skali (<1000 aktywnych). F7 r1: też `route-check` limit 500 (**DP-117**), `resolveStaleRisks` (**DP-118**), front/RPC (**DP-119**).
+2. **Poprawka:** wspólny `fetchSailingsSincePaged` (`range` + `order(departure_at).order(id)`); `sailingsSince` i `sailingsForVikingFileImport` przez helper; F7 r1: limicie `SAILINGS_MAX_PAGES` → throw `sailings page cap exceeded` (nie ciche obcięcie); dedupe po `id`.
+3. **Test:** `tests/691-dp116-sailings-page.test.ts` — atrapa z żywym `order`/remisami/obcięciem range; ≥300 remisów na granicy; błąd strony 2; `supabaseStore.sailingsSince` / `sailingsForVikingFileImport` >1000; cap throw.
+4. **Odbiór:** SELECT po deploy — brak obcięcia w jobach ferry (liczba rejsów czytanych ≥ COUNT w oknie) — koordynator.
 
 ### #662 · PILNE SafeFleet — link tymczasowy (SG-27) — SCALONE (`189688bc` / PR #663 / **0349**); #662-b SCALONE (`1ee855fd` / PR #664 / **0350**, 30.10.2026 12:54Z)
 Źródło: #662 (Spawn2018, `pilne`; właściciel 30.10 11:51). Przed poprawkami F7 #661.
@@ -1683,6 +1686,9 @@ Bez ekranów Opcji (te w P10b, po P3).
 | `sailingsForVikingFileImport` / `maxVikingFileDepartureAt` | — | OK już w #690 |
 | front `fetchAllSailings` | — | OK (F7 #539) |
 | `loads`/`positions` w store (filtry + limit 1 / head) | przy <1000 aktywnych brak ryzyka | bez zmian |
+| `route-check` `loads` `.limit(500)` bez sortu/statusu | przy >500 transportach losowy dobór | **DP-117** |
+| `resolveStaleRisks` (`risk_signals` bez limitu) | część nieaktualnych ryzyk niezamknięta przy `max_rows` | **DP-118** |
+| RPC zbiory / front `documents`·`invoices` bez `range` | obcięcie `max_rows` | **DP-119** (poza zakresem #691) |
 
 ### Decyzje koordynatora (lista poranna — nie czekają na właściciela)
 | Nr | Co | Stan |
@@ -2353,6 +2359,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 01.11.2026 00:35 | #690 F7 r2 POPRAWKI: B1 próg 50%+pary/dni; B2 podgląd z planem; B3 mutacje; B4 max(departure); decyzja 75 (±1 min); DP-116 | pętla |
 | 01.11.2026 01:05 | #690 F7 r3: testy mutacji (para/dni/próg+63c/podgląd/Edge); 63c apply≥30; bez imports.to_at; order(id); {vessel}; niepełny plik może pośrednio zamknąć SOURCE_DOWN przez cron (rejsy wstawione), ryzyko „niepełny plik” zostaje — akceptowane | pętla |
 | 01.11.2026 01:32 | #690 SCALONE `45d27978` (F7: gotowe @ 8fed1389); deploy-main 0360+Edge; start #691 DP-116 `sailingsSince` stronicowanie | pętla |
+| 01.11.2026 02:05 | #693 F7 r1 POPRAWKI: R1-B1 żywe testy atrapy; R1-B2 page cap throw; dedupe id; DP-117/118/119 | pętla |
 | 31.10.2026 — | Decyzja 73: TLLA-HEL ETA−150 min / HELA-TLL ETD+160 min (fixture Cargo; nocny 165 min OK). Decyzja 74: `sailings.source_ref` 0359; Digitraffic `digitraffic:portcall:<id>:<route>`; HTML/RECZNIE/DANE_STARTOWE wygrywają; #685-b RPC zastępuje digitraffic:% w ±3 h | F7 #688 r1–r4 |
 | 31.10.2026 — | F7 #683 nieblokujące (osobna poprawka): Scheduler grudzień + „on 2 January” → rok bieżący, ciche wygaśnięcie; Alert INFO bez ryzyka/historii — świadomie | F7 #683 r7 |
 | 31.10.2026 — | F7 #683 r8 nieblokujące (osobno): Alert poza Schedulerem obok Schedulera; sprzeczne bloki (resume→cofnięcie auto); rok przy długim oknie Schedulera; mutanty M10/M15–M17/M22 świadomie bez testów | F7 #683 r8 |

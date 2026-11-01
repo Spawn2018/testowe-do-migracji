@@ -7457,6 +7457,18 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (odbiór prod):** SELECT `here_road_legs` — **12** / active 12 / `browser_fetch` 5; core bez zmian (3495/12561/3742/18854/19408); BN7 7× null. `here-roads` **#108803** @ 04:49Z ok (0 prób — core świeże; BN7 poza cronem). Komentarz w #667. **Dalej:** BN3 (#573).
 - Bez push na main.
 
+## 2026-11-01 02:05 — #693 F7 r1 POPRAWKI (DP-116)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE; #685 baza SCALONE (ekran #692); #691 W TOKU. Bez nowych `pilne`.
+- Scalanie: brak „F7: gotowe do scalenia” (po r1 — ponowne F7). PR #692 visual FAIL — nie scalać. Bez push na main.
+- **Krok F7 #693 r1:**
+  - R1-B1: atrapa sortuje po `order()`, remisy losowe, `range` max 1000; testy remisów ≥300 / błąd strony 2 / `supabaseStore.sailingsSince`+`sailingsForVikingFileImport` >1000;
+  - R1-B2: `SAILINGS_MAX_PAGES` → throw `sailings page cap exceeded` (nie ciche obcięcie);
+  - nieblokujące: dedupe po `id`; PLAN §5 + DP-117 (`route-check` limit 500), DP-118 (`resolveStaleRisks`), DP-119 (front/RPC);
+  - vitest 691-dp116 **9**.
+- **Dalej:** push → CI → gotowe do F7 @ sha. Po scaleniu: BN3 winter-nav / MMSI.
+- Bez push na main.
+
 ## 2026-11-01 01:35 — #690 SCALONE; start #691 DP-116 (stronicowanie sailingsSince)
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE; #685 baza SCALONE (ekran #692); #691 W TOKU. Bez nowych `pilne`.

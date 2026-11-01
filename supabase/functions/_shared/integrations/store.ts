@@ -14,6 +14,8 @@ const SAILING_COLS = 'id,vessel_id,route,departure_at,arrival_at,delayed_departu
 
 /** DP-116 / #691: PostgREST max_rows=1000 — stronicowanie range + order(id). */
 export const SAILINGS_PAGE_SIZE = 1000;
+/** F7 #693 r1 R1-B2: po MAX_PAGES pełnych stron — błąd (nie ciche obcięcie). */
+export const SAILINGS_MAX_PAGES = 50;
 
 type SailingsPageQuery = {
   select: (cols: string) => SailingsPageQuery;
@@ -26,6 +28,7 @@ type SailingsPageQuery = {
 /**
  * Odczyt sailings od fromIso ze stronicowaniem (obejście max_rows=1000).
  * Eksport pod testy DP-116 — ten sam helper co supabaseStore.sailingsSince.
+ * F7 #693 r1: limicie stron → throw; dedupe po `id` (równoległy job między stronami).
  */
 export async function fetchSailingsSincePaged(
   fromTable: () => SailingsPageQuery,
@@ -38,8 +41,12 @@ export async function fetchSailingsSincePaged(
     return r.data;
   });
   const out: DbSailing[] = [];
+  const seen = new Set<string>();
   let from = 0;
   for (;;) {
+    if (from >= SAILINGS_MAX_PAGES * pageSize) {
+      throw new Error('sailings page cap exceeded');
+    }
     let q = fromTable()
       .select(SAILING_COLS)
       .gte('departure_at', fromIso);
@@ -48,10 +55,13 @@ export async function fetchSailingsSincePaged(
       await q.order('departure_at').order('id').range(from, from + pageSize - 1),
       'sailings page',
     ) as DbSailing[];
-    out.push(...r);
+    for (const row of r) {
+      if (seen.has(row.id)) continue;
+      seen.add(row.id);
+      out.push(row);
+    }
     if (r.length < pageSize) break;
     from += pageSize;
-    if (from > 50_000) break;
   }
   return out;
 }
