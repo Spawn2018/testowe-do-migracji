@@ -255,7 +255,7 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
     async insertOperatorNotice(row: {
       sailingId: string;
       operator: string;
-      kind: 'ODWOLANY' | 'OPOZNIONY' | 'ZMIANA_GODZINY';
+      kind: 'ODWOLANY' | 'OPOZNIONY' | 'ZMIANA_GODZINY' | 'PRZYWROCONY';
       note?: string | null;
       sourceUrl?: string | null;
       newDeparture?: string | null;
@@ -274,6 +274,82 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
         'operator_notices insert AUTO',
       ) as { id: string } | null;
       return r?.id ?? null;
+    },
+    /** #686: ostatni ODWOLANY dla rejsu (kolejność created_at). */
+    async latestCancelNotice(sailingId: string) {
+      const rows = must(
+        await sb.from('operator_notices')
+          .select('source,operator')
+          .eq('sailing_id', sailingId)
+          .eq('kind', 'ODWOLANY')
+          .order('created_at', { ascending: false })
+          .limit(1),
+        'operator_notices latestCancel',
+      ) as { source: string; operator: string }[];
+      return rows[0] ?? null;
+    },
+    /** #686: SAILING_CANCELLED:{load}:{sailingId} → resolve. */
+    async resolveSailingCancelledRisks(sailingId: string) {
+      const like = 'SAILING_CANCELLED:%';
+      const rows = must(
+        await sb.from('risk_signals').select('id,dedup_key')
+          .like('dedup_key', like)
+          .is('resolved_at', null),
+        'risk_signals sailing cancelled',
+      ) as { id: string; dedup_key: string | null }[];
+      const suffix = `:${sailingId}`;
+      const drop = rows.filter((r) => r.dedup_key?.endsWith(suffix)).map((r) => r.id);
+      if (!drop.length) return 0;
+      const updated = must(
+        await sb.from('risk_signals').update({ resolved_at: new Date().toISOString() })
+          .in('id', drop).is('resolved_at', null).select('id'),
+        'risk_signals resolve sailing cancelled',
+      ) as unknown[];
+      return updated.length;
+    },
+    /** #686: decyzje FERRY_CANCELLED powiązane z ryzykami tego rejsu → EXPIRED. */
+    async expireFerryCancelledDecisions(sailingId: string) {
+      const like = 'SAILING_CANCELLED:%';
+      const risks = must(
+        await sb.from('risk_signals').select('id,dedup_key')
+          .like('dedup_key', like),
+        'risk_signals for expire decisions',
+      ) as { id: string; dedup_key: string | null }[];
+      const suffix = `:${sailingId}`;
+      const riskIds = risks.filter((r) => r.dedup_key?.endsWith(suffix)).map((r) => r.id);
+      if (!riskIds.length) return 0;
+      const updated = must(
+        await sb.from('decisions').update({
+          status: 'EXPIRED',
+          expired_reason: 'nieaktualna — rejs przywrócony (Tallink Alert AUTO)',
+          updated_at: new Date().toISOString(),
+        })
+          .in('risk_id', riskIds)
+          .in('status', ['NEW', 'ASSIGNED', 'SNOOZED'])
+          .select('id'),
+        'decisions expire ferry cancelled',
+      ) as unknown[];
+      return updated.length;
+    },
+    /** #686: transporty z ryzykiem odwołania, które już nie mają tego sailing_id. */
+    async reassignedLoadsAfterCancel(sailingId: string) {
+      const like = 'SAILING_CANCELLED:%';
+      const risks = must(
+        await sb.from('risk_signals').select('load_id,dedup_key')
+          .like('dedup_key', like)
+          .is('resolved_at', null),
+        'risk_signals reassigned',
+      ) as { load_id: string | null; dedup_key: string | null }[];
+      const suffix = `:${sailingId}`;
+      const loadIds = [...new Set(
+        risks.filter((r) => r.dedup_key?.endsWith(suffix) && r.load_id).map((r) => r.load_id!),
+      )];
+      if (!loadIds.length) return [];
+      const loads = must(
+        await sb.from('loads').select('id,sailing_id').in('id', loadIds),
+        'loads reassigned after cancel',
+      ) as { id: string; sailing_id: string | null }[];
+      return loads.filter((l) => l.sailing_id !== sailingId).map((l) => l.id);
     },
     async raiseRisk(r: RiskInput & { loadId?: string }) {
       const res = await sb.rpc('raise_integration_risk', {

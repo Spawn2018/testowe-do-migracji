@@ -74,7 +74,8 @@ import {
 import {
   TALLINK_ALERT_FAIL_STREAK_SOURCE_DOWN, TALLINK_ALERT_UA, TALLINK_HEL_TLL_URL, TALLINK_HOME_URL,
   isTallinkAlertHtmlUsable,
-  finalizeTallinkAlertsForStatus, matchTallinkAlertSailings, parseTallinkAlerts,
+  finalizeTallinkAlertsForStatus, matchTallinkAlertSailings, matchTallinkRestoreSailings,
+  parseTallinkAlerts,
 } from '../ferry/tallinkAlert.ts';
 import {
   MARINE_POINTS, SMHI_OCOBS_URL, dmiWamUrl, evaluateMarineWindow, fmiHarmonieUrl, fmiWamUrl,
@@ -250,11 +251,28 @@ export interface SyncStore {
   insertOperatorNotice?(row: {
     sailingId: string;
     operator: string;
-    kind: 'ODWOLANY' | 'OPOZNIONY' | 'ZMIANA_GODZINY';
+    kind: 'ODWOLANY' | 'OPOZNIONY' | 'ZMIANA_GODZINY' | 'PRZYWROCONY';
     note?: string | null;
     sourceUrl?: string | null;
     newDeparture?: string | null;
   }): Promise<string | null>;
+  /**
+   * #686: ostatni komunikat ODWOLANY dla rejsu (AUTO Tallink → wolno cofnąć;
+   * RECZNIE / inny operator → ryzyko MEDIUM).
+   */
+  latestCancelNotice?(sailingId: string): Promise<{
+    source: string;
+    operator: string;
+  } | null>;
+  /** #686: zamknij ryzyka SAILING_CANCELLED:*:{sailingId}. */
+  resolveSailingCancelledRisks?(sailingId: string): Promise<number>;
+  /** #686: decyzje FERRY_CANCELLED z tych ryzyk → EXPIRED. */
+  expireFerryCancelledDecisions?(sailingId: string): Promise<number>;
+  /**
+   * #686: load_id z otwartych SAILING_CANCELLED dla rejsu, których sailing_id
+   * już nie wskazuje na ten rejs (przepięcie) — bez cofania przypisań.
+   */
+  reassignedLoadsAfterCancel?(sailingId: string): Promise<string[]>;
   raiseRisk(r: RiskInput & { loadId?: string }): Promise<boolean>;
   latestPositions(maxAgeMin: number): Promise<VehiclePos[]>;
   lastRun(job: string): Promise<string | null>;
@@ -2496,6 +2514,148 @@ export async function runFerryStatus(deps: JobDeps): Promise<JobResult> {
       for (const alert of mergedAlerts) {
         if (alert.isCampaign || alert.kind === 'IGNORE') continue;
         if (alert.filterReject === 'expired' || alert.filterReject === 'empty') continue;
+        // #686: najnowszy wzorzec przywrócenia → cofnięcie AUTO ODWOLANY (nie przy niepełnej puli).
+        if (alert.autoRestoreOk) {
+          if (poolIncomplete) {
+            const ok = await deps.store.raiseRisk({
+              kind: 'FERRY',
+              severity: 'MEDIUM',
+              title: 'Tallink Alert: niepełna pula stron — bez auto-przywrócenia, weryfikacja HHL',
+              titleKey: 'rk_tallink_alert_incomplete',
+              params: { vessel: alert.vessel ?? '' },
+              detail: {
+                tekst: alert.text.slice(0, 400),
+                statek: alert.vessel,
+                trasy: alert.routes,
+                niepelna_pula: true,
+                przywrocenie: true,
+                atrybucja: 'Komunikat: Tallink (tallink.com)',
+              },
+              dedup: `TALLINK_ALERT_INCOMPLETE:RESTORE:${alert.vessel ?? 'any'}:${alert.contentStartYmd ?? alert.windowStartYmd ?? 'x'}:${alert.text.slice(0, 40)}`,
+              sourceUrl: alert.sourceUrl,
+            });
+            if (ok) risks += 1;
+            continue;
+          }
+          const hit = matchTallinkRestoreSailings(alert, cands);
+          if (hit.kind === 'not_cancelled') continue;
+          if (hit.kind === 'restore') {
+            const match = hit.sailing;
+            const notice = deps.store.latestCancelNotice
+              ? await deps.store.latestCancelNotice(match.id)
+              : { source: 'AUTO', operator: 'TALLINK' };
+            const autoTallink = notice
+              && notice.source === 'AUTO'
+              && notice.operator.toUpperCase().includes('TALLINK');
+            if (!autoTallink) {
+              const ok = await deps.store.raiseRisk({
+                kind: 'FERRY',
+                severity: 'MEDIUM',
+                title: 'Tallink przywraca rejs odwołany ręcznie/innym źródłem — potwierdź',
+                titleKey: 'rk_tallink_alert_restore_manual',
+                params: { vessel: alert.vessel ?? '' },
+                detail: {
+                  tekst: alert.text.slice(0, 400),
+                  statek: alert.vessel,
+                  trasy: alert.routes,
+                  zrodlo_odwolania: notice?.source ?? 'brak',
+                  operator_odwolania: notice?.operator ?? 'brak',
+                  atrybucja: 'Komunikat: Tallink (tallink.com)',
+                },
+                dedup: `TALLINK_ALERT_RESTORE_MANUAL:${match.id}:${alert.contentStartYmd ?? 'x'}`,
+                sourceUrl: alert.sourceUrl,
+              });
+              if (ok) risks += 1;
+              continue;
+            }
+            const reassigned = deps.store.reassignedLoadsAfterCancel
+              ? await deps.store.reassignedLoadsAfterCancel(match.id)
+              : [];
+            if (reassigned.length > 0) {
+              const ok = await deps.store.raiseRisk({
+                kind: 'FERRY',
+                severity: 'MEDIUM',
+                title: 'Tallink: rejs przywrócony po zmianie planu — sprawdź',
+                titleKey: 'rk_tallink_alert_restore_reassigned',
+                params: { vessel: alert.vessel ?? '' },
+                detail: {
+                  tekst: alert.text.slice(0, 400),
+                  statek: alert.vessel,
+                  transporty: reassigned.slice(0, 20),
+                  atrybucja: 'Komunikat: Tallink (tallink.com)',
+                },
+                dedup: `TALLINK_ALERT_RESTORE_REASSIGNED:${match.id}:${alert.contentStartYmd ?? 'x'}`,
+                sourceUrl: alert.sourceUrl,
+              });
+              if (ok) risks += 1;
+              // Status rejsu i tak przywracamy; przypisań transportów nie cofamy.
+            }
+            if (await deps.store.updateSailing(match.id, { status: 'ZAPLANOWANY' })) {
+              updated += 1;
+              match.status = 'ZAPLANOWANY';
+              const row = existing.find((x) => x.id === match.id);
+              if (row) row.status = 'ZAPLANOWANY';
+              if (deps.store.insertOperatorNotice) {
+                await deps.store.insertOperatorNotice({
+                  sailingId: match.id,
+                  operator: 'TALLINK',
+                  kind: 'PRZYWROCONY',
+                  note: alert.text.slice(0, 400),
+                  sourceUrl: alert.sourceUrl,
+                });
+              }
+              if (deps.store.resolveSailingCancelledRisks) {
+                await deps.store.resolveSailingCancelledRisks(match.id);
+              }
+              if (deps.store.expireFerryCancelledDecisions) {
+                await deps.store.expireFerryCancelledDecisions(match.id);
+              }
+              const okInfo = await deps.store.raiseRisk({
+                kind: 'FERRY',
+                severity: 'INFO',
+                title: 'Tallink: rejs przywrócony',
+                titleKey: 'rk_tallink_alert_restored',
+                params: { vessel: alert.vessel ?? '' },
+                detail: {
+                  tekst: alert.text.slice(0, 400),
+                  statek: alert.vessel,
+                  trasy: alert.routes,
+                  atrybucja: 'Komunikat: Tallink (tallink.com)',
+                },
+                dedup: `TALLINK_ALERT_RESTORED:${match.id}:${alert.contentStartYmd ?? 'x'}`,
+                sourceUrl: alert.sourceUrl,
+              });
+              if (okInfo) risks += 1;
+            }
+            continue;
+          }
+          const ambiguous = hit.kind === 'ambiguous';
+          const beyond = hit.kind === 'beyond_horizon';
+          const ok = await deps.store.raiseRisk({
+            kind: 'FERRY',
+            severity: 'MEDIUM',
+            title: ambiguous
+              ? 'Tallink Alert: przywrócenie — wiele rejsów, weryfikacja HHL'
+              : beyond
+                ? 'Tallink Alert: przywrócenie poza horyzontem rozkładu — weryfikacja HHL'
+                : 'Tallink Alert: przywrócenie bez jednoznacznego rejsu — weryfikacja HHL',
+            titleKey: ambiguous ? 'rk_tallink_alert_restore_ambiguous' : 'rk_tallink_alert_restore_unmatched',
+            params: { vessel: alert.vessel ?? '' },
+            detail: {
+              tekst: alert.text.slice(0, 400),
+              statek: alert.vessel,
+              trasy: alert.routes,
+              przywrocenie: true,
+              niejednoznaczne: ambiguous,
+              poza_horyzontem: beyond,
+              atrybucja: 'Komunikat: Tallink (tallink.com)',
+            },
+            dedup: `TALLINK_ALERT_RESTORE:${alert.vessel ?? 'any'}:${alert.contentStartYmd ?? alert.windowStartYmd ?? 'x'}:${alert.text.slice(0, 40)}`,
+            sourceUrl: alert.sourceUrl,
+          });
+          if (ok) risks += 1;
+          continue;
+        }
         if (alert.kind !== 'ODWOLANY') continue;
         // DP-114 pkt 2: niepełna pula → tylko ryzyko MEDIUM, bez auto-ODWOLANY (reguła 72 traci połowę).
         if (poolIncomplete) {
