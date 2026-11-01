@@ -7469,6 +7469,44 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Dalej:** DP kolejka BN3 (np. DP-108 ODWOLANY→FERRY_CANCELLED) albo ATD wiarygodne / BN4.
 - Bez push na main.
 
+## 2026-11-01 19:00 — #708 CI: unique vs BN1 0344 + DP-116 timeout
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE.
+- Scalanie: brak „F7: gotowe do scalenia” na #708. Bez push na main.
+- **Krok (#708):** CI db status 538/6 FAIL — BN4 TLL-STO/PLD-KPS `16:00`/`18:00` kolidowały z BN1 NYN-GDN/GDN-NYN (unique vessel+departure) → puste ładunki; czasy BN4 → `16:20`/`18:20`. Unit push: R1-B2 DP-116 timeout → `15_000`.
+- **Dalej:** push → CI → gotowe do F7. Po F7: BN9-c2 / BN5.
+- Bez push na main.
+
+## 2026-11-01 18:25 — merge main (#707) → #708; fix unique departure B1
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE.
+- Scalanie: **#707** `bc7998ff` / **0367** (F7: gotowe @ c92498ba). Bez push na main — `deploy-main`.
+- **Krok (#708):** merge `origin/main`; CI status 534/10 FAIL — INSERT sailings B1 dzielił vessel+departure z outbound (unique) → brak ładunków; unikalne `departure_at` dla HEL-TLL/STO-TLL/KPS-PLD.
+- **Dalej:** push → CI → gotowe do F7. Po F7: BN9-c2 / BN5.
+- Bez push na main.
+
+## 2026-11-01 18:05 — #708 F7 r1 B1/B2 (arrival backup **0368**)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE. #707 hotfix CI/F7 w toku (scalać przed #708).
+- Scalanie: brak (F7 r1 niegotowe). Bez push na main.
+- **Krok (F7 #708 r1):**
+  - B1: kraj tylko `ferry_route_is_outbound` + wyjątek rodziny PL→SE (NYN-GDN); powroty HEL-TLL/HELA-TLL/VUO-MUU/STO-TLL/KPS-PLD → false;
+  - B2: `finland_land_geom` brzeg ~60.15 z wcięciami; Kapellskär ≤19.10; woda zatoki/KPS poza;
+  - testy status **544** (+31 vs 513; B1 ląd+port wyjścia); DP-136…138 w rejestrze.
+- **Dalej:** push → CI → gotowe do F7 @ nowy sha. Po F7: BN9-c2 / BN5.
+- Bez push na main.
+
+## 2026-11-01 17:50 — BN4 pkt 8 cz.2: arrival backup FI/SE (**0368**)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE. Hotfix AIS INFO = PR #707 / **0367** (osobno).
+- Scalanie wcześniejsze: **#706** `3c0b76ee` / **0366**. Bez push na main.
+- **Krok (BN4 pkt 8 cz.2):**
+  - migracja **0368**: `apply_ferry_ais_arrival_backup` — kraj przypłynięcia SE|FI; PORT_IN/lądu wg kraju;
+  - `finland_land_geom` (Helsinki/Vuosaari); `sweden_land_geom` + Kapellskär (PLD-KPS);
+  - status EXPECTED **524** (+11: FI port/lądu, regresja SE, TLL-STO, PLD-KPS).
+- **Dalej:** push → CI → gotowe do F7. Po F7: BN9-c2 / BN5.
+- Bez push na main.
+
 ## 2026-11-01 17:35 — PILNE hotfix #706 F7 r1 B1+B2 (AIS_<port>)
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE. **PILNE** z komentarza #706 16:24Z (scalenie bez F7).

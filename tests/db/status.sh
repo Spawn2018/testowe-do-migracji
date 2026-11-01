@@ -2444,6 +2444,139 @@ q "alter table public.sailings drop constraint if exists sailings_route_check;
    alter table public.sailings add constraint sailings_route_check
      check (route ~ '^[A-Z][A-Z0-9_-]{0,62}$');" >/dev/null
 
+# BN4 0368 F7 r1: AIS arrival backup FI/STO/KPS + B1 powroty + B2 zatoka.
+# PORT_IN wyłączony na czas backupu (jak #649).
+S367h=77777777-0000-0000-0000-00000000367a
+S367s=77777777-0000-0000-0000-00000000367b
+S367k=77777777-0000-0000-0000-00000000367c
+S367r1=77777777-0000-0000-0000-00000000367d
+S367r2=77777777-0000-0000-0000-00000000367e
+S367r3=77777777-0000-0000-0000-00000000367f
+S367r4=77777777-0000-0000-0000-000000003680
+S367r5=77777777-0000-0000-0000-000000003681
+S367n=77777777-0000-0000-0000-000000003682
+L367h=$(L e7)
+L367s=$(L e8)
+L367k=$(L e9)
+L367r1=$(L ea)
+L367r2=$(L eb)
+L367r3=$(L ec)
+L367r4=$(L ed)
+L367r5=$(L ee)
+L367n=$(L ef)
+q "alter table public.sailings drop constraint if exists sailings_route_check;
+   insert into sailings (id,project_id,vessel_id,route,departure_at,arrival_at,actual_departure_at,actual_arrival_at,status,source) values
+    ('$S367h','$P','66666666-0000-0000-0000-000000000001','TLL-HEL',
+     '2026-10-14 06:00+00','2026-10-14 08:30+00','2026-10-14 06:00+00','2026-10-14 08:30+00','DOPLYNAL','TALLINK'),
+    ('$S367s','$P','66666666-0000-0000-0000-000000000001','TLL-STO',
+     '2026-10-14 16:20+00','2026-10-15 06:20+00','2026-10-14 16:20+00','2026-10-15 06:20+00','DOPLYNAL','TALLINK'),
+    ('$S367k','$P','66666666-0000-0000-0000-000000000001','PLD-KPS',
+     '2026-10-14 18:20+00','2026-10-15 04:20+00','2026-10-14 18:20+00','2026-10-15 04:20+00','DOPLYNAL','DFDS'),
+    ('$S367r1','$P','66666666-0000-0000-0000-000000000001','HEL-TLL',
+     '2026-10-14 06:10+00','2026-10-14 08:40+00','2026-10-14 06:10+00','2026-10-14 08:40+00','DOPLYNAL','TALLINK'),
+    ('$S367r2','$P','66666666-0000-0000-0000-000000000001','HELA-TLL',
+     '2026-10-14 07:00+00','2026-10-14 09:30+00','2026-10-14 07:00+00','2026-10-14 09:30+00','DOPLYNAL','VIKING'),
+    ('$S367r3','$P','66666666-0000-0000-0000-000000000001','VUO-MUU',
+     '2026-10-14 08:00+00','2026-10-14 10:00+00','2026-10-14 08:00+00','2026-10-14 10:00+00','DOPLYNAL','ECKERO'),
+    ('$S367r4','$P','66666666-0000-0000-0000-000000000001','STO-TLL',
+     '2026-10-14 16:10+00','2026-10-15 06:10+00','2026-10-14 16:10+00','2026-10-15 06:10+00','DOPLYNAL','TALLINK'),
+    ('$S367r5','$P','66666666-0000-0000-0000-000000000001','KPS-PLD',
+     '2026-10-14 18:10+00','2026-10-15 04:10+00','2026-10-14 18:10+00','2026-10-15 04:10+00','DOPLYNAL','DFDS'),
+    ('$S367n','$P','66666666-0000-0000-0000-000000000001','TLL-HEL',
+     '2026-10-16 06:00+00','2026-10-16 08:30+00','2026-10-16 06:00+00',null,'W_REJSIE','TALLINK');" >/dev/null
+mk $L367h H367 "'HHL/H367'" "'SCX/H367'" FERRY "'$S367h'"
+mk $L367s S367 "'HHL/S367'" "'SCX/S367'" FERRY "'$S367s'"
+mk $L367k K367 "'HHL/K367'" "'SCX/K367'" FERRY "'$S367k'"
+mk $L367r1 R367a "'HHL/R367a'" "'SCX/R367a'" FERRY "'$S367r1'"
+mk $L367r2 R367b "'HHL/R367b'" "'SCX/R367b'" FERRY "'$S367r2'"
+mk $L367r3 R367c "'HHL/R367c'" "'SCX/R367c'" FERRY "'$S367r3'"
+mk $L367r4 R367d "'HHL/R367d'" "'SCX/R367d'" FERRY "'$S367r4'"
+mk $L367r5 R367e "'HHL/R367e'" "'SCX/R367e'" FERRY "'$S367r5'"
+mk $L367n N367 "'HHL/N367'" "'SCX/N367'" FERRY "'$S367n'"
+q "insert into load_events (load_id, event_type, occurred_at) values
+    ('$L367h','MILESTONE_LOADED','2026-10-13 08:00+00'),
+    ('$L367s','MILESTONE_LOADED','2026-10-13 08:00+00'),
+    ('$L367k','MILESTONE_LOADED','2026-10-13 08:00+00'),
+    ('$L367r1','MILESTONE_LOADED','2026-10-13 08:00+00'),
+    ('$L367r2','MILESTONE_LOADED','2026-10-13 08:00+00'),
+    ('$L367r3','MILESTONE_LOADED','2026-10-13 08:00+00'),
+    ('$L367r4','MILESTONE_LOADED','2026-10-13 08:00+00'),
+    ('$L367r5','MILESTONE_LOADED','2026-10-13 08:00+00'),
+    ('$L367n','MILESTONE_LOADED','2026-10-13 08:00+00')" >/dev/null
+chk "BN4: finland_land_geom istnieje" \
+  "select to_regprocedure('public.finland_land_geom()') is not null" t
+chk "BN4: Kapellskär w sweden_land_geom" \
+  "select st_covers(public.sweden_land_geom(), st_setsrid(st_makepoint(19.066, 59.723), 4326))" t
+# B2: otwarta zatoka / tory podejścia poza lądem FI
+chk "BN4 B2: zatoka 60.05/25.0 poza FI" \
+  "select st_covers(public.finland_land_geom(), st_setsrid(st_makepoint(25.0, 60.05), 4326))" f
+chk "BN4 B2: tor West Harbour 24.90/60.10 poza FI" \
+  "select st_covers(public.finland_land_geom(), st_setsrid(st_makepoint(24.90, 60.10), 4326))" f
+chk "BN4 B2: Suomenlinna S 24.98/60.13 poza FI" \
+  "select st_covers(public.finland_land_geom(), st_setsrid(st_makepoint(24.98, 60.13), 4326))" f
+chk "BN4 B2: podejście VUO 25.20/60.15 poza FI" \
+  "select st_covers(public.finland_land_geom(), st_setsrid(st_makepoint(25.20, 60.15), 4326))" f
+# Kapellskär: woda na wschód poza lądem
+chk "BN4: Kapellskär woda 19.15/59.74 poza SE" \
+  "select st_covers(public.sweden_land_geom(), st_setsrid(st_makepoint(19.15, 59.74), 4326))" f
+chk "BN4: Kapellskär woda 19.18/59.77 poza SE" \
+  "select st_covers(public.sweden_land_geom(), st_setsrid(st_makepoint(19.18, 59.77), 4326))" f
+q "update public.geofences set active = false
+    where project_id = '$P' and kind = 'PORT_IN' and country in ('SE', 'FI')" >/dev/null
+# Helsinki West Harbour — środek PORT_IN FI
+chk "BN4: TLL-HEL w porcie HEL → AIS backup true" \
+  "select public.apply_ferry_ais_arrival_backup('$L367h', 60.15400, 24.91400, '2026-10-14 08:45+00')" t
+chk "BN4: TLL-HEL w porcie → AT_PORT_NYNASHAMN" "$(st $L367h)" AT_PORT_NYNASHAMN
+# Inland FI ≥2 km (na północ od portu) → Droga SE (enum)
+q "select set_config('tower.status_ctx','on',true); update loads set status='FERRY' where id='$L367h'" >/dev/null
+chk "BN4: TLL-HEL ląd FI ≥2 km → AIS backup true" \
+  "select public.apply_ferry_ais_arrival_backup('$L367h', 60.28, 24.95, '2026-10-14 09:30+00')" t
+chk "BN4: TLL-HEL ląd FI → IN_TRANSIT_SE" "$(st $L367h)" IN_TRANSIT_SE
+# Regresja: TLL-HEL nie reaguje na ląd SE (kraj przypłynięcia = FI)
+q "select set_config('tower.status_ctx','on',true); update loads set status='FERRY' where id='$L367h'" >/dev/null
+chk "BN4: TLL-HEL + ląd SE → nadal false" \
+  "select public.apply_ferry_ais_arrival_backup('$L367h', 59.00, 17.90, '2026-10-14 10:00+00')" f
+# p_ts < ATA / ATA null → false (FERRY)
+chk "BN4: TLL-HEL p_ts < ATA → false" \
+  "select public.apply_ferry_ais_arrival_backup('$L367h', 60.28, 24.95, '2026-10-14 08:00+00')" f
+chk "BN4: TLL-HEL ATA null → false" \
+  "select public.apply_ferry_ais_arrival_backup('$L367n', 60.28, 24.95, '2026-10-16 09:00+00')" f
+# Nowe SE: Stockholm (TLL-STO) i Kapellskär (PLD-KPS) ≥2 km od PORT_IN
+chk "BN4: TLL-STO ląd SE → AIS backup true" \
+  "select public.apply_ferry_ais_arrival_backup('$L367s', 59.40, 18.00, '2026-10-15 07:00+00')" t
+chk "BN4: TLL-STO → IN_TRANSIT_SE" "$(st $L367s)" IN_TRANSIT_SE
+chk "BN4: PLD-KPS Kapellskär → AIS backup true" \
+  "select public.apply_ferry_ais_arrival_backup('$L367k', 59.75, 18.95, '2026-10-15 05:00+00')" t
+chk "BN4: PLD-KPS → IN_TRANSIT_SE" "$(st $L367k)" IN_TRANSIT_SE
+# B1: trasy powrotne (port_to poza SE/FI) — ląd i port wyjścia → false
+chk "BN4 B1: HEL-TLL ląd HEL → false" \
+  "select public.apply_ferry_ais_arrival_backup('$L367r1', 60.28, 24.95, '2026-10-14 09:00+00')" f
+chk "BN4 B1: HEL-TLL port HEL → false" \
+  "select public.apply_ferry_ais_arrival_backup('$L367r1', 60.15400, 24.91400, '2026-10-14 09:00+00')" f
+chk "BN4 B1: HELA-TLL ląd HEL → false" \
+  "select public.apply_ferry_ais_arrival_backup('$L367r2', 60.28, 24.95, '2026-10-14 10:00+00')" f
+chk "BN4 B1: HELA-TLL port HEL → false" \
+  "select public.apply_ferry_ais_arrival_backup('$L367r2', 60.15400, 24.91400, '2026-10-14 10:00+00')" f
+chk "BN4 B1: VUO-MUU ląd VUO → false" \
+  "select public.apply_ferry_ais_arrival_backup('$L367r3', 60.28, 25.20, '2026-10-14 10:30+00')" f
+chk "BN4 B1: VUO-MUU port VUO → false" \
+  "select public.apply_ferry_ais_arrival_backup('$L367r3', 60.21200, 25.19500, '2026-10-14 10:30+00')" f
+chk "BN4 B1: STO-TLL ląd STO → false" \
+  "select public.apply_ferry_ais_arrival_backup('$L367r4', 59.40, 18.00, '2026-10-15 07:00+00')" f
+chk "BN4 B1: STO-TLL port STO → false" \
+  "select public.apply_ferry_ais_arrival_backup('$L367r4', 59.35000, 18.10000, '2026-10-15 07:00+00')" f
+chk "BN4 B1: KPS-PLD ląd KPS → false" \
+  "select public.apply_ferry_ais_arrival_backup('$L367r5', 59.75, 18.95, '2026-10-15 05:00+00')" f
+chk "BN4 B1: KPS-PLD port KPS → false" \
+  "select public.apply_ferry_ais_arrival_backup('$L367r5', 59.72300, 19.06600, '2026-10-15 05:00+00')" f
+chk "BN4 B1: HEL-TLL status bez zmian" "$(st $L367r1)" FERRY
+chk "BN4 B1: STO-TLL status bez zmian" "$(st $L367r4)" FERRY
+q "update public.geofences set active = true
+    where project_id = '$P' and kind = 'PORT_IN' and country in ('SE', 'FI')" >/dev/null
+q "alter table public.sailings drop constraint if exists sailings_route_check;
+   alter table public.sailings add constraint sailings_route_check
+     check (route ~ '^[A-Z][A-Z0-9_-]{0,62}$');" >/dev/null
+
 # BN1 0344 F7: apply_ferry_se + mismatch — e2e (bez pg_get_functiondef like)
 # e2e SE: OTHER/TLL-HEL bez zmiany; GDN-NYN / NYN-GDN / GDY-KAA → Droga SE
 S640o=77777777-0000-0000-0000-00000000640a
