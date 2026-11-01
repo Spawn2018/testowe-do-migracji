@@ -1,0 +1,68 @@
+-- DP-128 (F7 #703 r2 P2): ręczna korekta ATA Viking XPRS HELA-TLL 01.11 —
+-- actual_arrival_at z AIS bez przejścia przez geofence (pierwszy sygnał już w TLLA).
+-- Czyścimy tylko ATA. Trigger 0264 (ATD jest, ATA null) ustawi / utrzyma W_REJSIE.
+-- closeStaleFiToEeWithoutAta może zapisać DOPLYNAL, ale trigger 0264 przy ATD
+-- i ATA null cofa status z powrotem do W_REJSIE — rejs zostaje W_REJSIE do DP-130
+-- (naprawa triggera / porządek 23 rejsów). Idempotentne: tylko gdy ATA = znany
+-- fałszywy znacznik AIS.
+
+begin;
+
+do $dp128$
+declare
+  v_id uuid := 'dd177080-621e-4322-8399-23b827a33e1b';
+  v_ata timestamptz;
+  v_status text;
+  v_status_after text;
+  v_prev text;
+begin
+  select s.actual_arrival_at, s.status::text
+    into v_ata, v_status
+    from public.sailings s
+   where s.id = v_id
+     and s.route = 'HELA-TLL';
+
+  if v_ata is null then
+    return;
+  end if;
+
+  -- Tylko ten konkretny fałszywy znacznik AIS (ms); inna ATA = nie tykać.
+  if v_ata is distinct from timestamptz '2026-11-01 12:18:52.731+00' then
+    return;
+  end if;
+
+  v_prev := current_setting('tower.bulk_quiet', true);
+  perform set_config('tower.bulk_quiet', 'on', true);
+
+  update public.sailings
+     set actual_arrival_at = null,
+         updated_at = now()
+   where id = v_id
+     and actual_arrival_at = timestamptz '2026-11-01 12:18:52.731+00';
+
+  select s.status::text into v_status_after
+    from public.sailings s
+   where s.id = v_id;
+
+  insert into public.audit_log (user_id, action, entity, entity_id, new_value)
+  values (
+    null,
+    'DP128_CLEAR_AIS_ATA',
+    'sailings',
+    v_id::text,
+    jsonb_build_object(
+      'route', 'HELA-TLL',
+      'vessel', 'M/F Viking XPRS',
+      'cleared_actual_arrival_at', v_ata,
+      'status_before', v_status,
+      'status_after', coalesce(v_status_after, 'W_REJSIE'),
+      'status_note', 'W_REJSIE po czyszczeniu ATA (trigger 0264); closeStale DOPLYNAL cofany przez 0264 do W_REJSIE — zostaje do DP-130',
+      'reason', 'AIS ATA bez przejścia geofence (DP-128 F7 r2 P2)'
+    )
+  );
+
+  perform set_config('tower.bulk_quiet', coalesce(v_prev, ''), true);
+end
+$dp128$;
+
+commit;

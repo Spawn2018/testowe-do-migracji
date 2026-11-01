@@ -1225,7 +1225,9 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-124 | Cursor | UMG: pusta godzina ATA — nie traktować jako ATA (wpis koordynatora 01.11) | F7 #695 / koord. 01.11 | BN3 / UMG | w kolejce |
 | DP-125 | Cursor | SMS „prom przywrócony” dla kierowców po auto-ODWOLANY — **ANULOWANE** (właściciel 01.11 11:24: „79: bez SMS”; #697) | F7 #698 r2 / #697 | BN3 / #686 | **ANULOWANE** 01.11.2026 |
 | DP-126 | Cursor | F7 #699 r3 nieblokujące: zaprzeczenie „will not be”; wzmocnienie T1; szersze testy filtrów ERR | F7 #699 r3 | BN3 / ERR RSS | w kolejce |
-| DP-127 | Cursor | Odbiór #699: `ferry-status` observations puste — dodać `err_rss_enabled` / `err_rss_items` / `err_rss_hits` (bez migracji) | #699 odbiór / F7 #701 | BN3 / ERR RSS | W TOKU `pakiet/dp127-err-rss-liczniki` |
+| DP-127 | Cursor | Odbiór #699: `ferry-status` observations puste — dodać `err_rss_enabled` / `err_rss_items` / `err_rss_hits` (bez migracji) | #699 odbiór / F7 #701 | BN3 / ERR RSS | SCALONE #702 `483a7ce8` |
+| DP-128 | Cursor | ATA/ATD z AIS tylko przy przejściu geofence (F7 r2: para ≤20 min, histereza 3/4 km, pas 3–4 pomijany, stronicowanie); korekta ATA XPRS HELA-TLL (`dd177080…` → W_REJSIE do DP-130) | F7 #702 / #703 r2 | BN4 / AIS | W TOKU `pakiet/dp128-ais-geofence-ata` / **0363** |
+| DP-130 | Cursor | Trigger 0264 cofa DOPLYNAL→W_REJSIE przy ATA null (23 rejsy utknięte: HEL-TLL 15, HELA-TLL 6, STO-TLL 1, KAA-GDY 1); trigger nie nadpisuje jawnego DOPLYNAL; migracja porządkująca; testy db+unit | F7 #703 r2 | BN4 / sailings | w kolejce (po #703) |
 | DP-122 | Cursor | `viking_schedule_imports` (0360) brak w kopii 01.11 01:30 — koordynator #697: **nie wymaga zmian** (0360 po kopii 00:30; kontrola kopii 02.11) | #697 | backup | bez zmian (koord. 01.11) |
 | DP-117 | Cursor | `route-check/index.ts` `loads` `.limit(500)` bez sortu/filtra statusu — przy >500 transportach losowy dobór | F7 #693 r1 | ferry / route-check | w kolejce |
 | DP-118 | Cursor | `store.resolveStaleRisks` — `risk_signals` bez limitu (`max_rows`) → część nieaktualnych ryzyk niezamknięta | F7 #693 r1 | BN3 / ryzyka | w kolejce |
@@ -1305,7 +1307,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 5. ~~**DP-21**~~ przeniesione do #666 (decyzja 63b) — parser pliku właściciela (F7 #680).
 6. ~~**BN3**~~ — **SCALONE** (wycinki + #699 RSS ERR `40141ff4`) — poniżej; DP kolejka / ATD wiarygodne dalej.
 7. ~~**#685** decyzja 63~~ — SCALONE (poniżej).
-8. **BN4** — cz.1 SCALONE (#701 `ef613eff`: bbox Zatoki + MMSI z vessels + ROUTE_AIS_PORTS); dalej: DP-127 → luka AIS 30 min / `AIS_<port>` / arrival backup → BN5…BN10 jak #573.
+8. **BN4** — cz.1 SCALONE (#701 `ef613eff`); ~~DP-127~~ SCALONE (#702); **DP-128** (F7 #703 r2: pas 3–4 / **0363**) → **DP-130** (trigger DOPLYNAL) → luka AIS 30 min / `AIS_<port>` / arrival backup → BN5…BN10 jak #573.
 
 ### BN3 · Opóźnienia i odwołania nowych armatorów — SCALONE (po wycinkach 1–3; ~~#685~~ / ~~#691~~ / ~~#692~~ / ~~#694~~ / ~~#695~~ / ~~#696~~ / ~~#686~~ / ~~#699~~; DP kolejka / ATD wiarygodne dalej)
 Źródło: #573 + komentarze BN3 31.10 (spec + decyzje 57–61). Po #667; DP-21 → #666 (63b).
@@ -1331,8 +1333,10 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 1. ~~**aisstream**~~ — `BALTIC_BBOXES`: PL/SE + Zatoka Fińska / Aland (`BALTIC_BBOX_GULF` 59,0–60,5°N, 17,5–26,0°E).
 2. ~~**Śledzenie MMSI**~~ — `isTrackedMmsi` = każdy poprawny MMSI z `vessels` (Digitraffic poll + aisstream allow); nie tylko 5 PL/SE. MMSI bałtyckie w **0361**.
 3. ~~**F7 #701 r1 B1**~~ — mapy `departurePortForRoute` / `arrivalPortForRoute` dla **wszystkich** `FerryRoute` (HEL/HELA, TLL/TLLA, MUU, VUO, PLD, KPS, STO, NYN, GDN, GDY, KAA); trasa bez mapy → `null` (nigdy domyślny GDN/NYN); II-9 / #421 geofence tylko przy mapie. Vitest bn4-ais. SCALONE #701 `ef613eff`.
-4. **DP-127** (przed dalszą BN4) — liczniki ERR w `ferry-status` observations.
-5. Dalej: luka AIS → pozycja szacowana 30 min (18B); `ferry_sailings_map` nowych portów; ryzyka `AIS_<port>`; `apply_ferry_ais_arrival_backup` nowych portów; front `FERRY_VESSELS` → baza (BN9-c2).
+4. ~~**DP-127**~~ SCALONE (#702 `483a7ce8`) — liczniki ERR w `ferry-status` observations.
+5. **DP-128** (F7 #702 / F7 #703 r2, przed resztą BN4) — ATA/ATD z AIS tylko przy parze geofence ≤20 min (histereza 3/4 km, **pas 3–4 km pomijany**, stronicowanie); bez pary → `BEZ_PRZEJSCIA_GEOFENCE`; korekta ATA Viking XPRS HELA-TLL 01.11 (**0363**: ATA null → W_REJSIE; closeStale DOPLYNAL cofany przez 0264 — zostaje do DP-130).
+6. **DP-130** (po #703) — trigger 0264 nie cofa jawnego DOPLYNAL przy ATA null; migracja 23 rejsów W_REJSIE; testy.
+7. Dalej: luka AIS → pozycja szacowana 30 min (18B); `ferry_sailings_map` nowych portów; ryzyka `AIS_<port>`; `apply_ferry_ais_arrival_backup` nowych portów; front `FERRY_VESSELS` → baza (BN9-c2).
 
 ### #687 · DP-114 Tallink HEL–TLL 404 + niepełna pula Alert — SCALONE (`5fc7d4a0` / PR #689)
 Źródło: #687 (Spawn2018, `dla-cursora`). Po #683 prod: `TALLINK_HEL_TLL_URL` `/en/helsinki-tallinn` → HTTP 404; reguła 72 traci połowę puli.
@@ -1733,6 +1737,7 @@ Bez ekranów Opcji (te w P10b, po P3).
 | **78** | Lód: ograniczenia lodowe tylko dla portów naszych tras (HEL/TLL/Muuga/Paldiski/KPS/STO/KAA/NYN/GDY/GDN). Jawne „odwołane” Digitraffic v2 na razie tylko obserwujemy (endpoint 400 → DP-121). | **przyjęta** 01.11 (#697; właściciel 73–78); kod #694 |
 | **79** | SMS „prom przywrócony” po auto-przywróceniu Tallink (#686): **bez SMS**. Status wraca; HHL ma ryzyko i powiadomienie w systemie. DP-125 anulowane. | **przyjęta ze zmianą** 01.11 (#697; właściciel: „79: bez SMS”) |
 | **80** | ERR RSS (info.err.ee/982667): po **pisemnej zgodzie ERR** (właściciel 01.11) źródło **włączone na produkcji**. `ERR_RSS_ENABLED` domyślnie on; env=0/false/off = wyłącznik awaryjny (0 zapytań/ryzyk/SOURCE_DOWN). Detail = tytuł+link+pubDate (bez opisu). Tylko ryzyko MEDIUM (bez ODWOLANY / operator_notices). | **rozstrzygnięta** 01.11 F7 #699 r2 (zgoda właściciela; W65 zamknięte); SCALONE #699 `40141ff4` |
+| **81** | AIS ATD/ATA: przy przerwie sygnału przy nabrzeżu / wejściu **>20 min** godzina z AIS **zostaje pusta** (nie zgadywana). Status jak dotąd. Wbrew wcześniejszemu „wypłynął przy każdym rejsie” (#430) — fałszywa godzina gorsza niż brak. Histereza 3/4 km; stronicowanie pozycji jak DP-116. | **przyjęta** 01.11 F7 #703 r1 (koordynator; do potwierdzenia właściciela) |
 | **72** | Tallink Alert: spośród bloków Alert (niekampanijnych) obowiązuje **najnowszy** (`dateStart`+`timeStart`, brak `timeStart`=00:00) — klucz **globalny** (bez wyliczania dni okna; R12-B2). Najnowszy spełnia 68+71 → ODWOLANY; najnowszy niewzorcowy → bez ODWOLANY ze starszych, ryzyko MEDIUM; remis / zła data / brak `dateStart` → ryzyko bez auto. **72a (łagodna, F7 r13):** blok z kluczem > teraz poza wyborem tylko gdy jest już opublikowany Alert; gdy wszystkie bloki przyszłe — ranking wśród nich (wczesne ogłoszenie jest prawdziwym odwołaniem; fixture CMS ma `dateStart` w przyszłości); status i tak tylko przy 68+71; późniejsze sprostowanie cofnie w #686. **72b:** `data-analytics-group` w cudzysłowie lub bez; kampania tylko `(?<![\w-])type=campaign` (nie `data-type`; `\b` łapało po `-`); luźny Alert (także obok Schedulera) / kampania z treścią serwisową (CANCEL/RESUME/statek/sailing/correction…) → brak auto dla wszystkich. **72c:** zdegradowany Alert zawsze podnosi ryzyko (także przy auto-zwycięzcy). Cofnięcie ODWOLANY — poza #683 (po #685). | **zmieniona przez właściciela** 31.10 14:58; **72a/b/c** F7 #683 r12/r13; kod wycinek 3 |
 
 ## §6. Czeka na dane albo decyzję, przeniesione do paczek, PO 1.0 (rezerwa usunięta 17.10)
@@ -2411,6 +2416,10 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 01.11.2026 12:32 | #699 SCALONE `40141ff4` (F7: gotowe @ 700b070a); DP-125 ANULOWANE; DP-126; W64 zamknięte (76 A); decyzje 73–80; start BN4 `pakiet/bn4-ais-bbox-mmsi` | pętla / F7 #699 |
 | 01.11.2026 13:55 | #701 F7 r1 B1: ROUTE_AIS_PORTS (HEL/HELA/TLL/TLLA…); null bez mapy; XPRS TLLA-HEL bez AIS_DEP_DELAY; vitest bn4-ais | pętla / F7 #701 |
 | 01.11.2026 14:25 | #701 SCALONE `ef613eff` (F7: gotowe do scalenia @ f5298023); start DP-127 `pakiet/dp127-err-rss-liczniki` | pętla / F7 #701 |
+| 01.11.2026 14:10 | #702 SCALONE `483a7ce8` (F7: gotowe @ 052ea652); start DP-128 AIS×geofence + **0363** korekta XPRS HELA-TLL | pętla / F7 #702 |
+| 01.11.2026 14:40 | #703 F7 r1 POPRAWKI B1–B4: geofenceTransition (ATD/ATA ≤20 min, 3/4 km, page); **0363** ATA→W_REJSIE (closeStale→DOPLYNAL); decyzja 81 (pusta godzina > zgadywanie); vitest dp128 + ferry-ais | pętla / F7 #703 |
+| 01.11.2026 14:45 | Właściciel: „81 akceptuję” — reguła F7 r1 (para ≤20 min / histereza / pusta godzina przy luce) | #703 |
+| 01.11.2026 14:55 | #703 F7 r2: B1/P1 pas 3–4 km pomijany (gęsty tor); P2 **0363** W_REJSIE do DP-130; **DP-130** (trigger 0264 / 23 rejsy) | pętla / F7 #703 |
 | 31.10.2026 — | Decyzja 73: TLLA-HEL ETA−150 min / HELA-TLL ETD+160 min (fixture Cargo; nocny 165 min OK). Decyzja 74: `sailings.source_ref` 0359; Digitraffic `digitraffic:portcall:<id>:<route>`; HTML/RECZNIE/DANE_STARTOWE wygrywają; #685-b RPC zastępuje digitraffic:% w ±3 h | F7 #688 r1–r4 |
 | 31.10.2026 — | F7 #683 nieblokujące (osobna poprawka): Scheduler grudzień + „on 2 January” → rok bieżący, ciche wygaśnięcie; Alert INFO bez ryzyka/historii — świadomie | F7 #683 r7 |
 | 31.10.2026 — | F7 #683 r8 nieblokujące (osobno): Alert poza Schedulerem obok Schedulera; sprzeczne bloki (resume→cofnięcie auto); rok przy długim oknie Schedulera; mutanty M10/M15–M17/M22 świadomie bez testów | F7 #683 r8 |

@@ -5,8 +5,30 @@
 import type { SyncStore, VehiclePos } from './jobs.ts';
 import type { VesselFix } from '../ferry/digitraffic.ts';
 import {
+  fetchVesselPositionsNearHubPaged,
+  findAtaTransitionIso,
+  findAtdTransitionIso,
+  GEOFENCE_QUERY_RADIUS_KM,
+} from '../ferry/geofenceTransition.ts';
+import {
   CANCEL_SUSPECT_DEDUP_PREFIX, sailingIdFromCancelSuspectDedup,
 } from '../ferry/cancelSuspect.ts';
+
+export {
+  fetchVesselPositionsNearHubPaged,
+  findAtaTransitionIso,
+  findAtdTransitionIso,
+  GEOFENCE_CLEAR_SOG_KN,
+  GEOFENCE_IN_KM,
+  GEOFENCE_OUT_KM,
+  GEOFENCE_PAIR_MAX_MS,
+  GEOFENCE_QUERY_RADIUS_KM,
+  haversineKm,
+  hubBbox,
+  VESSEL_POS_MAX_PAGES,
+  VESSEL_POS_PAGE_SIZE,
+} from '../ferry/geofenceTransition.ts';
+export type { GeofencePos } from '../ferry/geofenceTransition.ts';
 import {
   filterLoadsReassignedFromSailing,
   loadIdsFromSailingCancelledDedups,
@@ -524,23 +546,42 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
       for (const r of rows) if (!best.has(r.vessel_id)) best.set(r.vessel_id, r.observed_at);
       return [...best.entries()].map(([vesselId, observedAt]) => ({ vesselId, observedAt }));
     },
-    async lastPortPosition(vesselId: string, hub: { lat: number; lon: number }, radiusKm: number) {
-      // Przybliżenie haversine w SQL: 1° szer. ≈ 111 km; długość × cos(lat).
-      const dLat = radiusKm / 111;
-      const dLon = radiusKm / (111 * Math.max(0.2, Math.cos((hub.lat * Math.PI) / 180)));
-      const rows = must(await sb.from('vessel_positions')
-        .select('observed_at,lat,lon')
-        .eq('vessel_id', vesselId)
-        .gte('lat', hub.lat - dLat).lte('lat', hub.lat + dLat)
-        .gte('lon', hub.lon - dLon).lte('lon', hub.lon + dLon)
-        .order('observed_at', { ascending: false }).limit(20), 'vessel_positions port') as { observed_at: string; lat: number; lon: number }[];
-      const R = 6371, rad = Math.PI / 180;
-      for (const r of rows) {
-        const dLatR = (r.lat - hub.lat) * rad, dLonR = (r.lon - hub.lon) * rad;
-        const h = Math.sin(dLatR / 2) ** 2 + Math.cos(hub.lat * rad) * Math.cos(r.lat * rad) * Math.sin(dLonR / 2) ** 2;
-        if (2 * R * Math.asin(Math.sqrt(h)) <= radiusKm) return new Date(r.observed_at).toISOString();
-      }
-      return null;
+    /**
+     * DP-128 F7 r1: ATD = p_in przy przejściu ≤3 km → >4 km w ≤20 min (od sinceIso).
+     * radiusKm zachowane w sygnaturze (kompatybilność SyncStore); klasyfikacja IN/OUT stała 3/4.
+     */
+    async lastPortPosition(
+      vesselId: string,
+      hub: { lat: number; lon: number },
+      _radiusKm: number,
+      sinceIso: string,
+    ) {
+      const rows = await fetchVesselPositionsNearHubPaged(
+        () => sb.from('vessel_positions'),
+        vesselId,
+        hub,
+        sinceIso,
+        { queryKm: GEOFENCE_QUERY_RADIUS_KM, must },
+      );
+      return findAtdTransitionIso(rows, hub);
+    },
+    /**
+     * DP-128 F7 r1: ATA = pierwsze wejście ≤3 km po poprzedniej >4 km lub SOG≥3, luka ≤20 min.
+     */
+    async firstPortEntryAfter(
+      vesselId: string,
+      hub: { lat: number; lon: number },
+      _radiusKm: number,
+      sinceIso: string,
+    ) {
+      const rows = await fetchVesselPositionsNearHubPaged(
+        () => sb.from('vessel_positions'),
+        vesselId,
+        hub,
+        sinceIso,
+        { queryKm: GEOFENCE_QUERY_RADIUS_KM, must },
+      );
+      return findAtaTransitionIso(rows, hub);
     },
     async latestAisstreamFixes(sinceIso: string) {
       const rows = must(await sb.from('vessel_positions')
