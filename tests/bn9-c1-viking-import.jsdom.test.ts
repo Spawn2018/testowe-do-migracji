@@ -245,14 +245,89 @@ describe('BN9-c1 · przepływ podgląd → zatwierdź', () => {
     expect(host.querySelectorAll('[data-vi-section="to_insert"] li[data-vi-row]')).toHaveLength(2);
   });
 
-  it('Podgląd innego widoku: zapis nieaktywny z wyjaśnieniem', async () => {
-    const { api } = fakeApi();
+  it('Podgląd innego widoku (F7 r1 pkt 6): „Podgląd zmian” i zapis nieaktywne z wyjaśnieniem, bez wywołania serwera', async () => {
+    const { api, calls } = fakeApi();
     mount();
     await act(async () => { root.render(panel(api, { readOnly: true })); });
     await pickFile('viking.html', HTML);
+    const btn = q<HTMLButtonElement>('[data-vi-preview]')!;
+    expect(btn.disabled).toBe(true);
+    expect(q('[data-vi-preview-why]')?.textContent).toContain('tylko do odczytu');
+    await act(async () => { btn.click(); });
+    await flush();
+    expect(calls).toHaveLength(0);
+    expect(q('[data-vi-plan]')).toBeNull();
+  });
+
+  it('F7 r1 pkt 1: wybór innego pliku po podglądzie unieważnia podgląd; zatwierdzenie dopiero po nowym podglądzie', async () => {
+    const { api, calls } = fakeApi();
+    mount();
+    await act(async () => { root.render(panel(api)); });
+    await pickFile('viking.html', HTML);
     await click('[data-vi-preview]');
-    expect(q<HTMLButtonElement>('[data-vi-commit]')!.disabled).toBe(true);
-    expect(q('[data-vi-commit-why]')?.textContent).toContain('tylko do odczytu');
+    expect(q('[data-vi-commit]')).not.toBeNull();
+    await pickFile('inny.html', `${HTML}<!-- inny -->`);
+    expect(q('[data-vi-plan]')).toBeNull();
+    expect(q('[data-vi-commit]')).toBeNull();
+    await click('[data-vi-preview]');
+    await click('[data-vi-commit]');
+    await click('[data-vi-commit-yes]');
+    const commits = calls.filter((c) => c.commit);
+    expect(commits).toHaveLength(1);
+    expect(commits[0]).toMatchObject({ file_name: 'inny.html', html: `${HTML}<!-- inny -->` });
+  });
+
+  it('F7 r1 pkt 2: zmiana zakresu dni po podglądzie unieważnia podgląd', async () => {
+    const { api, calls } = fakeApi();
+    mount();
+    await act(async () => { root.render(panel(api)); });
+    await pickFile('viking.html', HTML);
+    await click('[data-vi-preview]');
+    expect(q('[data-vi-commit]')).not.toBeNull();
+    const sel = q<HTMLSelectElement>('[data-vi-days]')!;
+    await act(async () => { sel.value = '90'; sel.dispatchEvent(new Event('change', { bubbles: true })); });
+    expect(q('[data-vi-plan]')).toBeNull();
+    expect(q('[data-vi-commit]')).toBeNull();
+    await click('[data-vi-preview]');
+    expect(calls[calls.length - 1]).toMatchObject({ commit: false, days: 90 });
+  });
+
+  it('F7 r1 pkt 7: dwa szybkie kliknięcia „Tak, zapisz rozkład” → jedno wywołanie zapisu', async () => {
+    let release: () => void = () => {};
+    const { api, calls } = fakeApi();
+    const run = api.run as unknown as ReturnType<typeof vi.fn>;
+    const inner = run.getMockImplementation()!;
+    run.mockImplementation((req: VikingImportRequest) => (req.commit
+      ? new Promise((res) => { release = () => res(inner(req)); })
+      : inner(req)));
+    mount();
+    await act(async () => { root.render(panel(api)); });
+    await pickFile('viking.html', HTML);
+    await click('[data-vi-preview]');
+    await click('[data-vi-commit]');
+    const yes = q<HTMLButtonElement>('[data-vi-commit-yes]')!;
+    /* dwa wywołania obsługi z tego samego renderu (zanim React zdejmie przycisk) — DOM-owy drugi klik trafiłby w odłączony węzeł */
+    const propsKey = Object.keys(yes).find((k) => k.startsWith('__reactProps$'))!;
+    const onClick = (yes as unknown as Record<string, { onClick: () => void }>)[propsKey].onClick;
+    act(() => { onClick(); onClick(); });
+    await act(async () => { release(); });
+    await flush();
+    expect(run.mock.calls.filter(([r]) => (r as VikingImportRequest).commit)).toHaveLength(1);
+    expect(calls.filter((c) => c.commit)).toHaveLength(1);
+    expect(q('[data-vi-result]')).not.toBeNull();
+  });
+
+  it('F7 r1 pkt 8: pusta data „Od dnia” — podgląd nieaktywny z komunikatem', async () => {
+    const { api, calls } = fakeApi();
+    mount();
+    await act(async () => { root.render(panel(api)); });
+    await pickFile('viking.html', HTML);
+    const from = q<HTMLInputElement>('[data-vi-from]')!;
+    const set = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
+    await act(async () => { set.call(from, ''); from.dispatchEvent(new Event('input', { bubbles: true })); });
+    expect(q<HTMLButtonElement>('[data-vi-preview]')!.disabled).toBe(true);
+    expect(q('[data-vi-preview-why]')?.textContent).toContain('Od dnia');
+    expect(calls).toHaveLength(0);
   });
 });
 
@@ -307,6 +382,38 @@ describe('BN9-c1 · plik i błędy', () => {
     expect(q('[data-vi-plan]')).not.toBeNull();
     expect(q('[data-vi-result]')).toBeNull();
     expect(history).toHaveBeenCalledTimes(2);
+  });
+
+  for (const error of ['Import przerwany', 'Nie zapisano historii importu']) {
+    it(`F7 r1 pkt 5: zapis 500 (${error}) — komunikat, podgląd wyczyszczony, zapis dopiero po nowym podglądzie`, async () => {
+      const { api, calls } = fakeApi({ commit: { ok: false, status: 500, error } });
+      mount();
+      await act(async () => { root.render(panel(api)); });
+      await pickFile('viking.html', HTML);
+      await click('[data-vi-preview]');
+      await click('[data-vi-commit]');
+      await click('[data-vi-commit-yes]');
+      expect(q('[data-vi-error]')?.textContent).toMatch(/przerwany|historii/);
+      expect(q('[data-vi-plan]')).toBeNull();
+      expect(q('[data-vi-commit]')).toBeNull();
+      expect(q<HTMLButtonElement>('[data-vi-preview]')!.disabled).toBe(false);
+      await click('[data-vi-preview]');
+      expect(calls.filter((c) => !c.commit)).toHaveLength(2);
+    });
+  }
+
+  it('F7 r1 pkt 9: HTML ~2,9 MB z dużą liczbą znaków ucieczki w JSON — komunikat o rozmiarze, bez wywołania serwera', async () => {
+    const { api, calls } = fakeApi();
+    const big = `<html><body><table>${'"\\'.repeat(Math.floor(2.9 * 1024 * 1024 / 3))}</table></body></html>`;
+    expect(big.length).toBeLessThan(lib.VIKING_IMPORT_MAX_BYTES);
+    mount();
+    await act(async () => { root.render(panel(api)); });
+    await pickFile('duzy.html', big);
+    expect(q('[data-vi-error]')).toBeNull();
+    await click('[data-vi-preview]');
+    expect(q('[data-vi-error]')?.textContent).toContain('za duży');
+    expect(calls).toHaveLength(0);
+    expect(q('[data-vi-plan]')).toBeNull();
   });
 
   it('komunikaty: 401, 500 przerwany', () => {
@@ -380,6 +487,23 @@ describe('BN9-c1 · klient Edge (kontrakt #690)', () => {
     expect(await down.run({ html: HTML, file_name: 'v.html', commit: true })).toMatchObject({ ok: false, status: 0 });
     const noSession = createVikingImportApi({ baseUrl: 'https://x.test', anonKey: 'a', client: client(null), fetchImpl: vi.fn() as never });
     expect(await noSession.run({ html: HTML, file_name: 'v.html', commit: false })).toMatchObject({ ok: false, status: 401 });
+  });
+
+  it('F7 r1 pkt 3: todayYmd — doba w PL na granicy (zima i lato)', () => {
+    expect(lib.todayYmd('2026-11-01T23:30:00Z')).toBe('2026-11-02');
+    expect(lib.todayYmd('2026-07-01T22:30:00Z')).toBe('2026-07-02');
+    expect(lib.todayYmd('2026-11-01T22:30:00Z')).toBe('2026-11-01');
+  });
+
+  it('F7 r1 pkt 4: departureCells — inna doba w PL niż w porcie: data przy czasie PL', () => {
+    /* 00:30 Tallinn (UTC+2) 02.11 = 23:30 PL (UTC+1) 01.11 */
+    expect(lib.departureCells({ route: 'TLLA-HEL', departureUtc: '2026-11-01T22:30:00Z' })).toEqual({
+      local: '02.11.2026, 00:30 (Tallinn)', pl: '23:30 PL (01.11)',
+    });
+    expect(lib.departureCells({ route: 'TLLA-HEL', departureUtc: '2026-11-03T05:00:00Z' })).toEqual({
+      local: '03.11.2026, 07:00 (Tallinn)', pl: '06:00 PL',
+    });
+    expect(lib.departureCells({ route: 'GDN-NYN', departureUtc: '2026-11-03T05:00:00Z' }).pl).toBeNull();
   });
 
   it('plik i ciało: rozszerzenie, rozmiar, ciało ponad 3 MB po zamianie na tekst', () => {

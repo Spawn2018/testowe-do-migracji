@@ -1,15 +1,16 @@
 /**
  * BN9-c1 / decyzja 63b — „Wczytaj rozkład Vikinga z pliku” (Harmonogram › Rejsy, Administrator HHL).
  *
- * Kontrakt Edge `viking-schedule-import` i tabeli `viking_schedule_imports` z PR #690 (#685-b, migracja 0360,
- * `supabase/functions/viking-schedule-import/index.ts`, `_shared/ferry/vikingFileImport.ts`).
- * Typy poniżej MUSZĄ odpowiadać #690 — po jego scaleniu można je zastąpić reeksportem
- * `src/lib/ferry/vikingFileImport.ts` (na `main` przed #690 go nie ma, dlatego są tu lokalnie).
+ * Kontrakt Edge `viking-schedule-import` i tabeli `viking_schedule_imports` (#690 / #685-b, migracja 0360).
+ * Wiersz i plan podglądu — typy wspólne z Edge (`./ferry/vikingFileImport` → `_shared/ferry/vikingFileImport.ts`,
+ * tylko `import type`, bez kodu w paczce). Ciało żądania, odpowiedzi podglądu i zapisu oraz wiersz historii opisują
+ * JSON zwracany przez `supabase/functions/viking-schedule-import/index.ts` i tabelę z 0360 — przy zmianie Edge zmień je tutaj.
  *
  * Tu tylko czyste funkcje i dane demonstracyjne (bez klienta bazy — paczka demo, I-2).
  * Wywołanie serwera: `vikingImportApi.ts` (ładowany wyłącznie w buildzie z logowaniem).
  */
 import type { Locale, SailingStatus } from '../types';
+import type { VikingFileApplyPlan, VikingFilePlanRow } from './ferry/vikingFileImport';
 import { portByCode, routeEnds } from './ferryCatalog';
 import { ferryRouteLabel, portName } from './portName';
 import { sailingStatusLabel } from './sailings';
@@ -26,26 +27,14 @@ export interface VikingImportRequest {
   days?: number;
 }
 
-/** #690 `VikingFilePlanRow` — pozycja rejsu w planie podglądu. */
-export interface VikingPlanRow {
-  route: string;
-  vessel: string;
-  departureUtc: string;
-  status?: string;
-  reason?: string;
-}
+/** Pozycja rejsu w planie podglądu — typ Edge (#690). */
+export type VikingPlanRow = VikingFilePlanRow;
 
-/** #690 `VikingFileApplyPlan`. */
-export interface VikingImportPlan {
-  to_insert: VikingPlanRow[];
-  to_remove: VikingPlanRow[];
-  to_take_over: VikingPlanRow[];
-  risks: VikingPlanRow[];
-  blocked: VikingPlanRow[];
-}
+/** Plan podglądu — typ Edge (#690). */
+export type VikingImportPlan = VikingFileApplyPlan;
 
 /** Odpowiedź podglądu (`commit: false`). */
-export interface VikingImportPreview extends VikingImportPlan {
+export interface VikingImportPreview extends VikingFileApplyPlan {
   ok: true;
   preview: true;
   file_name: string;
@@ -177,9 +166,12 @@ export function departureCells(row: Pick<VikingPlanRow, 'route' | 'departureUtc'
   const tz = departureTz(row.route);
   const from = routeEnds(row.route)?.from;
   const where = from ? ` (${portName(locale, from)})` : '';
+  const day = (zone: string) => fmtDateTime(row.departureUtc, zone).split(', ')[0];
+  /* inna doba w PL niż w porcie (np. 00:30 Tallinn = 23:30 PL dzień wcześniej) — data przy czasie PL */
+  const plDay = day(TZ_OPS) !== day(tz) ? ` (${day(TZ_OPS).slice(0, 5)})` : '';
   return {
     local: `${fmtDateTime(row.departureUtc, tz)}${where}`,
-    pl: tz === TZ_OPS ? null : `${fmtTime(row.departureUtc, TZ_OPS)} PL`,
+    pl: tz === TZ_OPS ? null : `${fmtTime(row.departureUtc, TZ_OPS)} PL${plDay}`,
   };
 }
 

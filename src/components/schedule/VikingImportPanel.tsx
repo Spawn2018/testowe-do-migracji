@@ -5,7 +5,7 @@
  * Pod spodem historia importów (`viking_schedule_imports`). Kontrakt: PR #690 (`src/lib/vikingImport.ts`).
  * Demo i Podgląd innego widoku: zapis nieaktywny z wyjaśnieniem (baza i tak odmawia — `assert_not_preview`).
  */
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import type { Locale } from '../../types';
 import { DemoMark } from '../ui/DemoMark';
 import {
@@ -158,6 +158,11 @@ export function VikingImportPanel({ api, demo, readOnly, nowIso, locale, phone, 
       ? 'Podgląd innego widoku jest tylko do odczytu. Wróć do własnego widoku HHL, żeby zapisać rozkład.'
       : null;
 
+  /* Podgląd innego widoku: serwer odrzuca także podgląd (assert_not_preview → 403) — blokujemy z wyjaśnieniem */
+  const previewBlocked = readOnly ? commitBlocked : !fromYmd ? 'Wybierz dzień w polu „Od dnia”.' : null;
+  /* strażnik podwójnego zapisu (dwa kliknięcia przed przerysowaniem) */
+  const committing = useRef(false);
+
   const request = (commit: boolean): VikingImportRequest | null => (file && html != null
     ? { html, file_name: file.name, commit, from_ymd: fromYmd || undefined, days }
     : null);
@@ -184,7 +189,7 @@ export function VikingImportPanel({ api, demo, readOnly, nowIso, locale, phone, 
 
   async function onPreview() {
     const req = request(false);
-    if (!req || !api) return;
+    if (!req || !api || previewBlocked) return;
     if (vikingBodyTooLarge(req)) { setError(vikingImportErrorPl(413)); return; }
     setError(null);
     setResult(null);
@@ -197,13 +202,15 @@ export function VikingImportPanel({ api, demo, readOnly, nowIso, locale, phone, 
 
   async function onCommit() {
     const req = request(true);
-    if (!req || !api || !preview || commitBlocked) return;
+    if (!req || !api || !preview || commitBlocked || committing.current) return;
+    committing.current = true;
     setError(null);
     setPhase('committing');
-    const r = await api.run({ ...req, commit: true });
+    const r = await api.run({ ...req, commit: true }).finally(() => { committing.current = false; });
     if (!r.ok) {
       setError(vikingImportErrorPl(r.status, r.error));
-      setPhase('preview');
+      /* 500 (import przerwany / brak wpisu historii): stan bazy mógł się zmienić — stary podgląd nieaktualny */
+      if (r.status >= 500) { setPreview(null); setPhase('idle'); } else setPhase('preview');
       void loadHistory();
       return;
     }
@@ -283,13 +290,15 @@ export function VikingImportPanel({ api, demo, readOnly, nowIso, locale, phone, 
             type="button"
             className="btn"
             data-vi-preview
-            disabled={busy || !html || !api}
+            disabled={busy || !html || !api || !!previewBlocked}
+            title={previewBlocked ?? undefined}
             onClick={() => { void onPreview(); }}
           >
             {phase === 'previewing' ? 'Sprawdzam plik…' : 'Podgląd zmian'}
           </button>
         </div>
       </div>
+      {previewBlocked ? <p className="vi-muted" data-vi-preview-why>{previewBlocked}</p> : null}
       {file && html && phase !== 'reading' ? <p className="vi-muted" data-vi-file-ok>Wybrany plik: {file.name}</p> : null}
       {phase === 'reading' ? <p className="vi-muted" role="status">Czytam plik…</p> : null}
       {error ? <div className="note sv-err vi-err" role="alert" data-vi-error>{error}</div> : null}
