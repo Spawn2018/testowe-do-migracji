@@ -36,6 +36,9 @@ class MemStore implements SyncStore {
   marine: { maxWaveM: number | null; maxGustKn: number | null; risk: string; sources: string } | null = null;
   thr = { waveM: 3.8, gustKn: 40 };
   n = 0;
+  /** F7 #706 B1: INFO AIS_<port> tylko przy >0 transportach. */
+  loadCounts = new Map<string, number>();
+  async sailingAssignedLoadCount(id: string) { return this.loadCounts.get(id) ?? 0; }
   async projectId() { return 'p1'; }
   async vessels() { return [{ id: WAW, name: 'M/F Wawel', mmsi: null }, { id: NS, name: 'M/F Nova Star', mmsi: 311000787 }]; }
   async sailingsSince(from: string) { return this.sailings.filter((s) => s.departure_at >= from).map((s) => ({ ...s })); }
@@ -464,6 +467,7 @@ describe('ferry-ais — Digitraffic (prawdziwa odpowiedź 25.09.2026)', () => {
     const sNyn = sail(NS, '2026-09-24T16:00:00.000Z', '2026-09-25T10:00:00.000Z');
     sNyn.actual_departure_at = '2026-09-24T16:10:00.000Z';
     st.sailings.push(sNyn);
+    st.loadCounts.set(sNyn.id, 1); /* F7 #706 B1: INFO także NYN tylko z transportami */
     /* F7 r1: poprzednia ≤20 min przed wejściem, >4 km od NYN. */
     st.vesselPositions.push({
       vesselId: NS, lat: 58.85, lon: 17.95, observedAt: '2026-09-24T19:25:00.000Z', sogKn: 6,

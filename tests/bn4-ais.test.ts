@@ -72,8 +72,9 @@ const MEGA_AT_HEL = JSON.stringify({
 });
 
 class Mem {
-  vesselPositions: { vesselId: string; lat: number; lon: number; source?: string }[] = [];
+  vesselPositions: { vesselId: string; lat: number; lon: number; source?: string; sogKn?: number | null; observedAt?: string }[] = [];
   risks: { dedup: string; title?: string }[] = [];
+  loadCounts = new Map<string, number>();
   sailings: {
     id: string; vessel_id: string; route: string; departure_at: string; arrival_at: string;
     delayed_departure_at: string | null; delayed_arrival_at: string | null;
@@ -90,18 +91,42 @@ class Mem {
   }
   async sailingsSince() { return this.sailings; }
   async insertSailings() { /* */ }
-  async updateSailing() { return false; }
+  async updateSailing(id: string, patch: { actual_arrival_at?: string | null; status?: string }) {
+    const s = this.sailings.find((x) => x.id === id);
+    if (!s) return false;
+    if (patch.actual_arrival_at !== undefined) s.actual_arrival_at = patch.actual_arrival_at;
+    if (patch.status !== undefined) s.status = patch.status;
+    return true;
+  }
   async saveVesselPosition(vesselId: string, fix: VesselFix) {
     this.vesselPositions.push({
       vesselId, lat: fix.lat, lon: fix.lon, source: fix.source,
+      sogKn: fix.sogKn ?? null, observedAt: fix.timestampUtc,
     });
   }
+  async sailingAssignedLoadCount(id: string) { return this.loadCounts.get(id) ?? 0; }
   async raiseRisk(r: { dedup: string; title?: string }) { this.risks.push(r); return true; }
   async resolveRisks() { return 0; }
   async resolveStaleRisks() { return 0; }
   async latestPositions() { return []; }
   async lastRun() { return null; }
   async recordRun() { /* */ }
+  async firstPortEntryAfter(
+    vesselId: string,
+    hub: { lat: number; lon: number },
+    _radiusKm: number,
+    sinceIso: string,
+  ) {
+    const { findAtaTransitionIso, haversineKm, GEOFENCE_QUERY_RADIUS_KM } =
+      await import('../supabase/functions/_shared/ferry/geofenceTransition');
+    const rows = this.vesselPositions
+      .filter((p) => p.vesselId === vesselId && (p.observedAt ?? '') >= sinceIso
+        && haversineKm(p.lat, p.lon, hub.lat, hub.lon) <= GEOFENCE_QUERY_RADIUS_KM)
+      .map((p) => ({
+        observed_at: p.observedAt!, lat: p.lat, lon: p.lon, sog_kn: p.sogKn ?? null,
+      }));
+    return findAtaTransitionIso(rows, hub);
+  }
 }
 
 function deps(st: Mem, bodies: Record<string, string | number>, env: Record<string, string> = {}, now = new Date('2026-11-01T10:05:00Z')): JobDeps {
@@ -172,8 +197,9 @@ describe('BN4 F7 #701 r1 B1 — mapy portów (bez domyślnego GDN/NYN)', () => {
     )).toBeNull();
   });
 
-  it('BN4 pkt 8: Megastar TLL-HEL w hubie HEL → INFO AIS_HEL', async () => {
+  it('F7 #706 B1/B2: Megastar TLL-HEL w HEL + ATA geofence + transport → INFO AIS_HEL', async () => {
     const st = new Mem();
+    st.loadCounts.set('s-mega-hel', 1);
     st.sailings.push({
       id: 's-mega-hel', vessel_id: MEGA, route: 'TLL-HEL',
       departure_at: '2026-11-01T08:00:00Z', arrival_at: '2026-11-01T10:00:00Z',
@@ -181,9 +207,104 @@ describe('BN4 F7 #701 r1 B1 — mapy portów (bez domyślnego GDN/NYN)', () => {
       actual_departure_at: '2026-11-01T08:05:00Z', actual_arrival_at: null,
       status: 'W_REJSIE', source: 'TALLINK',
     });
+    st.vesselPositions.push({
+      vesselId: MEGA, lat: 60.10, lon: 24.85, sogKn: 8, observedAt: '2026-11-01T09:45:00Z',
+    });
     const r = await runFerryAis(deps(st, { 'digitraffic.fi': MEGA_AT_HEL }));
     expect(r.ok).toBe(true);
+    expect(st.sailings[0].actual_arrival_at).toBeTruthy();
     expect(st.risks.some((x) => x.dedup === 'AIS_HEL:s-mega-hel')).toBe(true);
+  });
+
+  it('F7 #706 B1: TLL-HEL w HEL bez transportów → brak AIS_HEL', async () => {
+    const st = new Mem();
+    st.sailings.push({
+      id: 's-mega-empty', vessel_id: MEGA, route: 'TLL-HEL',
+      departure_at: '2026-11-01T08:00:00Z', arrival_at: '2026-11-01T10:00:00Z',
+      delayed_departure_at: null, delayed_arrival_at: null,
+      actual_departure_at: '2026-11-01T08:05:00Z', actual_arrival_at: '2026-11-01T09:50:00Z',
+      status: 'DOPLYNAL', source: 'TALLINK',
+    });
+    const r = await runFerryAis(deps(st, { 'digitraffic.fi': MEGA_AT_HEL }));
+    expect(r.ok).toBe(true);
+    expect(st.risks.some((x) => x.dedup.startsWith('AIS_HEL:'))).toBe(false);
+  });
+
+  it('F7 #706 B2: statek w HEL bez ATA (bez przejścia geofence) → brak INFO', async () => {
+    const st = new Mem();
+    st.loadCounts.set('s-mega-no-ata', 1);
+    st.sailings.push({
+      id: 's-mega-no-ata', vessel_id: MEGA, route: 'TLL-HEL',
+      departure_at: '2026-11-01T08:00:00Z', arrival_at: '2026-11-01T10:00:00Z',
+      delayed_departure_at: null, delayed_arrival_at: null,
+      actual_departure_at: '2026-11-01T08:05:00Z', actual_arrival_at: null,
+      status: 'W_REJSIE', source: 'TALLINK',
+    });
+    const r = await runFerryAis(deps(st, { 'digitraffic.fi': MEGA_AT_HEL }));
+    expect(r.ok).toBe(true);
+    expect(st.sailings[0].actual_arrival_at).toBeNull();
+    expect(r.observations?.['M/F Megastar:ARR']).toBe('BEZ_PRZEJSCIA_GEOFENCE');
+    expect(st.risks.some((x) => x.dedup.startsWith('AIS_HEL:'))).toBe(false);
+  });
+
+  it('F7 #706 M5: postój poza portem HEL → brak AIS_HEL', async () => {
+    const st = new Mem();
+    st.loadCounts.set('s-mega-out', 1);
+    st.sailings.push({
+      id: 's-mega-out', vessel_id: MEGA, route: 'TLL-HEL',
+      departure_at: '2026-11-01T08:00:00Z', arrival_at: '2026-11-01T10:00:00Z',
+      delayed_departure_at: null, delayed_arrival_at: null,
+      actual_departure_at: '2026-11-01T08:05:00Z', actual_arrival_at: '2026-11-01T09:50:00Z',
+      status: 'DOPLYNAL', source: 'TALLINK',
+    });
+    const r = await runFerryAis(deps(st, { 'digitraffic.fi': MEGA_AIS }));
+    expect(r.ok).toBe(true);
+    expect(st.risks.some((x) => x.dedup.startsWith('AIS_HEL:'))).toBe(false);
+  });
+
+  it('F7 #706 M6: prom przepływa hub HEL (SOG≥3) → brak AIS_HEL', async () => {
+    const st = new Mem();
+    st.loadCounts.set('s-mega-pass', 1);
+    st.sailings.push({
+      id: 's-mega-pass', vessel_id: MEGA, route: 'TLL-HEL',
+      departure_at: '2026-11-01T08:00:00Z', arrival_at: '2026-11-01T10:00:00Z',
+      delayed_departure_at: null, delayed_arrival_at: null,
+      actual_departure_at: '2026-11-01T08:05:00Z', actual_arrival_at: '2026-11-01T09:50:00Z',
+      status: 'DOPLYNAL', source: 'TALLINK',
+    });
+    const passing = MEGA_AT_HEL.replace(/"sog":\s*0\.2/, '"sog":8');
+    expect(passing).toContain('"sog":8');
+    const r = await runFerryAis(deps(st, { 'digitraffic.fi': passing }));
+    expect(r.ok).toBe(true);
+    expect(st.risks.some((x) => x.dedup.startsWith('AIS_HEL:'))).toBe(false);
+  });
+
+  it('F7 #706 M9: HEL-TLL w TLL → brak AIS_TLL (port wyjścia EE bez etykiety)', async () => {
+    const st = new Mem();
+    st.loadCounts.set('s-mega-tll', 1);
+    st.sailings.push({
+      id: 's-mega-tll', vessel_id: MEGA, route: 'HEL-TLL',
+      departure_at: '2026-11-01T08:00:00Z', arrival_at: '2026-11-01T10:00:00Z',
+      delayed_departure_at: null, delayed_arrival_at: null,
+      actual_departure_at: '2026-11-01T08:05:00Z', actual_arrival_at: '2026-11-01T09:50:00Z',
+      status: 'DOPLYNAL', source: 'TALLINK',
+    });
+    const atTll = JSON.stringify({
+      type: 'FeatureCollection',
+      features: [{
+        type: 'Feature',
+        mmsi: 276829000,
+        geometry: { type: 'Point', coordinates: [24.768, 59.444] },
+        properties: {
+          mmsi: 276829000, sog: 0.1, cog: 0, navStat: 1,
+          timestampExternal: Date.parse('2026-11-01T10:00:00.000Z'),
+        },
+      }],
+    });
+    const r = await runFerryAis(deps(st, { 'digitraffic.fi': atTll }));
+    expect(r.ok).toBe(true);
+    expect(st.risks.some((x) => x.dedup.startsWith('AIS_TLL:'))).toBe(false);
+    expect(st.risks.some((x) => x.dedup.startsWith('AIS_HEL:'))).toBe(false);
   });
 
   it('Viking XPRS TLLA-HEL na morzu 20 kn → brak opóźnienia II-9 i brak delayed_*', async () => {
