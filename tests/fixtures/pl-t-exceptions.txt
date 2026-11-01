@@ -94,11 +94,6 @@ Kapellskär
 Tallink
 Eckerö
 Finbo
-Viking
-XPRS
-MyStar
-Megastar
-ERR
 Portnet
 portnet
 Ports

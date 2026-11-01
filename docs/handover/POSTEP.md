@@ -7457,6 +7457,23 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (odbiór prod):** SELECT `here_road_legs` — **12** / active 12 / `browser_fetch` 5; core bez zmian (3495/12561/3742/18854/19408); BN7 7× null. `here-roads` **#108803** @ 04:49Z ok (0 prób — core świeże; BN7 poza cronem). Komentarz w #667. **Dalej:** BN3 (#573).
 - Bez push na main.
 
+## 2026-11-01 12:30 — #699 F7 r1 POPRAWKI (decyzja 80 + B1–B5)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE; #697 `do-potwierdzenia` (decyzje 73–80 czekają właściciela). Bez nowych `pilne`.
+- Scalanie: brak „F7: gotowe do scalenia” (F7 r1 BLOKERY @ 4fb29016). Bez push na main.
+- **Krok (F7 r1):**
+  - **80 / W65:** `ERR_RSS_ENABLED` domyślnie false (+ env); off → 0 zapytań / 0 ryzyk / 0 SOURCE_DOWN;
+  - **B1:** detail tylko tytuł+link+pubDate (bez fragment/cytat/opisu);
+  - **B2:** `hasRiskDedup` (także zamknięte) + `resolveStaleRisks` przy 0 trafień + `validUntil`;
+  - **B3:** okno 24 h; bez pubDate → pomiń;
+  - **B4:** SOURCE_DOWN sticky `SOURCE_DOWN:ERR_RSS`; resolve tylko po udanym parse;
+  - **B5:** AND armator+cancel*+kontekst promowy; Finlandia→ECKERO; bez ET; bez Peru/Superuser;
+  - try/catch wokół joba; limit rozmiaru; strip HTML; UA 10 min; usunięte 5 wyjątków pl-t;
+  - **DP-122:** bez zmian w `REQUIRED_TABLES` (koord. #697: nie wymaga zmian; kontrola kopii 02.11);
+  - vitest bn3-err-rss **12**.
+- **Dalej:** push → CI → gotowe do F7 @ sha. Po F7: Imperva/tolerancja; SMS DP-125 osobno (#697).
+- Bez push na main.
+
 ## 2026-11-01 12:00 — BN3 RSS ERR: stub integracji + pusty kanał OK
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne`.

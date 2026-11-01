@@ -83,8 +83,8 @@ import {
   tallinkAlertLooksLikeRestore,
 } from '../ferry/tallinkRestore.ts';
 import {
-  ERR_ATTRIBUTION, ERR_RSS_UA, ERR_RSS_URL,
-  errRssCancelRisk, errRssEvidenceNote, filterErrFerryCancel, parseErrRss,
+  ERR_ATTRIBUTION, ERR_RSS_MAX_CHARS, ERR_RSS_UA, ERR_RSS_URL,
+  errRssCancelRisk, filterErrFerryCancel, isErrRssEnabled, isErrRssItemFresh, parseErrRss,
 } from '../ferry/errRss.ts';
 import {
   MARINE_POINTS, SMHI_OCOBS_URL, dmiWamUrl, evaluateMarineWindow, fmiHarmonieUrl, fmiWamUrl,
@@ -284,6 +284,11 @@ export interface SyncStore {
    */
   reassignedLoadsAfterCancel?(sailingId: string): Promise<string[]>;
   raiseRisk(r: RiskInput & { loadId?: string }): Promise<boolean>;
+  /**
+   * F7 #699 B2: czy istnieje ryzyko z tym dedup (także zamknięte) —
+   * trwała pamięć guid ERR, bez powrotu po ręcznym zamknięciu.
+   */
+  hasRiskDedup?(dedup: string): Promise<boolean>;
   latestPositions(maxAgeMin: number): Promise<VehiclePos[]>;
   lastRun(job: string): Promise<string | null>;
   /** F7 #689 R1-B3: ostatnie N wyników joba z integration_runs (od najnowszego). */
@@ -2824,8 +2829,14 @@ export async function runFerryStatus(deps: JobDeps): Promise<JobResult> {
     }
   }
 
-  /* BN3 decyzja 61 pkt 3: RSS ERR — potwierdzenie odwołań (bez zmiany statusu). Yle → W64 STOP. */
-  const errRss = await applyErrRssConfirmations(deps, since);
+  /* BN3 decyzja 61 pkt 3 / 80: RSS ERR (domyślnie wyłączone). Yle → W64 STOP. */
+  let errRss: { hits: number; risks: number; warnings: string[] } = { hits: 0, risks: 0, warnings: [] };
+  try {
+    errRss = await applyErrRssConfirmations(deps, since);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    errRss = { hits: 0, risks: 0, warnings: [`ERR RSS: wyjątek — ${msg.slice(0, 160)}`] };
+  }
   warnings.push(...errRss.warnings);
   risks += errRss.risks;
 
@@ -2857,51 +2868,66 @@ export async function runFerryStatus(deps: JobDeps): Promise<JobResult> {
 }
 
 /**
- * BN3 decyzja 61 pkt 3 — RSS ERR: filtr → FERRY MEDIUM + sourceUrl (dowód).
- * Bez zmiany statusu. Decyzja 69: bez ODWOLANY nie wstawiamy AUTO notice.
- * Yle niepodłączone (W64 STOP).
+ * BN3 decyzja 61 pkt 3 / F7 #699 — RSS ERR: filtr → FERRY MEDIUM + sourceUrl.
+ * Decyzja 80: domyślnie wyłączone (brak zapytań / ryzyk / SOURCE_DOWN).
+ * Decyzja 69: bez AUTO ODWOLANY. Yle niepodłączone (W64 STOP).
  */
 export async function applyErrRssConfirmations(deps: JobDeps, _sinceIso: string): Promise<{
   hits: number; risks: number; warnings: string[];
 }> {
-  const nowIso = deps.now().toISOString();
+  if (!isErrRssEnabled(deps.env)) {
+    return { hits: 0, risks: 0, warnings: [] };
+  }
+  const now = deps.now();
+  const nowIso = now.toISOString();
   const page = await readText(deps, ERR_RSS_URL, {
     headers: { 'User-Agent': ERR_RSS_UA, Accept: 'application/rss+xml, application/xml, text/xml, */*' },
   });
   if (!page.ok) {
-    await deps.store.raiseRisk(sourceDownRisk(
+    /* B4: nie zamykaj SOURCE_DOWN przy awarii; klucz sticky bez daty. */
+    if (await deps.store.raiseRisk(sourceDownRisk(
       'ERR_RSS',
       [page.warning],
       nowIso,
       ERR_RSS_URL,
-    ));
-    return { hits: 0, risks: 1, warnings: [page.warning] };
+    ))) {
+      return { hits: 0, risks: 1, warnings: [page.warning] };
+    }
+    return { hits: 0, risks: 0, warnings: [page.warning] };
   }
-  await deps.store.resolveRisks('SOURCE_DOWN:ERR_RSS:');
+  if (page.text.length > ERR_RSS_MAX_CHARS) {
+    const w = 'ERR RSS: odpowiedź za duża (limit).';
+    if (await deps.store.raiseRisk(sourceDownRisk('ERR_RSS', [w], nowIso, ERR_RSS_URL))) {
+      return { hits: 0, risks: 1, warnings: [w] };
+    }
+    return { hits: 0, risks: 0, warnings: [w] };
+  }
   const parsed = parseErrRss(page.text);
   const warnings = [...parsed.warnings];
-  if (parsed.warnings.some((w) => /struktura|pusta odpowiedź/i.test(w))) {
-    await deps.store.raiseRisk(sourceDownRisk('ERR_RSS', parsed.warnings, nowIso, ERR_RSS_URL));
-    return { hits: 0, risks: 1, warnings };
-  }
-  const hits = filterErrFerryCancel(parsed.items);
-  if (!hits.length) {
+  if (parsed.warnings.some((w) => /struktura|pusta odpowiedź|za duża/i.test(w))) {
+    /* B4: zamykać SOURCE_DOWN dopiero po udanym parsowaniu — tu awaria. */
+    if (await deps.store.raiseRisk(sourceDownRisk('ERR_RSS', parsed.warnings, nowIso, ERR_RSS_URL))) {
+      return { hits: 0, risks: 1, warnings };
+    }
     return { hits: 0, risks: 0, warnings };
   }
-  warnings.push(`${ERR_ATTRIBUTION}: ${hits.length} trafień`);
+  /* Udane parsowanie (także pusty kanał) → zamknij SOURCE_DOWN. */
+  await deps.store.resolveRisks('SOURCE_DOWN:ERR_RSS');
 
+  const fresh = parsed.items.filter((it) => isErrRssItemFresh(it, now));
+  const hits = filterErrFerryCancel(fresh);
   let risks = 0;
   const keep: string[] = [];
   for (const hit of hits) {
-    const risk = errRssCancelRisk(hit);
-    risk.detail = {
-      ...risk.detail,
-      cytat: errRssEvidenceNote(hit),
-    };
+    const risk = errRssCancelRisk(hit, nowIso);
     keep.push(risk.dedup);
+    /* B2: nie podnoś ponownie po ręcznym zamknięciu (pamięć guid). */
+    if (deps.store.hasRiskDedup && await deps.store.hasRiskDedup(risk.dedup)) continue;
     if (await deps.store.raiseRisk(risk)) risks += 1;
   }
+  if (hits.length) warnings.push(`${ERR_ATTRIBUTION}: ${hits.length} trafień`);
 
+  /* B2: zamykaj stare także przy 0 trafień. */
   if (deps.store.resolveStaleRisks) {
     await deps.store.resolveStaleRisks('FERRY_ERR_RSS:', keep);
   }
