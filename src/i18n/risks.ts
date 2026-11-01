@@ -119,12 +119,15 @@ const pl: Dict = {
   rk_tallink_alert_unmatched: 'Tallink Alert: odwołanie bez jednoznacznego rejsu — weryfikacja HHL',
   /* F7 #689 DP-114: niepełna pula stron Tallink Alert */
   rk_tallink_alert_incomplete: 'Tallink Alert: niepełna pula stron — bez auto-odwołania, weryfikacja HHL',
-  /* BN3 #686 decyzja 72 cz. 2: przywrócenie ODWOLANY */
+  /* BN3 #686 decyzja 72 cz. 2 + F7 r1: przywrócenie ODWOLANY */
   rk_tallink_alert_restored: 'Tallink: rejs przywrócony',
   rk_tallink_alert_restore_manual: 'Tallink przywraca rejs odwołany ręcznie/innym źródłem — potwierdź',
   rk_tallink_alert_restore_reassigned: 'Tallink: rejs przywrócony po zmianie planu — sprawdź',
   rk_tallink_alert_restore_ambiguous: 'Tallink Alert: przywrócenie — wiele rejsów, weryfikacja HHL',
   rk_tallink_alert_restore_unmatched: 'Tallink Alert: przywrócenie bez jednoznacznego rejsu — weryfikacja HHL',
+  rk_tallink_alert_restore_incomplete: 'Tallink Alert: niepełna pula stron — bez auto-przywrócenia, weryfikacja HHL',
+  rk_tallink_alert_restore_beyond: 'Tallink Alert: przywrócenie poza horyzontem rozkładu — weryfikacja HHL',
+  rk_tallink_alert_restore_check: 'Tallink podaje przywrócenie — sprawdź',
   rk_ferry_weather: 'Pogoda morska: możliwe odwołanie — fala {wave} m / porywy {gust} węzłów ({vessel}; progi {wave_thr} m / {gust_thr} węzłów)',
   /* BN3: Digitraffic winter-navigation v2 */
   rk_ferry_winter_nav: 'Żegluga zimowa: {kind} — {port} ({locode}): {summary}',

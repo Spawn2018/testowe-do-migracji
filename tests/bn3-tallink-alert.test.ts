@@ -1746,14 +1746,33 @@ describe('BN3 Tallink Alert — runFerryStatus (F7 B5)', () => {
   });
 });
 
-/** #686 / decyzja 72 cz. 2 — automatyczne cofnięcie ODWOLANY przy najnowszym przywróceniu. */
+/** #686 / decyzja 72 cz. 2 + F7 r1 — automatyczne cofnięcie ODWOLANY przy najnowszym przywróceniu. */
 describe('BN3 #686 Tallink restore', () => {
   const RESTORE =
     'The MyStar 16:30 departure from Tallinn to Helsinki on 2 November will operate as planned.';
   const CANCEL =
     'The MyStar 16:30 departure from Tallinn to Helsinki on 2 November is cancelled.';
+  const TALLINK_NOTICE_URL = 'https://www.tallink.com/';
+  const TS_EE_URL = 'https://www.ts.ee/en/schedules/';
 
-  it('autoRestoreFromRestoreSentence — wzorzec + przeprosiny; niewzorcowy → null', () => {
+  function odSailing(id = 's-od', patch: Partial<DbSailing> = {}): DbSailing {
+    return {
+      id, vessel_id: MYST, route: 'TLL-HEL',
+      departure_at: '2026-11-02T14:30:00.000Z', arrival_at: '2026-11-02T16:30:00.000Z',
+      delayed_departure_at: null, delayed_arrival_at: null,
+      status: 'ODWOLANY', source: 'TALLINK',
+      ...patch,
+    };
+  }
+
+  function tallinkCancelNotice(sailingId: string) {
+    return {
+      sailingId, kind: 'ODWOLANY', source: 'AUTO', operator: 'TALLINK',
+      sourceUrl: TALLINK_NOTICE_URL,
+    };
+  }
+
+  it('autoRestoreFromRestoreSentence — wzorzec + przeprosiny; niewzorcowy / will operate. → null', () => {
     expect(autoRestoreFromRestoreSentence(RESTORE, 2026)).toMatchObject({
       vessel: 'M/F MyStar', hm: '16:30', startYmd: '2026-11-02', routes: ['TLL-HEL'],
     });
@@ -1765,98 +1784,247 @@ describe('BN3 #686 Tallink restore', () => {
       'Correction: the MyStar 16:30 departure will operate as planned.',
       2026,
     )).toBeNull();
+    expect(autoRestoreFromRestoreSentence(
+      'The MyStar 16:30 departure from Tallinn to Helsinki on 2 November will operate.',
+      2026,
+    )).toBeNull();
   });
 
-  it('najnowszy restore wygrywa nad starszym cancel; RECZNIE → ryzyko bez cofnięcia', async () => {
-    // NOW = 12:00Z ≈ 14:00 Tallinn — oba timeStart ≤ teraz (72a: przyszły klucz poza wyborem).
-    // dateStart = dziś (nie przyszła data odejścia) — jak wrapAlertTimed w innych testach #686.
+  it('F7 B1: Tallink Alert → przywrócenie + zamknięcie SAILING_CANCELLED; ts.ee → MEDIUM', async () => {
     const html = wrapTwoAlertsTimed(
-      `<CwsP>${CANCEL}</CwsP>`,
-      '08:00',
-      `<CwsP>${RESTORE}</CwsP>`,
-      '12:00',
-      '2026-10-31',
+      `<CwsP>${CANCEL}</CwsP>`, '08:00', `<CwsP>${RESTORE}</CwsP>`, '12:00', '2026-10-31',
     );
-    const alerts = finalizeTallinkAlertsForStatus(
-      parseTallinkAlerts(html, TALLINK_HOME(), NOW).alerts, NOW,
-    );
-    const winner = alerts.find((a) => a.autoRestoreOk);
-    expect(winner).toBeTruthy();
-    expect(alerts.filter((a) => a.autoCancelOk)).toHaveLength(0);
-
     const st = new MemStore();
-    st.sailings.push({
-      id: 's-od', vessel_id: MYST, route: 'TLL-HEL',
-      departure_at: '2026-11-02T14:30:00.000Z', arrival_at: '2026-11-02T16:30:00.000Z',
-      delayed_departure_at: null, delayed_arrival_at: null,
-      status: 'ODWOLANY', source: 'TALLINK',
+    st.sailings.push(odSailing());
+    st.notices.push(tallinkCancelNotice('s-od'));
+    st.risks.push({
+      kind: 'FERRY', severity: 'HIGH', title: 'odwolany', titleKey: 'rk_sailing_cancelled',
+      params: {}, detail: {}, dedup: 'SAILING_CANCELLED:load-a:s-od', loadId: 'load-a',
     });
-    st.notices.push({
-      sailingId: 's-od', kind: 'ODWOLANY', source: 'AUTO', operator: 'TALLINK',
-    });
+    st.loadSailings['load-a'] = 's-od';
     await runFerryStatus(deps(st, {
       'tallink.com': html, 'ts.ee': 503, portsofstockholm: 503, 'port-calls': 503,
     }, NOW));
     expect(st.sailings[0]!.status).toBe('ZAPLANOWANY');
     expect(st.notices.some((n) => n.kind === 'PRZYWROCONY')).toBe(true);
     expect(st.risks.some((r) => r.titleKey === 'rk_tallink_alert_restored')).toBe(true);
+    expect(st.risks.some((r) => r.dedup.startsWith('SAILING_CANCELLED:'))).toBe(false);
 
-    const stRecz = new MemStore();
-    stRecz.sailings.push({
-      id: 's-od', vessel_id: MYST, route: 'TLL-HEL',
-      departure_at: '2026-11-02T14:30:00.000Z', arrival_at: '2026-11-02T16:30:00.000Z',
-      delayed_departure_at: null, delayed_arrival_at: null,
-      status: 'ODWOLANY', source: 'RECZNIE',
+    const stTs = new MemStore();
+    stTs.sailings.push(odSailing('s-ts'));
+    stTs.notices.push({
+      sailingId: 's-ts', kind: 'ODWOLANY', source: 'AUTO', operator: 'TALLINK',
+      sourceUrl: TS_EE_URL,
     });
-    stRecz.notices.push({
-      sailingId: 's-od', kind: 'ODWOLANY', source: 'RECZNIE', operator: 'TALLINK',
-    });
-    await runFerryStatus(deps(stRecz, {
+    await runFerryStatus(deps(stTs, {
       'tallink.com': html, 'ts.ee': 503, portsofstockholm: 503, 'port-calls': 503,
     }, NOW));
-    expect(stRecz.sailings[0]!.status).toBe('ODWOLANY');
-    expect(stRecz.notices.every((n) => n.kind !== 'PRZYWROCONY')).toBe(true);
-    expect(stRecz.risks.some((r) => r.titleKey === 'rk_tallink_alert_restore_manual')).toBe(true);
+    expect(stTs.sailings[0]!.status).toBe('ODWOLANY');
+    expect(stTs.notices.every((n) => n.kind !== 'PRZYWROCONY')).toBe(true);
+    expect(stTs.risks.some((r) => r.titleKey === 'rk_tallink_alert_restore_manual')).toBe(true);
   });
 
-  it('przywrócenie bez ODWOLANY → brak zmian; przepięcie → MEDIUM + status i tak ZAPLANOWANY', async () => {
-    // dateStart = dziś (opublikowany); 12:00 < 14:00 Tallinn (NOW).
+  it('F7 B2: przepięcie po zamkniętym SAILING_CANCELLED; OPOZNIONY przy delayed_*', async () => {
     const html = wrapAlertTimed(RESTORE, '2026-10-31', '12:00');
     const st = new MemStore();
-    st.sailings.push({
-      id: 's-ok', vessel_id: MYST, route: 'TLL-HEL',
-      departure_at: '2026-11-02T14:30:00.000Z', arrival_at: '2026-11-02T16:30:00.000Z',
-      delayed_departure_at: null, delayed_arrival_at: null,
-      status: 'ZAPLANOWANY', source: 'TALLINK',
+    st.sailings.push(odSailing('s-re', {
+      delayed_departure_at: '2026-11-02T15:00:00.000Z',
+    }));
+    st.notices.push(tallinkCancelNotice('s-re'));
+    st.resolvedRisks.push({
+      kind: 'FERRY', severity: 'HIGH', title: 'odwolany', titleKey: 'rk_sailing_cancelled',
+      params: {}, detail: {}, dedup: 'SAILING_CANCELLED:load-moved:s-re', loadId: 'load-moved',
     });
+    st.loadSailings['load-moved'] = 'other-sailing';
+    await runFerryStatus(deps(st, {
+      'tallink.com': html, 'ts.ee': 503, portsofstockholm: 503,
+    }, NOW));
+    expect(st.sailings[0]!.status).toBe('OPOZNIONY');
+    expect(st.risks.some((r) => r.titleKey === 'rk_tallink_alert_restore_reassigned')).toBe(true);
+    expect(st.risks.some((r) => r.titleKey === 'rk_tallink_alert_restored')).toBe(true);
+  });
+
+  it('F7 pkt 2–3 + helpery B1/B2/B3; RECZNIE → MEDIUM', async () => {
+    const html = wrapAlertTimed(RESTORE, '2026-10-31', '12:00');
+    const stRecz = new MemStore();
+    stRecz.sailings.push(odSailing('s-od', { source: 'RECZNIE' }));
+    stRecz.notices.push(tallinkCancelNotice('s-od'));
+    await runFerryStatus(deps(stRecz, {
+      'tallink.com': html, 'ts.ee': 503, portsofstockholm: 503,
+    }, NOW));
+    expect(stRecz.sailings[0]!.status).toBe('ODWOLANY');
+    expect(stRecz.risks.some((r) => r.titleKey === 'rk_tallink_alert_restore_manual')).toBe(true);
+
+    const {
+      isTallinkAlertAutoCancel, restoreStatusAfterCancel,
+      sailingCancelledRiskLike, filterLoadsReassignedFromSailing,
+      loadIdsFromSailingCancelledDedups,
+    } = await import('../supabase/functions/_shared/ferry/tallinkRestore');
+    expect(isTallinkAlertAutoCancel({
+      source: 'AUTO', operator: 'TALLINK', sourceUrl: TALLINK_NOTICE_URL,
+    })).toBe(true);
+    expect(isTallinkAlertAutoCancel({
+      source: 'AUTO', operator: 'TALLINK', sourceUrl: TS_EE_URL,
+    })).toBe(false);
+    expect(isTallinkAlertAutoCancel(null)).toBe(false);
+    expect(restoreStatusAfterCancel({
+      delayed_departure_at: 'x', delayed_arrival_at: null,
+    })).toBe('OPOZNIONY');
+    expect(sailingCancelledRiskLike('abc-123')).toBe('SAILING_CANCELLED:%:abc-123');
+    expect(loadIdsFromSailingCancelledDedups([
+      { load_id: 'L1', dedup_key: 'SAILING_CANCELLED:L1:s1' },
+      { load_id: 'L1', dedup_key: 'SAILING_CANCELLED:L1:s1' },
+      { load_id: null, dedup_key: 'x' },
+    ])).toEqual(['L1']);
+    expect(filterLoadsReassignedFromSailing(
+      ['L1', 'L2'],
+      [{ id: 'L1', sailing_id: 'other' }, { id: 'L2', sailing_id: 's1' }],
+      's1',
+    )).toEqual(['L1']);
+  });
+
+  it('F7 pkt 5 + negatywy przywrócenia (will operate. / negacja / remis / wygasły)', async () => {
+    // M12: „will operate.” bez as planned — brak autoRestore.
+    expect(autoRestoreFromRestoreSentence(
+      'The MyStar 16:30 departure from Tallinn to Helsinki on 2 November will operate.',
+      2026,
+    )).toBeNull();
+    // 72c / pkt 5: niewzorcowy, ale looksLikeRestore → MEDIUM (nie cichy continue).
+    const soft =
+      'Correction: the MyStar 16:30 departure will operate as planned.';
+    expect(autoRestoreFromRestoreSentence(soft, 2026)).toBeNull();
+    const st = new MemStore();
+    st.sailings.push(odSailing('s-ok', { status: 'ZAPLANOWANY' }));
+    await runFerryStatus(deps(st, {
+      'tallink.com': wrapAlertTimed(soft, '2026-10-31', '12:00'),
+      'ts.ee': 503, portsofstockholm: 503,
+    }, NOW));
+    expect(st.sailings[0]!.status).toBe('ZAPLANOWANY');
+    expect(st.risks.some((r) => r.titleKey === 'rk_tallink_alert_restore_check')).toBe(true);
+
+    expect(autoRestoreFromRestoreSentence(
+      'The MyStar 16:30 departure from Tallinn to Helsinki on 2 November will not operate as planned.',
+      2026,
+    )).toBeNull();
+
+    const stTie = new MemStore();
+    stTie.sailings.push(odSailing());
+    stTie.notices.push(tallinkCancelNotice('s-od'));
+    const htmlTie = wrapTwoAlertsTimed(
+      `<CwsP>${RESTORE}</CwsP>`, '12:00',
+      `<CwsP>${RESTORE} We apologise for any inconvenience.</CwsP>`, '12:00',
+      '2026-10-31',
+    );
+    await runFerryStatus(deps(stTie, {
+      'tallink.com': htmlTie, 'ts.ee': 503, portsofstockholm: 503,
+    }, NOW));
+    expect(stTie.sailings[0]!.status).toBe('ODWOLANY');
+    expect(stTie.notices.every((n) => n.kind !== 'PRZYWROCONY')).toBe(true);
+    expect(stTie.risks.some((r) => String(r.titleKey).startsWith('rk_tallink_alert_restore'))).toBe(true);
+
+    const stExp = new MemStore();
+    stExp.sailings.push(odSailing());
+    stExp.notices.push(tallinkCancelNotice('s-od'));
+    await runFerryStatus(deps(stExp, {
+      'tallink.com': wrapAlertTimed(RESTORE, '2025-10-31', '12:00'),
+      'ts.ee': 503, portsofstockholm: 503,
+    }, NOW));
+    expect(stExp.sailings[0]!.status).toBe('ODWOLANY');
+    expect(stExp.notices.every((n) => n.kind !== 'PRZYWROCONY')).toBe(true);
+  });
+
+  it('przywrócenie bez ODWOLANY → dokończenie zamknięcia SAILING_CANCELLED', async () => {
+    const html = wrapAlertTimed(RESTORE, '2026-10-31', '12:00');
+    const st = new MemStore();
+    st.sailings.push(odSailing('s-ok', { status: 'ZAPLANOWANY' }));
+    st.risks.push({
+      kind: 'FERRY', severity: 'HIGH', title: 'odwolany', titleKey: 'rk_sailing_cancelled',
+      params: {}, detail: {}, dedup: 'SAILING_CANCELLED:load-a:s-ok', loadId: 'load-a',
+    });
+    st.loadSailings['load-a'] = 's-ok';
     await runFerryStatus(deps(st, {
       'tallink.com': html, 'ts.ee': 503, portsofstockholm: 503,
     }, NOW));
     expect(st.sailings[0]!.status).toBe('ZAPLANOWANY');
     expect(st.notices).toHaveLength(0);
+    expect(st.risks.some((r) => r.dedup.startsWith('SAILING_CANCELLED:'))).toBe(false);
+  });
 
-    const alert = parseTallinkAlerts(html, TALLINK_HOME(), NOW).alerts.find((a) => a.autoRestoreOk)!;
-    expect(matchTallinkRestoreSailings(alert, [{
-      id: 's-ok', vesselName: 'M/F MyStar', route: 'TLL-HEL',
-      departureAt: '2026-11-02T14:30:00.000Z', status: 'ZAPLANOWANY', source: 'TALLINK',
-    }]).kind).toBe('not_cancelled');
-
-    const st2 = new MemStore();
-    st2.sailings.push({
-      id: 's-re', vessel_id: MYST, route: 'TLL-HEL',
-      departure_at: '2026-11-02T14:30:00.000Z', arrival_at: '2026-11-02T16:30:00.000Z',
-      delayed_departure_at: null, delayed_arrival_at: null,
-      status: 'ODWOLANY', source: 'TALLINK',
-    });
-    st2.notices.push({
-      sailingId: 's-re', kind: 'ODWOLANY', source: 'AUTO', operator: 'TALLINK',
-    });
-    st2.reassigned = ['load-moved'];
-    await runFerryStatus(deps(st2, {
-      'tallink.com': html, 'ts.ee': 503, portsofstockholm: 503,
+  it('F7 negatywy: niepełna pula + atrybut/komentarz/zagnieżdżony Scheduler → bez PRZYWROCONY', async () => {
+    // Niepełna pula (HOME OK, HEL 503) → restore_incomplete, bez auto.
+    const stInc = new MemStore();
+    stInc.sailings.push(odSailing());
+    stInc.notices.push(tallinkCancelNotice('s-od'));
+    await runFerryStatus(deps(stInc, {
+      'tallink.com': wrapAlertTimed(RESTORE, '2026-10-31', '12:00'),
+      'helsinki-tallinn-ferry': 503,
+      'ts.ee': 503, portsofstockholm: 503,
     }, NOW));
-    expect(st2.sailings[0]!.status).toBe('ZAPLANOWANY');
-    expect(st2.risks.some((r) => r.titleKey === 'rk_tallink_alert_restore_reassigned')).toBe(true);
+    expect(stInc.sailings[0]!.status).toBe('ODWOLANY');
+    expect(stInc.notices.every((n) => n.kind !== 'PRZYWROCONY')).toBe(true);
+    expect(stInc.risks.some((r) => r.titleKey === 'rk_tallink_alert_restore_incomplete')).toBe(true);
+
+    // M1/M3/M14: title / komentarz / zagnieżdżony Scheduler — allowlista HTML → bez autoRestore.
+    // Część mutacji nie wyciąga Alertu w ogóle (cicho) — wtedy też bez PRZYWROCONY.
+    // Gdy tekst wygląda na przywrócenie → restore_check (72c), nie cichy continue.
+    const softRestore =
+      'Correction: the MyStar 16:30 departure will operate as planned.';
+    const badInners = [
+      `<CwsAlert title="x"><CwsP>${RESTORE}</CwsP></CwsAlert>`,
+      `<!--</Scheduler>--><CwsP>${RESTORE}</CwsP>`,
+      `<Scheduler dateStart="2026-10-31" dateEnd="2026-10-31"><CwsP>${RESTORE}</CwsP></Scheduler>`,
+      `<CwsP title="x">${softRestore}</CwsP>`,
+    ];
+    for (const inner of badInners) {
+      const st = new MemStore();
+      st.sailings.push(odSailing());
+      st.notices.push(tallinkCancelNotice('s-od'));
+      await runFerryStatus(deps(st, {
+        'tallink.com': wrapAlertInner(inner, '2026-10-31'),
+        'ts.ee': 503, portsofstockholm: 503,
+      }, NOW));
+      expect(st.sailings[0]!.status).toBe('ODWOLANY');
+      expect(st.notices.every((n) => n.kind !== 'PRZYWROCONY')).toBe(true);
+    }
+    const stSoftAttr = new MemStore();
+    stSoftAttr.sailings.push(odSailing());
+    stSoftAttr.notices.push(tallinkCancelNotice('s-od'));
+    await runFerryStatus(deps(stSoftAttr, {
+      'tallink.com': wrapAlertInner(`<CwsP>${softRestore}</CwsP>`, '2026-10-31'),
+      'ts.ee': 503, portsofstockholm: 503,
+    }, NOW));
+    expect(stSoftAttr.sailings[0]!.status).toBe('ODWOLANY');
+    expect(stSoftAttr.risks.some((r) => r.titleKey === 'rk_tallink_alert_restore_check')).toBe(true);
+
+    // Beyond / zatrucie puli / brak klucza daty.
+    const stBeyond = new MemStore();
+    stBeyond.sailings.push(odSailing('s-early', {
+      departure_at: '2026-11-01T14:30:00.000Z',
+      arrival_at: '2026-11-01T16:30:00.000Z',
+    }));
+    stBeyond.notices.push(tallinkCancelNotice('s-early'));
+    await runFerryStatus(deps(stBeyond, {
+      'tallink.com': wrapAlertTimed(RESTORE, '2026-10-31', '12:00'),
+      'ts.ee': 503, portsofstockholm: 503,
+    }, NOW));
+    expect(stBeyond.sailings[0]!.status).toBe('ODWOLANY');
+    expect(stBeyond.risks.some((r) => r.titleKey === 'rk_tallink_alert_restore_beyond')).toBe(true);
+
+    const stPoison = new MemStore();
+    stPoison.sailings.push(odSailing('s-a'), odSailing('s-b'));
+    stPoison.notices.push(tallinkCancelNotice('s-a'), tallinkCancelNotice('s-b'));
+    await runFerryStatus(deps(stPoison, {
+      'tallink.com': wrapAlertTimed(RESTORE, '2026-10-31', '12:00'),
+      'ts.ee': 503, portsofstockholm: 503,
+    }, NOW));
+    expect(stPoison.sailings.every((s) => s.status === 'ODWOLANY')).toBe(true);
+    expect(stPoison.notices.every((n) => n.kind !== 'PRZYWROCONY')).toBe(true);
+    expect(stPoison.risks.some((r) => r.titleKey === 'rk_tallink_alert_restore_ambiguous')).toBe(true);
+
+    expect(autoRestoreFromRestoreSentence(
+      'The MyStar 16:30 departure from Tallinn to Helsinki will operate as planned.',
+      2026,
+    )).toBeNull();
   });
 });
 
@@ -1998,9 +2166,15 @@ class MemStore implements SyncStore {
   sailings: DbSailing[] = [];
   risks: (RiskInput & { loadId?: string })[] = [];
   notices: Array<{
-    sailingId: string; kind: string; source: string; operator?: string; note?: string | null;
+    sailingId: string; kind: string; source: string; operator?: string;
+    note?: string | null; sourceUrl?: string | null;
   }> = [];
+  /** F7 #698 B2: aktualne sailing_id transportów (po decision_resolve). */
+  loadSailings: Record<string, string | null> = {};
+  /** F7 #698 B2: zamknięte ryzyka SAILING_CANCELLED (historia po resolve). */
+  resolvedRisks: Array<RiskInput & { loadId?: string }> = [];
   runs: { job: string; at: string; ok: boolean; result: JobResult }[] = [];
+  /** @deprecated F7 B2 — użyj risks + loadSailings; zostawione tylko gdy puste. */
   reassigned: string[] = [];
   n = 0;
   async projectId() { return 'p1'; }
@@ -2035,7 +2209,7 @@ class MemStore implements SyncStore {
   }) {
     this.notices.push({
       sailingId: row.sailingId, kind: row.kind, source: 'AUTO',
-      operator: row.operator, note: row.note,
+      operator: row.operator, note: row.note, sourceUrl: row.sourceUrl ?? null,
     });
     return `n${this.notices.length}`;
   }
@@ -2044,7 +2218,11 @@ class MemStore implements SyncStore {
       (n) => n.sailingId === sailingId && n.kind === 'ODWOLANY',
     );
     return hit
-      ? { source: hit.source, operator: hit.operator ?? 'TALLINK' }
+      ? {
+        source: hit.source,
+        operator: hit.operator ?? 'TALLINK',
+        sourceUrl: hit.sourceUrl ?? null,
+      }
       : null;
   }
   async resolveSailingCancelledRisks(sailingId: string) {
@@ -2052,13 +2230,24 @@ class MemStore implements SyncStore {
     const hit = this.risks.filter(
       (r) => r.dedup.startsWith('SAILING_CANCELLED:') && r.dedup.endsWith(suffix),
     );
+    this.resolvedRisks.push(...hit);
     this.risks = this.risks.filter(
       (r) => !(r.dedup.startsWith('SAILING_CANCELLED:') && r.dedup.endsWith(suffix)),
     );
     return hit.length;
   }
   async expireFerryCancelledDecisions(_sailingId: string) { return 0; }
-  async reassignedLoadsAfterCancel(_sailingId: string) { return this.reassigned; }
+  async reassignedLoadsAfterCancel(sailingId: string) {
+    if (this.reassigned.length) return this.reassigned;
+    const suffix = `:${sailingId}`;
+    const all = [...this.risks, ...this.resolvedRisks];
+    const loadIds = [...new Set(
+      all
+        .filter((r) => r.dedup.startsWith('SAILING_CANCELLED:') && r.dedup.endsWith(suffix) && r.loadId)
+        .map((r) => r.loadId!),
+    )];
+    return loadIds.filter((id) => (this.loadSailings[id] ?? sailingId) !== sailingId);
+  }
   async raiseRisk(r: RiskInput & { loadId?: string }) {
     if (this.risks.some((x) => x.dedup === r.dedup)) return false;
     this.risks.push(r); return true;

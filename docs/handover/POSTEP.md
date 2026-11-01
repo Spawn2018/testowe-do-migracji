@@ -7457,6 +7457,20 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (odbiór prod):** SELECT `here_road_legs` — **12** / active 12 / `browser_fetch` 5; core bez zmian (3495/12561/3742/18854/19408); BN7 7× null. `here-roads` **#108803** @ 04:49Z ok (0 prób — core świeże; BN7 poza cronem). Komentarz w #667. **Dalej:** BN3 (#573).
 - Bez push na main.
 
+## 2026-11-01 10:25 — #698 F7 r1 POPRAWKI (B1–B3 + pkt 1–6)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne`.
+- Scalanie: F7 r1 BLOKERY @ 88ea2421 — nie scalać. CI unit/db/visual ✔ na 88ea2421. Bez push na main.
+- **Krok F7 #698 r1:**
+  - **B1:** cofnięcie tylko Tallink Alert (`source_url` tallink.com); ts.ee → MEDIUM.
+  - **B2:** przepięcia z SAILING_CANCELLED także zamkniętych + `load.sailing_id`.
+  - **B3/DP-116:** `SAILING_CANCELLED:%:{id}` + stronicowanie (resolve / expire / reassigned).
+  - pkt 1–6: OPOZNIONY przy `delayed_*`; RECZNIE; brak notice; kolejność PRZYWROCONY→status→ryzyka; 72c `restore_check`; i18n incomplete/beyond/check.
+  - **DP-124:** SMS „prom przywrócony” (decyzja 79) — osobny PR po scaleniu #698.
+  - vitest bn3-tallink-alert **67** (+ negatywy incomplete/HTML/beyond/poison) + helpers **5** (= **72**).
+- **Dalej:** push → CI → gotowe do F7 @ sha. Po F7: RSS ERR (+ W64 Yle STOP); SMS DP-124 osobno.
+- Bez push na main.
+
 ## 2026-11-01 08:45 — #696 SCALONE; start #686 Tallink restore
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne`.
