@@ -36,6 +36,11 @@ import {
   winterNavIceRisk,
 } from '../ferry/winterNavigation.ts';
 import {
+  cancelSuspectRisk, cancelSuspectTrigger, collectPortCallIds,
+  digitrafficAisUrl, isGulfFerryRoute, isStandingInGulfPort, nearestGulfHub,
+  CANCEL_SUSPECT_DEDUP_PREFIX,
+} from '../ferry/cancelSuspect.ts';
+import {
   UMG_ATTRIBUTION, UMG_EXPECTED_URL, UMG_IN_PORT_URL, UMG_OUTGOING_URL, UMG_UA,
   parseUmgdyGdyniaHtml, stenaUmgCandidates, type UmgKind, type UmgShipRow,
 } from '../ferry/umgdyShipMovements.ts';
@@ -1148,6 +1153,8 @@ async function applyDigitrafficVikingNearSchedule(deps: JobDeps, sinceIso: strin
 /** BN2/BN3 — Portnet Digitraffic: ATA/ATD → actual_*; ATA spóźnione ≥ FERRY_PORT_DELAY_MIN → delayed_arrival. */
 async function applyDigitrafficPortCallActuals(deps: JobDeps, sinceIso: string): Promise<{
   updated: number; warnings: string[]; fail: boolean;
+  /** BN3 decyzja 61 — id Portnet z tego przebiegu (null przy awarii). */
+  portCallIds: Set<string> | null;
 }> {
   const now = deps.now();
   const fromIso = new Date(now.getTime() - 2 * 864e5).toISOString();
@@ -1162,16 +1169,17 @@ async function applyDigitrafficPortCallActuals(deps: JobDeps, sinceIso: string):
     },
   });
   if (!page.ok) {
-    return { updated: 0, warnings: [page.warning], fail: true };
+    return { updated: 0, warnings: [page.warning], fail: true, portCallIds: null };
   }
   let json: unknown;
   try { json = JSON.parse(page.text); } catch {
-    return { updated: 0, warnings: ['Digitraffic Portnet: nieczytelny JSON'], fail: true };
+    return { updated: 0, warnings: ['Digitraffic Portnet: nieczytelny JSON'], fail: true, portCallIds: null };
   }
   const parsed = parseDigitrafficPortCalls(json);
   if (parsed.warnings.some((w) => /Struktura/i.test(w))) {
-    return { updated: 0, warnings: parsed.warnings, fail: true };
+    return { updated: 0, warnings: parsed.warnings, fail: true, portCallIds: null };
   }
+  const portCallIds = collectPortCallIds(json);
   const [vessels, existing] = await Promise.all([
     deps.store.vessels(), deps.store.sailingsSince(sinceIso),
   ]);
@@ -1255,7 +1263,101 @@ async function applyDigitrafficPortCallActuals(deps: JobDeps, sinceIso: string):
       }
     }
   }
-  return { updated, warnings, fail: false };
+  return { updated, warnings, fail: false, portCallIds };
+}
+
+/**
+ * BN3 decyzja 61 — podejrzenie odwołania (Zatoka Fińska): ETA+45 bez ATA
+ * albo zniknięcie Portnet po odejściu + AIS SOG≈0 w hubie → FERRY MEDIUM.
+ * Bez zmiany statusu / actual_* / delayed_*.
+ */
+async function applyCancelSuspectAis(
+  deps: JobDeps,
+  sinceIso: string,
+  activePortCallIds: Set<string> | null,
+): Promise<{ risks: number; hits: number; warnings: string[] }> {
+  const nowIso = deps.now().toISOString();
+  const nowMs = Date.parse(nowIso);
+  const [vessels, existing] = await Promise.all([
+    deps.store.vessels(), deps.store.sailingsSince(sinceIso),
+  ]);
+  const byId = new Map(vessels.map((v) => [v.id, v]));
+  const aisCache = new Map<number, VesselFix | null>();
+  const warnings: string[] = [];
+  const keep: string[] = [];
+  let risks = 0;
+  let hits = 0;
+
+  const aisHeaders = {
+    'User-Agent': USER_AGENT,
+    Accept: 'application/json',
+    'Accept-Encoding': 'gzip',
+    'Digitraffic-User': DIGITRAFFIC_USER,
+  };
+
+  for (const s of existing) {
+    if (!isGulfFerryRoute(s.route)) continue;
+    if (s.status === 'ODWOLANY' || s.status === 'DOPLYNAL') continue;
+    if (s.actual_arrival_at != null) continue;
+    const etaIso = s.delayed_arrival_at ?? s.arrival_at;
+    const trig = cancelSuspectTrigger({
+      etaIso,
+      departureIso: s.departure_at,
+      nowMs,
+      sourceRef: s.source_ref,
+      activePortCallIds,
+    });
+    if (!trig.check) continue;
+
+    const v = byId.get(s.vessel_id);
+    if (!v?.mmsi) {
+      warnings.push(`cancel-suspect: brak MMSI ${s.id}`);
+      continue;
+    }
+    let fix = aisCache.get(v.mmsi);
+    if (fix === undefined) {
+      const page = await readText(deps, digitrafficAisUrl(v.mmsi), { headers: aisHeaders });
+      if (!page.ok) {
+        warnings.push(`cancel-suspect AIS ${v.mmsi}: ${page.warning}`);
+        aisCache.set(v.mmsi, null);
+        continue;
+      }
+      try {
+        fix = parseDigitrafficLocations(JSON.parse(page.text), v.mmsi);
+      } catch {
+        warnings.push(`cancel-suspect AIS ${v.mmsi}: nieczytelny JSON`);
+        fix = null;
+      }
+      aisCache.set(v.mmsi, fix ?? null);
+    }
+    if (!fix || !isStandingInGulfPort(fix)) continue;
+
+    const hub = nearestGulfHub(fix.lat, fix.lon);
+    const reason = trig.due && trig.disappeared ? 'BOTH'
+      : trig.disappeared ? 'PORTCALL_GONE'
+        : 'ETA_GRACE';
+    const risk = cancelSuspectRisk({
+      sailingId: s.id,
+      vessel: v.name,
+      route: s.route,
+      departureAt: s.departure_at,
+      etaIso,
+      reason,
+      hubCode: hub?.code ?? null,
+      sogKn: fix.sogKn,
+      nowIso,
+    });
+    keep.push(risk.dedup);
+    hits += 1;
+    if (await deps.store.raiseRisk(risk)) risks += 1;
+  }
+
+  if (deps.store.resolveStaleRisks) {
+    await deps.store.resolveStaleRisks(CANCEL_SUSPECT_DEDUP_PREFIX, keep);
+  } else if (!keep.length) {
+    await deps.store.resolveRisks(CANCEL_SUSPECT_DEDUP_PREFIX);
+  }
+  return { risks, hits, warnings };
 }
 
 /**
@@ -1703,8 +1805,13 @@ export async function runFerryPortnet(deps: JobDeps): Promise<JobResult> {
   updated += umg.updated;
   risks += umg.risks;
 
+  /* BN3 decyzja 61: podejrzenie odwołania (ETA+45 / Portnet zniknął + AIS w porcie). */
+  const suspect = await applyCancelSuspectAis(deps, since, portnet.portCallIds);
+  warnings.push(...suspect.warnings);
+  risks += suspect.risks;
+
   return {
-    /* Winter-nav / v2 / UMG: awaria → SOURCE_DOWN / ryzyko, bez wywracania ok Portnet. */
+    /* Winter-nav / v2 / UMG / cancel-suspect: awaria → ryzyko, bez wywracania ok Portnet. */
     job: 'ferry-portnet', mode: 'LIVE', ok: !portnet.fail,
     updated, risks, warnings,
     observations: {
@@ -1714,6 +1821,7 @@ export async function runFerryPortnet(deps: JobDeps): Promise<JobResult> {
       port_call_v2_cancelled_n: String(v2c.count),
       umg_stena_rows: String(umg.rows),
       ...(umg.updated ? { umg_stena_updated: String(umg.updated) } : {}),
+      ...(suspect.hits ? { cancel_suspect_hits: String(suspect.hits) } : {}),
     },
   };
 }

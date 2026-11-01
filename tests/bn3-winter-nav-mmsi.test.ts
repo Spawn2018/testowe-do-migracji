@@ -125,6 +125,9 @@ function deps(store: MemStore, pages: Record<string, string | number>, now = NOW
     if (url.includes('ts.ee') || url.includes('portsofstockholm')) {
       return new Response('niedostepne', { status: 503 });
     }
+    if (url.includes('/ais/v1/locations')) {
+      return new Response(JSON.stringify({ type: 'FeatureCollection', features: [] }), { status: 200 });
+    }
     throw new Error(`nieoczekiwane zapytanie: ${url}`);
   }) as typeof fetch;
   return { store, fetch: f, env: {}, now: () => now };

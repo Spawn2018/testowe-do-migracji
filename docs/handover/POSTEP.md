@@ -7457,6 +7457,15 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (odbiór prod):** SELECT `here_road_legs` — **12** / active 12 / `browser_fetch` 5; core bez zmian (3495/12561/3742/18854/19408); BN7 7× null. `here-roads` **#108803** @ 04:49Z ok (0 prób — core świeże; BN7 poza cronem). Komentarz w #667. **Dalej:** BN3 (#573).
 - Bez push na main.
 
+## 2026-11-01 06:05 — BN3 podejrzenie odwołania 45 min+AIS (po #695)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne`.
+- Scalanie: **#695** już na `main` `6c908ae4`. Bez push na main.
+- **Krok BN3 decyzja 61** (`pakiet/bn3-suspect-cancel-ais`): `cancelSuspect.ts` + `applyCancelSuspectAis` w ferry-portnet — ETA+45 bez ATA albo Portnet zniknął (po odejściu) + AIS SOG≈0 w hubie Zatoki → FERRY MEDIUM (`rk_ferry_cancel_suspect`, dedup `FERRY_CANCEL_SUSPECT:AIS:{id}`); bez zmiany statusu; trasy TLL↔HEL / TLLA↔HEL / MUU↔VUO.
+- vitest bn3-cancel-suspect-ais **10** + bn3-umg-gdynia **17** + risk-keys **10**.
+- **Dalej:** push → CI → gotowe do F7 @ sha. Potem RSS ERR/Yle (decyzja 61 pkt 3).
+- Bez push na main.
+
 ## 2026-11-01 05:25 — #695 F7 r3 testy mutacji (UMG)
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne`.

@@ -161,6 +161,10 @@ function deps(store: MemStore, pages: Record<string, string | number>, now = NOW
         { status: 200 },
       );
     }
+    /* BN3 decyzja 61: AIS Digitraffic — domyślnie brak pozycji (bez podejrzenia). */
+    if (url.includes('/ais/v1/locations')) {
+      return new Response(JSON.stringify({ type: 'FeatureCollection', features: [] }), { status: 200 });
+    }
     throw new Error(`nieoczekiwane zapytanie: ${url}`);
   }) as typeof fetch;
   return { store, fetch: f, env: {}, now: () => now };
