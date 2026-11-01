@@ -7469,6 +7469,17 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Dalej:** DP kolejka BN3 (np. DP-108 ODWOLANY→FERRY_CANCELLED) albo ATD wiarygodne / BN4.
 - Bez push na main.
 
+## 2026-11-01 21:25 — #711 SCALONE; start DP-136 (**0371**)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne`.
+- Scalanie: **#711** `ac81bdd7` / **0370** (F7: gotowe do scalenia @ `fbde97d2`; CI unit/db/visual ✔). Bez push na main — `deploy-main`.
+- **Krok (DP-136):**
+  - migracja **0371**: `sailing_mismatch_propose_id` / `sailing_mismatch_assign` — ląd SE **lub** FI (`finland_land_geom`);
+  - status EXPECTED **554** (+4): def assign/propose, propose z lądem FI, zatoka FI → null;
+  - PLAN: DP-134/135 SCALONE; DP-136 W TOKU.
+- **Dalej:** push → CI → gotowe do F7. Po F7: DP-137 → DP-138 → BN5.
+- Bez push na main.
+
 ## 2026-11-01 21:00 — #711 F7 r1: status.sh bez `::text` (DP-134)
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne`.

@@ -2839,5 +2839,41 @@ else
   chk "DP-133: brak cron.job (stub) — gps-port OK" "select 1" 1
 fi
 
+# DP-136 (F7 #708 r1): przepięcie — ląd SE|FI (bez ::text na boolean)
+chk "DP-136: assign widzi finland_land_geom" \
+  "select pg_get_functiondef('public.sailing_mismatch_assign(uuid,uuid)'::regprocedure) like '%finland_land_geom%'" t
+chk "DP-136: propose widzi finland_land_geom" \
+  "select pg_get_functiondef('public.sailing_mismatch_propose_id(uuid)'::regprocedure) like '%finland_land_geom%'" t
+S136a=77777777-0000-0000-0000-00000000136a
+S136b=77777777-0000-0000-0000-00000000136b
+L136=$(L f0)
+L136w=$(L f1)
+V136=66666666-0000-0000-0000-000000000001
+# departure unikalne vs #557 / BN4 (Wawel)
+q "insert into sailings (id, project_id, vessel_id, route, departure_at, arrival_at,
+    actual_departure_at, actual_arrival_at, status, source) values
+   ('$S136a', '$P', '$V136', 'GDN-NYN',
+    '2026-10-12 12:00+00', '2026-10-13 06:00+00',
+    '2026-10-12 12:00+00', '2026-10-13 06:00+00', 'DOPLYNAL', 'POLFERRIES'),
+   ('$S136b', '$P', '$V136', 'GDN-NYN',
+    '2026-10-22 17:00+00', '2026-10-23 11:00+00',
+    null, null, 'ZAPLANOWANY', 'POLFERRIES')" >/dev/null
+mk $L136 A136 "'HHL/A136'" "'SCX/A136'" AT_PORT_GDANSK "'$S136b'"
+q "insert into load_events (load_id, event_type, occurred_at) values
+    ('$L136','MILESTONE_LOADED','2026-10-11 08:00+00');
+   insert into positions (load_id, ts, geom_raw, source) values
+    ('$L136', '2026-10-12 11:00+00', st_setsrid(st_makepoint(18.6800, 54.4030), 4326), 'TELEMATICS_API'),
+    ('$L136', '2026-10-13 08:00+00', st_setsrid(st_makepoint(24.95, 60.28), 4326), 'TELEMATICS_API')" >/dev/null
+chk "DP-136: propose z samym lądem FI (bez SE)" \
+  "select (public.sailing_mismatch_propose_id('$L136') = '$S136a')" t
+mk $L136w W136 "'HHL/W136'" "'SCX/W136'" AT_PORT_GDANSK "'$S136b'"
+q "insert into load_events (load_id, event_type, occurred_at) values
+    ('$L136w','MILESTONE_LOADED','2026-10-11 08:00+00');
+   insert into positions (load_id, ts, geom_raw, source) values
+    ('$L136w', '2026-10-12 11:00+00', st_setsrid(st_makepoint(18.6800, 54.4030), 4326), 'TELEMATICS_API'),
+    ('$L136w', '2026-10-13 08:00+00', st_setsrid(st_makepoint(25.0, 60.05), 4326), 'TELEMATICS_API')" >/dev/null
+chk "DP-136: zatoka FI nie liczy się jako ląd (propose null)" \
+  "select (public.sailing_mismatch_propose_id('$L136w') is null)" t
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]
