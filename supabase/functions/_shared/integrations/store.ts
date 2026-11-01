@@ -441,6 +441,14 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
       });
       return must(res, 'raise_integration_risk') === true;
     },
+    /** F7 #699 B2: guid ERR — także zamknięte (bez powrotu po ręcznym zamknięciu). */
+    async hasRiskDedup(dedup: string) {
+      const rows = must(
+        await sb.from('risk_signals').select('id').eq('dedup_key', dedup).limit(1),
+        'risk_signals hasRiskDedup',
+      ) as unknown[];
+      return rows.length > 0;
+    },
     /** F7 #695 r2 B2: otwarte ryzyko z prefiksem (UMG delayed tylko przy SOURCE_DOWN:STENA_STATUS). */
     async hasOpenRisk(dedupPrefix: string) {
       const like = `${dedupPrefix.replace(/[%_]/g, (c) => `\\${c}`)}%`;

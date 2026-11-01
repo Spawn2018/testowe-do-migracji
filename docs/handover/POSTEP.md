@@ -7457,6 +7457,68 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (odbiór prod):** SELECT `here_road_legs` — **12** / active 12 / `browser_fetch` 5; core bez zmian (3495/12561/3742/18854/19408); BN7 7× null. `here-roads` **#108803** @ 04:49Z ok (0 prób — core świeże; BN7 poza cronem). Komentarz w #667. **Dalej:** BN3 (#573).
 - Bez push na main.
 
+## 2026-11-01 13:10 — #699 F7 r2 POPRAWKI (R2-B1 + filtr)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE; #697 `do-potwierdzenia`. Bez nowych `pilne`.
+- Scalanie: brak „F7: gotowe do scalenia” (F7 r2 @ b2784c70: R2-B1 + dopasowanie; 3317fee4 tylko flaga). Bez push na main.
+- **Krok (F7 r2 POPRAWKI):**
+  - **R2-B1:** pusty kanał (0 itemów) → bez `resolveStaleRisks` (nie zamyka ERR; hasRiskDedup nie blokuje powrotu);
+  - filtr: zaprzeczenia `not|won't|will not|no longer` + cancel; `cancellations`; kontekst `trip|trips|crossing`; bez ET `laev|reis`;
+  - testy M2/M2b/M2c, M5, B2c, B4a/B4c, T1/T2, R2-B1; vitest bn3-err-rss **17**.
+- **Dalej:** push → CI → gotowe do F7 @ sha. Po F7: Imperva/tolerancja; SMS DP-125 (#697).
+- Bez push na main.
+
+## 2026-11-01 12:40 — #699 F7 r2: ERR RSS domyślnie ON (zgoda właściciela)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE; #697 `do-potwierdzenia`. Bez nowych `pilne`.
+- Scalanie: brak „F7: gotowe do scalenia” po r1 @ b2784c70 (koord. 11:25/11:31: zgoda ERR → default on). Bez push na main.
+- **Krok (F7 r2 / decyzja 80):**
+  - `ERR_RSS_ENABLED = true` (domyślnie włączone po zgodzie ERR);
+  - env `0`/`false`/`off`/`no` = wyłącznik awaryjny → 0 zapytań / 0 ryzyk / 0 SOURCE_DOWN;
+  - W65 zamknięte; decyzja 80 rozstrzygnięta w PLAN §5;
+  - test: default on + env=0 bez fetch.
+- **Dalej:** push → CI → gotowe do F7 @ sha. Po F7: Imperva/tolerancja; SMS DP-125 osobno (#697).
+- Bez push na main.
+
+## 2026-11-01 12:30 — #699 F7 r1 POPRAWKI (decyzja 80 + B1–B5)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE; #697 `do-potwierdzenia` (decyzje 73–80 czekają właściciela). Bez nowych `pilne`.
+- Scalanie: brak „F7: gotowe do scalenia” (F7 r1 BLOKERY @ 4fb29016). Bez push na main.
+- **Krok (F7 r1):**
+  - **80 / W65:** `ERR_RSS_ENABLED` domyślnie false (+ env); off → 0 zapytań / 0 ryzyk / 0 SOURCE_DOWN;
+  - **B1:** detail tylko tytuł+link+pubDate (bez fragment/cytat/opisu);
+  - **B2:** `hasRiskDedup` (także zamknięte) + `resolveStaleRisks` przy 0 trafień + `validUntil`;
+  - **B3:** okno 24 h; bez pubDate → pomiń;
+  - **B4:** SOURCE_DOWN sticky `SOURCE_DOWN:ERR_RSS`; resolve tylko po udanym parse;
+  - **B5:** AND armator+cancel*+kontekst promowy; Finlandia→ECKERO; bez ET; bez Peru/Superuser;
+  - try/catch wokół joba; limit rozmiaru; strip HTML; UA 10 min; usunięte 5 wyjątków pl-t;
+  - **DP-122:** bez zmian w `REQUIRED_TABLES` (koord. #697: nie wymaga zmian; kontrola kopii 02.11);
+  - vitest bn3-err-rss **12**.
+- **Dalej:** push → CI → gotowe do F7 @ sha. Po F7: Imperva/tolerancja; SMS DP-125 osobno (#697).
+- Bez push na main.
+
+## 2026-11-01 12:00 — BN3 RSS ERR: stub integracji + pusty kanał OK
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne`.
+- Scalanie: brak PR z „F7: gotowe do scalenia” po ostatnim commicie. Bez push na main.
+- **Krok:** `edcf75dd` — pusty kanał RSS ≠ SOURCE_DOWN; `integrations.test.ts` — domyślny pusty feed `news.err.ee/rss` (ferry-status bez fałszywego ERR_RSS). vitest integrations+bn3-err-rss+risk-keys **59/59**.
+- **Dalej:** push → CI → gotowe do F7 @ sha. Po F7: Imperva/tolerancja albo DP; SMS DP-125 osobno (#697).
+- Bez push na main.
+
+## 2026-11-01 11:50 — BN3 RSS ERR (decyzja 61 pkt 3; Yle = W64 STOP)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne`.
+- Scalanie: **#698** SCALONE `d0dacf4b` (F7: gotowe do scalenia @ 5efbae88). Bez push na main.
+- **Krok:** start `pakiet/bn3-rss-err-yle-stop` — RSS ERR News:
+  - `errRss.ts` + `applyErrRssConfirmations` w `ferry-status` (co ~10–15 min);
+  - filtr: armator/statek Zatoki + cancel (tühist/peru/cancel) → FERRY MEDIUM + `sourceUrl` artykułu;
+  - decyzja 69: **bez** fałszywego AUTO `operator_notices` ODWOLANY; historią jest ryzyko;
+  - `SourceId` `ERR_RSS`; Yle niepodłączone (W64 STOP — regulamin płatnych app);
+  - regulamin ERR: cytat tytułu + ≤5 zdań + link (bez pełnej kopii);
+  - vitest `bn3-err-rss`.
+- **Dalej:** push → CI → gotowe do F7 @ sha. Po F7: Imperva/tolerancja albo DP z kolejki; SMS DP-125 osobno (#697).
+- Bez push na main.
+
 ## 2026-11-01 10:50 — #698 F7 r2 POPRAWKI (B-r2-1 / B-r2-2 / asercja)
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne`.

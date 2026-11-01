@@ -83,6 +83,10 @@ import {
   tallinkAlertLooksLikeRestore,
 } from '../ferry/tallinkRestore.ts';
 import {
+  ERR_ATTRIBUTION, ERR_RSS_MAX_CHARS, ERR_RSS_UA, ERR_RSS_URL,
+  errRssCancelRisk, filterErrFerryCancel, isErrRssEnabled, isErrRssItemFresh, parseErrRss,
+} from '../ferry/errRss.ts';
+import {
   MARINE_POINTS, SMHI_OCOBS_URL, dmiWamUrl, evaluateMarineWindow, fmiHarmonieUrl, fmiWamUrl,
   marinePointsForRoute, marineWeatherRisk, parseDmiCoverageJson, parseFmiTimeValuePair, parseSmhiOcobs,
   samplesInWindow, type MarineSample, type MarinePointCode,
@@ -280,6 +284,11 @@ export interface SyncStore {
    */
   reassignedLoadsAfterCancel?(sailingId: string): Promise<string[]>;
   raiseRisk(r: RiskInput & { loadId?: string }): Promise<boolean>;
+  /**
+   * F7 #699 B2: czy istnieje ryzyko z tym dedup (także zamknięte) —
+   * trwała pamięć guid ERR, bez powrotu po ręcznym zamknięciu.
+   */
+  hasRiskDedup?(dedup: string): Promise<boolean>;
   latestPositions(maxAgeMin: number): Promise<VehiclePos[]>;
   lastRun(job: string): Promise<string | null>;
   /** F7 #689 R1-B3: ostatnie N wyników joba z integration_runs (od najnowszego). */
@@ -2820,10 +2829,24 @@ export async function runFerryStatus(deps: JobDeps): Promise<JobResult> {
     }
   }
 
+  /* BN3 decyzja 61 pkt 3 / 80: RSS ERR (domyślnie on; env=0 = off). Yle → W64 STOP. */
+  let errRss: { hits: number; risks: number; warnings: string[] } = { hits: 0, risks: 0, warnings: [] };
+  try {
+    errRss = await applyErrRssConfirmations(deps, since);
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    errRss = { hits: 0, risks: 0, warnings: [`ERR RSS: wyjątek — ${msg.slice(0, 160)}`] };
+  }
+  warnings.push(...errRss.warnings);
+  risks += errRss.risks;
+
   const result: JobResult = {
     job: 'ferry-status', mode: 'LIVE', ok: !(pfFail && stFail && dfStatusFail),
     inserted, updated, manualKept, unchanged, unknown, risks, warnings,
     tallink_alert_incomplete: tallinkAlertIncomplete || undefined,
+    observations: {
+      ...(errRss.hits ? { err_rss_hits: String(errRss.hits) } : {}),
+    },
   };
   // #421 F7: po zmianie statusu odśwież rozkład, ale max raz na 60 min (unikaj 28× Stena / 10 min).
   if (updated > 0 || inserted > 0) {
@@ -2842,6 +2865,74 @@ export async function runFerryStatus(deps: JobDeps): Promise<JobResult> {
     }
   }
   return result;
+}
+
+/**
+ * BN3 decyzja 61 pkt 3 / F7 #699 — RSS ERR: filtr → FERRY MEDIUM + sourceUrl.
+ * Decyzja 80 (r2): domyślnie włączone; env `ERR_RSS_ENABLED=0` → 0 zapytań/ryzyk/SOURCE_DOWN.
+ * Decyzja 69: bez AUTO ODWOLANY. Yle niepodłączone (W64 STOP).
+ */
+export async function applyErrRssConfirmations(deps: JobDeps, _sinceIso: string): Promise<{
+  hits: number; risks: number; warnings: string[];
+}> {
+  if (!isErrRssEnabled(deps.env)) {
+    return { hits: 0, risks: 0, warnings: [] };
+  }
+  const now = deps.now();
+  const nowIso = now.toISOString();
+  const page = await readText(deps, ERR_RSS_URL, {
+    headers: { 'User-Agent': ERR_RSS_UA, Accept: 'application/rss+xml, application/xml, text/xml, */*' },
+  });
+  if (!page.ok) {
+    /* B4: nie zamykaj SOURCE_DOWN przy awarii; klucz sticky bez daty. */
+    if (await deps.store.raiseRisk(sourceDownRisk(
+      'ERR_RSS',
+      [page.warning],
+      nowIso,
+      ERR_RSS_URL,
+    ))) {
+      return { hits: 0, risks: 1, warnings: [page.warning] };
+    }
+    return { hits: 0, risks: 0, warnings: [page.warning] };
+  }
+  if (page.text.length > ERR_RSS_MAX_CHARS) {
+    const w = 'ERR RSS: odpowiedź za duża (limit).';
+    if (await deps.store.raiseRisk(sourceDownRisk('ERR_RSS', [w], nowIso, ERR_RSS_URL))) {
+      return { hits: 0, risks: 1, warnings: [w] };
+    }
+    return { hits: 0, risks: 0, warnings: [w] };
+  }
+  const parsed = parseErrRss(page.text);
+  const warnings = [...parsed.warnings];
+  if (parsed.warnings.some((w) => /struktura|pusta odpowiedź|za duża/i.test(w))) {
+    /* B4: zamykać SOURCE_DOWN dopiero po udanym parsowaniu — tu awaria. */
+    if (await deps.store.raiseRisk(sourceDownRisk('ERR_RSS', parsed.warnings, nowIso, ERR_RSS_URL))) {
+      return { hits: 0, risks: 1, warnings };
+    }
+    return { hits: 0, risks: 0, warnings };
+  }
+  /* Udane parsowanie (także pusty kanał) → zamknij SOURCE_DOWN. */
+  await deps.store.resolveRisks('SOURCE_DOWN:ERR_RSS');
+
+  const fresh = parsed.items.filter((it) => isErrRssItemFresh(it, now));
+  const hits = filterErrFerryCancel(fresh);
+  let risks = 0;
+  const keep: string[] = [];
+  for (const hit of hits) {
+    const risk = errRssCancelRisk(hit, nowIso);
+    keep.push(risk.dedup);
+    /* B2: nie podnoś ponownie po ręcznym zamknięciu (pamięć guid). */
+    if (deps.store.hasRiskDedup && await deps.store.hasRiskDedup(risk.dedup)) continue;
+    if (await deps.store.raiseRisk(risk)) risks += 1;
+  }
+  if (hits.length) warnings.push(`${ERR_ATTRIBUTION}: ${hits.length} trafień`);
+
+  /* R2-B1: pusty kanał (0 itemów) nie zamyka ryzyk — hasRiskDedup zablokowałby powrót.
+   * Zamykanie starych: niepusty kanał (także 0 trafień po filtrze) albo validUntil. */
+  if (parsed.items.length > 0 && deps.store.resolveStaleRisks) {
+    await deps.store.resolveStaleRisks('FERRY_ERR_RSS:', keep);
+  }
+  return { hits: hits.length, risks, warnings };
 }
 
 /** ferry-ais — AIS-SRC. Stena IRM (co przebieg, bez cache), aisstream (5 MMSI), Digitraffic jako zapas.

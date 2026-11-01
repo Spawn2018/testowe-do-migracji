@@ -123,6 +123,13 @@ function deps(store: MemStore, pages: Record<string, string | number>, env: Reco
     if (url.includes('stenalinefreight.com')) {
       return new Response('niedostepne', { status: 503 });
     }
+    /* BN3 decyzja 61: RSS ERR — puste trafienia, bez SOURCE_DOWN w testach Polferries/Stena. */
+    if (url.includes('news.err.ee/rss') || url.includes('news.err.ee')) {
+      return new Response(
+        '<?xml version="1.0"?><rss version="2.0"><channel><title>news</title></channel></rss>',
+        { status: 200, headers: { 'Content-Type': 'application/rss+xml' } },
+      );
+    }
     throw new Error(`nieoczekiwane zapytanie (sieć zabroniona w teście): ${url}`);
   }) as typeof fetch;
   const d: JobDeps = { store, fetch: f, env, now: () => now };

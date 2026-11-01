@@ -134,6 +134,8 @@ const pl: Dict = {
   rk_ferry_portcall_v2_fihel: 'Digitraffic port-call v2: anulowane wizyty FIHEL — sprawdź odwołania Helsinki',
   /* BN3 decyzja 61: podejrzenie odwołania (ETA+45 / Portnet + AIS w porcie) */
   rk_ferry_cancel_suspect: 'Podejrzenie odwołania: {vessel} {dep} — AIS stoi w porcie, brak ATA (HHL)',
+  /* BN3 decyzja 61 pkt 3: RSS ERR (Yle → W64 STOP) */
+  rk_ferry_err_rss_cancel: 'ERR: możliwe odwołanie promu ({operator}) — {title}',
   rk_source_down: 'Źródło niedostępne: {source} — HHL weryfikuje ręcznie',
   /* A8: jedna sprawa na źródło z „od kiedy” (`detail.od_kiedy`) */
   rk_source_down_since: 'Źródło niedostępne: {source} od {since} — HHL weryfikuje ręcznie',
@@ -158,6 +160,7 @@ const pl: Dict = {
   rk_src_PORT_TALLINN: 'odjazdy/przyjazdy (Port of Tallinn)',
   rk_src_PORTS_STOCKHOLM: 'odjazdy/przyjazdy (Ports of Stockholm)',
   rk_src_UMG_GDY: 'ruch statków Gdynia (Urząd Morski)',
+  rk_src_ERR_RSS: 'potwierdzenia odwołań (ERR RSS)',
   rk_src_STENA_IRM: 'pozycje promów Stena (IRM)',
   rk_src_TRAFIKVERKET: 'utrudnienia drogowe SE (Trafikverket)',
   rk_src_KPD_GDDKIA: 'utrudnienia drogowe PL (KPD GDDKiA)',
