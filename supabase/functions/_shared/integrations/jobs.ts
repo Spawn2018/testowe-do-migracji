@@ -38,7 +38,7 @@ import {
 import {
   cancelSuspectRisk, cancelSuspectRiskDedup, cancelSuspectTrigger,
   departureHubsForRoute, digitrafficAisUrl, isFreshAisFix, isGulfFerryRoute,
-  isStandingInGulfPort, mergePortCallIdsIfComplete, nearestGulfHub,
+  isStandingAtDeparturePort, mergePortCallIdsIfComplete, nearestGulfHub,
   CANCEL_SUSPECT_DEDUP_PREFIX, DIGITRAFFIC_AIS_LOCATIONS_URL,
 } from '../ferry/cancelSuspect.ts';
 import {
@@ -1388,9 +1388,9 @@ async function applyCancelSuspectAis(
     }
     const fix = cached;
     if (!fix || !isFreshAisFix(fix, nowIso)) continue;
-    const depHubs = departureHubsForRoute(s.route);
-    if (!isStandingInGulfPort(fix, undefined, undefined, depHubs)) continue;
+    if (!isStandingAtDeparturePort(fix, s.route)) continue;
 
+    const depHubs = departureHubsForRoute(s.route);
     const hub = nearestGulfHub(fix.lat, fix.lon, undefined, depHubs);
     const reason = trig.due && trig.disappeared ? 'BOTH'
       : trig.disappeared ? 'PORTCALL_GONE'
@@ -1846,6 +1846,14 @@ export async function runFerryPortnet(deps: JobDeps): Promise<JobResult> {
   } else {
     await deps.store.resolveRisks('SOURCE_DOWN:DIGITRAFFIC_PORTCALL:');
   }
+
+  /* BN3 decyzja 61 / F7 #696 r1: podejrzenie PRZED closeStale — otwarte ryzyko blokuje auto-DOPLYNAL (61b). */
+  const portIds = await fetchCancelSuspectPortCallIds(deps);
+  warnings.push(...portIds.warnings);
+  const suspect = await applyCancelSuspectAis(deps, since, portIds.ids);
+  warnings.push(...suspect.warnings);
+  risks += suspect.risks;
+
   const closed = await closeStaleFiToEeWithoutAta(deps, since);
   updated += closed;
   // F7 #660: Port of Tallinn odwołania także co 15 min (dzień + następny).
@@ -1879,13 +1887,6 @@ export async function runFerryPortnet(deps: JobDeps): Promise<JobResult> {
   warnings.push(...umg.warnings);
   updated += umg.updated;
   risks += umg.risks;
-
-  /* BN3 decyzja 61 / F7 #696 r1 B5: zniknięcie tylko przy kompletnej odpowiedzi eta+etd. */
-  const portIds = await fetchCancelSuspectPortCallIds(deps);
-  warnings.push(...portIds.warnings);
-  const suspect = await applyCancelSuspectAis(deps, since, portIds.ids);
-  warnings.push(...suspect.warnings);
-  risks += suspect.risks;
 
   return {
     /* Winter-nav / v2 / UMG / cancel-suspect: awaria → ryzyko, bez wywracania ok Portnet. */

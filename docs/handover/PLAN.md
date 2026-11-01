@@ -1301,7 +1301,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 7. **#685** decyzja 63 (rozkład Viking) — zaraz po #683; poniżej.
 8. BN4…BN10 — jak #573 (AIS, pogoda, drogi LT/LV/EE/FI, HERE, statusy/ETA, ekrany, odbiór 48 h).
 
-### BN3 · Opóźnienia i odwołania nowych armatorów — W TOKU (po wycinkach 1–3; ~~#685~~ / ~~#691~~ / ~~#692~~ / ~~#694~~ / ~~#695~~ SCALONE; ~~podejrzenie 45 min+AIS~~ gotowe do F7 `pakiet/bn3-cancel-suspect-ais`)
+### BN3 · Opóźnienia i odwołania nowych armatorów — W TOKU (po wycinkach 1–3; ~~#685~~ / ~~#691~~ / ~~#692~~ / ~~#694~~ / ~~#695~~ SCALONE; ~~podejrzenie 45 min+AIS~~ F7 r1 POPRAWKI `pakiet/bn3-cancel-suspect-ais` / #696)
 Źródło: #573 + komentarze BN3 31.10 (spec + decyzje 57–61). Po #667; DP-21 → #666 (63b).
 ~~Wycinek 1~~ SCALONE (#680 `8100f685` / **0356**): decyzja 60 + ręczny komunikat 6 armatorów (`p_operator`, formularz).
 ~~Wycinek 2~~ SCALONE (#682 `a9c396d7` / **0357** + F7 r1–r2): DFDS remark/ETA + Portnet ATA + SOURCE_DOWN MEDIUM (**decyzja 67**).
@@ -1309,8 +1309,8 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 1. ~~**60** Tallink poza PLD–KPS~~ — baza już tylko DFDS; front `ferryCatalog` bez TALLINK; test bn9a.
 2. Źródła → update — ~~**DFDS remark**~~; ~~Portnet ATA~~; ~~ts.ee Lisainfo / Tallink Alert (F7 #683)~~; Digitraffic Viking near (#685-a).
 3. ~~Opóźnienie: ATA − arrival; `FERRY_PORT_DELAY_MIN` z `app_parameters` (zapas 15)~~ (**0357** + Portnet + store F7 B1); ~~ATD 13–19 min przed planem bez delayed (DP-94)~~; ATD tylko gdy wiarygodne — dalej.
-4. Odwołanie: ~~ts.ee / Tallink Alert (decyzja 59 + **68**, F7 #683)~~; ~~DFDS cancel → NIEZNANY (F7 B3)~~; ~~podejrzenie 45 min+AIS → FERRY MEDIUM~~ (decyzja **61**, `pakiet/bn3-cancel-suspect-ais` — gotowe do F7).
-5. `operator_notices`: ~~ręczny 6 armatorów (0356)~~; ~~`source` AUTO/RECZNIE + URL (**0358**)~~; ~~**decyzja 69** AUTO tylko przy ODWOLANY~~; ~~front BN9-c1 (#692)~~; RSS ERR / Yle (decyzja 61 pkt 3) — dalej.
+4. Odwołanie: ~~ts.ee / Tallink Alert (decyzja 59 + **68**, F7 #683)~~; ~~DFDS cancel → NIEZNANY (F7 B3)~~; ~~podejrzenie 45 min+AIS → FERRY MEDIUM~~ (decyzja **61**, #696 F7 r1: hub wyjścia / świeżość AIS / SOG / Portnet komplet / okno +6 h / SOURCE_DOWN AIS — gotowe do F7).
+5. `operator_notices`: ~~ręczny 6 armatorów (0356)~~; ~~`source` AUTO/RECZNIE + URL (**0358**)~~; ~~**decyzja 69** AUTO tylko przy ODWOLANY~~; ~~front BN9-c1 (#692)~~; RSS ERR / Yle (decyzja 61 pkt 3) — dalej (Yle: STOP regulamin płatnych app → W64).
 6. ~~SOURCE_DOWN: TALLINK/DFDS/ECKERO/DIGITRAFFIC (+ *_SCHEDULE) = MEDIUM~~ (wycinek 2 + **decyzja 67** F7 #682, uzasadnienie §5); Viking bez SourceId statusu.
 7. ~~Digitraffic winter-navigation~~ (**#694** `ef89f5d3` / **0361** + F7 r1: locode z tras, bez ryzyka v2 cancelled → **DP-121**); ~~Urząd Morski Gdynia (zapas Stena)~~ (**#695** `6c908ae4`); sonda v2 cancelled = observations.
 8. ~~MMSI XPRS/Finbo/Finlandia/MyStar/Megastar~~ (**0361**, vessel-details 01.11); ~~DP-11~~ (RPC przed seedem); ~~DP-1~~ (BN1 0339/0344).
@@ -2372,7 +2372,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 01.11.2026 05:25 | #695 F7 r3: 3 testy mutacji (przyszłe ETD bez down; 2OK+503 SOURCE_DOWN; RECZNIE+ETA przy down); vitest 17 | pętla |
 | 01.11.2026 06:05 | #695 SCALONE `6c908ae4` (F7: gotowe); start BN3 podejrzenie odwołania 45 min+AIS `pakiet/bn3-cancel-suspect-ais` (decyzja 61) | pętla |
 | 01.11.2026 07:10 | BN3 decyzja 61: `cancelSuspect` + `applyCancelSuspectAis` w ferry-portnet; ETA+45 / Portnet zniknął + AIS SOG≈0 → FERRY MEDIUM; vitest bn3-cancel-suspect-ais **10**; gotowe do F7 @ 23718f3d | pętla |
-| 01.11.2026 07:40 | #696 F7 r1 POPRAWKI: B1 hub wyjścia; B2 świeżość AIS 60 min; B3 brak SOG; B4 SOURCE_DOWN AIS+keep; B5 komplet eta/etd; B6 okno +6 h + closeStale vs podejrzenie; vitest **17** | pętla |
+| 01.11.2026 07:40 | #696 F7 r1 POPRAWKI: B1 hub wyjścia; B2 świeżość AIS 60 min; B3 brak SOG; B4 SOURCE_DOWN AIS+keep; B5 komplet eta/etd; B6 okno +6 h; cancel-suspect przed closeStale (61b); vitest **25**; Yle RSS → W64 STOP | pętla |
 | 31.10.2026 — | Decyzja 73: TLLA-HEL ETA−150 min / HELA-TLL ETD+160 min (fixture Cargo; nocny 165 min OK). Decyzja 74: `sailings.source_ref` 0359; Digitraffic `digitraffic:portcall:<id>:<route>`; HTML/RECZNIE/DANE_STARTOWE wygrywają; #685-b RPC zastępuje digitraffic:% w ±3 h | F7 #688 r1–r4 |
 | 31.10.2026 — | F7 #683 nieblokujące (osobna poprawka): Scheduler grudzień + „on 2 January” → rok bieżący, ciche wygaśnięcie; Alert INFO bez ryzyka/historii — świadomie | F7 #683 r7 |
 | 31.10.2026 — | F7 #683 r8 nieblokujące (osobno): Alert poza Schedulerem obok Schedulera; sprzeczne bloki (resume→cofnięcie auto); rok przy długim oknie Schedulera; mutanty M10/M15–M17/M22 świadomie bez testów | F7 #683 r8 |

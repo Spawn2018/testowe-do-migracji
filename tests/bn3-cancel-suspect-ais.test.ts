@@ -498,9 +498,9 @@ describe('BN3 ferry-portnet × cancel-suspect AIS (F7 #696 r1)', () => {
     expect(st.sailings[0]!.status).toBe('ZAPLANOWANY');
   });
 
-  it('closeStaleFiToEe: otwarte podejrzenie blokuje auto-DOPLYNAL (decyzja 61b)', async () => {
+  it('closeStaleFiToEe: podejrzenie (ten sam przebieg) blokuje auto-DOPLYNAL (decyzja 61b)', async () => {
     const st = new MemStore();
-    /* HEL-TLL, arrival +2 h minione, AIS stoi w HEL (wyjście). */
+    /* HEL-TLL, arrival +2 h minione, AIS stoi w HEL (wyjście) — cancel-suspect przed closeStale. */
     st.sailings.push(gulfSailing({
       id: 's-hel',
       route: 'HEL-TLL',

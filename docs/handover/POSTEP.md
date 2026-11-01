@@ -7466,9 +7466,10 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
   - **B2:** AIS ≤ 60 min (`isFreshAisFix`); **B3:** brak SOG ≠ stoi.
   - **B4:** AIS down → keep dedup + `SOURCE_DOWN:DIGITRAFFIC_AIS` MEDIUM.
   - **B5:** zniknięcie tylko przy kompletnej puli eta+etd (jak #688); pusta → null.
-  - **B6:** okno ETA+45…+6 h; `closeStaleFiToEeWithoutAta` nie zamyka przy otwartym podejrzeniu.
-  - vitest bn3-cancel-suspect-ais **17**.
-- **Dalej:** push → CI → gotowe do F7 @ sha. Po F7: RSS ERR/Yle.
+  - **B6:** okno ETA+45…+6 h; `applyCancelSuspectAis` **przed** `closeStaleFiToEeWithoutAta`; closeStale nie zamyka przy otwartym podejrzeniu (decyzja 61b).
+  - vitest bn3-cancel-suspect-ais **25** (+ risk-keys).
+  - **Yle RSS:** regulamin wyklucza płatne usługi/aplikacje → STOP W64 przy następnym kroku RSS; ERR do sprawdzenia.
+- **Dalej:** push → CI → gotowe do F7 @ sha. Po F7: RSS ERR (+ W64 Yle STOP).
 - Bez push na main.
 
 ## 2026-11-01 07:10 — BN3 cancel-suspect AIS gotowe do F7
