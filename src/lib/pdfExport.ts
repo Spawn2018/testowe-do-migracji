@@ -11,18 +11,19 @@ import { PDFDocument, rgb, type PDFFont, type PDFPage } from 'pdf-lib';
 import fontkit from '@pdf-lib/fontkit';
 import type { Load, Locale } from '../types';
 import { t, tp } from '../i18n/messages';
-import { statusLabel } from './statusLabel';
+import { routeStatusLabel } from './statusLabel';
 import { formatEtaBoden, formatLoadPl, formatOpsDateTime, formatUnloadSe, TZ_OPS } from './time';
 
 export interface PdfColumn { label: string; width: number; value: (l: Load) => string }
 
 const dash = (s: string) => (s === '—' ? '' : s);
 
-export function pdfColumns(locale: Locale = 'pl'): PdfColumn[] {
+/** DP-137: `routeOf` — kod trasy rejsu (FI: „Droga do placu” zamiast „Droga SE”). */
+export function pdfColumns(locale: Locale = 'pl', routeOf?: (l: Load) => string | null | undefined): PdfColumn[] {
   return [
     { label: t(locale, 'i24_pdf_col_code'), width: 92, value: (l) => l.code },
     { label: t(locale, 'i24_pdf_col_type'), width: 110, value: (l) => l.itemType ?? '' },
-    { label: t(locale, 'i24_pdf_col_status'), width: 92, value: (l) => statusLabel(l.status, l.stage, locale) },
+    { label: t(locale, 'i24_pdf_col_status'), width: 92, value: (l) => routeStatusLabel(l.status, l.stage, locale, routeOf?.(l) ?? null) },
     { label: t(locale, 'i24_pdf_col_load'), width: 70, value: (l) => dash(formatLoadPl(l.plannedLoadDate)) },
     { label: t(locale, 'i24_pdf_col_deliver'), width: 70, value: (l) => dash(formatUnloadSe(l.plannedDeliverDate)) },
     { label: t(locale, 'i24_pdf_col_eta'), width: 100, value: (l) => (l.etaPreLoad ? '–' : dash(formatEtaBoden(l.etaBoden))) },
@@ -54,14 +55,14 @@ function fit(text: string, font: PDFFont, size: number, max: number): string {
 }
 
 /** Buduje PDF (bajty). `fontBytes` = TTF z pełnym zestawem znaków (w aplikacji: /fonts/LiberationSans-Regular.ttf). */
-export async function buildLoadsPdf(loads: Load[], fontBytes: ArrayBuffer | Uint8Array, opts: { title: string; generatedAt?: Date; locale?: Locale }): Promise<Uint8Array> {
+export async function buildLoadsPdf(loads: Load[], fontBytes: ArrayBuffer | Uint8Array, opts: { title: string; generatedAt?: Date; locale?: Locale; routeOf?: (l: Load) => string | null | undefined }): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
   doc.registerFontkit(fontkit);
   const font = await doc.embedFont(fontBytes, { subset: true });
   doc.setTitle(opts.title); doc.setCreator('Watch Tower'); doc.setProducer('Watch Tower');
   const at = opts.generatedAt ?? new Date();
   const locale = opts.locale ?? 'pl';
-  const cols = pdfColumns(locale);
+  const cols = pdfColumns(locale, opts.routeOf);
   const perPage = Math.floor((PAGE_H - 2 * M - 40) / ROW_H);
   const pages: PDFPage[] = [];
   const header = (p: PDFPage) => {
@@ -90,10 +91,16 @@ export async function buildLoadsPdf(loads: Load[], fontBytes: ArrayBuffer | Uint
 }
 
 /** Eksport w przeglądarce: pobiera czcionkę, buduje PDF i uruchamia pobieranie pliku. */
-export async function exportLoadsPdf(loads: Load[], filename: string, title: string, locale: Locale = 'pl'): Promise<{ rows: number; bytes: number }> {
+export async function exportLoadsPdf(
+  loads: Load[],
+  filename: string,
+  title: string,
+  locale: Locale = 'pl',
+  routeOf?: (l: Load) => string | null | undefined,
+): Promise<{ rows: number; bytes: number }> {
   const res = await fetch(`${import.meta.env.BASE_URL ?? '/'}fonts/LiberationSans-Regular.ttf`);
   if (!res.ok) throw new Error(`czcionka PDF: HTTP ${res.status}`);
-  const bytes = await buildLoadsPdf(loads, await res.arrayBuffer(), { title, locale });
+  const bytes = await buildLoadsPdf(loads, await res.arrayBuffer(), { title, locale, routeOf });
   const ab = new ArrayBuffer(bytes.byteLength); new Uint8Array(ab).set(bytes);
   const url = URL.createObjectURL(new Blob([ab], { type: 'application/pdf' }));
   const a = document.createElement('a'); a.href = url; a.download = filename; a.rel = 'noopener'; a.style.display = 'none';

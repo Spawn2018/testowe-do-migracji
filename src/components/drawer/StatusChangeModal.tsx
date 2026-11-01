@@ -13,7 +13,7 @@
 import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { useTowerStore } from '../../store/useTowerStore';
 import { t, tp } from '../../i18n/messages';
-import { statusLabel } from '../../lib/statusLabel';
+import { routeStatusLabel } from '../../lib/statusLabel';
 import { formatCalendarDay, isoToDatetimeLocalValue, TZ_OPS, wallLocalToIso } from '../../lib/time';
 import { getNowIso } from '../../lib/frozenNow';
 import { buildStatusAxis, dateTimeFields, dayTime, gpsHint, isoMs } from '../../lib/statusAxis';
@@ -46,6 +46,10 @@ export function StatusChangeModal({
   const setLoadStatus = useTowerStore((s) => s.setLoadStatus);
   const pushToast = useTowerStore((s) => s.pushToast);
   const load = useTowerStore((s) => s.loads.find((l) => l.id === loadId));
+  const sailingRoute = useTowerStore((s) => {
+    const sid = s.loads.find((l) => l.id === loadId)?.sailingId;
+    return sid ? s.sailings.find((x) => x.id === sid)?.route ?? null : null;
+  });
   const allEvents = useTowerStore((s) => s.events);
   const geofences = useTowerStore((s) => s.geofences);
   const documents = useTowerStore((s) => s.documents);
@@ -78,8 +82,12 @@ export function StatusChangeModal({
   }, [onClose, upload]);
 
   const options = useMemo(
-    () => manualOptions(current, load?.stage, { hhlAdmin, canCancel }).map((s) => ({ s, label: statusLabel(s, undefined, locale) })),
-    [locale, canCancel, hhlAdmin, current, load?.stage],
+    () => manualOptions(current, load?.stage, { hhlAdmin, canCancel }).map((s) => ({
+      s,
+      /* DP-137: lista statusów FI — „Droga do placu”, nie „Droga SE” (25A). */
+      label: routeStatusLabel(s, undefined, locale, sailingRoute),
+    })),
+    [locale, canCancel, hhlAdmin, current, load?.stage, sailingRoute],
   );
   const back = isStepBack(status, current, load?.stage);
   /* powód wymagany przy cofnięciu i anulowaniu — pole obowiązkowe, „Zapisz” nieaktywny bez powodu */
@@ -146,7 +154,7 @@ export function StatusChangeModal({
     }
   }
 
-  const nowName = statusLabel(axis?.current ?? current, undefined, locale);
+  const nowName = routeStatusLabel(axis?.current ?? current, undefined, locale, sailingRoute);
 
   return (
     <>
@@ -280,7 +288,7 @@ export function StatusChangeModal({
           ) : null}
           {back ? (
             <div className="scm-info bad" data-status-back role="status">
-              {tp(locale, 'p4b_m_back_info', { from: nowName, to: statusLabel(status, undefined, locale) })}
+              {tp(locale, 'p4b_m_back_info', { from: nowName, to: routeStatusLabel(status, undefined, locale, sailingRoute) })}
             </div>
           ) : null}
           {/* notatka także na telefonie: cofnięcie i anulowanie wymagają powodu (E25) */}

@@ -1,4 +1,15 @@
 
+## 2026-11-01 22:25 — DP-137: etykiety FI + assign SE-only (**0372**)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych pilne.
+- Scalanie: #712 SCALONE `4b9384dd` / **0371** (F7: gotowe @ 555a8b85).
+- **Krok (DP-137):**
+  - potwierdzenie 25A: enum `IN_TRANSIT_SE` / `synthetic_port_se` zostają; UI `routeStatusLabel` / `routeStageLabel` → „Droga do placu” (nie „Droga SE”); StatusPill, StatusChangeModal, TodoCard;
+  - **0372**: `sailing_mismatch_assign` — `apply_ferry_se_from_position` tylko przy lądzie SE; FI → `apply_ferry_ais_arrival_backup`;
+  - testy: bn9b DP-137; status EXPECTED **558** (+2).
+- **Dalej:** push → CI → gotowe do F7. Po F7: DP-138 → BN5.
+- Bez push na main.
+
 ## 2026-11-01 21:52 — DP-136: FIX fixture UUID/vessel + timeout (#712)
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych pilne.

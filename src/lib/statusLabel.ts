@@ -53,19 +53,39 @@ export function stageOnlyLabel(stage: CorridorStage, locale: Locale = 'pl'): str
   return t(locale, STAGE_KEYS[stage]);
 }
 
+/** DP-137 / 25A: trasa spoza Polferries/Stena → etykiety FI/EE zamiast „Port SE” / „Droga SE”. */
+function balticNamedEnds(route: string | null | undefined) {
+  const ends = routeEnds(route);
+  if (!ends) return null;
+  if (operatorsForRoute(route).some((o) => LEGACY_OPERATORS.includes(o))) return null;
+  return ends;
+}
+
 /**
  * BN9-b, decyzja 25A — przeprawy z Estonii (Tallinn, Muuga, Paldiski): te same statusy, w nazwie port z rejsu:
  * „Port wypłynięcia — Muuga”, „Port przypłynięcia — Vuosaari”, „Droga do portu”, „Droga do placu”.
  * Polferries i Stena (i transport bez rejsu) — nazwy bez zmian („Port PL”, „Port SE”, „Droga PL”, „Droga SE”).
+ * DP-137: enum `IN_TRANSIT_SE` / flaga `synthetic_port_se` zostają (jak SE); UI i ETA pokazują etykiety FI.
  */
 export function routeStatusLabel(status: LoadStatus, stage: CorridorStage | undefined, locale: Locale, route: string | null | undefined): string {
-  const ends = routeEnds(route);
-  const legacy = !ends || operatorsForRoute(route).some((o) => LEGACY_OPERATORS.includes(o));
-  if (!legacy && ends) {
+  const ends = balticNamedEnds(route);
+  if (ends) {
     if (status === 'AT_PORT') return tp(locale, 's_port_out_named', { port: portName(locale, ends.from) + (ends.fromTerminal ? ` ${ends.fromTerminal}` : '') });
     if (status === 'AT_PORT_SE') return tp(locale, 's_port_in_named', { port: portName(locale, ends.to) + (ends.toTerminal ? ` ${ends.toTerminal}` : '') });
     if (status === 'IN_TRANSIT_PL') return t(locale, 's_road_to_port');
     if (status === 'IN_TRANSIT_SE') return t(locale, 's_road_to_site');
   }
   return statusLabel(status, stage, locale);
+}
+
+/** DP-137: etap (Opóźniony/Cichy) — te same nazwy FI co status (25A). */
+export function routeStageLabel(stage: CorridorStage, locale: Locale, route: string | null | undefined): string {
+  const ends = balticNamedEnds(route);
+  if (ends) {
+    if (stage === 'GDANSK') return tp(locale, 's_port_out_named', { port: portName(locale, ends.from) + (ends.fromTerminal ? ` ${ends.fromTerminal}` : '') });
+    if (stage === 'APPROACH') return tp(locale, 's_port_in_named', { port: portName(locale, ends.to) + (ends.toTerminal ? ` ${ends.toTerminal}` : '') });
+    if (stage === 'TO_PORT') return t(locale, 's_road_to_port');
+    if (stage === 'SE_ROAD') return t(locale, 's_road_to_site');
+  }
+  return stageOnlyLabel(stage, locale);
 }

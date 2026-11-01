@@ -2883,5 +2883,11 @@ q "insert into load_events (load_id, event_type, occurred_at) values
 chk "DP-136: zatoka FI nie liczy się jako ląd (propose null)" \
   "select (public.sailing_mismatch_propose_id('$L136w') is null)" t
 
+# DP-137: assign — se_from_position tylko przy lądzie SE; FI → AIS backup (powód z „FI”).
+chk "DP-137: assign se_from_position tylko po sweden_land" \
+  "select pg_get_functiondef('public.sailing_mismatch_assign(uuid,uuid)'::regprocedure) ~ 'v_on_se is true'" t
+chk "DP-137: TLL-HEL STATUS_AUTO powod z FI (nie trasie SE)" \
+  "select (coalesce(payload->>'powod','') like '%FI%' and coalesce(payload->>'powod','') not like '%trasie SE%') from load_events where load_id='$L367h' and event_type='STATUS_AUTO' and coalesce(payload->>'powod','') like '%promie%' order by occurred_at desc limit 1" t
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

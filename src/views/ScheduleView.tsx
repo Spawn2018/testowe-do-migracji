@@ -409,7 +409,12 @@ export function ScheduleView() {
           pushToast(tp(locale, 'a6_sch_export_ok', { rows: String(result.rows), bytes: String(result.bytes) }), 'MEDIUM');
         } else {
           const { exportLoadsPdf } = await import('../lib/pdfExport');
-          const result = await exportLoadsPdf(list, name, tp(locale, 'i24_pdf_title', { n: String(list.length) }), locale);
+          /* DP-137: status FI z trasy rejsu („Droga do placu”), nie „Droga SE”. */
+          const routeOf = (l: (typeof list)[number]) => {
+            const sid = l.sailingId;
+            return sid ? sailings.find((x) => x.id === sid)?.route ?? null : null;
+          };
+          const result = await exportLoadsPdf(list, name, tp(locale, 'i24_pdf_title', { n: String(list.length) }), locale, routeOf);
           pushToast(tp(locale, 'i24_sch_pdf_ok', { rows: String(result.rows), bytes: String(result.bytes) }), 'MEDIUM');
         }
       } catch (err: unknown) {
