@@ -1347,9 +1347,9 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 8. ~~**cz.1**~~ SCALONE (#706 `3c0b76ee` / **0366**). ~~Hotfix~~ SCALONE (#707 `bc7998ff` / **0367**). ~~**cz.2**~~ SCALONE (#708 `cb28f06f` / **0368**): FI+STO/KPS arrival backup; outbound+PL↔SE; brzeg FI; Kapellskär; status **544**. ~~BN9-c2 Cursor~~ SCALONE (#709). ~~**DP-133**~~ SCALONE (#710 / **0369**). ~~**DP-134/135**~~ SCALONE (#711 / **0370**). ~~**DP-136**~~ SCALONE (#712 / **0371**). **Dalej:** DP-137+138 (#715 **0372**+**0373**, #713) → BN5 (#714) → BN6 (#716).
 
 ### #713 · STAŁE ZASADY od 01.11 — W TOKU (pierwsze zastosowanie: DP-137+138 w #715)
-Źródło: #713 (Spawn2018, `dla-cursora`; właściciel 01.11 22:24). Nie przerywa bieżącej.
+Źródło: #713 (Spawn2018, `dla-cursora`; właściciel 01.11 22:24). Nie przerywa bieżącej. Wpis też w `ZASADY_CIAGLEJ_PRACY.md`.
 1. **Łączenie drobnych DP:** 2–3 DP z tego samego obszaru w jeden PR (osobne commity, osobne testy, jedna migracja gdy się da). Pierwsze: DP-137+138 w #715.
-2. **Unikalne fixture w `status.sh`:** własny vessel + UUID z numerem DP; po insert — `count(*)`; komentarz zajętych `L xx` / vesseli.
+2. **Unikalne fixture w `status.sh`:** własny vessel + UUID z numerem DP; po insert — `count(*)`; komentarz zajętych `L xx` / vesseli; bez `alter` CHECK schematu.
 3. Równolegle koordynator: `wyglad/BN9-c2` (bez etykiet statusów); spec BN5 (#714) i BN6 (#716).
 
 ### #714 · BN5 — pogoda bałtycka: specyfikacja — W KOLEJCE (po DP-137/138; start po domknięciu BN4)
@@ -2460,7 +2460,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 01.11.2026 21:50 | #712 F7 r1: S136a kolizja vessel+departure z S649o → osobny vessel …0136; EXPECTED 556; timeout DP-116 60 s | pętla / F7 #712 |
 | 01.11.2026 22:20 | #712 SCALONE `4b9384dd` / **0371** (F7: gotowe @ 555a8b85); start DP-137 **0372** etykiety FI + assign SE-only | pętla / F7 #712 |
 | 01.11.2026 23:00 | #713/#714/#716 wpisane §4 (łączenie DP; BN5/BN6 spec); DP-138 **0373** w tym samym PR #715 co DP-137; status **566** | pętla / #713 |
-| 01.11.2026 23:45 | #715 F7 r2 niegotowe: B1 coalesce(ATA, STATUS→AT_PORT); B2 bez alter CHECK; N1 geofence restore; status **568** | pętla / F7 #715 |
+| 01.11.2026 23:55 | #715 F7 r2: B1 coalesce(ATA, STATUS→AT_PORT) + brak STATUS→false; B2/N1; ZASADY #713; status **570** | pętla / F7 #715 |
 | 31.10.2026 — | Decyzja 73: TLLA-HEL ETA−150 min / HELA-TLL ETD+160 min (fixture Cargo; nocny 165 min OK). Decyzja 74: `sailings.source_ref` 0359; Digitraffic `digitraffic:portcall:<id>:<route>`; HTML/RECZNIE/DANE_STARTOWE wygrywają; #685-b RPC zastępuje digitraffic:% w ±3 h | F7 #688 r1–r4 |
 | 31.10.2026 — | F7 #683 nieblokujące (osobna poprawka): Scheduler grudzień + „on 2 January” → rok bieżący, ciche wygaśnięcie; Alert INFO bez ryzyka/historii — świadomie | F7 #683 r7 |
 | 31.10.2026 — | F7 #683 r8 nieblokujące (osobno): Alert poza Schedulerem obok Schedulera; sprzeczne bloki (resume→cofnięcie auto); rok przy długim oknie Schedulera; mutanty M10/M15–M17/M22 świadomie bez testów | F7 #683 r8 |
