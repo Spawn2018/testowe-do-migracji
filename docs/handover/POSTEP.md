@@ -7457,7 +7457,19 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (odbiór prod):** SELECT `here_road_legs` — **12** / active 12 / `browser_fetch` 5; core bez zmian (3495/12561/3742/18854/19408); BN7 7× null. `here-roads` **#108803** @ 04:49Z ok (0 prób — core świeże; BN7 poza cronem). Komentarz w #667. **Dalej:** BN3 (#573).
 - Bez push na main.
 
+## 2026-11-01 01:35 — #690 SCALONE; start #691 DP-116 (stronicowanie sailingsSince)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE; #685 baza SCALONE (ekran #692); #691 W TOKU. Bez nowych `pilne`.
+- Scalanie: **#690 SCALONE** `45d27978` (F7: gotowe do scalenia @ `8fed1389`; CI unit/db/visual ✔). `deploy-main` w toku (0360 przed Edge `viking-schedule-import`). Bez push na main.
+- **Krok #691 (DP-116):**
+  - inwentarz: wszystkie `sailingsSince` w ferry-schedule/status/weather/Digitraffic obcinane przy >1000; loads/positions OK przy bieżącej skali;
+  - `fetchSailingsSincePaged` + `sailingsSince` / `sailingsForVikingFileImport` przez helper (`range` + `order(id)`);
+  - testy `691-dp116-sailings-page` **3** (limit 1000 vs 1205; filtr sources).
+- **Dalej:** push → CI → gotowe do F7 @ sha. Po scaleniu: BN3 winter-nav / MMSI.
+- Bez push na main.
+
 ## 2026-11-01 01:05 — #685-b F7 r3: testy mutacji + drobne (PR #690)
+
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE; #685 W TOKU (b / PR #690). Bez nowych `pilne`.
 - Scalanie: F7 r3 **POPRAWKI** @ `fe4ce5d4` (CI unit/db/visual ✔). Brak „F7: gotowe do scalenia”. Bez push na main.
