@@ -1676,6 +1676,7 @@ Bez ekranów Opcji (te w P10b, po P3).
 | W63 | #637: właściciel ustawia Edge `SHAREPOINT_FILE_MODE=test` i sprawdza po nazwie, że `SHAREPOINT_TEST_FILE_URL` istnieje; pisze „W63 gotowe”. Sekrety wpisuje **wyłącznie właściciel** (wykonawca nie ustawia przez API). | #637 | **zamknięte 29.10.2026 13:50** — właściciel: „W63 gotowe” |
 | W63b | #637: wartość `SHAREPOINT_FILE_MODE` dokładnie `test` (+ Redeploy tylko gdy runtime nie widzi sekretu). Po `write_test_ok_at` właściciel zmienia `SHAREPOINT_FILE_MODE` na `prod` (albo usuwa sekret) — dopiero potem zakolejkowanie aktywnych. Import off. | #637 | **zamknięte 29.10.2026 14:20** — runtime `mode=test` (redeploy zbędny); dalej fix (a) + cykl |
 | W63c | #637: zamknąć plik testowy SharePoint — **anulowane** (właściciel 29.10 15:13: współedycja; zapis bez zamykania → #645 workbook). | #637 / #645 | **anulowane 29.10.2026 15:13** |
+| W64 | BN3 decyzja 61 pkt 3 — **Yle RSS**: regulamin (yle.fi/aihe/a/20-10008076, 15.11.2024) wyklucza użycie w płatnych usługach/aplikacjach („RSS-syötettä ei voi liittää maksullisiin palveluihin tai sovelluksiin”). STOP — bez podłączenia Yle. Decyzja: (A) rezygnacja z Yle / tylko ERR; (B) wyjątek właściciela; (C) inny legalny kanał FI. | BN3 RSS | czeka (STOP 01.11.2026; wykonawca nie podłącza Yle) |
 
 **DP-116 / #691 — miejsca i skutek `max_rows=1000` (nie W*):**
 | Miejsce | Skutek bez stronicowania | Stan |
