@@ -7469,6 +7469,13 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Dalej:** DP kolejka BN3 (np. DP-108 ODWOLANY→FERRY_CANCELLED) albo ATD wiarygodne / BN4.
 - Bez push na main.
 
+## 2026-11-01 21:00 — #711 F7 r1: status.sh bez `::text` (DP-134)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne`.
+- Scalanie: „niegotowe” @ 95e2c72b — CI db FAIL 549/1. Bez push na main.
+- **Krok:** F7 r1 — jedyny FAIL: `::text` na boolean → `true` vs oczekiwane `t`. Usunięto `::text` z chk DP-134 (oczekiwane nadal `t`). EXPECTED 550 bez zmian. Logika 0370 OK (behawioralne DP-135 przeszły).
+- Dalej: push → CI → ponowne „F7: gotowe”. Po F7: DP-136…138 → BN5.
+
 ## 2026-11-01 20:35 — #710 SCALONE; start DP-134/135 (**0370**)
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne`.

@@ -2443,6 +2443,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 01.11.2026 19:35 | BN9-c2 krok 1: Q-18 EE/FI/STO/KPS; aisDb vesselId=`vessels.id`; vitest bmapa/i2j/w-prom | pętla / BN9-c2 |
 | 01.11.2026 20:05 | #709 SCALONE `7db16a87`; DP-133 **0369** `tower-prom-gps-port` (osobny cron GPS stuck) | pętla / DP-133 |
 | 01.11.2026 20:35 | #710 SCALONE `ebd92f55` / **0369** (F7: gotowe @ e479a04c); start DP-134/135 **0370** mapa bez `fr.active` | pętla / F7 #710 |
+| 01.11.2026 20:55 | #711 F7 r1: usuń `::text` z asercji DP-134 (boolean → `t`, nie `true`); EXPECTED 550 | pętla / F7 #711 |
 | 31.10.2026 — | Decyzja 73: TLLA-HEL ETA−150 min / HELA-TLL ETD+160 min (fixture Cargo; nocny 165 min OK). Decyzja 74: `sailings.source_ref` 0359; Digitraffic `digitraffic:portcall:<id>:<route>`; HTML/RECZNIE/DANE_STARTOWE wygrywają; #685-b RPC zastępuje digitraffic:% w ±3 h | F7 #688 r1–r4 |
 | 31.10.2026 — | F7 #683 nieblokujące (osobna poprawka): Scheduler grudzień + „on 2 January” → rok bieżący, ciche wygaśnięcie; Alert INFO bez ryzyka/historii — świadomie | F7 #683 r7 |
 | 31.10.2026 — | F7 #683 r8 nieblokujące (osobno): Alert poza Schedulerem obok Schedulera; sprzeczne bloki (resume→cofnięcie auto); rok przy długim oknie Schedulera; mutanty M10/M15–M17/M22 świadomie bez testów | F7 #683 r8 |

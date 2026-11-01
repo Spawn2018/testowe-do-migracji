@@ -2385,9 +2385,10 @@ chk "BN1: ferry_sailings_map z ferry_ports" \
 chk "BN4: ferry_sailings_map bez domyslnego GDN" \
   "select pg_get_functiondef('public.ferry_sailings_map()'::regprocedure) not like '%coalesce(fr.port_from%'" t
 # DP-134/135 (F7 #706 r1): mapa bez fr.active + test behawioralny (nie sam grep)
+# F7 #711 r1: bez ::text — psql zwraca t/f dla boolean (nie true/false)
 chk "DP-134: ferry_sailings_map join bez fr.active" \
   "select (pg_get_functiondef('public.ferry_sailings_map()'::regprocedure) like '%join ferry_routes fr on fr.code = s.route%'
-     and pg_get_functiondef('public.ferry_sailings_map()'::regprocedure) not like '%join ferry_routes fr on fr.code = s.route and fr.active%')::text" t
+     and pg_get_functiondef('public.ferry_sailings_map()'::regprocedure) not like '%join ferry_routes fr on fr.code = s.route and fr.active%')" t
 S134=77777777-0000-0000-0000-00000000134a
 # departure_at unikalne vs inne rejsy Wawel w oknie ±6 h (unique vessel+departure)
 q "insert into sailings (id,project_id,vessel_id,route,departure_at,arrival_at,status,source) values
