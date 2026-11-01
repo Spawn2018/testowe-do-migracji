@@ -154,8 +154,14 @@ export function subscribeFerryPositions(opts: {
         if (gen !== hub.gen || !hub.subs.size) return;
         hub.stop = subscribeAisDb((pos) => {
           hub.last = pos;
-          for (const cb of [...hub.subs]) cb(pos, pos.length ? 'db' : 'none');
+          /* błąd jednego odbiorcy nie odbiera danych pozostałym */
+          for (const cb of [...hub.subs]) {
+            try { cb(pos, pos.length ? 'db' : 'none'); } catch { /* odbiorca sam obsługuje swoje błędy */ }
+          }
         });
+      }).catch(() => {
+        /* moduł bazy się nie wczytał (np. sieć) — kolejny odbiorca spróbuje ponownie */
+        if (gen === hub.gen) hub.started = false;
       });
     }
     return () => {

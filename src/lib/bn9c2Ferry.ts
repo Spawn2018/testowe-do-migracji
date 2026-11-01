@@ -12,6 +12,8 @@ import { t, tp } from '../i18n/messages';
 import { formatOpsDateTime } from './time';
 import { etaDuration } from './etaDuration';
 import { vesselKey } from './p9eGroups';
+import { stageTileOf, trackingPhase } from './stageTiles';
+import type { Load, Sailing } from '../types';
 
 /** Rejs statku do dymka markera: porty (kody z bazy, np. `TLL_D`, `HEL_T2`) i ich współrzędne. */
 export interface FerryVoyage {
@@ -26,8 +28,6 @@ export interface FerryVoyage {
 }
 
 const PORT_SEED = new Set(['GDN', 'GDY', 'NYN', 'KAA', 'TLL', 'MUU', 'PLD', 'HEL', 'VUO', 'STO', 'KPS']);
-/** Przeprawy sprzed BN9 (Polferries, Stena) — kierunek strzałki bez COG zostaje jak dotąd. */
-const LEGACY_PORTS = new Set(['GDN', 'GDY', 'NYN', 'KAA']);
 
 /** „TLL_D” → TLL, „TLL_A” → TLL + terminal A (jak `routeEnds`); kod spoza katalogu → null. */
 function seedPort(code: string): { base: string; terminal?: string } | null {
@@ -85,7 +85,8 @@ export function voyageOfVessel(
     const arr = Date.parse(r.arrival_at ?? '');
     if (!Number.isFinite(dep)) continue;
     if (dep <= nowMs) {
-      if (Number.isFinite(arr) && nowMs >= arr) continue;
+      /* wypłynął (departed_at) i nie dopłynął — trwa także po planowym przypłynięciu (opóźnienie), żeby nie wskoczył powrót */
+      if (!r.departed_at && Number.isFinite(arr) && nowMs >= arr) continue;
       if (!ongoing || dep < ongoing.dep) ongoing = { r, dep };
     } else if (!next || dep < next.dep) {
       next = { r, dep };
@@ -105,8 +106,8 @@ export function withVoyages(markers: readonly AisPosition[], rows: readonly Sail
 }
 
 /**
- * Kierunek strzałki markera promu: COG z AIS; bez COG — namiar port wyjścia → port przypłynięcia rejsu.
- * Przeprawy sprzed BN9 (GDN-NYN, GDY-KAA i powroty) i statek bez rejsu — dotychczasowa reguła (demo: rejs z rozkładu).
+ * Kierunek strzałki markera promu: COG z AIS; bez COG — namiar port wyjścia → port przypłynięcia rejsu (każda trasa,
+ * także GDN-NYN i GDY-KAA — DP-141). Statek bez wiersza rejsu — dotychczasowa reguła (demo: rejs z rozkładu, 20° / 200°).
  */
 export function ferryMarkerHeading(
   p: Pick<AisPosition, 'cog' | 'vesselId' | 'voyage'>,
@@ -114,8 +115,7 @@ export function ferryMarkerHeading(
 ): number {
   if (typeof p.cog === 'number') return p.cog;
   const v = p.voyage;
-  const legacy = !v || LEGACY_PORTS.has(seedPort(v.depPort)?.base ?? '') || LEGACY_PORTS.has(seedPort(v.arrPort)?.base ?? '');
-  if (!legacy && v) return Math.round(bearing(v.depLat, v.depLng, v.arrLat, v.arrLng));
+  if (v) return Math.round(bearing(v.depLat, v.depLng, v.arrLat, v.arrLng));
   return p.vesselId === liveSail.vessel ? (liveSail.depPort === 'GDN' ? 20 : 200) : 20;
 }
 
@@ -174,4 +174,24 @@ export function ferryTrackInfo(opts: {
     : p.estimated ? { kind: 'est', lastAisTs: p.estimated.lastAisTs }
       : { kind: 'ais', ts: p.ts };
   return { vessel: opts.vessel ?? p?.name ?? null, route, pos };
+}
+
+/** Pasek „Na promie”: okno śledzenia trwa i transport jest w etapie promu (kafelek FERRY). */
+export function ferryBarOn(load: Pick<Load, 'status' | 'stage' | 'plannedLoadDate'> | null | undefined, nowIso: string): boolean {
+  return !!load && trackingPhase(load, nowIso) === 'on' && stageTileOf(load) === 'FERRY';
+}
+
+/**
+ * Rejs ładunku: przypięty (`sailingId`); bez przypięcia — rejs tego statku (ta sama normalizacja nazwy co pozycja AIS,
+ * `vesselKey`) o godzinie odejścia z rezerwacji (porównanie chwil, nie zapisu).
+ */
+export function loadSailing(
+  load: Pick<Load, 'sailingId' | 'ferry'>,
+  sailings: readonly Sailing[],
+): Sailing | undefined {
+  if (load.sailingId) return sailings.find((x) => x.id === load.sailingId);
+  const key = vesselKey(load.ferry.vessel);
+  const dep = Date.parse(load.ferry.departureAt ?? '');
+  if (!key || !Number.isFinite(dep)) return undefined;
+  return sailings.find((x) => vesselKey(x.vessel) === key && Date.parse(x.departureAt) === dep);
 }

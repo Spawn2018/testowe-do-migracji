@@ -12,14 +12,15 @@ import type { SailingMapRow } from '../src/lib/ferry/estimate';
 import { bearing, estimateFerryPositions } from '../src/lib/ferry/estimate';
 import { withEstimates } from '../src/lib/aisDb';
 import {
-  ferryMarkerHeading, ferryMarkerName, ferryTrackInfo, ferryTrackingLines, voyageOfVessel, voyagePortName, voyageRouteText, withVoyages,
+  ferryBarOn, ferryMarkerHeading, ferryMarkerName, ferryTrackInfo, ferryTrackingLines, loadSailing, voyageOfVessel, voyagePortName,
+  voyageRouteText, withVoyages,
   type FerryTrackInfo,
 } from '../src/lib/bn9c2Ferry';
 import { TrackingBar } from '../src/components/drawer/TrackingBar';
 import { trackingStateLines } from '../src/lib/trackingStateText';
 import { BN9C2_EN, I18N_ALL, t, tp } from '../src/i18n/messages';
 import { formatOpsDateTime } from '../src/lib/time';
-import type { Load } from '../src/types';
+import type { Load, Sailing } from '../src/types';
 
 const TLL_D = { lat: 59.44, lon: 24.775 };
 const HEL_T2 = { lat: 60.154, lon: 24.914 };
@@ -66,6 +67,21 @@ describe('BN9-c2 — trasa rejsu w dymku markera promu', () => {
     expect(voyageOfVessel([row({ vessel_id: 'x', mmsi: 1, vessel_name: 'Star' })], mega, now)).toBeNull();
   });
 
+  it('opóźniony rejs: wypłynął (departed_at), nie dopłynął, po planowym przypłynięciu — nadal TLL→HEL, nie powrót', () => {
+    const now = at('2026-11-01T10:30:00Z');
+    const rows = [
+      row({ sailing_id: 'tam', departed_at: '2026-11-01T08:20:00Z', arrived_at: null }),
+      row({ sailing_id: 'powrot', departure_at: '2026-11-01T12:00:00Z', arrival_at: '2026-11-01T14:00:00Z', route: 'HEL-TLL', dep_port: 'HEL_T2', arr_port: 'TLL_D' }),
+    ];
+    const v = voyageOfVessel(rows, mega, now);
+    expect(v?.sailingId).toBe('tam');
+    const [m] = withVoyages([mega], rows, now);
+    expect(ferryMarkerName(m, 'pl')).toBe('M/F Megastar · Tallinn → Helsinki');
+    expect(ferryMarkerHeading(m, liveSail)).toBeLessThan(15);
+    /* bez potwierdzonego wypłynięcia po planowym przypłynięciu — rejs uznany za zakończony (jak dotąd) */
+    expect(voyageOfVessel([{ ...rows[0], departed_at: null }, rows[1]], mega, now)?.sailingId).toBe('powrot');
+  });
+
   it('dymek: „M/F Megastar · Tallinn → Helsinki”; bez wiersza rejsu — tekst jak dotąd', () => {
     const [m] = withVoyages([mega], [row()], at('2026-11-01T09:00:00Z'));
     expect(ferryMarkerName(m, 'pl')).toBe('M/F Megastar · Tallinn → Helsinki');
@@ -78,7 +94,8 @@ describe('BN9-c2 — trasa rejsu w dymku markera promu', () => {
   it('mapa: nazwa z trasą w każdym dymku promu (zwykły, nieaktualny, szacowany); rejs z tego samego RPC ferry_sailings_map', () => {
     const m = readFileSync('src/components/map/CorridorMap.tsx', 'utf8');
     expect(m).toContain('const name = ferryMarkerName(p, loc);');
-    expect(m).toContain('.bindTooltip(`${name} · ${est}`');
+    expect(m).toContain('.bindTooltip(esc(`${name} · ${est}`)');
+    expect(m).toContain('const tip = esc(stale');
     expect(m).not.toContain('p.name || p.mmsi');
     const db = readFileSync('src/lib/aisDb.ts', 'utf8');
     expect(db).toContain('withVoyages(withEstimates(markersFromTrack(res.data), sailRows, nowMs), sailRows, nowMs)');
@@ -105,18 +122,28 @@ describe('BN9-c2 — kierunek strzałki bez COG', () => {
     const [m] = withVoyages([{ ...mega, cog: 137 }], [row()], now);
     expect(ferryMarkerHeading(m, liveSail)).toBe(137);
   });
-  it('regresja GDN-NYN / GDY-KAA i statek bez rejsu: reguła sprzed BN9-c2 (20° / 200°)', () => {
+  it('DP-141: GDN-NYN / GDY-KAA (i powroty) z wierszem rejsu — namiar portów; statek bez rejsu — reguła 20° / 200°', () => {
     const gdn = row({ route: 'GDN-NYN', dep_port: 'GDN', arr_port: 'NYN', dep_lat: GDN.lat, dep_lon: GDN.lon, arr_lat: NYN.lat, arr_lon: NYN.lon });
     const ns: AisPosition = { ...mega, vesselId: 'NS', name: 'M/F Nova Star', mmsi: '311000787' };
     const [withV] = withVoyages([ns], [{ ...gdn, vessel_id: 'NS', vessel_name: 'M/F Nova Star', mmsi: 311000787 }], now);
     expect(withV.voyage?.route).toBe('GDN-NYN');
-    expect(ferryMarkerHeading(withV, { vessel: 'NS', depPort: 'GDN' })).toBe(20);
-    expect(ferryMarkerHeading(withV, { vessel: 'NS', depPort: 'NYN' })).toBe(200);
-    expect(ferryMarkerHeading(withV, { vessel: 'WAW', depPort: 'NYN' })).toBe(20);
-    const kaa = { ...withV, voyage: { ...withV.voyage!, route: 'KAA-GDY', depPort: 'KAA', arrPort: 'GDY' } };
-    expect(ferryMarkerHeading(kaa, { vessel: 'NS', depPort: 'NYN' })).toBe(200);
+    const north = Math.round(bearing(GDN.lat, GDN.lon, NYN.lat, NYN.lon));
+    expect(north).toBeGreaterThan(340);
+    /* niezależnie od rozkładu demo (liveSail) — kierunek rejsu */
+    expect(ferryMarkerHeading(withV, { vessel: 'NS', depPort: 'GDN' })).toBe(north);
+    expect(ferryMarkerHeading(withV, { vessel: 'NS', depPort: 'NYN' })).toBe(north);
+    const back = { ...withV, voyage: { ...withV.voyage!, route: 'NYN-GDN', depPort: 'NYN', arrPort: 'GDN', depLat: NYN.lat, depLng: NYN.lon, arrLat: GDN.lat, arrLng: GDN.lon } };
+    const south = ferryMarkerHeading(back, liveSail);
+    expect(south).toBeGreaterThan(160);
+    expect(south).toBeLessThan(200);
+    const GDY = { lat: 54.533, lon: 18.54 };
+    const KAA = { lat: 56.155, lon: 15.62 };
+    const kaa = { ...withV, voyage: { ...withV.voyage!, route: 'KAA-GDY', depPort: 'KAA', arrPort: 'GDY', depLat: KAA.lat, depLng: KAA.lon, arrLat: GDY.lat, arrLng: GDY.lon } };
+    expect(ferryMarkerHeading(kaa, { vessel: 'NS', depPort: 'NYN' })).toBe(Math.round(bearing(KAA.lat, KAA.lon, GDY.lat, GDY.lon)));
+    /* bez wiersza rejsu — reguła sprzed BN9-c2 */
     expect(ferryMarkerHeading(mega, liveSail)).toBe(20);
     expect(ferryMarkerHeading({ ...mega, vesselId: 'NS' }, { vessel: 'NS', depPort: 'NYN' })).toBe(200);
+    expect(ferryMarkerHeading({ ...mega, vesselId: 'NS' }, { vessel: 'NS', depPort: 'GDN' })).toBe(20);
     /* dymek GDN-NYN z pełnymi nazwami */
     expect(ferryMarkerName(withV, 'pl')).toBe('M/F Nova Star · Gdańsk → Nynäshamn');
   });
@@ -250,10 +277,33 @@ describe('BN9-c2 — dane paska z pozycji AIS i rejsu (ferryTrackInfo)', () => {
     expect(ferryTrackInfo({ vessel: 'Finlandia', routeText: null, positions, locale: 'pl' }).pos).toEqual({ kind: 'none' });
     expect(ferryTrackInfo({ vessel: null, routeText: null, positions, locale: 'pl' }).pos).toEqual({ kind: 'none' });
   });
+  it('warunek paska (ferryBarOn): okno „on” i etap promu; przed oknem, po dostawie i poza promem — nie', () => {
+    expect(ferryBarOn(ferryLoad(), NOW)).toBe(true);
+    expect(ferryBarOn(ferryLoad({ status: 'IN_TRANSIT_SE', stage: 'SE' as Load['stage'] }), NOW)).toBe(false);
+    expect(ferryBarOn(ferryLoad({ status: 'DELIVERED', stage: 'DELIVERED' as Load['stage'] }), NOW)).toBe(false);
+    expect(ferryBarOn(ferryLoad({ status: 'RESOURCES_PENDING', stage: 'PLAN', plannedLoadDate: '2026-11-05' }), NOW)).toBe(false);
+    expect(ferryBarOn(null, NOW)).toBe(false);
+  });
+
+  it('rejs ładunku (loadSailing): sailingId; bez niego statek (bez „M/F”) + ta sama chwila odejścia', () => {
+    const s = (id: string, vessel: string, departureAt: string): Sailing => ({
+      id, vessel, route: 'TLL-HEL' as Sailing['route'], departureAt, arrivalAt: '2026-11-01T10:00:00Z',
+      delayedDepartureAt: null, delayedArrivalAt: null, status: 'ZAPLANOWANY', source: 'TALLINK',
+    });
+    const list = [s('a', 'M/F Megastar', '2026-11-01T08:00:00.000Z'), s('b', 'Star', '2026-11-01T08:00:00Z'), s('c', 'Megastar', '2026-11-01T12:00:00Z')];
+    expect(loadSailing({ sailingId: 'c', ferry: ferryLoad().ferry }, list)?.id).toBe('c');
+    expect(loadSailing({ sailingId: 'zzz', ferry: ferryLoad().ferry }, list)).toBeUndefined();
+    /* „Megastar” 08:00Z = „M/F Megastar” 08:00:00.000Z (inny zapis tej samej chwili) */
+    expect(loadSailing({ sailingId: undefined, ferry: ferryLoad().ferry }, list)?.id).toBe('a');
+    expect(loadSailing({ sailingId: undefined, ferry: { ...ferryLoad().ferry, departureAt: '2026-11-01T09:00:00Z' } }, list)).toBeUndefined();
+    expect(loadSailing({ sailingId: undefined, ferry: { ...ferryLoad().ferry, vessel: null } }, list)).toBeUndefined();
+  });
+
   it('panel: dane promu z subskrypcji AIS (bez nowych zapytań) i rejsu ładunku; TrackingBar bez zapytań', () => {
     const d = readFileSync('src/components/drawer/LoadDrawer.tsx', 'utf8');
     expect(d).toContain('subscribeFerryPositions({ prod: PROD_BUILD');
-    expect(d).toContain('load.sailingId');
+    expect(d).toContain('ferryBarOn(load, nowIso)');
+    expect(d).toContain('loadSailing(load, sailings)');
     expect(d).toContain('ferry={ferryTrack}');
     const bar = readFileSync('src/components/drawer/TrackingBar.tsx', 'utf8');
     expect(bar).not.toMatch(/subscribe|getSupabase|fetch\(/);
@@ -261,33 +311,105 @@ describe('BN9-c2 — dane paska z pozycji AIS i rejsu (ferryTrackInfo)', () => {
 });
 
 describe('BN9-c2 — jedno odpytywanie bazy na wszystkich odbiorców (produkcja)', () => {
-  it('drugi odbiorca dostaje ostatni wynik od razu; bez odbiorców subskrypcja bazy zatrzymana', async () => {
+  /** Świeży moduł `ais` z podstawionym `aisDb` (fabryka mocka) i środowiskiem produkcji. */
+  async function freshAis(factory: () => unknown) {
     vi.resetModules();
-    const stop = vi.fn();
-    let push: ((p: AisPosition[]) => void) | null = null;
-    const sub = vi.fn((cb: (p: AisPosition[]) => void) => { push = cb; return stop; });
-    vi.doMock('../src/lib/aisDb', () => ({ subscribeAisDb: sub }));
+    vi.doMock('../src/lib/aisDb', factory);
     vi.stubEnv('VITE_AUTH_MODE', 'supabase');
-    const WS = vi.fn();
-    vi.stubGlobal('WebSocket', WS);
-    const { subscribeFerryPositions } = await import('../src/lib/ais');
-    const a: [number, string][] = [];
-    const b: [number, string][] = [];
-    const offA = subscribeFerryPositions({ prod: true, onUpdate: (p, m) => a.push([p.length, m]) });
-    await vi.waitFor(() => expect(sub).toHaveBeenCalledTimes(1));
-    act(() => push!([mega]));
-    const offB = subscribeFerryPositions({ prod: true, onUpdate: (p, m) => b.push([p.length, m]) });
-    expect(b).toEqual([[1, 'db']]);
-    expect(sub).toHaveBeenCalledTimes(1);
-    expect(a).toEqual([[0, 'none'], [1, 'db']]);
-    offA();
-    expect(stop).not.toHaveBeenCalled();
-    offB();
-    expect(stop).toHaveBeenCalledTimes(1);
-    expect(WS).not.toHaveBeenCalled();
+    vi.stubGlobal('WebSocket', vi.fn());
+    return (await import('../src/lib/ais')).subscribeFerryPositions;
+  }
+  function cleanup() {
     vi.doUnmock('../src/lib/aisDb');
     vi.unstubAllGlobals();
     vi.unstubAllEnvs();
+    vi.resetModules();
+  }
+
+  it('drugi odbiorca dostaje ostatni wynik od razu; bez odbiorców subskrypcja bazy zatrzymana', async () => {
+    try {
+      const stop = vi.fn();
+      let push: ((p: AisPosition[]) => void) | null = null;
+      const sub = vi.fn((cb: (p: AisPosition[]) => void) => { push = cb; return stop; });
+      const subscribeFerryPositions = await freshAis(() => ({ subscribeAisDb: sub }));
+      const a: [number, string][] = [];
+      const b: [number, string][] = [];
+      const offA = subscribeFerryPositions({ prod: true, onUpdate: (p, m) => a.push([p.length, m]) });
+      await vi.waitFor(() => expect(sub).toHaveBeenCalledTimes(1));
+      act(() => push!([mega]));
+      const offB = subscribeFerryPositions({ prod: true, onUpdate: (p, m) => b.push([p.length, m]) });
+      expect(b).toEqual([[1, 'db']]);
+      expect(sub).toHaveBeenCalledTimes(1);
+      expect(a).toEqual([[0, 'none'], [1, 'db']]);
+      offA();
+      expect(stop).not.toHaveBeenCalled();
+      offB();
+      expect(stop).toHaveBeenCalledTimes(1);
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('wyjątek w jednym odbiorcy — drugi i tak dostaje dane', async () => {
+    try {
+      let push: ((p: AisPosition[]) => void) | null = null;
+      const sub = vi.fn((cb: (p: AisPosition[]) => void) => { push = cb; return () => {}; });
+      const subscribeFerryPositions = await freshAis(() => ({ subscribeAisDb: sub }));
+      const got: number[] = [];
+      const offBad = subscribeFerryPositions({ prod: true, onUpdate: (p) => { if (p.length) throw new Error('zły odbiorca'); } });
+      const offOk = subscribeFerryPositions({ prod: true, onUpdate: (p) => got.push(p.length) });
+      await vi.waitFor(() => expect(sub).toHaveBeenCalledTimes(1));
+      expect(() => push!([mega])).not.toThrow();
+      expect(got).toEqual([0, 1]);
+      offBad();
+      offOk();
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('moduł bazy się nie wczytał — kolejna subskrypcja próbuje ponownie (bez nieobsłużonego błędu)', async () => {
+    try {
+      let attempt = 0;
+      const sub = vi.fn(() => () => {});
+      const subscribeFerryPositions = await freshAis(() => {
+        attempt += 1;
+        if (attempt === 1) throw new Error('chunk nie wczytany');
+        return { subscribeAisDb: sub };
+      });
+      const off1 = subscribeFerryPositions({ prod: true, onUpdate: () => {} });
+      await vi.waitFor(() => expect(attempt).toBe(1));
+      await new Promise((r) => setTimeout(r, 0));
+      expect(sub).not.toHaveBeenCalled();
+      const off2 = subscribeFerryPositions({ prod: true, onUpdate: () => {} });
+      await vi.waitFor(() => expect(sub).toHaveBeenCalledTimes(1));
+      off1();
+      off2();
+    } finally {
+      cleanup();
+    }
+  });
+
+  it('odsubskrybowanie przed wczytaniem modułu, potem ponowna subskrypcja — odpytywanie działa (jedno)', async () => {
+    try {
+      const stop = vi.fn();
+      const sub = vi.fn(() => stop);
+      const subscribeFerryPositions = await freshAis(() => ({ subscribeAisDb: sub }));
+      const off1 = subscribeFerryPositions({ prod: true, onUpdate: () => {} });
+      off1();
+      /* pierwsze `import()` kończy się już bez odbiorców — nie startuje odpytywania. (Vitest przy dwóch równoległych
+         `import()` modułu z `vi.doMock` podaje drugiemu prawdziwy moduł, więc ponowna subskrypcja po rozstrzygnięciu.) */
+      await new Promise((r) => setTimeout(r, 0));
+      expect(sub).not.toHaveBeenCalled();
+      const off2 = subscribeFerryPositions({ prod: true, onUpdate: () => {} });
+      await vi.waitFor(() => expect(sub).toHaveBeenCalledTimes(1));
+      await new Promise((r) => setTimeout(r, 0));
+      expect(sub).toHaveBeenCalledTimes(1);
+      off2();
+      expect(stop).toHaveBeenCalledTimes(1);
+    } finally {
+      cleanup();
+    }
   });
 });
 

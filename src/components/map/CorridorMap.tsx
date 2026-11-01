@@ -776,17 +776,18 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
             icon: ferryDivIcon('#6BA8D6', heading, false, true),
             keyboard: false,
           })
-            .bindTooltip(`${name} · ${est}`, { direction: 'top', offset: [0, -10] })
+            .bindTooltip(esc(`${name} · ${est}`), { direction: 'top', offset: [0, -10] })
             .addTo(layers.ais);
           continue;
         }
         const stale = ferryMarkerTone(p.ts, getNowIso()) === 'stale';
         const when = formatOpsDateTime(p.ts);
-        const tip = stale
+        /* BN9-c2: nazwa statku (z bazy), trasa i czas jako tekst — bez HTML w dymku */
+        const tip = esc(stale
           ? `${name} · ${t(loc, 'i2_ais_stale').replace('{d}', when)}`
           : (p.source === 'db'
             ? `${name} · ${t(loc, 'i2_ais_read_at').replace('{d}', when)}`
-            : name);
+            : name));
         L.marker([p.lat, p.lng], {
           icon: ferryDivIcon(stale ? '#8E9BA6' : '#6BA8D6', heading, stale),
           keyboard: false,

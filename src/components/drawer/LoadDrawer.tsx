@@ -15,10 +15,9 @@ import { deliveredCheckResolve } from '../../lib/deliveredCheckResolve';
 import { lazyRetry } from '../../lib/lazyRetry';
 import { useEtaWx } from '../../lib/e49WxSource';
 import { buildStatusAxis } from '../../lib/statusAxis';
-import { stageTileOf, trackingPhase } from '../../lib/stageTiles';
+import { trackingPhase } from '../../lib/stageTiles';
 import { subscribeFerryPositions, type AisPosition } from '../../lib/ais';
-import { ferryTrackInfo } from '../../lib/bn9c2Ferry';
-import { vesselKeyOf } from '../../lib/vesselGroups';
+import { ferryBarOn, ferryTrackInfo, loadSailing } from '../../lib/bn9c2Ferry';
 import { ferryRouteLabel } from '../../lib/portName';
 import { useIsPhone } from '../../lib/useIsPhone';
 import { getNow } from '../../lib/frozenNow';
@@ -193,7 +192,7 @@ export function LoadDrawer() {
   const etaWx = useEtaWx(load, loads, nowIso);
   /* BN9-c2 (#573): na promie pasek śledzenia pokazuje pozycję statku — z tej samej subskrypcji AIS co mapa
      (w produkcji jedno odpytywanie bazy na wszystkich odbiorców); rejs przypięty do ładunku daje statek i trasę */
-  const onFerry = !!load && trackingPhase(load, nowIso) === 'on' && stageTileOf(load) === 'FERRY';
+  const onFerry = ferryBarOn(load, nowIso);
   const [ferryPos, setFerryPos] = useState<AisPosition[]>([]);
   useEffect(() => {
     if (!onFerry) { setFerryPos([]); return undefined; }
@@ -203,11 +202,7 @@ export function LoadDrawer() {
   const ferryTrack = useMemo(() => {
     if (!load || !onFerry) return null;
     /* rejs przypięty do ładunku; bez przypięcia — rejs tego statku o godzinie z rezerwacji (jak znacznik na mapie) */
-    const sail = load.sailingId
-      ? sailings.find((x) => x.id === load.sailingId)
-      : load.ferry.vessel
-        ? sailings.find((x) => vesselKeyOf(x.vessel) === vesselKeyOf(load.ferry.vessel) && x.departureAt === load.ferry.departureAt)
-        : undefined;
+    const sail = loadSailing(load, sailings);
     return ferryTrackInfo({
       vessel: sail?.vessel ?? load.ferry.vessel ?? null,
       routeText: sail?.route ? ferryRouteLabel(locale, sail.route) || null : null,
