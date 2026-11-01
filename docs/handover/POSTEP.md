@@ -7457,6 +7457,33 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (odbiór prod):** SELECT `here_road_legs` — **12** / active 12 / `browser_fetch` 5; core bez zmian (3495/12561/3742/18854/19408); BN7 7× null. `here-roads` **#108803** @ 04:49Z ok (0 prób — core świeże; BN7 poza cronem). Komentarz w #667. **Dalej:** BN3 (#573).
 - Bez push na main.
 
+## 2026-11-01 08:10 — #696 F7 r2 POPRAWKI (decyzja 61b)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne`.
+- Scalanie: F7 r2 BLOKERY @ 5dfaea18 (NB1/NB2) — nie scalać. Bez push na main.
+- **Krok F7 #696 r2 (61b):**
+  - Podnoszenie tylko gdy ATD i ATA null; ATD → zamknięcie podejrzenia + DOPLYNAL działa (NB1 wahadło).
+  - Okno ETA: +45…+90 min; zniknięcie: dep+45…ETA+90 (samodzielnie przed ETA+45).
+  - Keep poza oknem do ATD/ATA / AIS poza hubem / HHL; NB2: stara pozycja / `features:[]` / `{}` → keep (+ SOURCE_DOWN przy złej strukturze).
+  - SOURCE_DOWN AIS zamykane tylko po przebiegu z poprawnym odczytem (`aisOkSeen`).
+  - vitest bn3-cancel-suspect-ais **31**. Decyzja **61b** w PLAN §5.
+- **Dalej:** push → CI → gotowe do F7 @ sha. Po F7: RSS ERR (+ W64 Yle STOP).
+- Bez push na main.
+
+## 2026-11-01 08:10 — #696 F7 r2 POPRAWKI (decyzja 61b)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne`.
+- Scalanie: F7 r2 BLOKERY (NB1/NB2) @ 5dfaea18 — nie scalać. Bez push na main.
+- **Krok F7 #696 r2 / 61b:**
+  - Podnoszenie tylko bez ATD i ATA; okno ETA+45…+**90** min; zniknięcie samodzielne dep+45…ETA+90.
+  - Keep poza oknem do ATD/ATA / świeży AIS poza hubem wyjścia / HHL.
+  - NB2: stary AIS / `features:[]` → keep; `{}` → keep + SOURCE_DOWN; SOURCE_DOWN tylko po poprawnym AIS.
+  - NB1: HEL-TLL z ATD + powrót → bez alarmu, DOPLYNAL działa.
+  - Spec: `docs/handover/BN3_SPECYFIKACJA_61b.md`; decyzja 61b w §5.
+  - vitest bn3-cancel-suspect-ais **38**.
+- **Dalej:** push → CI → gotowe do F7 @ sha. Po F7: RSS ERR (+ W64 Yle STOP).
+- Bez push na main.
+
 ## 2026-11-01 07:40 — #696 F7 r1 POPRAWKI (cancel-suspect B1–B6)
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne`.

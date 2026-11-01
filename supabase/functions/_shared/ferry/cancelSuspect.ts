@@ -1,8 +1,8 @@
 /**
- * BN3 decyzja 61 — „podejrzenie odwołania”: ETA+45 bez ATA albo zniknięcie z Portnet
- * + AIS stoi w **porcie wyjścia** Zatoki Fińskiej → FERRY MEDIUM (bez zmiany statusu rejsu).
- * Viking / Eckerö / Finbo / Tallink · trasy TLL↔HEL / TLLA↔HEL / MUU↔VUO.
- * F7 #696 r1: B1 hub wyjścia; B2 świeżość AIS; B3 brak SOG ≠ stoi; B5 komplet Portnet; B6 okno ETA+6 h.
+ * BN3 decyzja 61 / 61b (F7 #696 r2) — „podejrzenie odwołania” Zatoki Fińskiej:
+ * ETA+45…+90 bez ATA **albo** zniknięcie Portnet (dep+45…ETA+90) + AIS stoi w porcie wyjścia
+ * → FERRY MEDIUM (bez zmiany statusu). Tylko gdy ATD i ATA są null.
+ * Raz podniesione nie gaśnie po wyjściu z okna — tylko ATD/ATA / AIS poza hubem / HHL.
  */
 import { distanceKm, type VesselFix } from './digitraffic.ts';
 import { DIGITRAFFIC_PORTCALL_SOURCE_REF_PREFIX } from './digitrafficPortCalls.ts';
@@ -15,8 +15,13 @@ export const GULF_FERRY_ROUTES: ReadonlySet<FerryRoute> = new Set([
 ]);
 
 export const CANCEL_SUSPECT_GRACE_MIN = 45;
-/** F7 #696 r1 B6: górna granica okna podejrzenia po ETA. */
-export const CANCEL_SUSPECT_WINDOW_AFTER_ETA_H = 6;
+/**
+ * F7 #696 r2 / decyzja 61b: górna granica okna **podnoszenia** alarmu po ETA.
+ * 90 min < najkrótszy nawrót promów na Zatoce Fińskiej (wahadło nie wpada w fałszywy alarm).
+ */
+export const CANCEL_SUSPECT_WINDOW_AFTER_ETA_MIN = 90;
+/** @deprecated F7 r2: było 6 h — zostaw alias tylko gdy ktoś czyta starą nazwę w diffie. */
+export const CANCEL_SUSPECT_WINDOW_AFTER_ETA_H = CANCEL_SUSPECT_WINDOW_AFTER_ETA_MIN / 60;
 export const CANCEL_SUSPECT_MAX_SOG_KN = 0.5;
 export const CANCEL_SUSPECT_RADIUS_KM = 3;
 /** F7 #696 r1 B2: pozycja AIS starsza → „nie wiadomo”. */
@@ -91,6 +96,36 @@ export function isFreshAisFix(
 }
 
 /**
+ * F7 #696 r2 NB2: poprawna struktura Digitraffic AIS = obiekt z tablicą `features`
+ * (także pustą). `{}` / brak features → zła struktura → SOURCE_DOWN.
+ */
+export function isDigitrafficAisPayloadOk(json: unknown): boolean {
+  return !!json && typeof json === 'object'
+    && Array.isArray((json as { features?: unknown }).features);
+}
+
+/**
+ * F7 #696 r2 NB2: odpowiedź AIS.
+ * - `DOWN` — JSON zły / brak tablicy `features` (w tym `{}`) → SOURCE_DOWN + keep;
+ * - `null` — poprawna struktura, brak pozycji (np. `features: []`) → keep, bez SOURCE_DOWN;
+ * - `VesselFix` — pozycja.
+ */
+export function interpretCancelSuspectAisJson(
+  text: string,
+  mmsi: number,
+  parse: (json: unknown, mmsi: number) => VesselFix | null,
+): VesselFix | null | 'DOWN' {
+  let json: unknown;
+  try {
+    json = JSON.parse(text);
+  } catch {
+    return 'DOWN';
+  }
+  if (!isDigitrafficAisPayloadOk(json)) return 'DOWN';
+  return parse(json, mmsi) ?? null;
+}
+
+/**
  * F7 #696 r1 B5 / jak #688 completeForRemoval:
  * obie strony OK, obie mają niepustą tablicę portCalls → scalone id; inaczej null.
  */
@@ -143,17 +178,35 @@ export function isStandingInGulfPort(
   return hubs.some((h) => distanceKm(fix.lat, fix.lon, h.lat, h.lon) <= rad);
 }
 
-/** true gdy now ∈ [ETA + graceMin, ETA + windowAfterEtaH]. */
+/** true gdy now ∈ [ETA + graceMin, ETA + windowAfterEtaMin]. F7 r2: domyślnie 45…90. */
 export function cancelSuspectDue(
   etaIso: string,
   nowMs: number,
   graceMin = CANCEL_SUSPECT_GRACE_MIN,
-  windowAfterEtaH = CANCEL_SUSPECT_WINDOW_AFTER_ETA_H,
+  windowAfterEtaMin = CANCEL_SUSPECT_WINDOW_AFTER_ETA_MIN,
 ): boolean {
   const eta = Date.parse(etaIso);
   if (!Number.isFinite(eta)) return false;
   const lo = eta + graceMin * 60_000;
-  const hi = eta + windowAfterEtaH * 3600_000;
+  const hi = eta + windowAfterEtaMin * 60_000;
+  return nowMs >= lo && nowMs <= hi;
+}
+
+/**
+ * F7 #696 r2: okno gałęzi „zniknięcie” = [odejście planowe + grace … ETA + windowAfterEtaMin].
+ */
+export function cancelSuspectDisappearDue(
+  departureIso: string,
+  etaIso: string,
+  nowMs: number,
+  graceMin = CANCEL_SUSPECT_GRACE_MIN,
+  windowAfterEtaMin = CANCEL_SUSPECT_WINDOW_AFTER_ETA_MIN,
+): boolean {
+  const dep = Date.parse(departureIso);
+  const eta = Date.parse(etaIso);
+  if (!Number.isFinite(dep) || !Number.isFinite(eta)) return false;
+  const lo = dep + graceMin * 60_000;
+  const hi = eta + windowAfterEtaMin * 60_000;
   return nowMs >= lo && nowMs <= hi;
 }
 
@@ -193,8 +246,8 @@ export function portCallDisappeared(
 }
 
 /**
- * Czy sprawdzać AIS: ETA w oknie grace…+6 h bez ATA **lub** zniknięcie Portnet po planowym odejściu
- * (w tym samym oknie ETA). Nie zmienia statusu — tylko sygnał do ryzyka.
+ * F7 #696 r2: gałąź ETA (due) i samodzielna gałąź zniknięcia (disappeared).
+ * `check` = due ∨ disappeared — zniknięcie może być przed ETA+45.
  */
 export function cancelSuspectTrigger(o: {
   etaIso: string;
@@ -203,14 +256,16 @@ export function cancelSuspectTrigger(o: {
   sourceRef?: string | null;
   activePortCallIds?: Set<string> | null;
   graceMin?: number;
-  windowAfterEtaH?: number;
+  windowAfterEtaMin?: number;
 }): { due: boolean; disappeared: boolean; check: boolean } {
-  const due = cancelSuspectDue(o.etaIso, o.nowMs, o.graceMin, o.windowAfterEtaH);
-  const depPast = Date.parse(o.departureIso) < o.nowMs;
-  const disappeared = due
-    && depPast
+  const grace = o.graceMin ?? CANCEL_SUSPECT_GRACE_MIN;
+  const win = o.windowAfterEtaMin ?? CANCEL_SUSPECT_WINDOW_AFTER_ETA_MIN;
+  const due = cancelSuspectDue(o.etaIso, o.nowMs, grace, win);
+  const inDisappear = cancelSuspectDisappearDue(
+    o.departureIso, o.etaIso, o.nowMs, grace, win,
+  );
+  const disappeared = inDisappear
     && portCallDisappeared(o.sourceRef, o.activePortCallIds ?? null);
-  /* F7 #696 r1 B6: zniknięcie też tylko w oknie ETA (due). */
   return { due, disappeared, check: due || disappeared };
 }
 

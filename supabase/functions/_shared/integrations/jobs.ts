@@ -37,8 +37,8 @@ import {
 } from '../ferry/winterNavigation.ts';
 import {
   cancelSuspectRisk, cancelSuspectRiskDedup, cancelSuspectTrigger,
-  departureHubsForRoute, digitrafficAisUrl, isFreshAisFix, isGulfFerryRoute,
-  isStandingAtDeparturePort, mergePortCallIdsIfComplete, nearestGulfHub,
+  departureHubsForRoute, digitrafficAisUrl, isDigitrafficAisPayloadOk, isFreshAisFix,
+  isGulfFerryRoute, isStandingAtDeparturePort, mergePortCallIdsIfComplete, nearestGulfHub,
   CANCEL_SUSPECT_DEDUP_PREFIX, DIGITRAFFIC_AIS_LOCATIONS_URL,
 } from '../ferry/cancelSuspect.ts';
 import {
@@ -1314,9 +1314,9 @@ async function fetchCancelSuspectPortCallIds(deps: JobDeps): Promise<{
 }
 
 /**
- * BN3 decyzja 61 — podejrzenie odwołania (Zatoka Fińska): ETA+45…+6 h bez ATA
- * albo zniknięcie Portnet po odejściu + AIS SOG≈0 w hubie **wyjścia** → FERRY MEDIUM.
- * Bez zmiany statusu / actual_* / delayed_*. F7 #696 r1 B1–B6.
+ * BN3 decyzja 61 / 61b — podejrzenie odwołania (Zatoka Fińska).
+ * Podnoszenie: bez ATD i bez ATA; ETA+45…+90 **albo** zniknięcie (dep+45…ETA+90) + AIS w hubie wyjścia.
+ * Keep poza oknem do ATD/ATA / AIS poza wyjściem / HHL. F7 #696 r2.
  */
 async function applyCancelSuspectAis(
   deps: JobDeps,
@@ -1329,13 +1329,15 @@ async function applyCancelSuspectAis(
     deps.store.vessels(), deps.store.sailingsSince(sinceIso),
   ]);
   const byId = new Map(vessels.map((v) => [v.id, v]));
-  /** null = awaria AIS dla MMSI; VesselFix = OK. */
+  /** VesselFix | null (pusta/brak) | 'DOWN' (HTTP/zła struktura). */
   const aisCache = new Map<number, VesselFix | null | 'DOWN'>();
   const warnings: string[] = [];
   const keep: string[] = [];
   let risks = 0;
   let hits = 0;
   let aisDown = false;
+  /** Przebieg z ≥1 poprawną odpowiedzią AIS (także puste features) — wolno zamknąć SOURCE_DOWN. */
+  let aisOkSeen = false;
 
   const aisHeaders = {
     'User-Agent': USER_AGENT,
@@ -1347,7 +1349,9 @@ async function applyCancelSuspectAis(
   for (const s of existing) {
     if (!isGulfFerryRoute(s.route)) continue;
     if (s.status === 'ODWOLANY' || s.status === 'DOPLYNAL') continue;
-    if (s.actual_arrival_at != null) continue;
+    /* 61b pkt 1/4: ATD lub ATA → zamknij podejrzenie (brak w keep). */
+    if (s.actual_arrival_at != null || s.actual_departure_at != null) continue;
+
     const etaIso = s.delayed_arrival_at ?? s.arrival_at;
     const trig = cancelSuspectTrigger({
       etaIso,
@@ -1356,11 +1360,16 @@ async function applyCancelSuspectAis(
       sourceRef: s.source_ref,
       activePortCallIds,
     });
-    if (!trig.check) continue;
+    const open = deps.store.hasOpenRisk
+      ? await deps.store.hasOpenRisk(cancelSuspectRiskDedup(s.id))
+      : false;
+    /* Poza oknem: tylko utrzymuj / gasij istniejące (AIS poza hubem). */
+    if (!trig.check && !open) continue;
 
     const v = byId.get(s.vessel_id);
     if (!v?.mmsi) {
       warnings.push(`cancel-suspect: brak MMSI ${s.id}`);
+      if (open) keep.push(cancelSuspectRiskDedup(s.id));
       continue;
     }
     let cached = aisCache.get(v.mmsi);
@@ -1372,7 +1381,14 @@ async function applyCancelSuspectAis(
         cached = 'DOWN';
       } else {
         try {
-          cached = parseDigitrafficLocations(JSON.parse(page.text), v.mmsi) ?? null;
+          const json = JSON.parse(page.text) as unknown;
+          if (!isDigitrafficAisPayloadOk(json)) {
+            warnings.push(`cancel-suspect AIS ${v.mmsi}: zła struktura`);
+            cached = 'DOWN';
+          } else {
+            aisOkSeen = true;
+            cached = parseDigitrafficLocations(json, v.mmsi) ?? null;
+          }
         } catch {
           warnings.push(`cancel-suspect AIS ${v.mmsi}: nieczytelny JSON`);
           cached = 'DOWN';
@@ -1380,15 +1396,22 @@ async function applyCancelSuspectAis(
         aisCache.set(v.mmsi, cached);
       }
     }
-    /* F7 #696 r1 B4: awaria AIS → zachowaj istniejące podejrzenie (keep) + SOURCE_DOWN. */
+    /* NB2 / B4: awaria lub nieznany stan AIS → keep (nie gaś); DOWN → SOURCE_DOWN. */
     if (cached === 'DOWN') {
       aisDown = true;
       keep.push(cancelSuspectRiskDedup(s.id));
       continue;
     }
     const fix = cached;
-    if (!fix || !isFreshAisFix(fix, nowIso)) continue;
+    if (!fix || !isFreshAisFix(fix, nowIso)) {
+      keep.push(cancelSuspectRiskDedup(s.id));
+      continue;
+    }
+    /* Świeży AIS poza portem wyjścia → zamknij (brak keep). */
     if (!isStandingAtDeparturePort(fix, s.route)) continue;
+
+    keep.push(cancelSuspectRiskDedup(s.id));
+    if (!trig.check) continue; /* poza oknem: tylko keep, bez nowego podniesienia */
 
     const depHubs = departureHubsForRoute(s.route);
     const hub = nearestGulfHub(fix.lat, fix.lon, undefined, depHubs);
@@ -1406,7 +1429,6 @@ async function applyCancelSuspectAis(
       sogKn: fix.sogKn,
       nowIso,
     });
-    keep.push(risk.dedup);
     hits += 1;
     if (await deps.store.raiseRisk(risk)) risks += 1;
   }
@@ -1418,7 +1440,8 @@ async function applyCancelSuspectAis(
       nowIso,
       DIGITRAFFIC_AIS_LOCATIONS_URL,
     ))) risks += 1;
-  } else {
+  } else if (aisOkSeen) {
+    /* F7 #696 r2 pkt 5: zamykaj SOURCE_DOWN tylko po realnym, poprawnym odczycie AIS. */
     await deps.store.resolveRisks('SOURCE_DOWN:DIGITRAFFIC_AIS:');
   }
 

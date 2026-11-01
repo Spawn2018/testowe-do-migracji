@@ -1,14 +1,16 @@
 /**
- * BN3 decyzja 61 / F7 #696 r1 — podejrzenie odwołania: ETA+45…+6 h bez ATA
- * + AIS stoi w **porcie wyjścia** → FERRY MEDIUM. Bez zmiany statusu.
+ * BN3 decyzja 61 / 61b / F7 #696 r2 — podejrzenie odwołania:
+ * ETA+45…+90 bez ATA **albo** zniknięcie (dep+45…ETA+90) + AIS w porcie wyjścia.
+ * ATD/ATA → bez alarmu; keep poza oknem do AIS poza hubem / ATD / ATA / HHL.
  */
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import {
-  cancelSuspectDue, cancelSuspectRiskDedup, cancelSuspectTrigger,
-  collectPortCallIds, departureHubsForRoute, isFreshAisFix, isStandingAtDeparturePort,
-  isStandingInGulfPort, mergePortCallIdsIfComplete, portCallDisappeared,
-  CANCEL_SUSPECT_MAX_SOG_KN, CANCEL_SUSPECT_WINDOW_AFTER_ETA_H, GULF_FERRY_ROUTES,
+  cancelSuspectDue, cancelSuspectDisappearDue, cancelSuspectRiskDedup, cancelSuspectTrigger,
+  collectPortCallIds, departureHubsForRoute, isDigitrafficAisPayloadOk, isFreshAisFix,
+  isStandingAtDeparturePort, isStandingInGulfPort, mergePortCallIdsIfComplete, portCallDisappeared,
+  CANCEL_SUSPECT_MAX_AIS_AGE_MIN, CANCEL_SUSPECT_MAX_SOG_KN,
+  CANCEL_SUSPECT_WINDOW_AFTER_ETA_MIN, GULF_FERRY_ROUTES,
 } from '../supabase/functions/_shared/ferry/cancelSuspect';
 import { parseDigitrafficLocations } from '../supabase/functions/_shared/ferry/digitraffic';
 import {
@@ -22,7 +24,7 @@ const AIS_TLL = fx('digitraffic-ais-standing-tll-synthetic.json');
 const AIS_HEL = fx('digitraffic-ais-standing-hel-synthetic.json');
 const AIS_MOVE = fx('digitraffic-ais-moving-synthetic.json');
 const MEGA = 'v-mega';
-/** ETA 10:00Z → okno 10:45…16:00; now 11:00 = w oknie. */
+/** ETA 10:00Z → okno podnoszenia 10:45…11:30; now 11:00 = w oknie. */
 const NOW = new Date('2026-10-30T11:00:00Z');
 const ETA = '2026-10-30T10:00:00.000Z';
 const DEP = '2026-10-30T07:30:00.000Z';
@@ -161,16 +163,24 @@ function gulfSailing(over: Partial<DbSailing> = {}): DbSailing {
   };
 }
 
-describe('BN3 cancel-suspect helpers (F7 #696 r1)', () => {
-  it('trasy zatoki + okno ETA grace…+6 h (B6)', () => {
+describe('BN3 cancel-suspect helpers (F7 #696 r2 / 61b)', () => {
+  it('trasy zatoki + okno ETA grace…+90 min', () => {
     expect(GULF_FERRY_ROUTES.has('TLL-HEL')).toBe(true);
     expect(GULF_FERRY_ROUTES.has('GDY-KAA')).toBe(false);
     const eta = '2026-10-30T10:00:00.000Z';
     expect(cancelSuspectDue(eta, Date.parse('2026-10-30T10:44:00Z'))).toBe(false);
     expect(cancelSuspectDue(eta, Date.parse('2026-10-30T10:45:00Z'))).toBe(true);
-    expect(cancelSuspectDue(eta, Date.parse('2026-10-30T16:00:00Z'))).toBe(true);
-    expect(cancelSuspectDue(eta, Date.parse('2026-10-30T16:00:01Z'))).toBe(false);
-    expect(CANCEL_SUSPECT_WINDOW_AFTER_ETA_H).toBe(6);
+    expect(cancelSuspectDue(eta, Date.parse('2026-10-30T11:30:00Z'))).toBe(true);
+    expect(cancelSuspectDue(eta, Date.parse('2026-10-30T11:30:01Z'))).toBe(false);
+    expect(CANCEL_SUSPECT_WINDOW_AFTER_ETA_MIN).toBe(90);
+  });
+
+  it('okno zniknięcia: dep+45 … ETA+90 (samodzielne przed ETA+45)', () => {
+    expect(cancelSuspectDisappearDue(DEP, ETA, Date.parse('2026-10-30T08:14:00Z'))).toBe(false);
+    expect(cancelSuspectDisappearDue(DEP, ETA, Date.parse('2026-10-30T08:15:00Z'))).toBe(true);
+    expect(cancelSuspectDisappearDue(DEP, ETA, Date.parse('2026-10-30T09:00:00Z'))).toBe(true);
+    expect(cancelSuspectDisappearDue(DEP, ETA, Date.parse('2026-10-30T11:30:00Z'))).toBe(true);
+    expect(cancelSuspectDisappearDue(DEP, ETA, Date.parse('2026-10-30T11:30:01Z'))).toBe(false);
   });
 
   it('B1: hub wyjścia TLL-HEL = Vanasadam; HEL ≠ wyjście', () => {
@@ -183,7 +193,7 @@ describe('BN3 cancel-suspect helpers (F7 #696 r1)', () => {
     expect(isStandingAtDeparturePort(atHel, 'HEL-TLL')).toBe(true);
   });
 
-  it('B3: brak SOG ≠ stoi; próg SOG na granicy (M12)', () => {
+  it('B3/M12: brak SOG ≠ stoi; próg SOG przez stałą', () => {
     const base = parseDigitrafficLocations(JSON.parse(AIS_TLL), 276829000)!;
     expect(isStandingAtDeparturePort({ ...base, sogKn: null }, 'TLL-HEL')).toBe(false);
     expect(isStandingAtDeparturePort({ ...base, sogKn: undefined }, 'TLL-HEL')).toBe(false);
@@ -192,13 +202,22 @@ describe('BN3 cancel-suspect helpers (F7 #696 r1)', () => {
     expect(isStandingInGulfPort({ ...base, sogKn: null })).toBe(false);
   });
 
-  it('B2: świeżość AIS ≤ 60 min', () => {
+  it('B2/M14: świeżość AIS przez stałą (2 h > 60 min)', () => {
+    expect(CANCEL_SUSPECT_MAX_AIS_AGE_MIN).toBe(60);
     const fix = parseDigitrafficLocations(JSON.parse(AIS_TLL), 276829000)!;
     expect(isFreshAisFix(fix, NOW.toISOString())).toBe(true);
-    expect(isFreshAisFix({
+    const twoH = {
       ...fix,
-      timestampUtc: '2025-10-30T12:00:00.000Z',
-    }, NOW.toISOString())).toBe(false);
+      timestampUtc: new Date(NOW.getTime() - 2 * 3600_000).toISOString(),
+    };
+    expect(isFreshAisFix(twoH, NOW.toISOString())).toBe(false);
+    expect(isFreshAisFix(twoH, NOW.toISOString(), 100_000)).toBe(true);
+  });
+
+  it('NB2: isDigitrafficAisPayloadOk — {} zła; features:[] OK', () => {
+    expect(isDigitrafficAisPayloadOk({})).toBe(false);
+    expect(isDigitrafficAisPayloadOk({ type: 'FeatureCollection', features: [] })).toBe(true);
+    expect(isDigitrafficAisPayloadOk(null)).toBe(false);
   });
 
   it('B5: mergePortCallIdsIfComplete — pusta / jedna strona → null', () => {
@@ -231,10 +250,10 @@ describe('BN3 cancel-suspect helpers (F7 #696 r1)', () => {
     expect(t.disappeared).toBe(true);
   });
 
-  it('M9: zniknięcie bez odejścia (dep w przyszłości) → bez disappeared', () => {
+  it('M9: zniknięcie przed dep+45 → bez disappeared', () => {
     const t = cancelSuspectTrigger({
       etaIso: ETA,
-      departureIso: '2026-10-30T12:00:00.000Z',
+      departureIso: '2026-10-30T10:30:00.000Z',
       nowMs: NOW.getTime(),
       sourceRef: 'digitraffic:portcall:999:TLL-HEL',
       activePortCallIds: new Set(['1']),
@@ -243,9 +262,22 @@ describe('BN3 cancel-suspect helpers (F7 #696 r1)', () => {
     expect(t.disappeared).toBe(false);
     expect(t.check).toBe(true);
   });
+
+  it('samodzielne zniknięcie przed ETA+45', () => {
+    const t = cancelSuspectTrigger({
+      etaIso: '2026-10-30T12:00:00.000Z',
+      departureIso: DEP,
+      nowMs: Date.parse('2026-10-30T09:00:00Z'),
+      sourceRef: 'digitraffic:portcall:999:TLL-HEL',
+      activePortCallIds: new Set(['1']),
+    });
+    expect(t.due).toBe(false);
+    expect(t.disappeared).toBe(true);
+    expect(t.check).toBe(true);
+  });
 });
 
-describe('BN3 ferry-portnet × cancel-suspect AIS (F7 #696 r1)', () => {
+describe('BN3 ferry-portnet × cancel-suspect AIS (F7 #696 r2)', () => {
   it('ETA+45 + AIS SOG≈0 w porcie wyjścia (TLL) → FERRY MEDIUM; status bez zmian', async () => {
     const st = new MemStore();
     st.sailings.push(gulfSailing());
@@ -264,6 +296,145 @@ describe('BN3 ferry-portnet × cancel-suspect AIS (F7 #696 r1)', () => {
     expect(st.sailings[0]!.status).toBe(statusBefore);
     expect(st.sailings[0]!.actual_arrival_at).toBeNull();
     expect(r.observations?.cancel_suspect_hits).toBe('1');
+  });
+
+  it('NB1: HEL-TLL z ATD + powrót do HEL → brak alarmu; DOPLYNAL działa', async () => {
+    const st = new MemStore();
+    st.sailings.push(gulfSailing({
+      id: 's-hel-atd',
+      route: 'HEL-TLL',
+      departure_at: '2026-10-30T07:30:00.000Z',
+      arrival_at: '2026-10-30T10:00:00.000Z',
+      actual_departure_at: '2026-10-30T07:32:00.000Z',
+      status: 'W_REJSIE',
+    }));
+    const now = new Date('2026-10-30T13:00:00Z');
+    await runFerryPortnet(deps(st, {
+      'port-calls': PORTNET_OTHER,
+      'locations?mmsi=': aisJson({
+        lat: 60.153, lon: 24.915, sog: 0.1,
+        tsMs: Date.parse('2026-10-30T12:50:00Z'),
+      }),
+    }, now));
+    expect(st.risks.filter((x) => x.dedup.startsWith('FERRY_CANCEL_SUSPECT:'))).toHaveLength(0);
+    expect(st.sailings[0]!.status).toBe('DOPLYNAL');
+  });
+
+  it('TLL-HEL po nawrocie w TLL o ETA+3 h → brak nowego alarmu', async () => {
+    const st = new MemStore();
+    st.sailings.push(gulfSailing());
+    const late = new Date('2026-10-30T13:00:00Z');
+    await runFerryPortnet(deps(st, {
+      'port-calls': PORTNET_OTHER,
+      'locations?mmsi=': aisJson({
+        lat: 59.443, lon: 24.77, sog: 0.2,
+        tsMs: Date.parse('2026-10-30T12:50:00Z'),
+      }),
+    }, late));
+    expect(st.risks.filter((x) => x.dedup.startsWith('FERRY_CANCEL_SUSPECT:'))).toHaveLength(0);
+  });
+
+  it('podejrzenie z okna zostaje o ETA+8 h gdy statek wciąż stoi', async () => {
+    const st = new MemStore();
+    st.sailings.push(gulfSailing());
+    st.risks.push({
+      kind: 'FERRY', severity: 'MEDIUM', title: 'x', titleKey: 'rk_ferry_cancel_suspect',
+      dedup: cancelSuspectRiskDedup('s-gulf-1'), detail: {},
+    });
+    const late = new Date('2026-10-30T18:00:00Z');
+    await runFerryPortnet(deps(st, {
+      'port-calls': PORTNET_OTHER,
+      'locations?mmsi=': aisJson({
+        lat: 59.443, lon: 24.77, sog: 0.1,
+        tsMs: Date.parse('2026-10-30T17:50:00Z'),
+      }),
+    }, late));
+    expect(st.risks.some((x) => x.dedup === cancelSuspectRiskDedup('s-gulf-1'))).toBe(true);
+  });
+
+  it('podejrzenie zostaje o ETA+8 h gdy AIS nieznany (stary)', async () => {
+    const st = new MemStore();
+    st.sailings.push(gulfSailing());
+    st.risks.push({
+      kind: 'FERRY', severity: 'MEDIUM', title: 'x', titleKey: 'rk_ferry_cancel_suspect',
+      dedup: cancelSuspectRiskDedup('s-gulf-1'), detail: {},
+    });
+    const late = new Date('2026-10-30T18:00:00Z');
+    await runFerryPortnet(deps(st, {
+      'port-calls': PORTNET_OTHER,
+      'locations?mmsi=': aisJson({
+        lat: 59.443, lon: 24.77, sog: 0.1,
+        tsMs: Date.parse('2026-10-30T13:00:00Z'),
+      }),
+    }, late));
+    expect(st.risks.some((x) => x.dedup === cancelSuspectRiskDedup('s-gulf-1'))).toBe(true);
+  });
+
+  it('zamknięcie podejrzenia po ATD', async () => {
+    const st = new MemStore();
+    st.sailings.push(gulfSailing({
+      actual_departure_at: '2026-10-30T07:40:00.000Z',
+    }));
+    st.risks.push({
+      kind: 'FERRY', severity: 'MEDIUM', title: 'x', titleKey: 'rk_ferry_cancel_suspect',
+      dedup: cancelSuspectRiskDedup('s-gulf-1'), detail: {},
+    });
+    await runFerryPortnet(deps(st, {
+      'port-calls': PORTNET_OTHER,
+      'locations?mmsi=': AIS_TLL,
+    }));
+    expect(st.risks.filter((x) => x.dedup.startsWith('FERRY_CANCEL_SUSPECT:'))).toHaveLength(0);
+  });
+
+  it('zamknięcie podejrzenia po ATA', async () => {
+    const st = new MemStore();
+    st.sailings.push(gulfSailing({
+      actual_arrival_at: '2026-10-30T10:05:00.000Z',
+    }));
+    st.risks.push({
+      kind: 'FERRY', severity: 'MEDIUM', title: 'x', titleKey: 'rk_ferry_cancel_suspect',
+      dedup: cancelSuspectRiskDedup('s-gulf-1'), detail: {},
+    });
+    await runFerryPortnet(deps(st, {
+      'port-calls': PORTNET_OTHER,
+      'locations?mmsi=': AIS_TLL,
+    }));
+    expect(st.risks.filter((x) => x.dedup.startsWith('FERRY_CANCEL_SUSPECT:'))).toHaveLength(0);
+  });
+
+  it('zamknięcie podejrzenia po AIS w ruchu', async () => {
+    const st = new MemStore();
+    st.sailings.push(gulfSailing());
+    st.risks.push({
+      kind: 'FERRY', severity: 'MEDIUM', title: 'x', titleKey: 'rk_ferry_cancel_suspect',
+      dedup: cancelSuspectRiskDedup('s-gulf-1'), detail: {},
+    });
+    await runFerryPortnet(deps(st, {
+      'port-calls': PORTNET_OTHER,
+      'locations?mmsi=': AIS_MOVE,
+    }));
+    expect(st.risks.filter((x) => x.dedup.startsWith('FERRY_CANCEL_SUSPECT:'))).toHaveLength(0);
+  });
+
+  it('samodzielna gałąź zniknięcia przed ETA+45 + AIS w TLL', async () => {
+    const st = new MemStore();
+    st.sailings.push(gulfSailing({
+      id: 's-gone-early',
+      arrival_at: '2026-10-30T12:00:00.000Z',
+      source_ref: 'digitraffic:portcall:999001:TLL-HEL',
+      source: 'VIKING',
+    }));
+    const early = new Date('2026-10-30T09:00:00Z');
+    await runFerryPortnet(deps(st, {
+      'port-calls': PORTNET_OTHER,
+      'locations?mmsi=': aisJson({
+        lat: 59.443, lon: 24.77, sog: 0.2,
+        tsMs: Date.parse('2026-10-30T08:50:00Z'),
+      }),
+    }, early));
+    const risks = st.risks.filter((x) => x.dedup.startsWith('FERRY_CANCEL_SUSPECT:'));
+    expect(risks).toHaveLength(1);
+    expect((risks[0]!.detail as { powod?: string }).powod).toBe('PORTCALL_GONE');
   });
 
   it('B1: AIS w HEL przy TLL-HEL → bez ryzyka (port docelowy)', async () => {
@@ -286,7 +457,7 @@ describe('BN3 ferry-portnet × cancel-suspect AIS (F7 #696 r1)', () => {
     expect(st.risks.filter((x) => x.dedup.startsWith('FERRY_CANCEL_SUSPECT:'))).toHaveLength(0);
   });
 
-  it('B2: stary AIS (rok wstecz) → bez ryzyka', async () => {
+  it('B2: stary AIS (rok wstecz) → bez nowego; keep gdy otwarte (NB2)', async () => {
     const st = new MemStore();
     st.sailings.push(gulfSailing());
     await runFerryPortnet(deps(st, {
@@ -297,6 +468,49 @@ describe('BN3 ferry-portnet × cancel-suspect AIS (F7 #696 r1)', () => {
       }),
     }));
     expect(st.risks.filter((x) => x.dedup.startsWith('FERRY_CANCEL_SUSPECT:'))).toHaveLength(0);
+
+    st.risks.push({
+      kind: 'FERRY', severity: 'MEDIUM', title: 'x', titleKey: 'rk_ferry_cancel_suspect',
+      dedup: cancelSuspectRiskDedup('s-gulf-1'), detail: {},
+    });
+    await runFerryPortnet(deps(st, {
+      'port-calls': PORTNET_OTHER,
+      'locations?mmsi=': aisJson({
+        lat: 59.443, lon: 24.77, sog: 0.2,
+        tsMs: Date.parse('2025-10-30T12:00:00Z'),
+      }),
+    }));
+    expect(st.risks.some((x) => x.dedup === cancelSuspectRiskDedup('s-gulf-1'))).toBe(true);
+  });
+
+  it('NB2: features: [] z otwartym ryzykiem → keep', async () => {
+    const st = new MemStore();
+    st.sailings.push(gulfSailing());
+    st.risks.push({
+      kind: 'FERRY', severity: 'MEDIUM', title: 'x', titleKey: 'rk_ferry_cancel_suspect',
+      dedup: cancelSuspectRiskDedup('s-gulf-1'), detail: {},
+    });
+    await runFerryPortnet(deps(st, {
+      'port-calls': PORTNET_OTHER,
+      'locations?mmsi=': JSON.stringify({ type: 'FeatureCollection', features: [] }),
+    }));
+    expect(st.risks.some((x) => x.dedup === cancelSuspectRiskDedup('s-gulf-1'))).toBe(true);
+    expect(st.risks.some((x) => x.dedup.startsWith('SOURCE_DOWN:DIGITRAFFIC_AIS:'))).toBe(false);
+  });
+
+  it('NB2: {} z otwartym ryzykiem → keep + SOURCE_DOWN', async () => {
+    const st = new MemStore();
+    st.sailings.push(gulfSailing());
+    st.risks.push({
+      kind: 'FERRY', severity: 'MEDIUM', title: 'x', titleKey: 'rk_ferry_cancel_suspect',
+      dedup: cancelSuspectRiskDedup('s-gulf-1'), detail: {},
+    });
+    await runFerryPortnet(deps(st, {
+      'port-calls': PORTNET_OTHER,
+      'locations?mmsi=': '{}',
+    }));
+    expect(st.risks.some((x) => x.dedup === cancelSuspectRiskDedup('s-gulf-1'))).toBe(true);
+    expect(st.risks.some((x) => x.dedup.startsWith('SOURCE_DOWN:DIGITRAFFIC_AIS:'))).toBe(true);
   });
 
   it('B3: brak pola sog → bez ryzyka', async () => {
@@ -319,15 +533,15 @@ describe('BN3 ferry-portnet × cancel-suspect AIS (F7 #696 r1)', () => {
     expect(st.risks.filter((x) => x.dedup.startsWith('FERRY_CANCEL_SUSPECT:'))).toHaveLength(0);
   });
 
-  it('B6: ETA+7 h (poza oknem) → bez ryzyka mimo AIS w TLL', async () => {
+  it('poza oknem ETA+90 → bez nowego ryzyka mimo AIS w TLL', async () => {
     const st = new MemStore();
     st.sailings.push(gulfSailing());
-    const late = new Date('2026-10-30T17:05:00Z');
+    const late = new Date('2026-10-30T12:00:00Z');
     await runFerryPortnet(deps(st, {
       'port-calls': PORTNET_OTHER,
       'locations?mmsi=': aisJson({
         lat: 59.443, lon: 24.77, sog: 0.2,
-        tsMs: Date.parse('2026-10-30T17:00:00Z'),
+        tsMs: Date.parse('2026-10-30T11:50:00Z'),
       }),
     }, late));
     expect(st.risks.filter((x) => x.dedup.startsWith('FERRY_CANCEL_SUSPECT:'))).toHaveLength(0);
@@ -369,31 +583,6 @@ describe('BN3 ferry-portnet × cancel-suspect AIS (F7 #696 r1)', () => {
     expect(st.risks.filter((x) => x.dedup.startsWith('FERRY_CANCEL_SUSPECT:'))).toHaveLength(0);
   });
 
-  it('DOPLYNAL → bez; potem resolve gdy AIS nie stoi', async () => {
-    const st = new MemStore();
-    st.sailings.push(gulfSailing({
-      id: 's-ata', actual_arrival_at: '2026-10-30T10:05:00.000Z', status: 'DOPLYNAL',
-    }));
-    await runFerryPortnet(deps(st, {
-      'port-calls': PORTNET_OTHER,
-      'locations?mmsi=': AIS_TLL,
-    }));
-    expect(st.risks.filter((x) => x.dedup.startsWith('FERRY_CANCEL_SUSPECT:'))).toHaveLength(0);
-
-    st.sailings = [gulfSailing()];
-    await runFerryPortnet(deps(st, {
-      'port-calls': PORTNET_OTHER,
-      'locations?mmsi=': AIS_TLL,
-    }));
-    expect(st.risks.filter((x) => x.dedup.startsWith('FERRY_CANCEL_SUSPECT:'))).toHaveLength(1);
-
-    await runFerryPortnet(deps(st, {
-      'port-calls': PORTNET_OTHER,
-      'locations?mmsi=': AIS_MOVE,
-    }));
-    expect(st.risks.filter((x) => x.dedup.startsWith('FERRY_CANCEL_SUSPECT:'))).toHaveLength(0);
-  });
-
   it('B5: pusta odpowiedź Portnet ≠ zniknięcie (nawet z source_ref)', async () => {
     const st = new MemStore();
     st.sailings.push(gulfSailing({
@@ -401,7 +590,6 @@ describe('BN3 ferry-portnet × cancel-suspect AIS (F7 #696 r1)', () => {
       source_ref: 'digitraffic:portcall:999001:TLL-HEL',
       source: 'VIKING',
     }));
-    /* ETA+45 i tak w oknie — ale powod nie PORTCALL_GONE gdy ids=null; AIS w TLL → ETA_GRACE. */
     await runFerryPortnet(deps(st, {
       'port-calls': JSON.stringify({ portCalls: [] }),
       'locations?mmsi=': AIS_TLL,
@@ -431,7 +619,7 @@ describe('BN3 ferry-portnet × cancel-suspect AIS (F7 #696 r1)', () => {
     expect(st.sailings[0]!.status).toBe('W_REJSIE');
   });
 
-  it('M1: zniknięcie bez AIS (HTTP 503) → SOURCE_DOWN, bez fałszywego stoi; keep', async () => {
+  it('M1: zniknięcie bez wymogu „stoi” przy AIS down — keep + SOURCE_DOWN', async () => {
     const st = new MemStore();
     st.sailings.push(gulfSailing({
       id: 's-down',
@@ -464,6 +652,30 @@ describe('BN3 ferry-portnet × cancel-suspect AIS (F7 #696 r1)', () => {
     expect(st.risks.some((x) => x.dedup.startsWith('SOURCE_DOWN:DIGITRAFFIC_AIS:'))).toBe(true);
   });
 
+  it('M20: SOURCE_DOWN zamykane dopiero po poprawnym AIS (powrót)', async () => {
+    const st = new MemStore();
+    st.sailings.push(gulfSailing({
+      actual_departure_at: '2026-10-30T07:40:00.000Z',
+    }));
+    st.risks.push({
+      kind: 'FERRY', severity: 'MEDIUM', title: 'AIS down', titleKey: 'rk_source_down',
+      dedup: 'SOURCE_DOWN:DIGITRAFFIC_AIS:x', detail: {},
+    });
+    /* ATD → brak odpytania AIS → SOURCE_DOWN zostaje */
+    await runFerryPortnet(deps(st, {
+      'port-calls': PORTNET_OTHER,
+      'locations?mmsi=': AIS_TLL,
+    }));
+    expect(st.risks.some((x) => x.dedup.startsWith('SOURCE_DOWN:DIGITRAFFIC_AIS:'))).toBe(true);
+
+    st.sailings = [gulfSailing()];
+    await runFerryPortnet(deps(st, {
+      'port-calls': PORTNET_OTHER,
+      'locations?mmsi=': AIS_TLL,
+    }));
+    expect(st.risks.some((x) => x.dedup.startsWith('SOURCE_DOWN:DIGITRAFFIC_AIS:'))).toBe(false);
+  });
+
   it('M6: dedup per rejs (nie wspólny) — dwa rejsy → dwa ryzyka', async () => {
     const st = new MemStore();
     st.sailings.push(gulfSailing({ id: 's-a' }));
@@ -483,7 +695,6 @@ describe('BN3 ferry-portnet × cancel-suspect AIS (F7 #696 r1)', () => {
       cancelSuspectRiskDedup('s-a'),
       cancelSuspectRiskDedup('s-b'),
     ]);
-    /* asercja bez użycia cancelSuspectRiskDedup w liczeniu — jawne stringi */
     expect(new Set(risks.map((r) => r.dedup)).size).toBe(2);
   });
 
@@ -498,9 +709,8 @@ describe('BN3 ferry-portnet × cancel-suspect AIS (F7 #696 r1)', () => {
     expect(st.sailings[0]!.status).toBe('ZAPLANOWANY');
   });
 
-  it('closeStaleFiToEe: podejrzenie (ten sam przebieg) blokuje auto-DOPLYNAL (decyzja 61b)', async () => {
+  it('closeStaleFiToEe: otwarte podejrzenie (bez ATD) blokuje auto-DOPLYNAL', async () => {
     const st = new MemStore();
-    /* HEL-TLL, arrival +2 h minione, AIS stoi w HEL (wyjście) — cancel-suspect przed closeStale. */
     st.sailings.push(gulfSailing({
       id: 's-hel',
       route: 'HEL-TLL',
@@ -508,6 +718,10 @@ describe('BN3 ferry-portnet × cancel-suspect AIS (F7 #696 r1)', () => {
       arrival_at: '2026-10-30T08:00:00.000Z',
       status: 'W_REJSIE',
     }));
+    st.risks.push({
+      kind: 'FERRY', severity: 'MEDIUM', title: 'x', titleKey: 'rk_ferry_cancel_suspect',
+      dedup: cancelSuspectRiskDedup('s-hel'), detail: {},
+    });
     const now = new Date('2026-10-30T11:00:00Z');
     await runFerryPortnet(deps(st, {
       'port-calls': PORTNET_OTHER,
