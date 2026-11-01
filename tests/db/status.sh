@@ -2444,6 +2444,61 @@ q "alter table public.sailings drop constraint if exists sailings_route_check;
    alter table public.sailings add constraint sailings_route_check
      check (route ~ '^[A-Z][A-Z0-9_-]{0,62}$');" >/dev/null
 
+# BN4 0368: AIS arrival backup FI (HEL) + nowe SE (STO/KPS).
+# PORT_IN wyłączony na czas backupu (jak #649).
+S367h=77777777-0000-0000-0000-00000000367a
+S367s=77777777-0000-0000-0000-00000000367b
+S367k=77777777-0000-0000-0000-00000000367c
+L367h=$(L e7)
+L367s=$(L e8)
+L367k=$(L e9)
+q "alter table public.sailings drop constraint if exists sailings_route_check;
+   insert into sailings (id,project_id,vessel_id,route,departure_at,arrival_at,actual_departure_at,actual_arrival_at,status,source) values
+    ('$S367h','$P','66666666-0000-0000-0000-000000000001','TLL-HEL',
+     '2026-10-14 06:00+00','2026-10-14 08:30+00','2026-10-14 06:00+00','2026-10-14 08:30+00','DOPLYNAL','TALLINK'),
+    ('$S367s','$P','66666666-0000-0000-0000-000000000001','TLL-STO',
+     '2026-10-14 16:00+00','2026-10-15 06:00+00','2026-10-14 16:00+00','2026-10-15 06:00+00','DOPLYNAL','TALLINK'),
+    ('$S367k','$P','66666666-0000-0000-0000-000000000001','PLD-KPS',
+     '2026-10-14 18:00+00','2026-10-15 04:00+00','2026-10-14 18:00+00','2026-10-15 04:00+00','DOPLYNAL','DFDS');" >/dev/null
+mk $L367h H367 "'HHL/H367'" "'SCX/H367'" FERRY "'$S367h'"
+mk $L367s S367 "'HHL/S367'" "'SCX/S367'" FERRY "'$S367s'"
+mk $L367k K367 "'HHL/K367'" "'SCX/K367'" FERRY "'$S367k'"
+q "insert into load_events (load_id, event_type, occurred_at) values
+    ('$L367h','MILESTONE_LOADED','2026-10-13 08:00+00'),
+    ('$L367s','MILESTONE_LOADED','2026-10-13 08:00+00'),
+    ('$L367k','MILESTONE_LOADED','2026-10-13 08:00+00')" >/dev/null
+chk "BN4: finland_land_geom istnieje" \
+  "select to_regprocedure('public.finland_land_geom()') is not null" t
+chk "BN4: Kapellskär w sweden_land_geom" \
+  "select st_covers(public.sweden_land_geom(), st_setsrid(st_makepoint(19.066, 59.723), 4326))" t
+q "update public.geofences set active = false
+    where project_id = '$P' and kind = 'PORT_IN' and country in ('SE', 'FI')" >/dev/null
+# Helsinki West Harbour — środek PORT_IN FI
+chk "BN4: TLL-HEL w porcie HEL → AIS backup true" \
+  "select public.apply_ferry_ais_arrival_backup('$L367h', 60.15400, 24.91400, '2026-10-14 08:45+00')" t
+chk "BN4: TLL-HEL w porcie → AT_PORT_NYNASHAMN" "$(st $L367h)" AT_PORT_NYNASHAMN
+# Inland FI ≥2 km (na północ od portu) → Droga SE (enum)
+q "select set_config('tower.status_ctx','on',true); update loads set status='FERRY' where id='$L367h'" >/dev/null
+chk "BN4: TLL-HEL ląd FI ≥2 km → AIS backup true" \
+  "select public.apply_ferry_ais_arrival_backup('$L367h', 60.28, 24.95, '2026-10-14 09:30+00')" t
+chk "BN4: TLL-HEL ląd FI → IN_TRANSIT_SE" "$(st $L367h)" IN_TRANSIT_SE
+# Regresja: TLL-HEL nie reaguje na ląd SE (kraj przypłynięcia = FI)
+q "select set_config('tower.status_ctx','on',true); update loads set status='FERRY' where id='$L367h'" >/dev/null
+chk "BN4: TLL-HEL + ląd SE → nadal false" \
+  "select public.apply_ferry_ais_arrival_backup('$L367h', 59.00, 17.90, '2026-10-14 10:00+00')" f
+# Nowe SE: Stockholm (TLL-STO) i Kapellskär (PLD-KPS) ≥2 km od PORT_IN
+chk "BN4: TLL-STO ląd SE → AIS backup true" \
+  "select public.apply_ferry_ais_arrival_backup('$L367s', 59.40, 18.00, '2026-10-15 07:00+00')" t
+chk "BN4: TLL-STO → IN_TRANSIT_SE" "$(st $L367s)" IN_TRANSIT_SE
+chk "BN4: PLD-KPS Kapellskär → AIS backup true" \
+  "select public.apply_ferry_ais_arrival_backup('$L367k', 59.75, 18.95, '2026-10-15 05:00+00')" t
+chk "BN4: PLD-KPS → IN_TRANSIT_SE" "$(st $L367k)" IN_TRANSIT_SE
+q "update public.geofences set active = true
+    where project_id = '$P' and kind = 'PORT_IN' and country in ('SE', 'FI')" >/dev/null
+q "alter table public.sailings drop constraint if exists sailings_route_check;
+   alter table public.sailings add constraint sailings_route_check
+     check (route ~ '^[A-Z][A-Z0-9_-]{0,62}$');" >/dev/null
+
 # BN1 0344 F7: apply_ferry_se + mismatch — e2e (bez pg_get_functiondef like)
 # e2e SE: OTHER/TLL-HEL bez zmiany; GDN-NYN / NYN-GDN / GDY-KAA → Droga SE
 S640o=77777777-0000-0000-0000-00000000640a

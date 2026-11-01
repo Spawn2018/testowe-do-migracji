@@ -7469,6 +7469,17 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Dalej:** DP kolejka BN3 (np. DP-108 ODWOLANY→FERRY_CANCELLED) albo ATD wiarygodne / BN4.
 - Bez push na main.
 
+## 2026-11-01 17:50 — BN4 pkt 8 cz.2: arrival backup FI/SE (**0368**)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE. Hotfix AIS INFO = PR #707 / **0367** (osobno).
+- Scalanie wcześniejsze: **#706** `3c0b76ee` / **0366**. Bez push na main.
+- **Krok (BN4 pkt 8 cz.2):**
+  - migracja **0368**: `apply_ferry_ais_arrival_backup` — kraj przypłynięcia SE|FI; PORT_IN/lądu wg kraju;
+  - `finland_land_geom` (Helsinki/Vuosaari); `sweden_land_geom` + Kapellskär (PLD-KPS);
+  - status EXPECTED **524** (+11: FI port/lądu, regresja SE, TLL-STO, PLD-KPS).
+- **Dalej:** push → CI → gotowe do F7. Po F7: BN9-c2 / BN5.
+- Bez push na main.
+
 ## 2026-11-01 16:50 — #705 SCALONE; start BN4 pkt 8 (szacunek + map + AIS_<port>)
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne`.
