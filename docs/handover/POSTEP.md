@@ -7469,6 +7469,18 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Dalej:** DP kolejka BN3 (np. DP-108 ODWOLANY→FERRY_CANCELLED) albo ATD wiarygodne / BN4.
 - Bez push na main.
 
+## 2026-11-01 13:55 — #701 F7 r1 B1: mapy portów AIS (Zatoka)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne`.
+- Scalanie: **#701** F7 r1 BLOKER @ `bed9fc86` (fałszywe opóźnienia Zatoki vs GDN/NYN) — poprawki w tym PR; bez scalenia. Bez push na main.
+- **Krok (F7 r1 B1):**
+  - `ROUTE_AIS_PORTS` + `AIS_PORT_COORDS` (HEL/HELA, TLL/TLLA, MUU, VUO, PLD, KPS, STO, GDN, GDY, NYN, KAA);
+  - `departurePortForRoute` / `arrivalPortForRoute` → `null` bez mapy (nigdy domyślny GDN/NYN);
+  - `aisDepartureDelayMin` + geofence #421 tylko przy hubie; Zatoka: obs z SOG, nie `interpretFix(NYN)`;
+  - vitest bn4-ais: XPRS TLLA-HEL 20 kn → brak `AIS_DEP_DELAY`; trasa XXX → null.
+- **Dalej:** push → CI → gotowe do F7 @ sha. Po F7: luka AIS 30 min / `AIS_<port>` / arrival backup.
+- Bez push na main.
+
 ## 2026-11-01 13:35 — #699 SCALONE; start BN4 AIS
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE; #697 — właściciel 73–78 OK, **79 bez SMS** (DP-125 ANULOWANE), 80 zgoda ERR. Bez nowych `pilne`.

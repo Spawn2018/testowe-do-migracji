@@ -1,6 +1,7 @@
 /**
  * BN4 (#573) — AIS Zatoka Fińska: bbox aisstream + śledzenie MMSI z `vessels`
  * (nie tylko 5 PL/SE). Digitraffic poll dla Megastar itd.
+ * F7 #701 r1 B1: mapy portów wszystkich tras — bez domyślnego GDN/NYN.
  */
 import { describe, expect, it } from 'vitest';
 import {
@@ -10,7 +11,10 @@ import { isTrackedMmsi, TRACKED_MMSI } from '../supabase/functions/_shared/ferry
 import {
   runFerryAis, type JobDeps, type SyncStore,
 } from '../supabase/functions/_shared/integrations/jobs';
-import type { VesselFix } from '../supabase/functions/_shared/ferry/digitraffic';
+import {
+  aisDepartureDelayMin, arrivalPortForRoute, departurePortForRoute, portCoords,
+  type VesselFix,
+} from '../supabase/functions/_shared/ferry/digitraffic';
 
 const MEGA = 'v-megastar';
 const XPRS = 'v-xprs';
@@ -33,9 +37,32 @@ const MEGA_AIS = JSON.stringify({
   }],
 });
 
+/** Viking XPRS (230705000) na morzu Zatoki ~20 kn — środek TLL↔HEL. */
+const XPRS_AIS = JSON.stringify({
+  type: 'FeatureCollection',
+  features: [{
+    type: 'Feature',
+    mmsi: 230705000,
+    geometry: { type: 'Point', coordinates: [24.9, 59.85] },
+    properties: {
+      mmsi: 230705000,
+      sog: 20,
+      cog: 0,
+      navStat: 0,
+      timestampExternal: Date.parse('2026-11-01T10:00:00.000Z'),
+    },
+  }],
+});
+
 class Mem {
   vesselPositions: { vesselId: string; lat: number; lon: number; source?: string }[] = [];
-  risks: { dedup: string }[] = [];
+  risks: { dedup: string; title?: string }[] = [];
+  sailings: {
+    id: string; vessel_id: string; route: string; departure_at: string; arrival_at: string;
+    delayed_departure_at: string | null; delayed_arrival_at: string | null;
+    actual_departure_at: string | null; actual_arrival_at: string | null;
+    status: string; source: string;
+  }[] = [];
   async projectId() { return 'p'; }
   async vessels() {
     return [
@@ -44,7 +71,7 @@ class Mem {
       { id: XPRS, name: 'M/F Viking XPRS', mmsi: 230705000, imo: 9375654 },
     ];
   }
-  async sailingsSince() { return []; }
+  async sailingsSince() { return this.sailings; }
   async insertSailings() { /* */ }
   async updateSailing() { return false; }
   async saveVesselPosition(vesselId: string, fix: VesselFix) {
@@ -52,7 +79,7 @@ class Mem {
       vesselId, lat: fix.lat, lon: fix.lon, source: fix.source,
     });
   }
-  async raiseRisk(r: { dedup: string }) { this.risks.push(r); return true; }
+  async raiseRisk(r: { dedup: string; title?: string }) { this.risks.push(r); return true; }
   async resolveRisks() { return 0; }
   async resolveStaleRisks() { return 0; }
   async latestPositions() { return []; }
@@ -99,5 +126,56 @@ describe('BN4 AIS — bbox Zatoka + MMSI z vessels', () => {
     expect(mega!.lat).toBeCloseTo(59.95, 4);
     expect(mega!.lon).toBeCloseTo(24.95, 4);
     expect(st.vesselPositions.some((p) => p.vesselId === WAW)).toBe(false);
+  });
+});
+
+describe('BN4 F7 #701 r1 B1 — mapy portów (bez domyślnego GDN/NYN)', () => {
+  it('TLLA-HEL / HELA-TLL / MUU-VUO: porty Zatoki, nie GDN/NYN', () => {
+    expect(departurePortForRoute('TLLA-HEL')).toBe('TLLA');
+    expect(arrivalPortForRoute('TLLA-HEL')).toBe('HELA');
+    expect(departurePortForRoute('HELA-TLL')).toBe('HELA');
+    expect(arrivalPortForRoute('HELA-TLL')).toBe('TLLA');
+    expect(departurePortForRoute('MUU-VUO')).toBe('MUU');
+    expect(arrivalPortForRoute('MUU-VUO')).toBe('VUO');
+    expect(departurePortForRoute('TLL-HEL')).toBe('TLL');
+    expect(arrivalPortForRoute('HEL-TLL')).toBe('TLL');
+    expect(departurePortForRoute('PLD-KPS')).toBe('PLD');
+    expect(arrivalPortForRoute('STO-TLL')).toBe('TLL');
+    expect(portCoords('TLLA')!.lat).toBeCloseTo(59.444, 3);
+    expect(portCoords('HELA')!.lat).toBeCloseTo(60.166, 3);
+  });
+
+  it('trasa bez mapy → null (nigdy GDN/NYN)', () => {
+    expect(departurePortForRoute('XXX-YYY')).toBeNull();
+    expect(arrivalPortForRoute('XXX-YYY')).toBeNull();
+    expect(portCoords(null)).toBeNull();
+    expect(aisDepartureDelayMin(
+      { mmsi: 1, lat: 59.85, lon: 24.9, sogKn: 20, cog: null, navStat: null, timestampUtc: '2026-11-01T10:00:00Z' },
+      '2026-11-01T10:05:00Z', '2026-11-01T12:00:00Z', 'XXX-YYY',
+    )).toBeNull();
+  });
+
+  it('Viking XPRS TLLA-HEL na morzu 20 kn → brak opóźnienia II-9 i brak delayed_*', async () => {
+    const now = '2026-11-01T10:05:00Z';
+    const dep = '2026-11-01T12:00:00Z';
+    // Środek Zatoki względem Gdańska = setki km → stary kod dawał opóźnienie; mapa TLLA → null lub małe.
+    expect(aisDepartureDelayMin(
+      { mmsi: 230705000, lat: 59.85, lon: 24.9, sogKn: 20, cog: 0, navStat: 0, timestampUtc: now },
+      now, dep, 'TLLA-HEL',
+    )).toBeNull();
+
+    const st = new Mem();
+    st.sailings.push({
+      id: 's-xprs', vessel_id: XPRS, route: 'TLLA-HEL',
+      departure_at: dep, arrival_at: '2026-11-01T14:00:00Z',
+      delayed_departure_at: null, delayed_arrival_at: null,
+      actual_departure_at: null, actual_arrival_at: null,
+      status: 'ZAPLANOWANY', source: 'VIKING',
+    });
+    const r = await runFerryAis(deps(st, { 'digitraffic.fi': XPRS_AIS }));
+    expect(r.ok).toBe(true);
+    expect(st.risks.some((x) => x.dedup.startsWith('AIS_DEP_DELAY:'))).toBe(false);
+    expect(st.sailings[0].delayed_departure_at).toBeNull();
+    expect(st.sailings[0].delayed_arrival_at).toBeNull();
   });
 });

@@ -95,33 +95,76 @@ export const GDANSK = { lat: 54.40372, lon: 18.68130 };
 /** Terminal Stena Gdynia — STENA-3 (do potwierdzenia mapą — D-STENA-COORDS). */
 export const GDYNIA = { lat: 54.53321, lon: 18.54425 };
 
-export type DeparturePort = 'GDN' | 'GDY' | 'NYN' | 'KAA';
+/**
+ * BN4 F7 #701 r1 B1: kody portów AIS dla **wszystkich** `FerryRoute`
+ * (HEL/HELA, TLL/TLLA, MUU, VUO, PLD, KPS, STO, NYN, GDN, GDY, KAA).
+ * Współrzędne jak seed `ferry_ports` (0338) + huby cancelSuspect (GULF).
+ * Nigdy nie domyślaj GDN/NYN — trasa bez mapy → null.
+ */
+export type AisPortCode =
+  | 'GDN' | 'GDY' | 'NYN' | 'KAA'
+  | 'TLL' | 'TLLA' | 'HEL' | 'HELA'
+  | 'MUU' | 'VUO' | 'PLD' | 'KPS' | 'STO';
 
-export function departurePortForRoute(route: string): DeparturePort {
-  if (route === 'GDY-KAA') return 'GDY';
-  if (route === 'KAA-GDY') return 'KAA';
-  if (route === 'NYN-GDN') return 'NYN';
-  return 'GDN';
+/** @deprecated BN4: używaj `AisPortCode` (pełna mapa). Alias dla starych wywołań PL/SE. */
+export type DeparturePort = AisPortCode;
+
+/** Port → hub AIS (lat/lon). Terminal A/D i Katajanokka osobno. */
+export const AIS_PORT_COORDS: Readonly<Record<AisPortCode, { lat: number; lon: number }>> = {
+  GDN: GDANSK,
+  GDY: GDYNIA,
+  NYN: NYNASHAMN,
+  KAA: KARLSKRONA,
+  /* Tallinn Terminal D (Tallink) — ferry_ports TLL_D */
+  TLL: { lat: 59.440, lon: 24.775 },
+  /* Tallinn Terminal A (Viking/Eckerö) — ferry_ports TLL_A */
+  TLLA: { lat: 59.444, lon: 24.768 },
+  /* Helsinki West Harbour T2 — ferry_ports HEL_T2 / catalog HEL */
+  HEL: { lat: 60.154, lon: 24.914 },
+  /* Helsinki Katajanokka — ferry_ports HEL_KAT / cancelSuspect HEL_ES */
+  HELA: { lat: 60.166, lon: 24.968 },
+  MUU: { lat: 59.505, lon: 24.958 },
+  VUO: { lat: 60.212, lon: 25.188 },
+  PLD: { lat: 59.333, lon: 24.083 },
+  KPS: { lat: 59.723, lon: 19.066 },
+  STO: { lat: 59.350, lon: 18.110 },
+};
+
+/** Trasa → port wyjścia / celu. Brak wpisu = null (bez wyliczeń AIS). */
+export const ROUTE_AIS_PORTS: Readonly<Record<string, { dep: AisPortCode; arr: AisPortCode }>> = {
+  'GDN-NYN': { dep: 'GDN', arr: 'NYN' },
+  'NYN-GDN': { dep: 'NYN', arr: 'GDN' },
+  'GDY-KAA': { dep: 'GDY', arr: 'KAA' },
+  'KAA-GDY': { dep: 'KAA', arr: 'GDY' },
+  'TLL-HEL': { dep: 'TLL', arr: 'HEL' },
+  'HEL-TLL': { dep: 'HEL', arr: 'TLL' },
+  'TLLA-HEL': { dep: 'TLLA', arr: 'HELA' },
+  'HELA-TLL': { dep: 'HELA', arr: 'TLLA' },
+  'MUU-VUO': { dep: 'MUU', arr: 'VUO' },
+  'VUO-MUU': { dep: 'VUO', arr: 'MUU' },
+  'TLL-STO': { dep: 'TLL', arr: 'STO' },
+  'STO-TLL': { dep: 'STO', arr: 'TLL' },
+  'PLD-KPS': { dep: 'PLD', arr: 'KPS' },
+  'KPS-PLD': { dep: 'KPS', arr: 'PLD' },
+};
+
+export function departurePortForRoute(route: string): AisPortCode | null {
+  return ROUTE_AIS_PORTS[route]?.dep ?? null;
 }
 
-/** Port docelowy trasy (do delayed_arrival_at z AIS — #421). */
-export function arrivalPortForRoute(route: string): DeparturePort {
-  if (route === 'GDY-KAA') return 'KAA';
-  if (route === 'KAA-GDY') return 'GDY';
-  if (route === 'NYN-GDN') return 'GDN';
-  return 'NYN';
+/** Port docelowy trasy (do actual_arrival / delayed z AIS — #421). */
+export function arrivalPortForRoute(route: string): AisPortCode | null {
+  return ROUTE_AIS_PORTS[route]?.arr ?? null;
 }
 
-export function portCoords(port: DeparturePort): { lat: number; lon: number } {
-  if (port === 'GDY') return GDYNIA;
-  if (port === 'NYN') return NYNASHAMN;
-  if (port === 'KAA') return KARLSKRONA;
-  return GDANSK;
+export function portCoords(port: AisPortCode | null | undefined): { lat: number; lon: number } | null {
+  if (!port) return null;
+  return AIS_PORT_COORDS[port] ?? null;
 }
 
 /**
  * II-9: czy AIS mówi, że prom nie zdąży do portu odejścia przed planowanym wypłynięciem.
- * Brak pozycji / brak prędkości / zasięg Digitraffic (PL) → null (brak ≠ opóźnienie).
+ * Brak pozycji / brak prędkości / zasięg Digitraffic (PL) / trasa bez mapy portu → null (brak ≠ opóźnienie).
  * Zwraca szacowane spóźnienie [min] albo null.
  */
 export function aisDepartureDelayMin(
@@ -140,6 +183,7 @@ export function aisDepartureDelayMin(
   const sog = fix.sogKn;
   if (sog == null || sog < minSogKn) return null; // postoju nie interpretujemy jako opóźnienia
   const hub = portCoords(departurePortForRoute(route));
+  if (!hub) return null; // BN4 F7 #701: Zatoka bez mapy ≠ opóźnienie względem Gdańska
   const distKm = distanceKm(fix.lat, fix.lon, hub.lat, hub.lon);
   if (distKm <= 3) return null; // już w porcie odejścia
   const hoursNeed = distKm / (sog * 1.852); // kn → km/h

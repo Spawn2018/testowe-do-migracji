@@ -3090,19 +3090,31 @@ export async function runFerryAis(deps: JobDeps): Promise<JobResult> {
     if (!fix) { observations[v.name] = 'BRAK_SWIEZEGO_SYGNALU'; continue; }
     const arrPort = arrivalPortForRoute(s.route);
     const depPort = departurePortForRoute(s.route);
-    // F7 r2: etykieta SE z portu SE na trasie (KAA-GDY → KAA, nie NYN).
-    const seObsPort: 'NYN' | 'KAA' =
-      arrPort === 'NYN' || arrPort === 'KAA' ? arrPort
-        : depPort === 'NYN' || depPort === 'KAA' ? depPort
-          : 'NYN';
-    const obs = interpretFix(fix, now, 60, seObsPort);
+    // BN4 F7 #701: interpretFix (NYN/KAA) tylko dla tras z portem SE; inaczej SOG → W_REJSIE / POSTOJ.
+    // Nigdy nie licz Zatoki względem Nynäshamn (stary fallback GDN/NYN).
+    let obs: ReturnType<typeof interpretFix> | 'W_REJSIE' | 'POSTOJ_POZA_PORTEM' | 'BRAK_MAPY_PORTU';
+    if (arrPort === 'NYN' || arrPort === 'KAA' || depPort === 'NYN' || depPort === 'KAA') {
+      const seObsPort: 'NYN' | 'KAA' =
+        arrPort === 'NYN' || arrPort === 'KAA' ? arrPort
+          : depPort === 'NYN' || depPort === 'KAA' ? depPort
+            : 'NYN';
+      obs = interpretFix(fix, now, 60, seObsPort);
+    } else if (!depPort || !arrPort) {
+      obs = 'BRAK_MAPY_PORTU';
+    } else {
+      const ageMin = (Date.parse(now) - Date.parse(fix.timestampUtc)) / 60_000;
+      obs = ageMin > 60 ? 'BRAK_SWIEZEGO_SYGNALU'
+        : (fix.sogKn ?? 0) >= 3 ? 'W_REJSIE'
+          : 'POSTOJ_POZA_PORTEM';
+    }
     observations[v.name] = obs;
 
     // #421 F7: wypłynął → actual_departure_at; wiek ≤15 min; 3–10 km (preferuj ostatnią w porcie) albo poza >3 km z lastPortPosition.
+    // BN4 F7 #701: bez mapy portu wyjścia — bez geofence (nigdy GDN dla TLLA-HEL).
     if (s.actual_departure_at == null) {
       const ageMin = (Date.parse(now) - Date.parse(fix.timestampUtc)) / 60_000;
-      if (ageMin <= 15) {
-        const depHub = portCoords(depPort);
+      const depHub = portCoords(depPort);
+      if (ageMin <= 15 && depHub) {
         const dist = distanceKm(fix.lat, fix.lon, depHub.lat, depHub.lon);
         const moving = (fix.sogKn ?? 0) >= 3;
         const prevArr = sailings
@@ -3140,19 +3152,21 @@ export async function runFerryAis(deps: JobDeps): Promise<JobResult> {
     if (s.actual_arrival_at == null) {
       const ageMin = (Date.parse(now) - Date.parse(fix.timestampUtc)) / 60_000;
       const arrHub = portCoords(arrPort);
-      const arrived = distanceKm(fix.lat, fix.lon, arrHub.lat, arrHub.lon) <= 3 && (fix.sogKn ?? 0) < 3;
-      const depRef = s.actual_departure_at ?? s.delayed_departure_at ?? s.departure_at;
-      if (arrived && ageMin <= 15 && Date.parse(fix.timestampUtc) > Date.parse(depRef)) {
-        // #446: status DOPLYNAL przy actual_arrival_at (ODWOLANY bez zmian).
-        const ok = await deps.store.updateSailing(s.id, {
-          actual_arrival_at: fix.timestampUtc,
-          ...(s.status === 'ODWOLANY' ? {} : { status: 'DOPLYNAL' }),
-        });
-        if (ok) {
-          s.actual_arrival_at = fix.timestampUtc;
-          if (s.status !== 'ODWOLANY') s.status = 'DOPLYNAL';
-          departures++;
-          observations[`${v.name}:ARR`] = `DOPŁYNĄŁ_${fix.timestampUtc}`;
+      if (arrHub) {
+        const arrived = distanceKm(fix.lat, fix.lon, arrHub.lat, arrHub.lon) <= 3 && (fix.sogKn ?? 0) < 3;
+        const depRef = s.actual_departure_at ?? s.delayed_departure_at ?? s.departure_at;
+        if (arrived && ageMin <= 15 && Date.parse(fix.timestampUtc) > Date.parse(depRef)) {
+          // #446: status DOPLYNAL przy actual_arrival_at (ODWOLANY bez zmian).
+          const ok = await deps.store.updateSailing(s.id, {
+            actual_arrival_at: fix.timestampUtc,
+            ...(s.status === 'ODWOLANY' ? {} : { status: 'DOPLYNAL' }),
+          });
+          if (ok) {
+            s.actual_arrival_at = fix.timestampUtc;
+            if (s.status !== 'ODWOLANY') s.status = 'DOPLYNAL';
+            departures++;
+            observations[`${v.name}:ARR`] = `DOPŁYNĄŁ_${fix.timestampUtc}`;
+          }
         }
       }
     }
