@@ -7457,6 +7457,19 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (odbiór prod):** SELECT `here_road_legs` — **12** / active 12 / `browser_fetch` 5; core bez zmian (3495/12561/3742/18854/19408); BN7 7× null. `here-roads` **#108803** @ 04:49Z ok (0 prób — core świeże; BN7 poza cronem). Komentarz w #667. **Dalej:** BN3 (#573).
 - Bez push na main.
 
+## 2026-11-01 09:00 — #696 F7 r4 POPRAWKI (DP-116 + M1/M12/N11)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne`.
+- Scalanie: F7 r4 BLOKER @ 9189b083 (DP-116 openCancelSuspect bez range) — nie scalać. Bez push na main.
+- **Krok F7 #696 r4:**
+  - **B1/DP-116:** `openCancelSuspectSailings` — `risk_signals` range+order(id); sailings `.in` ≤150; błąd/cap → throw.
+  - Testy store: >1000 dedupów, błąd strony, page cap, batche `.in`.
+  - **M1** zniknięcie+ruch w oknie; **M12** SOG 1,5 kn (mutacja 50 kn); **N11** bez metody → bez resolveStale.
+  - Spec 61b: ATD/ATA spoza since tylko AIS/ODWOLANY/HHL/UMG.
+  - vitest bn3-cancel-suspect-ais **49**; 691-dp116 (+4 openCancelSuspect) **13**.
+- **Dalej:** push → CI → gotowe do F7 @ sha. Po F7: RSS ERR (+ W64 Yle STOP).
+- Bez push na main.
+
 ## 2026-11-01 08:25 — #696 F7 r3 POPRAWKI (B1/B2)
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne`.

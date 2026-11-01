@@ -23,6 +23,10 @@ Raz podniesione nie gaśnie po wyjściu z okna. Zamyka się tylko gdy:
 
 `resolveStaleRisks`: dedup rejsów poza oknem idzie do `keep`, dopóki nie zajdzie warunek wyżej. Otwarte dedupy są pobierane **razem z rejsami niezależnie od okna `since` (24 h)** — inaczej resolve zamykałby je na ślepo. Brak metody `openCancelSuspectSailings` → job **nie** woła resolve (nie zamyka wszystkiego). `closeStaleFiToEeWithoutAta` nie zamyka rejsu z otwartym podejrzeniem.
 
+**DP-116 / F7 r4:** `openCancelSuspectSailings` stronicuje `risk_signals` (`range` + `order(id)`), a rejsy bierze `.in('id', …)` w paczkach ≤ 150. Błąd strony albo limit stron → throw (nie ciche obcięcie).
+
+**Rejs spoza `since` (24 h):** `applyDigitrafficPortCallActuals` też czyta `since`, więc ATD/ATA z Portnet **nie** dotrze do takiego rejsu w tym przebiegu. Zamknięcie podejrzenia następuje wtedy przez AIS (clear), ODWOLANY, wpis HHL/UMG albo ręcznie — świadomie.
+
 ## AIS / SOURCE_DOWN
 
 - Nieświeża pozycja, `features: []`, brak fix → keep (nie gaszenie).

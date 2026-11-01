@@ -205,14 +205,18 @@ describe('BN3 cancel-suspect helpers (F7 #696 r2 / 61b)', () => {
     expect(isStandingAtDeparturePort(atHel, 'HEL-TLL')).toBe(true);
   });
 
-  it('B3/M12: brak SOG ≠ stoi; próg SOG przez stałą (+0,1)', () => {
+  it('B3/M12: brak SOG ≠ stoi; SOG 1,5 kn powyżej stałej (mutacja 50 kn pada)', () => {
     const base = parseDigitrafficLocations(JSON.parse(AIS_TLL), 276829000)!;
+    const sog15 = 1.5;
+    expect(sog15).toBeGreaterThan(CANCEL_SUSPECT_MAX_SOG_KN);
     expect(isStandingAtDeparturePort({ ...base, sogKn: null }, 'TLL-HEL')).toBe(false);
     expect(isStandingAtDeparturePort({ ...base, sogKn: undefined }, 'TLL-HEL')).toBe(false);
     expect(isStandingAtDeparturePort({ ...base, sogKn: CANCEL_SUSPECT_MAX_SOG_KN }, 'TLL-HEL')).toBe(true);
     expect(isStandingAtDeparturePort({
       ...base, sogKn: CANCEL_SUSPECT_MAX_SOG_KN + 0.1,
     }, 'TLL-HEL')).toBe(false);
+    /* F7 r4 M12: stała 1,5 — przy progu 50 kn ten expect pada. */
+    expect(isStandingAtDeparturePort({ ...base, sogKn: sog15 }, 'TLL-HEL')).toBe(false);
     expect(isStandingInGulfPort({ ...base, sogKn: null })).toBe(false);
   });
 
@@ -546,6 +550,75 @@ describe('BN3 ferry-portnet × cancel-suspect AIS (F7 #696 r3)', () => {
       }),
     }, early));
     expect(st.risks.filter((x) => x.dedup.startsWith('FERRY_CANCEL_SUSPECT:'))).toHaveLength(0);
+  });
+
+  it('M1/F7 r4: zniknięcie + statek w ruchu w oknie ETA → brak alarmu', async () => {
+    const st = new MemStore();
+    st.sailings.push(gulfSailing({
+      id: 's-gone-move-win',
+      source_ref: 'digitraffic:portcall:999002:TLL-HEL',
+      source: 'VIKING',
+    }));
+    await runFerryPortnet(deps(st, {
+      'port-calls': PORTNET_OTHER,
+      'locations?mmsi=': aisJson({
+        lat: 59.85, lon: 24.85, sog: 18.5,
+        tsMs: Date.parse('2026-10-30T10:50:00Z'),
+      }),
+    }));
+    expect(st.risks.filter((x) => x.dedup.startsWith('FERRY_CANCEL_SUSPECT:'))).toHaveLength(0);
+  });
+
+  it('M12/F7 r4: SOG 1,5 kn w porcie wyjścia w oknie → brak alarmu', async () => {
+    const sog15 = 1.5;
+    expect(sog15).toBeGreaterThan(CANCEL_SUSPECT_MAX_SOG_KN);
+    const st = new MemStore();
+    st.sailings.push(gulfSailing());
+    await runFerryPortnet(deps(st, {
+      'port-calls': PORTNET_OTHER,
+      'locations?mmsi=': aisJson({
+        lat: 59.443, lon: 24.77, sog: sog15,
+        tsMs: Date.parse('2026-10-30T10:50:00Z'),
+      }),
+    }));
+    expect(st.risks.filter((x) => x.dedup.startsWith('FERRY_CANCEL_SUSPECT:'))).toHaveLength(0);
+  });
+
+  it('N11: bez openCancelSuspectSailings — ryzyko spoza since + ruch nie zamknięte', async () => {
+    const st = new MemStore();
+    const dep25h = new Date(NOW.getTime() - 25 * 3600_000).toISOString();
+    const eta25h = new Date(NOW.getTime() - 22 * 3600_000).toISOString();
+    st.sailings.push(gulfSailing({
+      id: 's-n11-old',
+      departure_at: dep25h,
+      arrival_at: eta25h,
+    }));
+    const dedup = cancelSuspectRiskDedup('s-n11-old');
+    st.risks.push({
+      kind: 'FERRY', severity: 'MEDIUM', title: 'x', titleKey: 'rk_ferry_cancel_suspect',
+      dedup, detail: {},
+    });
+    let cancelSuspectResolveCalls = 0;
+    const origResolve = st.resolveStaleRisks.bind(st);
+    st.resolveStaleRisks = async (prefix, keep) => {
+      if (prefix === CANCEL_SUSPECT_DEDUP_PREFIX) cancelSuspectResolveCalls += 1;
+      return origResolve(prefix, keep);
+    };
+    /* Własna właściwość zasłania metodę prototypu — jak store bez openCancelSuspectSailings. */
+    Object.defineProperty(st, 'openCancelSuspectSailings', {
+      value: undefined,
+      configurable: true,
+      writable: true,
+    });
+    await runFerryPortnet(deps(st, {
+      'port-calls': PORTNET_OTHER,
+      'locations?mmsi=': aisJson({
+        lat: 59.85, lon: 24.85, sog: 18.5,
+        tsMs: Date.parse('2026-10-30T10:50:00Z'),
+      }),
+    }));
+    expect(cancelSuspectResolveCalls).toBe(0);
+    expect(st.risks.some((x) => x.dedup === dedup)).toBe(true);
   });
 
   it('N7: rejs bez MMSI z otwartym podejrzeniem → keep', async () => {

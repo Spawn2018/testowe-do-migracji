@@ -19,6 +19,11 @@ const SAILING_COLS = 'id,vessel_id,route,departure_at,arrival_at,delayed_departu
 export const SAILINGS_PAGE_SIZE = 1000;
 /** F7 #693 r1 R1-B2: po MAX_PAGES pełnych stron — błąd (nie ciche obcięcie). */
 export const SAILINGS_MAX_PAGES = 50;
+/** F7 #696 r4 / DP-116: risk_signals open cancel-suspect — ten sam limit stron. */
+export const CANCEL_SUSPECT_RISK_PAGE_SIZE = SAILINGS_PAGE_SIZE;
+export const CANCEL_SUSPECT_RISK_MAX_PAGES = SAILINGS_MAX_PAGES;
+/** F7 #696 r4: `.in('id', …)` w paczkach — unikaj za długiego URL. */
+export const CANCEL_SUSPECT_SAILING_IN_BATCH = 150;
 
 type SailingsPageQuery = {
   select: (cols: string) => SailingsPageQuery;
@@ -26,6 +31,22 @@ type SailingsPageQuery = {
   in: (col: string, vals: string[]) => SailingsPageQuery;
   order: (col: string, opts?: { ascending?: boolean }) => SailingsPageQuery;
   range: (from: number, to: number) => Promise<{ data: DbSailing[] | null; error: { message: string } | null }>;
+};
+
+type RiskDedupPageQuery = {
+  select: (cols: string) => RiskDedupPageQuery;
+  like: (col: string, val: string) => RiskDedupPageQuery;
+  is: (col: string, val: null) => RiskDedupPageQuery;
+  order: (col: string, opts?: { ascending?: boolean }) => RiskDedupPageQuery;
+  range: (from: number, to: number) => Promise<{
+    data: { dedup_key: string | null }[] | null;
+    error: { message: string } | null;
+  }>;
+};
+
+type SailingsByIdQuery = {
+  select: (cols: string) => SailingsByIdQuery;
+  in: (col: string, vals: string[]) => Promise<{ data: DbSailing[] | null; error: { message: string } | null }>;
 };
 
 /**
@@ -65,6 +86,82 @@ export async function fetchSailingsSincePaged(
     }
     if (r.length < pageSize) break;
     from += pageSize;
+  }
+  return out;
+}
+
+/**
+ * F7 #696 r4 / DP-116: otwarte dedupy cancel-suspect ze stronicowaniem (max_rows=1000).
+ * Błąd strony albo page cap → throw (nie ciche obcięcie → resolveStale nie zamyka reszty).
+ */
+export async function fetchOpenCancelSuspectDedupKeysPaged(
+  fromTable: () => RiskDedupPageQuery,
+  likePattern: string,
+  opts?: {
+    pageSize?: number;
+    must?: <T>(r: { data: T; error: { message: string } | null }, what: string) => T;
+  },
+): Promise<string[]> {
+  const pageSize = opts?.pageSize ?? CANCEL_SUSPECT_RISK_PAGE_SIZE;
+  const mustFn = opts?.must ?? (<T>(r: { data: T; error: { message: string } | null }, what: string): T => {
+    if (r.error) throw new Error(`${what}: ${r.error.message}`);
+    return r.data;
+  });
+  const out: string[] = [];
+  const seen = new Set<string>();
+  let from = 0;
+  for (;;) {
+    if (from >= CANCEL_SUSPECT_RISK_MAX_PAGES * pageSize) {
+      throw new Error('cancel-suspect risk page cap exceeded');
+    }
+    const r = mustFn(
+      await fromTable()
+        .select('dedup_key')
+        .like('dedup_key', likePattern)
+        .is('resolved_at', null)
+        .order('id')
+        .range(from, from + pageSize - 1),
+      'risk_signals open cancel-suspect page',
+    ) as { dedup_key: string | null }[];
+    for (const row of r) {
+      const k = row.dedup_key;
+      if (!k || seen.has(k)) continue;
+      seen.add(k);
+      out.push(k);
+    }
+    if (r.length < pageSize) break;
+    from += pageSize;
+  }
+  return out;
+}
+
+/** F7 #696 r4: sailings po id w paczkach ≤ CANCEL_SUSPECT_SAILING_IN_BATCH. */
+export async function fetchSailingsByIdsBatched(
+  fromTable: () => SailingsByIdQuery,
+  ids: string[],
+  opts?: {
+    batchSize?: number;
+    must?: <T>(r: { data: T; error: { message: string } | null }, what: string) => T;
+  },
+): Promise<DbSailing[]> {
+  const batchSize = opts?.batchSize ?? CANCEL_SUSPECT_SAILING_IN_BATCH;
+  const mustFn = opts?.must ?? (<T>(r: { data: T; error: { message: string } | null }, what: string): T => {
+    if (r.error) throw new Error(`${what}: ${r.error.message}`);
+    return r.data;
+  });
+  const out: DbSailing[] = [];
+  const seen = new Set<string>();
+  for (let i = 0; i < ids.length; i += batchSize) {
+    const chunk = ids.slice(i, i + batchSize);
+    const rows = mustFn(
+      await fromTable().select(SAILING_COLS).in('id', chunk),
+      'sailings open cancel-suspect batch',
+    ) as DbSailing[];
+    for (const row of rows) {
+      if (seen.has(row.id)) continue;
+      seen.add(row.id);
+      out.push(row);
+    }
   }
   return out;
 }
@@ -195,25 +292,26 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
       return rows.length > 0;
     },
     /**
-     * F7 #696 r3 B1: otwarte FERRY_CANCEL_SUSPECT + rejsy (bez limitu since).
-     * Jedno zapytanie ryzyka + .in('id', …) na sailings.
+     * F7 #696 r3 B1 / r4 DP-116: otwarte FERRY_CANCEL_SUSPECT + rejsy (bez limitu since).
+     * risk_signals: range+order(id); sailings: .in() paczkami ≤150; błąd/cap → throw.
      */
     async openCancelSuspectSailings() {
       const like = `${CANCEL_SUSPECT_DEDUP_PREFIX.replace(/[%_]/g, (c) => `\\${c}`)}%`;
-      const rows = must(
-        await sb.from('risk_signals').select('dedup_key')
-          .like('dedup_key', like).is('resolved_at', null),
-        'risk_signals open cancel-suspect',
-      ) as { dedup_key: string | null }[];
+      const keys = await fetchOpenCancelSuspectDedupKeysPaged(
+        () => sb.from('risk_signals') as RiskDedupPageQuery,
+        like,
+        { must },
+      );
       const ids = [...new Set(
-        rows.map((r) => (r.dedup_key ? sailingIdFromCancelSuspectDedup(r.dedup_key) : null))
+        keys.map((k) => sailingIdFromCancelSuspectDedup(k))
           .filter((id): id is string => !!id),
       )];
       if (!ids.length) return [];
-      return must(
-        await sb.from('sailings').select(SAILING_COLS).in('id', ids),
-        'sailings open cancel-suspect',
-      ) as DbSailing[];
+      return fetchSailingsByIdsBatched(
+        () => sb.from('sailings') as SailingsByIdQuery,
+        ids,
+        { must },
+      );
     },
     async resolveRisks(dedupPrefix: string) {
       const r = must(await sb.from('risk_signals').update({ resolved_at: new Date().toISOString() })
