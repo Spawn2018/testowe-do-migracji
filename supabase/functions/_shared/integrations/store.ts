@@ -4,6 +4,9 @@
  */
 import type { SyncStore, VehiclePos } from './jobs.ts';
 import type { VesselFix } from '../ferry/digitraffic.ts';
+import {
+  CANCEL_SUSPECT_DEDUP_PREFIX, sailingIdFromCancelSuspectDedup,
+} from '../ferry/cancelSuspect.ts';
 import type { DbSailing, RiskInput, SailingInsert, SailingPatch, VesselRow } from './sync.ts';
 import { ROAD_LEGS } from '../here/refreshRoadLegs.ts';
 import { legDefFromRow } from '../here/legDefFromRow.ts';
@@ -190,6 +193,27 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
         'risk_signals hasOpenRisk',
       ) as unknown[];
       return rows.length > 0;
+    },
+    /**
+     * F7 #696 r3 B1: otwarte FERRY_CANCEL_SUSPECT + rejsy (bez limitu since).
+     * Jedno zapytanie ryzyka + .in('id', …) na sailings.
+     */
+    async openCancelSuspectSailings() {
+      const like = `${CANCEL_SUSPECT_DEDUP_PREFIX.replace(/[%_]/g, (c) => `\\${c}`)}%`;
+      const rows = must(
+        await sb.from('risk_signals').select('dedup_key')
+          .like('dedup_key', like).is('resolved_at', null),
+        'risk_signals open cancel-suspect',
+      ) as { dedup_key: string | null }[];
+      const ids = [...new Set(
+        rows.map((r) => (r.dedup_key ? sailingIdFromCancelSuspectDedup(r.dedup_key) : null))
+          .filter((id): id is string => !!id),
+      )];
+      if (!ids.length) return [];
+      return must(
+        await sb.from('sailings').select(SAILING_COLS).in('id', ids),
+        'sailings open cancel-suspect',
+      ) as DbSailing[];
     },
     async resolveRisks(dedupPrefix: string) {
       const r = must(await sb.from('risk_signals').update({ resolved_at: new Date().toISOString() })

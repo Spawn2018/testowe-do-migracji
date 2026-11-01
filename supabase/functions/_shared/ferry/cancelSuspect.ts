@@ -23,6 +23,11 @@ export const CANCEL_SUSPECT_WINDOW_AFTER_ETA_MIN = 90;
 /** @deprecated F7 r2: było 6 h — zostaw alias tylko gdy ktoś czyta starą nazwę w diffie. */
 export const CANCEL_SUSPECT_WINDOW_AFTER_ETA_H = CANCEL_SUSPECT_WINDOW_AFTER_ETA_MIN / 60;
 export const CANCEL_SUSPECT_MAX_SOG_KN = 0.5;
+/**
+ * F7 #696 r3 / 61b: zamknięcie „przez AIS” tylko gdy SOG znany i ≥ 3 kn
+ * (manewr przy kei 0,5–3 kn nie zamyka) albo pozycja poza geofence wyjścia.
+ */
+export const CANCEL_SUSPECT_CLEAR_MIN_SOG_KN = 3;
 export const CANCEL_SUSPECT_RADIUS_KM = 3;
 /** F7 #696 r1 B2: pozycja AIS starsza → „nie wiadomo”. */
 export const CANCEL_SUSPECT_MAX_AIS_AGE_MIN = 60;
@@ -144,6 +149,17 @@ export function mergePortCallIdsIfComplete(o: {
   return out;
 }
 
+/** Pozycja w geofence hubów wyjścia (bez SOG). */
+export function isInDepartureGeofence(
+  fix: Pick<VesselFix, 'lat' | 'lon'>,
+  route: string,
+  radiusKm = CANCEL_SUSPECT_RADIUS_KM,
+): boolean {
+  const hubs = departureHubsForRoute(route);
+  if (!hubs.length) return false;
+  return hubs.some((h) => distanceKm(fix.lat, fix.lon, h.lat, h.lon) <= radiusKm);
+}
+
 /**
  * SOG ≈ 0 i pozycja ≤ radiusKm od hubu **wyjścia**.
  * F7 #696 r1 B1/B3: brak SOG → nie stoi; huby tylko z trasy.
@@ -156,9 +172,33 @@ export function isStandingAtDeparturePort(
 ): boolean {
   if (fix.sogKn == null || !Number.isFinite(fix.sogKn)) return false;
   if (fix.sogKn > maxSogKn) return false;
-  const hubs = departureHubsForRoute(route);
-  if (!hubs.length) return false;
-  return hubs.some((h) => distanceKm(fix.lat, fix.lon, h.lat, h.lon) <= radiusKm);
+  return isInDepartureGeofence(fix, route, radiusKm);
+}
+
+/**
+ * F7 #696 r3 B2 / 61b: świeży AIS zamyka podejrzenie tylko gdy
+ * pozycja poza geofence wyjścia **albo** SOG znany i ≥ CLEAR_MIN (3 kn).
+ * SOG null / 0,5–3 kn w porcie → „nie wiadomo” / manewr → nie zamyka.
+ */
+export function aisClearsCancelSuspect(
+  fix: Pick<VesselFix, 'lat' | 'lon' | 'sogKn'>,
+  route: string,
+  clearMinSogKn = CANCEL_SUSPECT_CLEAR_MIN_SOG_KN,
+  radiusKm = CANCEL_SUSPECT_RADIUS_KM,
+): boolean {
+  if (!isInDepartureGeofence(fix, route, radiusKm)) return true;
+  if (fix.sogKn != null && Number.isFinite(fix.sogKn) && fix.sogKn >= clearMinSogKn) {
+    return true;
+  }
+  return false;
+}
+
+/** `FERRY_CANCEL_SUSPECT:AIS:{id}` → id rejsu; inaczej null. */
+export function sailingIdFromCancelSuspectDedup(dedup: string): string | null {
+  const p = `${CANCEL_SUSPECT_DEDUP_PREFIX}AIS:`;
+  if (!dedup.startsWith(p)) return null;
+  const id = dedup.slice(p.length);
+  return id || null;
 }
 
 /**
