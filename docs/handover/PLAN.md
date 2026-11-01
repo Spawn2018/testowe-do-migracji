@@ -1225,6 +1225,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-124 | Cursor | UMG: pusta godzina ATA — nie traktować jako ATA (wpis koordynatora 01.11) | F7 #695 / koord. 01.11 | BN3 / UMG | w kolejce |
 | DP-125 | Cursor | SMS „prom przywrócony” dla kierowców po auto-ODWOLANY — **ANULOWANE** (właściciel 01.11 11:24: „79: bez SMS”; #697) | F7 #698 r2 / #697 | BN3 / #686 | **ANULOWANE** 01.11.2026 |
 | DP-126 | Cursor | F7 #699 r3 nieblokujące: zaprzeczenie „will not be”; wzmocnienie T1; szersze testy filtrów ERR | F7 #699 r3 | BN3 / ERR RSS | w kolejce |
+| DP-127 | Cursor | Odbiór #699: `ferry-status` observations puste — dodać `err_rss_enabled` / `err_rss_items` / `err_rss_hits` (bez migracji) | #699 odbiór / F7 #701 | BN3 / ERR RSS | W TOKU `pakiet/dp127-err-rss-liczniki` |
 | DP-122 | Cursor | `viking_schedule_imports` (0360) brak w kopii 01.11 01:30 — koordynator #697: **nie wymaga zmian** (0360 po kopii 00:30; kontrola kopii 02.11) | #697 | backup | bez zmian (koord. 01.11) |
 | DP-117 | Cursor | `route-check/index.ts` `loads` `.limit(500)` bez sortu/filtra statusu — przy >500 transportach losowy dobór | F7 #693 r1 | ferry / route-check | w kolejce |
 | DP-118 | Cursor | `store.resolveStaleRisks` — `risk_signals` bez limitu (`max_rows`) → część nieaktualnych ryzyk niezamknięta | F7 #693 r1 | BN3 / ryzyka | w kolejce |
@@ -1304,7 +1305,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 5. ~~**DP-21**~~ przeniesione do #666 (decyzja 63b) — parser pliku właściciela (F7 #680).
 6. ~~**BN3**~~ — **SCALONE** (wycinki + #699 RSS ERR `40141ff4`) — poniżej; DP kolejka / ATD wiarygodne dalej.
 7. ~~**#685** decyzja 63~~ — SCALONE (poniżej).
-8. **BN4** — W TOKU (`pakiet/bn4-ais-bbox-mmsi`); dalej BN5…BN10 jak #573.
+8. **BN4** — cz.1 SCALONE (#701 `ef613eff`: bbox Zatoki + MMSI z vessels + ROUTE_AIS_PORTS); dalej: DP-127 → luka AIS 30 min / `AIS_<port>` / arrival backup → BN5…BN10 jak #573.
 
 ### BN3 · Opóźnienia i odwołania nowych armatorów — SCALONE (po wycinkach 1–3; ~~#685~~ / ~~#691~~ / ~~#692~~ / ~~#694~~ / ~~#695~~ / ~~#696~~ / ~~#686~~ / ~~#699~~; DP kolejka / ATD wiarygodne dalej)
 Źródło: #573 + komentarze BN3 31.10 (spec + decyzje 57–61). Po #667; DP-21 → #666 (63b).
@@ -1325,12 +1326,13 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 9. Testy: ~~DFDS remark / Portnet ATA / F7 B5 wycinek 2~~; ~~ts.ee/Alert (F7 #683 B5)~~; ~~winter-nav / DP-11 / F7 #694 R1-B3~~; ~~UMG #695~~; ~~cancel-suspect AIS decyzja 61~~; ~~#686 restore~~; ~~RSS ERR #699~~; ~~Imperva (BN2 #661 / Tallink Alert #689; bez obchodzenia)~~; ~~tolerancja ±3 h (DP-95)~~; RECZNIE; ODWOLANY→FERRY_CANCELLED (DP-108) — część dalej.
 10. ~~Role komunikatu: HHL_ADMIN + CARRIER_DISPATCH (SCX); KSH odmowa~~ (F7 #680).
 
-### BN4 · Pozycje promów (AIS) — W TOKU (`pakiet/bn4-ais-bbox-mmsi` / PR #701)
+### BN4 · Pozycje promów (AIS) — CZĘŚCIOWO (`ef613eff` / PR #701 SCALONE)
 Źródło: #573 BN4. Po #699.
 1. ~~**aisstream**~~ — `BALTIC_BBOXES`: PL/SE + Zatoka Fińska / Aland (`BALTIC_BBOX_GULF` 59,0–60,5°N, 17,5–26,0°E).
 2. ~~**Śledzenie MMSI**~~ — `isTrackedMmsi` = każdy poprawny MMSI z `vessels` (Digitraffic poll + aisstream allow); nie tylko 5 PL/SE. MMSI bałtyckie w **0361**.
-3. **F7 #701 r1 B1** — mapy `departurePortForRoute` / `arrivalPortForRoute` dla **wszystkich** `FerryRoute` (HEL/HELA, TLL/TLLA, MUU, VUO, PLD, KPS, STO, NYN, GDN, GDY, KAA); trasa bez mapy → `null` (nigdy domyślny GDN/NYN); II-9 / #421 geofence tylko przy mapie. Vitest bn4-ais.
-4. Dalej: luka AIS → pozycja szacowana 30 min (18B); `ferry_sailings_map` nowych portów; ryzyka `AIS_<port>`; `apply_ferry_ais_arrival_backup` nowych portów; front `FERRY_VESSELS` → baza (BN9-c2).
+3. ~~**F7 #701 r1 B1**~~ — mapy `departurePortForRoute` / `arrivalPortForRoute` dla **wszystkich** `FerryRoute` (HEL/HELA, TLL/TLLA, MUU, VUO, PLD, KPS, STO, NYN, GDN, GDY, KAA); trasa bez mapy → `null` (nigdy domyślny GDN/NYN); II-9 / #421 geofence tylko przy mapie. Vitest bn4-ais. SCALONE #701 `ef613eff`.
+4. **DP-127** (przed dalszą BN4) — liczniki ERR w `ferry-status` observations.
+5. Dalej: luka AIS → pozycja szacowana 30 min (18B); `ferry_sailings_map` nowych portów; ryzyka `AIS_<port>`; `apply_ferry_ais_arrival_backup` nowych portów; front `FERRY_VESSELS` → baza (BN9-c2).
 
 ### #687 · DP-114 Tallink HEL–TLL 404 + niepełna pula Alert — SCALONE (`5fc7d4a0` / PR #689)
 Źródło: #687 (Spawn2018, `dla-cursora`). Po #683 prod: `TALLINK_HEL_TLL_URL` `/en/helsinki-tallinn` → HTTP 404; reguła 72 traci połowę puli.
@@ -2408,6 +2410,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 01.11.2026 13:10 | #699 F7 r2 POPRAWKI: R2-B1 pusty kanał; filtr negacji+trip/cancellations; vitest bn3-err-rss **17** | pętla |
 | 01.11.2026 12:32 | #699 SCALONE `40141ff4` (F7: gotowe @ 700b070a); DP-125 ANULOWANE; DP-126; W64 zamknięte (76 A); decyzje 73–80; start BN4 `pakiet/bn4-ais-bbox-mmsi` | pętla / F7 #699 |
 | 01.11.2026 13:55 | #701 F7 r1 B1: ROUTE_AIS_PORTS (HEL/HELA/TLL/TLLA…); null bez mapy; XPRS TLLA-HEL bez AIS_DEP_DELAY; vitest bn4-ais | pętla / F7 #701 |
+| 01.11.2026 14:25 | #701 SCALONE `ef613eff` (F7: gotowe do scalenia @ f5298023); start DP-127 `pakiet/dp127-err-rss-liczniki` | pętla / F7 #701 |
 | 31.10.2026 — | Decyzja 73: TLLA-HEL ETA−150 min / HELA-TLL ETD+160 min (fixture Cargo; nocny 165 min OK). Decyzja 74: `sailings.source_ref` 0359; Digitraffic `digitraffic:portcall:<id>:<route>`; HTML/RECZNIE/DANE_STARTOWE wygrywają; #685-b RPC zastępuje digitraffic:% w ±3 h | F7 #688 r1–r4 |
 | 31.10.2026 — | F7 #683 nieblokujące (osobna poprawka): Scheduler grudzień + „on 2 January” → rok bieżący, ciche wygaśnięcie; Alert INFO bez ryzyka/historii — świadomie | F7 #683 r7 |
 | 31.10.2026 — | F7 #683 r8 nieblokujące (osobno): Alert poza Schedulerem obok Schedulera; sprzeczne bloki (resume→cofnięcie auto); rok przy długim oknie Schedulera; mutanty M10/M15–M17/M22 świadomie bez testów | F7 #683 r8 |
