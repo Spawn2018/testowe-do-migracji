@@ -1219,7 +1219,10 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-98 | Cursor | `TALLINK_HEL_TLL_URL` zwraca 404 → ostrzeżenie co 10 min — poprawić/usunąć | F7 #683 | BN3 | DONE w #687 (DP-114: nowy URL) |
 | DP-114 | Cursor | Tallink HEL–TLL 404 po #683: nowy URL; niepełna pula → brak auto; streak ≥ 3 SOURCE_DOWN; F7 r1 usable HTML + streak z integration_runs; F7 r2 test markera | #687 / PR #689 | SCALONE `5fc7d4a0` | DONE |
 | DP-115 | Cursor | `stenaIrmBackoffUntilMs` — stan w pamięci modułu (jak dawny streak Tallink); ocenić persist / Edge cold start | F7 #689 r1 | BN3 / AIS | w kolejce |
-| DP-116 | Cursor | `max_rows=1000` obcina odczyty rejsów (2119 na prod) — przegląd innych jobów ferry + stronicowanie / agregaty | F7 #690 r2 / #691 | BN3 / ferry | w #690: 63c+import Viking; reszta w kolejce (#691) |
+| DP-116 | Cursor | `max_rows=1000` obcina odczyty rejsów (2119 na prod) — przegląd innych jobów ferry + stronicowanie / agregaty | F7 #690 r2 / #691 | BN3 / ferry | W TOKU #691 PR #693: F7 r2 Fisher–Yates atrapa + dedupe offset |
+| DP-117 | Cursor | `route-check/index.ts` `loads` `.limit(500)` bez sortu/filtra statusu — przy >500 transportach losowy dobór | F7 #693 r1 | ferry / route-check | w kolejce |
+| DP-118 | Cursor | `store.resolveStaleRisks` — `risk_signals` bez limitu (`max_rows`) → część nieaktualnych ryzyk niezamknięta | F7 #693 r1 | BN3 / ryzyka | w kolejce |
+| DP-119 | Cursor | Front `documents`/`invoices` bez `range` (max_rows); RPC zwracające zbiory też `max_rows` (`latest_vehicle_positions` itd.) | F7 #693 r1 | front / API | w kolejce |
 | DP-99 | Cursor | `operatorFromSailingSource` fallback MUU-VUO → VIKING (prod tylko ECKERO), domyślnie TALLINK → z `data-company` ts.ee albo `ferry_route_operators` (DP-1) | F7 #683 | BN3 | w kolejce |
 | DP-100 | Cursor | dedup AUTO tylko aplikacyjny → partial unique index `(sailing_id, kind) where source='AUTO'` albo `.neq('status','ODWOLANY')` w update | F7 #683 | BN3 | w kolejce |
 | DP-101 | Cursor | `insertOperatorNotice` z `must()` po zmianie statusu — przy błędzie wpis nie powstanie nigdy (kolejność / transakcja) | F7 #683 | BN3 | w kolejce |
@@ -1295,7 +1298,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 7. **#685** decyzja 63 (rozkład Viking) — zaraz po #683; poniżej.
 8. BN4…BN10 — jak #573 (AIS, pogoda, drogi LT/LV/EE/FI, HERE, statusy/ETA, ekrany, odbiór 48 h).
 
-### BN3 · Opóźnienia i odwołania nowych armatorów — W TOKU (po wycinkach 1–3; dalej #685 / winter-nav / MMSI)
+### BN3 · Opóźnienia i odwołania nowych armatorów — W TOKU (po wycinkach 1–3; ~~#685~~ SCALONE baza; dalej #691 / winter-nav / MMSI)
 Źródło: #573 + komentarze BN3 31.10 (spec + decyzje 57–61). Po #667; DP-21 → #666 (63b).
 ~~Wycinek 1~~ SCALONE (#680 `8100f685` / **0356**): decyzja 60 + ręczny komunikat 6 armatorów (`p_operator`, formularz).
 ~~Wycinek 2~~ SCALONE (#682 `a9c396d7` / **0357** + F7 r1–r2): DFDS remark/ETA + Portnet ATA + SOURCE_DOWN MEDIUM (**decyzja 67**).
@@ -1319,13 +1322,20 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 4. ~~F7 r2~~ — test R2-B1 (strona ≥2 KB bez Footer/Cws → INCOMPLETE) + nieblokujące. Testy bn3-tallink-alert **59**.
 DP-98 DONE; DP-114 DONE; DP-115 (Stena IRM backoff) w kolejce.
 
-### #685 · Decyzja 63: rozkład Viking Line (Digitraffic + import z pliku) — W TOKU (#685-b; #685-a SCALONE `774fd2c0` / PR #688 / **0359**)
+### #685 · Decyzja 63: rozkład Viking Line (Digitraffic + import z pliku) — SCALONE baza (`45d27978` / PR #690 / **0360**; #685-a `774fd2c0` / **0359**); ekran BN9-c1 = PR #692 (koordynator)
 Źródło: #685 (Spawn2018, `dla-cursora`; decyzja 63 potwierdzona właścicielem 31.10 09:56). Bez obchodzenia Imperva (cargo/sales 403).
 **Podział PR (prognoza):**
 1. **#685-a (63a)** — ~~SCALONE~~ (`774fd2c0` / PR #688 / **0359**, 31.10.2026 21:31Z; F7: gotowe @ `b31d504e`).
-2. **#685-b (63b)** — W TOKU (PR #690 `pakiet/685b-viking-schedule-import`; **0360** `viking_schedule_import_assert`/`_record` HHL_ADMIN+2FA + projekt `STEGRA_BODEN`; Edge `viking-schedule-import` + `applyVikingFileSchedule` ≠ `applySailings`; F7 r1–r3: ZAPLANOWANY+przyszłe ±3 h; B4 sezon z progiem 50% + pary (trasa,statek)+dni; podgląd z planem; max(departure) bez limitu 1000 / bez imports.to_at; parser `&#x2013;`/`li.accordion`; ekran BN9-c1 koordynator).
+2. **#685-b (63b)** — ~~SCALONE~~ (`45d27978` / PR #690 / **0360**, 01.11.2026 00:32Z; F7: gotowe @ `8fed1389`): `viking_schedule_import_assert`/`_record` HHL_ADMIN+2FA + `STEGRA_BODEN`; Edge `viking-schedule-import` + `applyVikingFileSchedule`; F7 r1–r3; ekran BN9-c1 → **#692**.
 3. **#685-c (63c)** — w b: apply i cron zamykają / nie wystawiają `SOURCE_DOWN:VIKING_SCHEDULE` przy pokryciu **od teraz** ≥ 30 d (kompletny plik + próg 50%; `maxVikingFileDepartureAt`).
-Kolejność: a → b(+c). DP-21 w #685-b. **Wdrożenie:** **0359** na main; **0360** przed Edge `viking-schedule-import`.
+Kolejność: a → b(+c). DP-21 w #685-b. **Wdrożenie:** **0360** przed Edge `viking-schedule-import` (deploy-main).
+
+### #691 · DP-116: `max_rows=1000` obcina odczyty rejsów — W TOKU (`pakiet/691-dp116-sailings-paging` / PR #693)
+Źródło: #691 (Spawn2018; F7 #690 r2). Prod 01.11: **2119** rejsów od wczoraj; PostgREST `max_rows=1000`.
+1. **Inwentarz (skutek bez stronicowania):** `store.sailingsSince` ← `applySailings` / ferry-schedule (Polferries/Stena/Tallink/Eckerö/DFDS/Viking HTML) → pominięte update/insert poza pierwszymi 1000; Digitraffic Viking (#688) → duplikaty / brak usunięć; ferry-status / Tallink Alert / Portnet / DFDS remark → brak dopasowania ±3 h; ferry-weather → niepełna lista; cron 63c fallback `sailingsSince` (gdy brak `maxVikingFileDepartureAt`). **Już OK w #690:** `maxVikingFileDepartureAt`, `sailingsForVikingFileImport` (strony). **loads/positions** w store: filtry + `limit 1` / head count — bez ryzyka przy bieżącej skali (<1000 aktywnych). F7 r1: też `route-check` limit 500 (**DP-117**), `resolveStaleRisks` (**DP-118**), front/RPC (**DP-119**).
+2. **Poprawka:** wspólny `fetchSailingsSincePaged` (`range` + `order(departure_at).order(id)`); `sailingsSince` i `sailingsForVikingFileImport` przez helper; F7 r1: limicie `SAILINGS_MAX_PAGES` → throw `sailings page cap exceeded` (nie ciche obcięcie); dedupe po `id`.
+3. **Test:** `tests/691-dp116-sailings-page.test.ts` — F7 r2: Fisher–Yates + stabilny sort po `order()` (LCG); ≥300 remisów ściśle na granicy strony; dedupe przy wstawce/offset; błąd strony 2; `supabaseStore` >1000; cap throw.
+4. **Odbiór:** SELECT po deploy — brak obcięcia w jobach ferry (liczba rejsów czytanych ≥ COUNT w oknie) — koordynator.
 
 ### #662 · PILNE SafeFleet — link tymczasowy (SG-27) — SCALONE (`189688bc` / PR #663 / **0349**); #662-b SCALONE (`1ee855fd` / PR #664 / **0350**, 30.10.2026 12:54Z)
 Źródło: #662 (Spawn2018, `pilne`; właściciel 30.10 11:51). Przed poprawkami F7 #661.
@@ -1664,6 +1674,21 @@ Bez ekranów Opcji (te w P10b, po P3).
 | W63 | #637: właściciel ustawia Edge `SHAREPOINT_FILE_MODE=test` i sprawdza po nazwie, że `SHAREPOINT_TEST_FILE_URL` istnieje; pisze „W63 gotowe”. Sekrety wpisuje **wyłącznie właściciel** (wykonawca nie ustawia przez API). | #637 | **zamknięte 29.10.2026 13:50** — właściciel: „W63 gotowe” |
 | W63b | #637: wartość `SHAREPOINT_FILE_MODE` dokładnie `test` (+ Redeploy tylko gdy runtime nie widzi sekretu). Po `write_test_ok_at` właściciel zmienia `SHAREPOINT_FILE_MODE` na `prod` (albo usuwa sekret) — dopiero potem zakolejkowanie aktywnych. Import off. | #637 | **zamknięte 29.10.2026 14:20** — runtime `mode=test` (redeploy zbędny); dalej fix (a) + cykl |
 | W63c | #637: zamknąć plik testowy SharePoint — **anulowane** (właściciel 29.10 15:13: współedycja; zapis bez zamykania → #645 workbook). | #637 / #645 | **anulowane 29.10.2026 15:13** |
+
+**DP-116 / #691 — miejsca i skutek `max_rows=1000` (nie W*):**
+| Miejsce | Skutek bez stronicowania | Stan |
+|---|---|---|
+| `store.sailingsSince` → ferry-schedule / applySailings (wszystkie armatory) | update/insert poza pierwszymi 1000 pomijane → nieaktualny rozkład | **naprawione** `fetchSailingsSincePaged` |
+| Digitraffic Viking (#688) przez `sailingsSince` | duplikaty / brak usunięć w ±3 h | **naprawione** (ten sam helper) |
+| ferry-status / Tallink Alert / Portnet / DFDS remark | brak dopasowania poza 1000 | **naprawione** |
+| ferry-weather | niepełna lista rejsów | **naprawione** |
+| cron 63c fallback `sailingsSince` | błędne pokrycie SOURCE_DOWN | **naprawione**; prod używa `maxVikingFileDepartureAt` |
+| `sailingsForVikingFileImport` / `maxVikingFileDepartureAt` | — | OK już w #690 |
+| front `fetchAllSailings` | — | OK (F7 #539) |
+| `loads`/`positions` w store (filtry + limit 1 / head) | przy <1000 aktywnych brak ryzyka | bez zmian |
+| `route-check` `loads` `.limit(500)` bez sortu/statusu | przy >500 transportach losowy dobór | **DP-117** |
+| `resolveStaleRisks` (`risk_signals` bez limitu) | część nieaktualnych ryzyk niezamknięta przy `max_rows` | **DP-118** |
+| RPC zbiory / front `documents`·`invoices` bez `range` | obcięcie `max_rows` | **DP-119** (poza zakresem #691) |
 
 ### Decyzje koordynatora (lista poranna — nie czekają na właściciela)
 | Nr | Co | Stan |
@@ -2333,6 +2358,8 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 31.10.2026 23:55 | #690 F7 r1 POPRAWKI: B2–B7 (ZAPLANOWANY+przyszłe; sezon; 63c od teraz; limit 3 MB); parser `&#x2013;`/`li.accordion` na pliku właściciela; nullguard 905 | pętla |
 | 01.11.2026 00:35 | #690 F7 r2 POPRAWKI: B1 próg 50%+pary/dni; B2 podgląd z planem; B3 mutacje; B4 max(departure); decyzja 75 (±1 min); DP-116 | pętla |
 | 01.11.2026 01:05 | #690 F7 r3: testy mutacji (para/dni/próg+63c/podgląd/Edge); 63c apply≥30; bez imports.to_at; order(id); {vessel}; niepełny plik może pośrednio zamknąć SOURCE_DOWN przez cron (rejsy wstawione), ryzyko „niepełny plik” zostaje — akceptowane | pętla |
+| 01.11.2026 01:32 | #690 SCALONE `45d27978` (F7: gotowe @ 8fed1389); deploy-main 0360+Edge; start #691 DP-116 `sailingsSince` stronicowanie | pętla |
+| 01.11.2026 02:05 | #693 F7 r1 POPRAWKI: R1-B1 żywe testy atrapy; R1-B2 page cap throw; dedupe id; DP-117/118/119 | pętla |
 | 31.10.2026 — | Decyzja 73: TLLA-HEL ETA−150 min / HELA-TLL ETD+160 min (fixture Cargo; nocny 165 min OK). Decyzja 74: `sailings.source_ref` 0359; Digitraffic `digitraffic:portcall:<id>:<route>`; HTML/RECZNIE/DANE_STARTOWE wygrywają; #685-b RPC zastępuje digitraffic:% w ±3 h | F7 #688 r1–r4 |
 | 31.10.2026 — | F7 #683 nieblokujące (osobna poprawka): Scheduler grudzień + „on 2 January” → rok bieżący, ciche wygaśnięcie; Alert INFO bez ryzyka/historii — świadomie | F7 #683 r7 |
 | 31.10.2026 — | F7 #683 r8 nieblokujące (osobno): Alert poza Schedulerem obok Schedulera; sprzeczne bloki (resume→cofnięcie auto); rok przy długim oknie Schedulera; mutanty M10/M15–M17/M22 świadomie bez testów | F7 #683 r8 |

@@ -12,6 +12,60 @@ import { legDefFromRow } from '../here/legDefFromRow.ts';
 type Client = any;
 const SAILING_COLS = 'id,vessel_id,route,departure_at,arrival_at,delayed_departure_at,delayed_arrival_at,actual_departure_at,actual_arrival_at,status,source,source_ref';
 
+/** DP-116 / #691: PostgREST max_rows=1000 — stronicowanie range + order(id). */
+export const SAILINGS_PAGE_SIZE = 1000;
+/** F7 #693 r1 R1-B2: po MAX_PAGES pełnych stron — błąd (nie ciche obcięcie). */
+export const SAILINGS_MAX_PAGES = 50;
+
+type SailingsPageQuery = {
+  select: (cols: string) => SailingsPageQuery;
+  gte: (col: string, val: string) => SailingsPageQuery;
+  in: (col: string, vals: string[]) => SailingsPageQuery;
+  order: (col: string, opts?: { ascending?: boolean }) => SailingsPageQuery;
+  range: (from: number, to: number) => Promise<{ data: DbSailing[] | null; error: { message: string } | null }>;
+};
+
+/**
+ * Odczyt sailings od fromIso ze stronicowaniem (obejście max_rows=1000).
+ * Eksport pod testy DP-116 — ten sam helper co supabaseStore.sailingsSince.
+ * F7 #693 r1: limicie stron → throw; dedupe po `id` (równoległy job między stronami).
+ */
+export async function fetchSailingsSincePaged(
+  fromTable: () => SailingsPageQuery,
+  fromIso: string,
+  opts?: { sources?: string[]; pageSize?: number; must?: <T>(r: { data: T; error: { message: string } | null }, what: string) => T },
+): Promise<DbSailing[]> {
+  const pageSize = opts?.pageSize ?? SAILINGS_PAGE_SIZE;
+  const mustFn = opts?.must ?? (<T>(r: { data: T; error: { message: string } | null }, what: string): T => {
+    if (r.error) throw new Error(`${what}: ${r.error.message}`);
+    return r.data;
+  });
+  const out: DbSailing[] = [];
+  const seen = new Set<string>();
+  let from = 0;
+  for (;;) {
+    if (from >= SAILINGS_MAX_PAGES * pageSize) {
+      throw new Error('sailings page cap exceeded');
+    }
+    let q = fromTable()
+      .select(SAILING_COLS)
+      .gte('departure_at', fromIso);
+    if (opts?.sources?.length) q = q.in('source', opts.sources);
+    const r = mustFn(
+      await q.order('departure_at').order('id').range(from, from + pageSize - 1),
+      'sailings page',
+    ) as DbSailing[];
+    for (const row of r) {
+      if (seen.has(row.id)) continue;
+      seen.add(row.id);
+      out.push(row);
+    }
+    if (r.length < pageSize) break;
+    from += pageSize;
+  }
+  return out;
+}
+
 export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncStore {
   let pid: string | null = null;
   const must = <T>(r: { data: T; error: { message: string } | null }, what: string): T => {
@@ -25,8 +79,9 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
   return {
     projectId,
     async vessels() { return must(await sb.from('vessels').select('id,name,mmsi,imo'), 'vessels') as VesselRow[]; },
+    /** DP-116: stronicowanie — bez tego prod (>1000 rejsów) obcinał rozkład / statusy / pogodę. */
     async sailingsSince(fromIso: string) {
-      return must(await sb.from('sailings').select(SAILING_COLS).gte('departure_at', fromIso).order('departure_at'), 'sailings') as DbSailing[];
+      return fetchSailingsSincePaged(() => sb.from('sailings') as SailingsPageQuery, fromIso, { must });
     },
     /**
      * F7 #690 R2-B4 / 63c: max(departure_at) VIKING source_ref null > now.
@@ -47,29 +102,14 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
     },
     /**
      * F7 #690 R2-B4: rejsy VIKING+RECZNIE od fromIso ze stronicowaniem (import pliku).
-     * F7 r3: .order('id') — stabilny range.
+     * F7 r3: .order('id') — stabilny range. DP-116: wspólny helper.
      */
     async sailingsForVikingFileImport(fromIso: string) {
-      const pageSize = 1000;
-      const out: DbSailing[] = [];
-      let from = 0;
-      for (;;) {
-        const r = must(
-          await sb.from('sailings')
-            .select(SAILING_COLS)
-            .gte('departure_at', fromIso)
-            .in('source', ['VIKING', 'RECZNIE'])
-            .order('departure_at')
-            .order('id')
-            .range(from, from + pageSize - 1),
-          'sailings viking import page',
-        ) as DbSailing[];
-        out.push(...r);
-        if (r.length < pageSize) break;
-        from += pageSize;
-        if (from > 50_000) break;
-      }
-      return out;
+      return fetchSailingsSincePaged(
+        () => sb.from('sailings') as SailingsPageQuery,
+        fromIso,
+        { sources: ['VIKING', 'RECZNIE'], must },
+      );
     },
     async insertSailings(rows: SailingInsert[]) {
       // unikalność (statek, odejście): istniejący wiersz zostaje — plan i tak aktualizuje go osobno
