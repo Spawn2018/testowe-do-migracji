@@ -1,6 +1,6 @@
 {
   "type": "FeatureCollection",
-  "dataUpdatedTime": "2026-10-30T12:00:00.000Z",
+  "dataUpdatedTime": "2026-10-30T11:00:00.000Z",
   "features": [
     {
       "mmsi": 276829000,
@@ -17,7 +17,7 @@
         "rot": 0,
         "heading": 90,
         "timestamp": 0,
-        "timestampExternal": 1761825600000
+        "timestampExternal": 1793357400000
       }
     }
   ]

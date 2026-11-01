@@ -7457,6 +7457,20 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (odbiór prod):** SELECT `here_road_legs` — **12** / active 12 / `browser_fetch` 5; core bez zmian (3495/12561/3742/18854/19408); BN7 7× null. `here-roads` **#108803** @ 04:49Z ok (0 prób — core świeże; BN7 poza cronem). Komentarz w #667. **Dalej:** BN3 (#573).
 - Bez push na main.
 
+## 2026-11-01 07:40 — #696 F7 r1 POPRAWKI (cancel-suspect B1–B6)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne`.
+- Scalanie: brak „F7: gotowe do scalenia” (F7 r1 BLOKERY @ 72e25218). Bez push na main.
+- **Krok F7 #696 r1:**
+  - **B1:** hub tylko portu wyjścia (`departureHubsForRoute`); AIS w porcie docelowym → bez alarmu.
+  - **B2:** AIS ≤ 60 min (`isFreshAisFix`); **B3:** brak SOG ≠ stoi.
+  - **B4:** AIS down → keep dedup + `SOURCE_DOWN:DIGITRAFFIC_AIS` MEDIUM.
+  - **B5:** zniknięcie tylko przy kompletnej puli eta+etd (jak #688); pusta → null.
+  - **B6:** okno ETA+45…+6 h; `closeStaleFiToEeWithoutAta` nie zamyka przy otwartym podejrzeniu.
+  - vitest bn3-cancel-suspect-ais **17**.
+- **Dalej:** push → CI → gotowe do F7 @ sha. Po F7: RSS ERR/Yle.
+- Bez push na main.
+
 ## 2026-11-01 07:10 — BN3 cancel-suspect AIS gotowe do F7
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne`.

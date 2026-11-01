@@ -142,6 +142,7 @@ const pl: Dict = {
   rk_src_DFDS_SCHEDULE: 'rozkład promów (DFDS)',
   rk_src_DFDS_STATUS: 'status promów (DFDS)',
   rk_src_DIGITRAFFIC: 'AIS promów (Digitraffic)',
+  rk_src_DIGITRAFFIC_AIS: 'AIS promów Zatoki (Digitraffic)',
   rk_src_DIGITRAFFIC_PORTCALL: 'godziny portowe (Digitraffic Portnet)',
   rk_src_DIGITRAFFIC_VIKING: 'rozkład Viking (Digitraffic Portnet)',
   rk_src_DIGITRAFFIC_WINTER: 'żegluga zimowa (Digitraffic IBNet)',
