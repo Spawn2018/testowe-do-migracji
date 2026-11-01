@@ -7469,6 +7469,28 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Dalej:** DP kolejka BN3 (np. DP-108 ODWOLANY→FERRY_CANCELLED) albo ATD wiarygodne / BN4.
 - Bez push na main.
 
+## 2026-11-01 19:35 — #708 SCALONE; start BN9-c2 (aisDb / Q-18 Bałtyk)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE.
+- Scalanie: **#708** `cb28f06f` / **0368** (F7: gotowe @ `1217fc3d`; CI unit/db/visual ✔). Bez push na main — `deploy-main`.
+- **Krok (BN9-c2 cz.1):**
+  - Q-18: strefy TLL/MUU/PLD (dep) + HEL/VUO/STO/KPS (arr); fazy jak PL↔SE;
+  - `aisDb`: `vesselId` = `vessels.id` (bez listy demo WAW|NS); szacunek z `ferry_sailings_map` dla Megastar TLL-HEL;
+  - vitest bmapa + i2j-ais-db + w-prom-szacowany **39**.
+- **Dalej:** push → CI → gotowe do F7. Po F7: BN5 (pogoda morska) / reszta BN9-c2 wygląd.
+- Bez push na main.
+
+## 2026-11-01 19:30 — #708 SCALONE; start BN9-c2 (`FERRY_VESSELS`→baza)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne`.
+- Scalanie: **#708** `cb28f06f` / **0368** (F7: gotowe do scalenia @ `1217fc3d`; CI unit/visual/db ✔). Bez push na main — `deploy-main`.
+- **Krok (BN9-c2 cz.1 Cursor):**
+  - `aisDb`: `vesselId` = `vessels.id` (uuid); usunięty import/`FERRY_VESSELS[0]` fallback;
+  - `AisPosition.vesselId: string`; Q-18 `PORT_ZONES` + EE/FI (TLL/MUU/PLD/HEL/VUO/STO/KPS) przez `side` dep/arr;
+  - vitest i2j / w-prom-szacowany / bmapa (Tallinn→Helsinki, Paldiski/Kapellskär).
+- **Dalej:** push → CI → gotowe do F7. Po F7: BN5 (pogoda) / reszta BN9-c2 wygląd (koordynator).
+- Bez push na main.
+
 ## 2026-11-01 19:00 — #708 CI: unique vs BN1 0344 + DP-116 timeout
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE.

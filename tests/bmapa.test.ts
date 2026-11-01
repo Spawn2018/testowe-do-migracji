@@ -353,6 +353,26 @@ describe('Q-18 — reguła poprawiona 05.10 07:16', () => {
     expect(ferryVisible([{ id: 'ns', lat: 54.40469, lng: 18.67377, ts: at(5) }])).toBe(true);
     expect(ferryVisible([{ id: 'w', lat: 58.90557, lng: 17.95721, ts: at(5) }])).toBe(true);
   });
+
+  it('BN9-c2: Tallinn → Helsinki jak PL→SE (widoczny w EE, na morzu i w FI; znika w powrocie)', () => {
+    const tll = { id: 'mega', lat: 59.443, lng: 24.77, ts: at(6) };
+    const gulf = { id: 'mega', lat: 59.8, lng: 24.85, ts: at(8) };
+    const hel = { id: 'mega', lat: 60.153, lng: 24.915, ts: at(10) };
+    const outHel = { id: 'mega', lat: 59.95, lng: 24.9, ts: at(12) };
+    expect(ferryPhase([tll])).toBe('pl-port');
+    expect(ferryPhase([tll, gulf])).toBe('to-se');
+    expect(ferryPhase([tll, gulf, hel])).toBe('se-port');
+    expect(ferryPhase([tll, gulf, hel, outHel])).toBe('to-pl');
+    expect(ferryVisible([tll, gulf, hel])).toBe(true);
+    expect(ferryVisible([tll, gulf, hel, outHel])).toBe(false);
+  });
+
+  it('BN9-c2: Paldiski / Kapellskär i Muuga / Vuosaari — strefy dep/arr', () => {
+    expect(ferryVisible([{ id: 'sirena', lat: 59.335, lng: 24.083, ts: at(6) }])).toBe(true);
+    expect(ferryVisible([{ id: 'sirena', lat: 59.721, lng: 19.065, ts: at(14) }])).toBe(true);
+    expect(ferryVisible([{ id: 'finbo', lat: 59.497, lng: 24.96, ts: at(6) }])).toBe(true);
+    expect(ferryVisible([{ id: 'finbo', lat: 60.206, lng: 25.19, ts: at(10) }])).toBe(true);
+  });
 });
 
 function denseVia(via: Array<[number, number]>, stepKm: number): Array<[number, number]> {
