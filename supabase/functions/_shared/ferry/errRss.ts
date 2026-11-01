@@ -94,9 +94,7 @@ export function parseErrRss(xml: string): { items: ErrRssItem[]; warnings: strin
       pubDate,
     });
   }
-  if (!items.length) {
-    warnings.push('ERR RSS: brak pozycji <item> (struktura lub pusty kanał).');
-  }
+  /* Pusty kanał (0 itemów) jest OK — brak newsów, nie awaria struktury. */
   return { items, warnings };
 }
 

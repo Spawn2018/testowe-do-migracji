@@ -2880,7 +2880,7 @@ export async function applyErrRssConfirmations(deps: JobDeps, _sinceIso: string)
   await deps.store.resolveRisks('SOURCE_DOWN:ERR_RSS:');
   const parsed = parseErrRss(page.text);
   const warnings = [...parsed.warnings];
-  if (parsed.warnings.some((w) => /struktura|pusta/i.test(w))) {
+  if (parsed.warnings.some((w) => /struktura|pusta odpowiedź/i.test(w))) {
     await deps.store.raiseRisk(sourceDownRisk('ERR_RSS', parsed.warnings, nowIso, ERR_RSS_URL));
     return { hits: 0, risks: 1, warnings };
   }
