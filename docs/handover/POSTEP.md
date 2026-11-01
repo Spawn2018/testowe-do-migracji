@@ -7457,6 +7457,81 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (odbiór prod):** SELECT `here_road_legs` — **12** / active 12 / `browser_fetch` 5; core bez zmian (3495/12561/3742/18854/19408); BN7 7× null. `here-roads` **#108803** @ 04:49Z ok (0 prób — core świeże; BN7 poza cronem). Komentarz w #667. **Dalej:** BN3 (#573).
 - Bez push na main.
 
+## 2026-11-01 01:05 — #685-b F7 r3: testy mutacji + drobne (PR #690)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE; #685 W TOKU (b / PR #690). Bez nowych `pilne`.
+- Scalanie: F7 r3 **POPRAWKI** @ `fe4ce5d4` (CI unit/db/visual ✔). Brak „F7: gotowe do scalenia”. Bez push na main.
+- **Krok F7 #690 r3:**
+  - testy: filtr pary (trasa,statek); filtr dni trasy; niepełny plik + horyzont >30 → bez resolve SOURCE_DOWN; podgląd = plan zapisu bez mutacji; Edge mfaErr→403 / !commit bez record;
+  - 63c apply **≥ 30 d** (jak cron); `maxVikingFileDepartureAt` bez `imports.to_at`; `.order('id')` przy stronicowaniu; i18n `{vessel}`; bez duplikatu MemStore;
+  - PLAN §4/§8: niepełny plik może pośrednio zamknąć SOURCE_DOWN przez cron — akceptowane;
+  - vitest 685b **23**.
+- **Dalej:** push → CI → gotowe do F7 @ sha. Ekran BN9-c1 — koordynator.
+- Bez push na main.
+
+## 2026-11-01 00:45 — #685-b F7 r2 POPRAWKI B1–B4 (PR #690)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE; #685 W TOKU (b / PR #690). Bez nowych `pilne`.
+- Scalanie: F7 r2 **POPRAWKI** @ `0adcc886` (CI unit/db/visual ✔). Brak „F7: gotowe do scalenia”. Bez push na main.
+- **Krok F7 #690 r2:**
+  - **B1** — czyszczenie tylko (trasa, statek) + dni z pliku; próg ≥50% rejsów trasy (inaczej ryzyko MEDIUM, bez kasowania, bez zamykania SOURCE_DOWN);
+  - **B2** — podgląd: `planningVikingFileStore` + plan `to_insert`/`to_remove`/`to_take_over`/`risks`/`blocked`;
+  - **B3** — structuredClone; coverage apply > 30 d (cron ≥ 30); RECZNIE 30 min (+45 → insert); Digitraffic nie liczy pokrycia; ODWOLANY/OPOZNIONY/poza zakresem nietykalne;
+  - **B4** — `maxVikingFileDepartureAt` (+ `viking_schedule_imports.to_at`) + stronicowanie VIKING+RECZNIE; cron 29 d → SOURCE_DOWN, 30 d → resolve;
+  - decyzja **75** (±1 min obecności); DP-116 (`max_rows` w innych jobach → #691);
+  - vitest 685b **18**; bn2 63c coverage.
+- **Dalej:** push → CI → gotowe do F7 @ sha. Ekran BN9-c1 — koordynator.
+- Bez push na main.
+
+## 2026-10-31 23:55 — #685-b F7 r1 POPRAWKI B2–B7 (PR #690)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE; #685 W TOKU (b). Bez nowych `pilne`.
+- Scalanie: F7 r1 POPRAWKI @ 9e508d9f; B1 już w `de27c7d5` (UTF-8 + nullguard 905, CI ✔). Bez push na main.
+- **Krok F7 #690 r1:**
+  - **B2/B3** — tylko `ZAPLANOWANY`+przyszłe do usuń/przejmij; nietykalne blokują insert;
+  - **B4** — sezon: VIKING `source_ref` null w dniach pliku, nie w pliku → usuń / ryzyko MEDIUM;
+  - **B5** — cron `ferry-schedule`: SOURCE_DOWN tylko gdy pokrycie od teraz < 30 d;
+  - **B6** — testy mutacji (2,5/3,5 h, trasa/statek, 29/30 d, ODWOLANY/W_REJSIE, sezon, idempotencja);
+  - **B7** — Edge 3 MB → 413; parser max 40 tabel / 500 wierszy;
+  - vitest 685b **11**.
+- **Dalej:** push → CI → gotowe do F7.
+- Bez push na main.
+
+## 2026-10-31 23:55 — #690 F7 r1 POPRAWKI (B2–B7 + parser pliku właściciela)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE; #685 W TOKU (b / PR #690). Bez nowych `pilne`.
+- Scalanie: F7 r1 **POPRAWKI** @ `de27c7d5` (CI unit/db/visual ✔). Brak „F7: gotowe do scalenia”. Bez push na main.
+- **Krok F7 #690 r1:**
+  - B2/B3: tylko `ZAPLANOWANY` + `departure_at > now` w ±3 h; ODWOLANY/W_REJSIE/przeszłe blokują insert;
+  - B4: sezon — nieobecne VIKING (`source_ref` null) w zakresie pliku: bez transportu → usuń; z transportem → ryzyko MEDIUM;
+  - B5/63c: pokrycie **od teraz** ≥ 30 d; cron nie wystawia `SOURCE_DOWN:VIKING_SCHEDULE` przy pokryciu;
+  - B7: Edge max 3 MB → 413; min `days` 30; `record` projekt `STEGRA_BODEN`; bez surowego `recErr.message`;
+  - parser: `stripTags` dekoduje `&#x2013;`; `li.c-accordion__item`; fixture `viking-cargo-hel-tll-saved-sample.html` (żywy plik → 260 rejsów / 60 d);
+  - vitest `685b-viking-file-import` **11** + bn2-ferry **46**.
+- **Dalej:** push → CI → gotowe do F7 @ sha. Ekran BN9-c1 — koordynator.
+- Bez push na main.
+
+## 2026-10-31 23:15 — #685-b CI db: UTF-8 null-guard + EXPECTED 905; odbiór ferry-schedule
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE; #685 W TOKU (b / PR #690). Bez nowych `pilne`.
+- Scalanie: brak „F7: gotowe do scalenia” na #690. Bez push na main.
+- **Odbiór #688:** jednorazowy Edge `ferry-schedule` prod @ 22:03Z → `integration_runs` **113222** ok; inserted **1296**; Digitraffic Viking **14** (TLLA-HEL 7 + HELA-TLL 7; 150/160 min; `source_ref` digitraffic); 403 cargo/sales oczekiwane.
+- **Krok CI #690:** unit/visual ✔; db FAIL — `9e508d9f` zepsuł UTF-8 w `null-guard-calls.txt` (212 FAIL regex). Przywrócono pliki z `d4dd3d52`; `EXPECTED_LOCAL.nullguard` **895→905** (+2 GUARD ×5).
+- **Dalej:** push → CI → gotowe do F7; ekran BN9-c1 (koordynator).
+- Bez push na main.
+
+## 2026-10-31 22:45 — #688 SCALONE; #685-b (0360 + Edge + apply)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE; #685 W TOKU (b). Bez nowych `pilne`.
+- Scalanie: **#688 SCALONE** `774fd2c0` (F7: gotowe do scalenia @ `b31d504e`; CI unit/db/visual ✔). Bez push na main.
+- **Krok #685-b:**
+  - migracja **0360** — `viking_schedule_imports` + `viking_schedule_import_assert` / `_record` (HHL_ADMIN+2FA);
+  - Edge `viking-schedule-import` — podgląd/zapis HTML; `parseVikingTimetableHtml`;
+  - `applyVikingFileSchedule` (≠ `applySailings`): ±3 h digitraffic usuń/przejmij; RECZNIE nietykalne; #685-c SOURCE_DOWN przy horyzoncie ≥ 30 d;
+  - vitest `bn2-viking-file-import` **7**; allowlist / null-guard / advisor.
+- **Dalej:** push → CI → gotowe do F7; ekran BN9-c1 (koordynator).
+- Bez push na main.
+
 ## 2026-10-31 22:10 — #688 F7 r4 POPRAWKI (mutacje + RECZNIE/DANE_STARTOWE)
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE; #685/#499/#537/#538/#500 w planie. Bez nowych `pilne`.

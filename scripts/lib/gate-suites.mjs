@@ -24,7 +24,7 @@ export const EXPECTED_LOCAL = {
   invite: 48,
   risks: 46, // #398: +8 +1 SMS; #411: +3 (blok *_RESOLVED + url)
   import: 425, // #653 revoke enqueue_active_wt: +2 privilege chk; było 423
-  nullguard: 895, // #653: −5 (usunięty GUARD enqueue_active_wt ×4 odmowy +1 pozytywna); było 900
+  nullguard: 905, // #685-b: +10 (viking_schedule_import_assert/record ×4 odmowy +1 pozytywna); było 895 (#653)
   i2: 675, // #666/0351: +3 actual_departure_at (SCX/OPS/ADMIN odmowa+zgoda); było 672
   i30: 10,
   i31: 10, // D-1300: +korekta n_sek=7

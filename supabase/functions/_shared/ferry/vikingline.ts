@@ -355,7 +355,13 @@ export function parseVikingTimetableHtml(
     return { sailings, warnings };
   }
   const legs: WeeklyLeg[] = [];
-  const tables = [...html.matchAll(/<table\b([^>]*)>([\s\S]*?)<\/table>/gi)];
+  /* F7 #690 R1-B7: limit tabel/wierszy (O(tabele × rozmiar)). */
+  const MAX_TABLES = 40;
+  const MAX_ROWS_PER_TABLE = 500;
+  const tables = [...html.matchAll(/<table\b([^>]*)>([\s\S]*?)<\/table>/gi)].slice(0, MAX_TABLES);
+  if ([...html.matchAll(/<table\b/gi)].length > MAX_TABLES) {
+    warnings.push(`Viking: pominięto tabele powyżej limitu ${MAX_TABLES}.`);
+  }
   let fallbackIdx = 0;
   for (const tm of tables) {
     const attrs = tm[1] ?? '';
@@ -365,7 +371,8 @@ export function parseVikingTimetableHtml(
     /* F7 #668 r3: sezon = ostatnie otwarcie c-accordion__item przed tabelą (nie pierwszy w prefiksie).
        Przy strukturze akordeonu bez seasonAll z wcześniejszych elementów. */
     const before = html.slice(0, idx);
-    const itemOpenRe = /<(?:details|div)\b[^>]*\bc-accordion__item\b[^>]*>/gi;
+    /* #685-b: prawdziwy zapis Cargo ma c-accordion__item na <li>, nie na <details>. */
+    const itemOpenRe = /<(?:details|div|li)\b[^>]*\bc-accordion__item\b[^>]*>/gi;
     let lastOpenIdx = -1;
     let openM: RegExpExecArray | null;
     while ((openM = itemOpenRe.exec(before)) != null) lastOpenIdx = openM.index;
@@ -398,7 +405,7 @@ export function parseVikingTimetableHtml(
     }
     const tzDep = route === 'HELA-TLL' ? 'Europe/Helsinki' : 'Europe/Tallinn';
     const tzArr = route === 'HELA-TLL' ? 'Europe/Tallinn' : 'Europe/Helsinki';
-    const rows = [...body.matchAll(/<tr[\s\S]*?<\/tr>/gi)];
+    const rows = [...body.matchAll(/<tr[\s\S]*?<\/tr>/gi)].slice(0, MAX_ROWS_PER_TABLE);
     for (const rm of rows) {
       const cells = [...rm[0].matchAll(/<t[dh][^>]*>([\s\S]*?)<\/t[dh]>/gi)].map((x) => stripTags(x[1]!));
       if (cells.length < 3) continue;
