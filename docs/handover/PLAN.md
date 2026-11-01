@@ -1235,8 +1235,12 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-136 | Cursor | Przepięcie rejsu (0344) patrzy tylko na `sweden_land_geom` — dodać FI / `finland_land_geom` | F7 #708 r1 | BN4 / ferry | SCALONE #712 `4b9384dd` / **0371** |
 | DP-137 | Cursor | Status `IN_TRANSIT_SE` („Droga SE”) i `synthetic_port_se` dla Finlandii — potwierdzić z UI i ETA (etykiety FI) | F7 #708 r1 / #713 | BN4 / UI+ETA | SCALONE #715 `c02ac887` / **0372** |
 | DP-138 | Cursor | AT_PORT → IN_TRANSIT_SE: `p_ts > coalesce(ATA, STATUS→AT_PORT)`; FERRY bez zmian | F7 #708 / #715 r2 / #713 | BN4 / AIS backup | SCALONE #715 `c02ac887` / **0373** |
-| DP-139 | Cursor | MMSI/IMO Victoria I + Sirena Seaways (null w 0347); alias AIS „VICTORIA 1” w Portnet/Port Tallinn | F7 #715 | BN4 / vessels | PR #719 (**0374**, `59cedb41`) |
-| DP-140 | Cursor | Analiza: pozostałe `vessels.mmsi` null w flocie bałtyckiej 0347 + spójność fixture testów z Digitraffic | F7 #715 | BN4 / vessels | PR #719 (analiza w POSTEP; brak dalszych null w ósemce 0347) |
+| DP-139 | Cursor | MMSI/IMO Victoria I + Sirena Seaways (null w 0347); alias AIS „VICTORIA 1”; analiza floty 0347 (brak dalszych null MMSI) | F7 #715 / F7 #719 | BN4 / vessels | SCALONE #719 `eddc4bae` / **0374** |
+| DP-140 | Cursor | Analiza 28 przeterminowanych rejsów (przypłynięcie > 6 h, status ZAPLANOWANY/OPOZNIONY/W_REJSIE): brak potwierdzenia vs odbyte; wpływ na najbliższy prom/ETA/mapę; propozycja zasady zgodnej z 61b (bez auto-zamykania) | F7 #719 / #713 | BN4 / sailings | w kolejce (nie blokuje BN5; analiza → komentarz / BN8a) |
+| DP-141 | koordynator | Namiar GDN-NYN (BN9-c2) | #717 | BN9-c2 | SCALONE #717 `ae308fce` |
+| DP-142 | Cursor | PDF ferry (osobno od BN9-c2) | #717 | ferry / PDF | w kolejce |
+| DP-143 | Cursor | Typy frontu: `GeofenceCountry` bez EE/FI; `Geofence.route` jako `FerryOperator` choć zapisane kody tras — ryzyko ekranu Strefy | #720 §6 | BN8 | w kolejce (przy BN8) |
+| DP-144 | Cursor | `FerryOperator` zamknięta lista — armator tylko w bazie nie trafia do Kokpitu/awizacji (`src/lib`) | #720 §6 | BN8 / front | w kolejce (przy BN8) |
 | DP-122 | Cursor | `viking_schedule_imports` (0360) brak w kopii 01.11 01:30 — koordynator #697: **nie wymaga zmian** (0360 po kopii 00:30; kontrola kopii 02.11) | #697 | backup | bez zmian (koord. 01.11) |
 | DP-117 | Cursor | `route-check/index.ts` `loads` `.limit(500)` bez sortu/filtra statusu — przy >500 transportach losowy dobór | F7 #693 r1 | ferry / route-check | w kolejce |
 | DP-118 | Cursor | `store.resolveStaleRisks` — `risk_signals` bez limitu (`max_rows`) → część nieaktualnych ryzyk niezamknięta | F7 #693 r1 | BN3 / ryzyka | w kolejce |
@@ -1316,7 +1320,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 5. ~~**DP-21**~~ przeniesione do #666 (decyzja 63b) — parser pliku właściciela (F7 #680).
 6. ~~**BN3**~~ — **SCALONE** (wycinki + #699 RSS ERR `40141ff4`) — poniżej; DP kolejka / ATD wiarygodne dalej.
 7. ~~**#685** decyzja 63~~ — SCALONE (poniżej).
-8. ~~**BN4**~~ — SCALONE (#701…#708 / **0363–0368**); ~~pkt 8 cz.2~~ SCALONE (#708 `cb28f06f` / **0368**); ~~BN9-c2 Cursor~~ SCALONE (#709 `7db16a87`); ~~**DP-133**~~ SCALONE (#710 `ebd92f55` / **0369**); ~~**DP-134/135**~~ SCALONE (#711 `ac81bdd7` / **0370**); ~~**DP-136**~~ SCALONE (#712 `4b9384dd` / **0371**); ~~**DP-137+138**~~ SCALONE (#715 `c02ac887` / **0372**+**0373**); ~~BN9-c2 wygląd~~ SCALONE (#717 `ae308fce`). **W TOKU:** **DP-139+140** PR #719 (**0374**, `59cedb41`) → **BN5** (#714 spec) → **BN6** (#716 spec) → **BN7** (#718 spec) → BN8…BN10 jak #573.
+8. ~~**BN4**~~ — SCALONE (#701…#708 / **0363–0368**); ~~pkt 8 cz.2~~ SCALONE (#708 `cb28f06f` / **0368**); ~~BN9-c2 Cursor~~ SCALONE (#709 `7db16a87`); ~~**DP-133**~~ SCALONE (#710 `ebd92f55` / **0369**); ~~**DP-134/135**~~ SCALONE (#711 `ac81bdd7` / **0370**); ~~**DP-136**~~ SCALONE (#712 `4b9384dd` / **0371**); ~~**DP-137+138**~~ SCALONE (#715 `c02ac887` / **0372**+**0373**); ~~BN9-c2 wygląd~~ SCALONE (#717 `ae308fce`); ~~**DP-139**~~ SCALONE (#719 `eddc4bae` / **0374**; flota MMSI w DP-139). **W TOKU:** **BN5** (#714, `pakiet/bn5-baltic-marine-weather`, **0375**…) → **BN6** (#716) → **BN7** (#718) → **BN8** (#720 BN8a/BN8b) → BN9…BN10 jak #573. **DP-140** (28 przeterminowanych rejsów) w kolejce, nie blokuje BN5.
 
 ### BN3 · Opóźnienia i odwołania nowych armatorów — SCALONE (po wycinkach 1–3; ~~#685~~ / ~~#691~~ / ~~#692~~ / ~~#694~~ / ~~#695~~ / ~~#696~~ / ~~#686~~ / ~~#699~~; DP kolejka / ATD wiarygodne dalej)
 Źródło: #573 + komentarze BN3 31.10 (spec + decyzje 57–61). Po #667; DP-21 → #666 (63b).
@@ -1346,7 +1350,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 5. ~~**DP-128**~~ SCALONE (#703 `d8708766` / **0363**) — ATA/ATD AIS×geofence (pas 3–4 km pomijany); korekta XPRS HELA-TLL.
 6. ~~**DP-130**~~ SCALONE (#704 `68421fbb` / **0364**) — trigger nie cofa jawnego DOPLYNAL przy ATA null; migracja 23+ rejsów W_REJSIE; testy status + vitest.
 7. ~~**DP-131**~~ SCALONE (#705 `aa6ab71c` / **0365**) — ryzyko HIGH gdy FERRY a GPS ≤3 km od portu wyjścia po ATD/ATA; dedup; bez zmiany statusu; cron `tower-prom-opoznienie`.
-8. ~~**cz.1**~~ SCALONE (#706 `3c0b76ee` / **0366**). ~~Hotfix~~ SCALONE (#707 `bc7998ff` / **0367**). ~~**cz.2**~~ SCALONE (#708 `cb28f06f` / **0368**): FI+STO/KPS arrival backup; outbound+PL↔SE; brzeg FI; Kapellskär; status **544**. ~~BN9-c2 Cursor~~ SCALONE (#709). ~~**DP-133**~~ SCALONE (#710 / **0369**). ~~**DP-134/135**~~ SCALONE (#711 / **0370**). ~~**DP-136**~~ SCALONE (#712 / **0371**). ~~**DP-137+138**~~ SCALONE (#715 `c02ac887` / **0372**+**0373**). ~~BN9-c2 wygląd~~ SCALONE (#717). **Dalej:** DP-139+140 PR #719 (**0374**) → BN5 (#714) → BN6 (#716) → BN7 (#718).
+8. ~~**cz.1**~~ SCALONE (#706 `3c0b76ee` / **0366**). ~~Hotfix~~ SCALONE (#707 `bc7998ff` / **0367**). ~~**cz.2**~~ SCALONE (#708 `cb28f06f` / **0368**): FI+STO/KPS arrival backup; outbound+PL↔SE; brzeg FI; Kapellskär; status **544**. ~~BN9-c2 Cursor~~ SCALONE (#709). ~~**DP-133**~~ SCALONE (#710 / **0369**). ~~**DP-134/135**~~ SCALONE (#711 / **0370**). ~~**DP-136**~~ SCALONE (#712 / **0371**). ~~**DP-137+138**~~ SCALONE (#715 `c02ac887` / **0372**+**0373**). ~~BN9-c2 wygląd~~ SCALONE (#717). ~~**DP-139**~~ SCALONE (#719 / **0374**). **Dalej:** BN5 (#714) → BN6 (#716) → BN7 (#718) → BN8 (#720).
 
 ### #713 · STAŁE ZASADY od 01.11 — W TOKU (pierwsze zastosowanie: DP-137+138 w #715)
 Źródło: #713 (Spawn2018, `dla-cursora`; właściciel 01.11 22:24). Nie przerywa bieżącej. Wpis też w `ZASADY_CIAGLEJ_PRACY.md`.
@@ -1354,16 +1358,23 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 2. **Unikalne fixture w `status.sh`:** własny vessel + UUID z numerem DP; po insert — `count(*)`; komentarz zajętych `L xx` / vesseli; bez `alter` CHECK schematu.
 3. **Start etapu od specyfikacji koordynatora** (kod od razu; pytania w issue).
 4. **Praca równoległa koordynatora** (`wyglad/*`, spec) bez kolizji ścieżek.
-5. ~~`wyglad/BN9-c2`~~ SCALONE (#717); spec BN5 (#714), BN6 (#716), BN7 (#718).
+5. ~~`wyglad/BN9-c2`~~ SCALONE (#717); ~~DP-139~~ SCALONE (#719); spec BN5 (#714) W TOKU; BN6 (#716), BN7 (#718), BN8 (#720).
 
-### #714 · BN5 — pogoda bałtycka: specyfikacja — W KOLEJCE (po DP-139/140; start po domknięciu BN4)
+### #714 · BN5 — pogoda bałtycka — W TOKU (`pakiet/bn5-baltic-marine-weather`, **0375**)
 Źródło: #714 (Spawn2018). Spec w treści zgłoszenia (korytarze `BALTIC_GULF_FI` / `PLD_KPS` / `TLL_STO`, FMI/DMI/SMHI, lód Digitraffic, bez domyślnego GDN-NYN). Ekrany BN9-c3 — koordynator.
+1. ~~**cz.1 mapowanie + baza**~~ — **0375** CHECK + seed 3 korytarzy; `marineCorridorForRoute` / `marinePointsForRoute` po `family_key`; trasa nieznana → `null`; job `ferry-weather` zapisuje 5 korytarzy; vitest `bn5-marine-corridors`.
+2. **cz.2** — SMHI snow1g (zapas wiatru); NaN WAM → ostrzeżenie w `detail`; DMI 429 bez SOURCE_DOWN gdy FMI OK (regresja).
+3. **cz.3** — lód Digitraffic → `FERRY_ICE` (vs istniejące FERRY_WINTER z BN3); atrybucja Fintraffic.
+4. Testy ryzyka per korytarz (fala 4 m na GULF_FI nie na GDN-NYN).
 
 ### #716 · BN6 — drogi LT/LV/EE/FI: specyfikacja — W KOLEJCE (po BN5)
 Źródło: #716 (Spawn2018). Spec w treści zgłoszenia (Digitraffic FI, eismoinfo LT, LVC LV, Tark Tee EE; `ROAD_LT/LV/EE/FI`; bufor 2 km; limity masy). Ekrany BN9-c4 — koordynator.
 
 ### #718 · BN7 — trasy HERE i linie na mapie: specyfikacja — W KOLEJCE (po BN6)
 Źródło: #718 (Spawn2018, `dla-cursora`; 02.11 ~00:20). Spec w treści zgłoszenia (legi BN7, via, `cron_fetch`, OSM corridor, ETA segmenty, filtr tras; `cron_fetch=true` dopiero po froncie koordynatora). Ekrany BN9-c5 — koordynator.
+
+### #720 · BN8 — statusy / awizacja / ETA dla wszystkich tras — W KOLEJCE (po BN5; BN8a po BN5/BN6, BN8b po BN7)
+Źródło: #720 (Spawn2018, `dla-cursora`; 02.11 ~02:10). Spec w treści: BN8a (statusy, mismatch, overdue, `process_position`, `eta_record_segment_observations`, blokada fałszywego OFF_CORRIDOR, `loads.ferry_route`); BN8b (`compute_load_eta` + OFF_CORRIDOR z korytarzy BN7). Front `src/lib` Cursor; ekrany BN9-c6 — koordynator. DP-143/DP-144 przy BN8. Decyzja właściciela 82 (odprawa EE) — założenie do czasu W.
 
 ### #687 · DP-114 Tallink HEL–TLL 404 + niepełna pula Alert — SCALONE (`5fc7d4a0` / PR #689)
 Źródło: #687 (Spawn2018, `dla-cursora`). Po #683 prod: `TALLINK_HEL_TLL_URL` `/en/helsinki-tallinn` → HTTP 404; reguła 72 traci połowę puli.
@@ -2470,6 +2481,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 01.11.2026 23:55 | #715 F7 r2: B1 coalesce(ATA, STATUS→AT_PORT) + brak STATUS→false; B2/N1; ZASADY #713; status **570** | pętla / F7 #715 |
 | 02.11.2026 00:00 | #715 SCALONE `c02ac887` / **0372**+**0373**; #717 SCALONE `ae308fce`; start DP-139+140 **0374**; #718 BN7 wpisane §4; ZASADY #713 pkt 3–4 | pętla / F7 #715 |
 | 02.11.2026 00:15 | DP-139+140 PR #719 `59cedb41` (**0374** + alias `victoria 1` + analiza DP-140); komentarz #718; czekam F7 | pętla |
+| 02.11.2026 00:34 | #719 SCALONE `eddc4bae` / **0374** (F7: gotowe @ ebc05bbd); DP-140 = 28 przeterminowanych rejsów (F7); #720 BN8 wpisane §4; start BN5 **0375** | pętla / F7 #719 |
 | 31.10.2026 — | Decyzja 73: TLLA-HEL ETA−150 min / HELA-TLL ETD+160 min (fixture Cargo; nocny 165 min OK). Decyzja 74: `sailings.source_ref` 0359; Digitraffic `digitraffic:portcall:<id>:<route>`; HTML/RECZNIE/DANE_STARTOWE wygrywają; #685-b RPC zastępuje digitraffic:% w ±3 h | F7 #688 r1–r4 |
 | 31.10.2026 — | F7 #683 nieblokujące (osobna poprawka): Scheduler grudzień + „on 2 January” → rok bieżący, ciche wygaśnięcie; Alert INFO bez ryzyka/historii — świadomie | F7 #683 r7 |
 | 31.10.2026 — | F7 #683 r8 nieblokujące (osobno): Alert poza Schedulerem obok Schedulera; sprzeczne bloki (resume→cofnięcie auto); rok przy długim oknie Schedulera; mutanty M10/M15–M17/M22 świadomie bez testów | F7 #683 r8 |

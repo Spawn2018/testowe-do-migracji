@@ -58,7 +58,9 @@ describe('FERRY-STATUS — rozkład Stena Freight', () => {
 describe('FERRY-STATUS — pogoda i panel', () => {
   it('fala powyżej 3,8 m na obu trasach jest przekroczeniem progu', () => {
     for (const route of ['GDN-NYN', 'GDY-KAA'] as const) {
-      const point = marinePointsForRoute(route)[0];
+      const pts = marinePointsForRoute(route);
+      expect(pts?.length).toBeGreaterThan(0);
+      const point = pts![0]!;
       const ev = evaluateMarineWindow([
         { point, at: '2026-10-05T12:00:00Z', waveM: 4.1, gustKn: 20, source: 'FMI' },
       ], 3.8, 40);

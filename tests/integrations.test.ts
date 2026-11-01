@@ -133,7 +133,7 @@ class MemStore implements SyncStore {
   }
   async opsThresholds() { return this.thr; }
   async saveMarineCondition(row: {
-    corridor: 'BALTIC_GDN_NYN' | 'BALTIC_GDY_KAA'; maxWaveM: number | null; maxGustKn: number | null;
+    corridor: 'BALTIC_GDN_NYN' | 'BALTIC_GDY_KAA' | 'BALTIC_GULF_FI' | 'BALTIC_PLD_KPS' | 'BALTIC_TLL_STO'; maxWaveM: number | null; maxGustKn: number | null;
     risk: 'niskie' | 'podwyższone' | 'wysokie'; sources: string;
   }) {
     this.marine = { maxWaveM: row.maxWaveM, maxGustKn: row.maxGustKn, risk: row.risk, sources: row.sources };
@@ -785,6 +785,28 @@ describe('ferry-weather — II-8 FMI+DMI+SMHI', () => {
     }, {}, WX_NOW).d);
     expect(r.ok).toBe(false);
     expect(st.risks[0]?.dedup).toMatch(/^SOURCE_DOWN:MARINE_WEATHER:/);
+  });
+
+  it('BN5: trasa bez mapy bez FERRY_WEATHER; SMHI sam nie ratuje SOURCE_DOWN', async () => {
+    const st = new MemStore();
+    st.thr = { waveM: 0.5, gustKn: 5 };
+    st.sailings = [{
+      id: 's-unknown', vessel_id: WAW, route: 'HEL-STO',
+      departure_at: '2026-10-02T03:00:00.000Z', arrival_at: '2026-10-02T21:00:00.000Z',
+      delayed_departure_at: null, delayed_arrival_at: null, status: 'ZAPLANOWANY', source: 'TALLINK',
+    }];
+    const ok = await runFerryWeather(deps(st, wxPages(), {}, WX_NOW).d);
+    expect(ok.ok).toBe(true);
+    expect(st.risks.filter((x) => x.dedup.startsWith('FERRY_WEATHER:'))).toHaveLength(0);
+
+    const down = new MemStore();
+    const r = await runFerryWeather(deps(down, {
+      'opendata.fmi.fi': 503,
+      'opendataapi.dmi.dk': 429,
+      'ocobs.smhi.se': SMHI,
+    }, {}, WX_NOW).d);
+    expect(r.ok).toBe(false);
+    expect(down.risks[0]?.dedup).toMatch(/^SOURCE_DOWN:MARINE_WEATHER:/);
   });
 });
 

@@ -87,9 +87,9 @@ import {
   errRssCancelRisk, filterErrFerryCancel, isErrRssEnabled, isErrRssItemFresh, parseErrRss,
 } from '../ferry/errRss.ts';
 import {
-  MARINE_POINTS, SMHI_OCOBS_URL, dmiWamUrl, evaluateMarineWindow, fmiHarmonieUrl, fmiWamUrl,
-  marinePointsForRoute, marineWeatherRisk, parseDmiCoverageJson, parseFmiTimeValuePair, parseSmhiOcobs,
-  samplesInWindow, type MarineSample, type MarinePointCode,
+  MARINE_CORRIDORS, MARINE_POINTS, SMHI_OCOBS_URL, dmiWamUrl, evaluateMarineWindow, fmiHarmonieUrl, fmiWamUrl,
+  marinePointsForCorridor, marinePointsForRoute, marineWeatherRisk, parseDmiCoverageJson, parseFmiTimeValuePair,
+  parseSmhiOcobs, samplesInWindow, type MarineSample, type MarinePointCode,
 } from '../ferry/marineWeather.ts';
 import {
   integrationMode, parseDatexSituations, parseTrafikverketRoadConditions,
@@ -397,7 +397,7 @@ export interface SyncStore {
   lastPositionFix?(loadId: string, source: string): Promise<{ lat: number; lon: number; ts: string } | null>;
   /** II-8: zapis bieżącej pogody morskiej */
   saveMarineCondition?(row: {
-    corridor: 'BALTIC_GDN_NYN' | 'BALTIC_GDY_KAA';
+    corridor: 'BALTIC_GDN_NYN' | 'BALTIC_GDY_KAA' | 'BALTIC_GULF_FI' | 'BALTIC_PLD_KPS' | 'BALTIC_TLL_STO';
     maxWaveM: number | null;
     maxGustKn: number | null;
     risk: 'niskie' | 'podwyższone' | 'wysokie';
@@ -3785,17 +3785,17 @@ export async function runFerryWeather(deps: JobDeps): Promise<JobResult> {
     warnings.push(`SMHI ocobs: ${smhiRes.warning}`);
   }
 
-  if (fmiOk === 0 && dmiOk === 0 && smhiOk === 0) {
+  // BN5: SOURCE_DOWN gdy brak FMI i DMI (SMHI ocobs nie zastępuje prognoz).
+  if (fmiOk === 0 && dmiOk === 0) {
     await deps.store.raiseRisk(sourceDownRisk('MARINE_WEATHER', warnings, nowIso, 'https://en.ilmatieteenlaitos.fi/open-data'));
     return { job: 'ferry-weather', mode: 'LIVE', ok: false, risks: 1, warnings };
   }
   await deps.store.resolveRisks('SOURCE_DOWN:MARINE_WEATHER:');
 
   const nearTo = new Date(now.getTime() + 24 * 3600_000).toISOString();
-  const corridors = ['BALTIC_GDN_NYN', 'BALTIC_GDY_KAA'] as const;
   const evalByCorridor = new Map<string, ReturnType<typeof evaluateMarineWindow>>();
-  for (const corridor of corridors) {
-    const pts = new Set(marinePointsForRoute(corridor === 'BALTIC_GDY_KAA' ? 'GDY-KAA' : 'GDN-NYN'));
+  for (const corridor of MARINE_CORRIDORS) {
+    const pts = new Set(marinePointsForCorridor(corridor));
     const slice = samplesInWindow(samples.filter((s) => pts.has(s.point)), nowIso, nearTo);
     const ev = evaluateMarineWindow(slice.length ? slice : samples.filter((s) => pts.has(s.point)), thr.waveM, thr.gustKn);
     evalByCorridor.set(corridor, ev);
@@ -3827,7 +3827,9 @@ export async function runFerryWeather(deps: JobDeps): Promise<JobResult> {
   let risks = 0;
   const breachedIds = new Set<string>();
   for (const s of upcoming) {
-    const pts = new Set(marinePointsForRoute(s.route));
+    const routePts = marinePointsForRoute(s.route);
+    if (!routePts?.length) continue; // BN5: trasa bez mapy — bez oceny / bez GDN-NYN
+    const pts = new Set(routePts);
     const winFrom = new Date(Date.parse(s.departure_at) - 6 * 3600_000).toISOString();
     const winTo = new Date(Date.parse(s.departure_at) + 6 * 3600_000).toISOString();
     const winSamples = samplesInWindow(samples.filter((x) => pts.has(x.point)), winFrom, winTo);

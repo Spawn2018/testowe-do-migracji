@@ -6,8 +6,15 @@ import { PROD_BUILD } from './prodFacade';
 
 export type MarineRiskLevel = 'niskie' | 'podwyższone' | 'wysokie';
 
+export type MarineCorridorCode =
+  | 'BALTIC_GDN_NYN'
+  | 'BALTIC_GDY_KAA'
+  | 'BALTIC_GULF_FI'
+  | 'BALTIC_PLD_KPS'
+  | 'BALTIC_TLL_STO';
+
 export interface MarineConditionRow {
-  corridor: 'BALTIC_GDN_NYN' | 'BALTIC_GDY_KAA';
+  corridor: MarineCorridorCode;
   maxWaveM: number | null;
   maxGustKn: number | null;
   risk: MarineRiskLevel;
@@ -35,7 +42,7 @@ export async function fetchMarineCondition(): Promise<MarineConditionRow | null>
       .maybeSingle();
     if (error || !data) return null;
     const row = data as {
-      corridor: 'BALTIC_GDN_NYN' | 'BALTIC_GDY_KAA';
+      corridor: MarineCorridorCode;
       max_wave_m: number | null;
       max_gust_kn: number | null;
       risk: MarineRiskLevel;
@@ -66,7 +73,15 @@ export async function fetchMarineCondition(): Promise<MarineConditionRow | null>
   }
 }
 
-/** Oba korytarze: Gdańsk–Nynäshamn i Gdynia–Karlskrona. Pusty wiersz zostaje (brak odczytu). */
+const ALL_MARINE_CORRIDORS: MarineCorridorCode[] = [
+  'BALTIC_GDN_NYN',
+  'BALTIC_GDY_KAA',
+  'BALTIC_GULF_FI',
+  'BALTIC_PLD_KPS',
+  'BALTIC_TLL_STO',
+];
+
+/** Wszystkie korytarze BN5 (PL–SE + bałtyckie). Pusty wiersz zostaje (brak odczytu). */
 export async function fetchMarineConditions(): Promise<MarineConditionRow[]> {
   if (!PROD_BUILD) return [];
   try {
@@ -77,7 +92,7 @@ export async function fetchMarineConditions(): Promise<MarineConditionRow[]> {
       .select(
         'corridor,max_wave_m,max_gust_kn,risk,wave_thr_m,gust_thr_kn,sources,attribution,observed_at,window_from,window_to',
       )
-      .in('corridor', ['BALTIC_GDN_NYN', 'BALTIC_GDY_KAA']);
+      .in('corridor', ALL_MARINE_CORRIDORS);
     if (error || !data) return [];
     return (data as Array<Record<string, unknown>>).map((row) => ({
       corridor: row.corridor as MarineConditionRow['corridor'],

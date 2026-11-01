@@ -1,7 +1,8 @@
 /**
- * II-8 — pogoda morska Bałtyk (FMI WAM + DMI WAM + SMHI ocobs).
+ * II-8 / BN5 (#714) — pogoda morska Bałtyk (FMI WAM + DMI WAM + SMHI ocobs).
  * Licencje CC BY 4.0 — w UI podać źródło. Bez klucza API.
  * Progi: WAVE_M (m) / GUST_KN (kn) z ops_thresholds (D-39: 3,8 m / 40 kn).
+ * Trasa bez mapy → null (nigdy domyślny GDN-NYN).
  */
 export const FMI_ATTRIBUTION = 'FMI Open Data (CC BY 4.0)';
 export const DMI_ATTRIBUTION = 'DMI Open Data (CC BY 4.0)';
@@ -9,7 +10,49 @@ export const SMHI_ATTRIBUTION = 'SMHI Open Data (CC BY 4.0)';
 export const MARINE_ATTRIBUTION =
   'Dane: FMI / DMI / SMHI (CC BY 4.0)';
 
-/** Punkty trasy Gdańsk–Nynäshamn (ZLECENIE II-8) + podejście SE. */
+export type MarineCorridor =
+  | 'BALTIC_GDN_NYN'
+  | 'BALTIC_GDY_KAA'
+  | 'BALTIC_GULF_FI'
+  | 'BALTIC_PLD_KPS'
+  | 'BALTIC_TLL_STO';
+
+export const MARINE_CORRIDORS: readonly MarineCorridor[] = [
+  'BALTIC_GDN_NYN',
+  'BALTIC_GDY_KAA',
+  'BALTIC_GULF_FI',
+  'BALTIC_PLD_KPS',
+  'BALTIC_TLL_STO',
+] as const;
+
+/** Słownik code → family_key (jak ferry_routes / 0338). */
+const ROUTE_TO_FAMILY: Record<string, string> = {
+  'GDN-NYN': 'GDN-NYN',
+  'NYN-GDN': 'GDN-NYN',
+  'GDY-KAA': 'GDY-KAA',
+  'KAA-GDY': 'GDY-KAA',
+  'TLL-HEL': 'TLL-HEL',
+  'TLLA-HEL': 'TLL-HEL',
+  'HEL-TLL': 'TLL-HEL',
+  'HELA-TLL': 'TLL-HEL',
+  'MUU-VUO': 'MUU-VUO',
+  'VUO-MUU': 'MUU-VUO',
+  'PLD-KPS': 'PLD-KPS',
+  'KPS-PLD': 'PLD-KPS',
+  'TLL-STO': 'TLL-STO',
+  'STO-TLL': 'TLL-STO',
+};
+
+const FAMILY_TO_CORRIDOR: Record<string, MarineCorridor> = {
+  'GDN-NYN': 'BALTIC_GDN_NYN',
+  'GDY-KAA': 'BALTIC_GDY_KAA',
+  'TLL-HEL': 'BALTIC_GULF_FI',
+  'MUU-VUO': 'BALTIC_GULF_FI',
+  'PLD-KPS': 'BALTIC_PLD_KPS',
+  'TLL-STO': 'BALTIC_TLL_STO',
+};
+
+/** Punkty PL–SE + otwarta woda bałtycka (#714). */
 export const MARINE_POINTS = {
   GDN: { lat: 54.4, lon: 18.67, label: 'Gdańsk' },
   MID: { lat: 56.5, lon: 18.5, label: 'środek trasy Gdańsk–Nynäshamn' },
@@ -17,17 +60,52 @@ export const MARINE_POINTS = {
   GDY: { lat: 54.53, lon: 18.55, label: 'Gdynia' },
   MID_STENA: { lat: 55.6, lon: 16.6, label: 'środek trasy Gdynia–Karlskrona' },
   KAA: { lat: 56.16, lon: 15.59, label: 'podejście Karlskrona' },
+  GULF_MID: { lat: 59.80, lon: 24.85, label: 'środek Zatoki Fińskiej' },
+  NB_EAST: { lat: 59.55, lon: 21.80, label: 'wschodni Bałtyk północny (PLD–KPS)' },
+  ALAND_S: { lat: 59.75, lon: 19.70, label: 'południe Wysp Alandzkich (PLD–KPS)' },
+  GULF_W: { lat: 59.40, lon: 21.20, label: 'zachód Zatoki Fińskiej (TLL–STO)' },
+  ALAND_SEA: { lat: 59.95, lon: 19.40, label: 'Morze Alandzkie (TLL–STO)' },
 } as const;
 export type MarinePointCode = keyof typeof MARINE_POINTS;
 
-/** Punkty oceny rejsu. SMHI Knolls Grund zostaje przy podejściu Nynäshamn. */
-export function marinePointsForRoute(route: string | null | undefined): Array<MarinePointCode | 'SMHI_KNOLLS'> {
-  if (route === 'GDY-KAA' || route === 'KAA-GDY') return ['GDY', 'MID_STENA', 'KAA'];
-  return ['GDN', 'MID', 'NYN', 'SMHI_KNOLLS'];
+export type MarineEvalPoint = MarinePointCode | 'SMHI_KNOLLS';
+
+/** Rodzina trasy ze słownika; null = poza mapą BN5. */
+export function marineRouteFamily(route: string | null | undefined): string | null {
+  if (route == null) return null;
+  const key = route.trim().toUpperCase();
+  if (!key) return null;
+  return ROUTE_TO_FAMILY[key] ?? null;
 }
 
-export function marineCorridorForRoute(route: string | null | undefined): 'BALTIC_GDN_NYN' | 'BALTIC_GDY_KAA' {
-  return route === 'GDY-KAA' || route === 'KAA-GDY' ? 'BALTIC_GDY_KAA' : 'BALTIC_GDN_NYN';
+export function marineCorridorForRoute(route: string | null | undefined): MarineCorridor | null {
+  const fam = marineRouteFamily(route);
+  if (!fam) return null;
+  return FAMILY_TO_CORRIDOR[fam] ?? null;
+}
+
+export function marinePointsForCorridor(corridor: MarineCorridor): MarineEvalPoint[] {
+  switch (corridor) {
+    case 'BALTIC_GDN_NYN':
+      return ['GDN', 'MID', 'NYN', 'SMHI_KNOLLS'];
+    case 'BALTIC_GDY_KAA':
+      return ['GDY', 'MID_STENA', 'KAA'];
+    case 'BALTIC_GULF_FI':
+      return ['GULF_MID'];
+    case 'BALTIC_PLD_KPS':
+      return ['NB_EAST', 'ALAND_S'];
+    case 'BALTIC_TLL_STO':
+      return ['GULF_W', 'GULF_MID', 'ALAND_SEA'];
+  }
+}
+
+/** Punkty oceny rejsu; null gdy trasa nieznana (bez domyślnego GDN). */
+export function marinePointsForRoute(
+  route: string | null | undefined,
+): MarineEvalPoint[] | null {
+  const corridor = marineCorridorForRoute(route);
+  if (!corridor) return null;
+  return marinePointsForCorridor(corridor);
 }
 
 /** SMHI Knolls Grund — aktywna boja falowa na podejściu SE (obserwacje). */
@@ -52,7 +130,7 @@ export interface MarineSample {
   windMs: number | null;
   periodS: number | null;
   source: MarineSource;
-  point: MarinePointCode | 'SMHI_KNOLLS';
+  point: MarineEvalPoint;
 }
 
 export interface MarineEval {
