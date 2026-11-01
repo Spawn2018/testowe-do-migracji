@@ -163,7 +163,7 @@ ${itemXml({
     expect(filterErrFerryCancel([items[1]!])).toEqual([]);
   });
 
-  it('B5: Peru/Superuser bez trafienia; cancels łapie; Finlandia=Eckerö; bez buyback/museum', () => {
+  it('B5/M2: Peru/Superuser bez trafienia (także z armatorem+kontekstem); Finlandia=Eckerö; trip/cancellations', () => {
     const cases = parseErrRss(`<?xml version="1.0"?><rss version="2.0"><channel>
 ${itemXml({
   title: 'Peru cancels trade summit with Finland',
@@ -172,10 +172,22 @@ ${itemXml({
   description: 'Diplomatic news from Peru.',
 })}
 ${itemXml({
+  title: 'Tallink ferry passengers fly to Peru for the summit',
+  link: 'https://news.err.ee/peru2',
+  guid: 'peru2',
+  description: 'Tallink ferry passengers on a tourism trip to Peru.',
+})}
+${itemXml({
   title: 'Superuser cancelled account after breach',
   link: 'https://news.err.ee/su',
   guid: 'su',
   description: 'IT security note.',
+})}
+${itemXml({
+  title: 'Tallink ferry portal Superuser login guide',
+  link: 'https://news.err.ee/su2',
+  guid: 'su2',
+  description: 'How a Tallink ferry booking Superuser account works online.',
 })}
 ${itemXml({
   title: 'Tallink cancels share buyback programme',
@@ -190,26 +202,42 @@ ${itemXml({
   description: 'Culture: Viking ship museum cancelled the show.',
 })}
 ${itemXml({
+  title: 'Vikings cancelled the ferry crossing to Helsinki',
+  link: 'https://news.err.ee/vikings',
+  guid: 'vikings',
+  description: 'History exhibit about Norse Vikings — museum ferry crossing story.',
+})}
+${itemXml({
   title: 'Finlandia ferry cancels evening departure',
   link: 'https://news.err.ee/fin',
   guid: 'fin',
   description: 'Eckerö Line vessel Finlandia cancels sailing to Helsinki.',
 })}
 ${itemXml({
-  title: 'Tallink cancels morning sailing to Helsinki',
+  title: 'Tallink announces cancellations of morning trips to Helsinki',
   link: 'https://news.err.ee/ok',
   guid: 'ok',
-  description: 'Ferry cancellation on the Tallinn route.',
+  description: 'Ferry cancellations on the Tallinn route.',
+})}
+${itemXml({
+  title: 'Tallink will not cancel tonight ferry sailing',
+  link: 'https://news.err.ee/neg',
+  guid: 'neg',
+  description: 'Operator confirms Tallink will not cancel the ferry sailing.',
 })}
 </channel></rss>`).items;
     expect(filterErrFerryCancel([cases[0]!])).toEqual([]);
-    expect(filterErrFerryCancel([cases[1]!])).toEqual([]);
+    expect(filterErrFerryCancel([cases[1]!])).toEqual([]); /* M2c Peru + Tallink + ferry */
     expect(filterErrFerryCancel([cases[2]!])).toEqual([]);
-    expect(filterErrFerryCancel([cases[3]!])).toEqual([]);
-    const fin = filterErrFerryCancel([cases[4]!]);
+    expect(filterErrFerryCancel([cases[3]!])).toEqual([]); /* M2 Superuser + Tallink */
+    expect(filterErrFerryCancel([cases[4]!])).toEqual([]);
+    expect(filterErrFerryCancel([cases[5]!])).toEqual([]);
+    expect(filterErrFerryCancel([cases[6]!])).toEqual([]); /* M2b Vikings ≠ Viking */
+    const fin = filterErrFerryCancel([cases[7]!]);
     expect(fin).toHaveLength(1);
     expect(fin[0]!.operators).toEqual(['ECKERO']);
-    expect(filterErrFerryCancel([cases[5]!])).toHaveLength(1);
+    expect(filterErrFerryCancel([cases[8]!])).toHaveLength(1); /* cancellations + trips */
+    expect(filterErrFerryCancel([cases[9]!])).toEqual([]); /* will not cancel */
   });
 
   it('B1: detail i evidence — tylko tytuł + link + pubDate (bez opisu)', () => {
@@ -312,7 +340,7 @@ ${itemXml({
     expect(store.risks.filter((x) => x.dedup === 'SOURCE_DOWN:ERR_RSS')).toHaveLength(1);
   });
 
-  it('job (włączony): 2 ryzyka FERRY_ERR_RSS, 0 notices; resolveStale także przy 0 trafień', async () => {
+  it('job (włączony): 2 ryzyka FERRY_ERR_RSS; resolveStale przy niepustym kanale (także 0 trafień)', async () => {
     const store = makeStore();
     const r = await applyErrRssConfirmations(
       depsOf(store, async () => new Response(SAMPLE, {
@@ -329,13 +357,40 @@ ${itemXml({
     expect(store.staleCalls[0]!.prefix).toBe('FERRY_ERR_RSS:');
     expect(store.staleCalls[0]!.keep).toHaveLength(2);
 
-    const emptyOk = `<?xml version="1.0"?><rss version="2.0"><channel><title>x</title></channel></rss>`;
-    const store2 = makeStore();
-    await applyErrRssConfirmations(depsOf(store2, async () => new Response(emptyOk, { status: 200 })));
-    expect(store2.staleCalls).toEqual([{ prefix: 'FERRY_ERR_RSS:', keep: [] }]);
+    /* niepusty kanał, 0 trafień po filtrze → resolveStale z keep=[] */
+    const noHitFeed = `<?xml version="1.0"?><rss version="2.0"><channel>
+${itemXml({
+  title: 'Prime minister speaks about Russia',
+  link: 'https://news.err.ee/1/politics',
+  guid: 'https://news.err.ee/1',
+  description: 'Politics only — no ferry.',
+})}
+</channel></rss>`;
+    const storeNoHit = makeStore();
+    await applyErrRssConfirmations(depsOf(storeNoHit, async () => new Response(noHitFeed, { status: 200 })));
+    expect(storeNoHit.staleCalls).toEqual([{ prefix: 'FERRY_ERR_RSS:', keep: [] }]);
   });
 
-  it('B2: po ręcznym zamknięciu guid nie wraca', async () => {
+  it('R2-B1: pusty kanał nie woła resolveStaleRisks (nie zamyka ryzyk ERR)', async () => {
+    const emptyOk = `<?xml version="1.0"?><rss version="2.0"><channel><title>x</title></channel></rss>`;
+    const store = makeStore();
+    store.risks.push({
+      kind: 'FERRY',
+      severity: 'MEDIUM',
+      title: 'stare ERR',
+      titleKey: 'rk_ferry_err_rss_cancel',
+      params: {},
+      detail: {},
+      dedup: 'FERRY_ERR_RSS:https://news.err.ee/old',
+      sourceUrl: null,
+    });
+    const r = await applyErrRssConfirmations(depsOf(store, async () => new Response(emptyOk, { status: 200 })));
+    expect(r.hits).toBe(0);
+    expect(store.staleCalls).toEqual([]);
+    expect((store.risks[0] as { resolved?: boolean }).resolved).toBeUndefined();
+  });
+
+  it('B2: po ręcznym zamknięciu guid nie wraca; B2c validUntil = pubDate+24h', async () => {
     const guid = 'https://news.err.ee/1610177011';
     const store = makeStore({ knownDedup: new Set([`FERRY_ERR_RSS:${guid}`]) });
     const r = await applyErrRssConfirmations(
@@ -345,6 +400,86 @@ ${itemXml({
     /* jedno guid znane → tylko drugie ryzyko */
     expect(r.risks).toBe(1);
     expect(store.risks.map((x) => x.dedup)).toEqual(['FERRY_ERR_RSS:https://news.err.ee/1135991']);
+
+    const hit = filterErrFerryCancel(parseErrRss(SAMPLE).items)[0]!;
+    const risk = errRssCancelRisk(hit, NOW.toISOString());
+    expect(risk.validUntil).toBe(
+      new Date(Date.parse(hit.item.pubDate!) + 24 * 3600_000).toISOString(),
+    );
+  });
+
+  it('M5: HTTP 503 → resolveStaleRisks nie wywołane', async () => {
+    const store = makeStore();
+    const staleSpy = vi.spyOn(store, 'resolveStaleRisks');
+    await applyErrRssConfirmations(
+      depsOf(store, async () => new Response('nope', { status: 503 })),
+    );
+    expect(staleSpy).not.toHaveBeenCalled();
+  });
+
+  it('B4a/B4c: zły XML przy otwartym SOURCE_DOWN zostaje; sukces zamyka', async () => {
+    const store = makeStore();
+    store.risks.push({
+      kind: 'FERRY',
+      severity: 'MEDIUM',
+      title: 'stare',
+      titleKey: 'rk_source_down',
+      params: {},
+      detail: {},
+      dedup: 'SOURCE_DOWN:ERR_RSS',
+      sourceUrl: null,
+    });
+    const resolveSpy = vi.spyOn(store, 'resolveRisks');
+    await applyErrRssConfirmations(
+      depsOf(store, async () => new Response('<html>not rss</html>', { status: 200 })),
+    );
+    expect(resolveSpy).not.toHaveBeenCalled();
+    expect(store.risks.some((x) => x.dedup === 'SOURCE_DOWN:ERR_RSS' && !(x as { resolved?: boolean }).resolved)).toBe(true);
+
+    const storeOk = makeStore();
+    storeOk.risks.push({
+      kind: 'FERRY',
+      severity: 'MEDIUM',
+      title: 'stare',
+      titleKey: 'rk_source_down',
+      params: {},
+      detail: {},
+      dedup: 'SOURCE_DOWN:ERR_RSS',
+      sourceUrl: null,
+    });
+    await applyErrRssConfirmations(
+      depsOf(storeOk, async () => new Response(SAMPLE, { status: 200 })),
+    );
+    expect(storeOk.risks.some((x) => x.dedup === 'SOURCE_DOWN:ERR_RSS' && (x as { resolved?: boolean }).resolved)).toBe(true);
+  });
+
+  it('T1: wyjątek ze store łapany jak w runFerryStatus (nie przerywa joba)', async () => {
+    const store = makeStore();
+    store.raiseRisk = async () => {
+      throw new Error('boom-store');
+    };
+    let errRss: { hits: number; risks: number; warnings: string[] } = { hits: 0, risks: 0, warnings: [] };
+    try {
+      errRss = await applyErrRssConfirmations(
+        depsOf(store, async () => new Response(SAMPLE, { status: 200 })),
+      );
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      errRss = { hits: 0, risks: 0, warnings: [`ERR RSS: wyjątek — ${msg.slice(0, 160)}`] };
+    }
+    expect(errRss.warnings[0]).toMatch(/boom-store/);
+    expect(errRss.risks).toBe(0);
+  });
+
+  it('T2: za duża odpowiedź → SOURCE_DOWN', async () => {
+    const store = makeStore();
+    const huge = 'x'.repeat(1_500_001);
+    const r = await applyErrRssConfirmations(
+      depsOf(store, async () => new Response(huge, { status: 200 })),
+    );
+    expect(r.risks).toBe(1);
+    expect(store.risks.some((x) => x.dedup === 'SOURCE_DOWN:ERR_RSS')).toBe(true);
+    expect(r.warnings.some((w) => /za duża/i.test(w))).toBe(true);
   });
 
   it('URL feedu = news.err.ee/rss (bez Yle)', () => {

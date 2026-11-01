@@ -55,14 +55,16 @@ const FERRY_MARKERS: { re: RegExp; label: string; op: ErrOperator }[] = [
 ];
 
 /**
- * F7 B5: tylko EN (kanał news.err.ee); granice słów.
- * cancel / cancels / cancelled / cancellation / canceled.
- * Bez „no/without cancellation” (M1 Q3 earnings).
+ * F7 B5 / r2: tylko EN (kanał news.err.ee); granice słów.
+ * cancel / cancels / cancelled / cancellation(s) / canceled.
+ * Bez zaprzeczeń: no / without / not / won't / will not / no longer.
  */
-const CANCEL_RE = /(?<!\bno\s)(?<!\bwithout\s)\bcancel(?:s|l?ed|lation)?\b/i;
+const CANCEL_RE =
+  /(?<!\bnot\s)(?<!\bwon'?t\s)(?<!\bwill\snot\s)(?<!\bno\slonger\s)(?<!\bno\s)(?<!\bwithout\s)\bcancel(?:s|l?ed|lations?)?\b/i;
 
-/** Kontekst promowy — łącznie z armator+cancel (F7 B5). */
-const FERRY_CONTEXT_RE = /\b(?:ferry|ferries|sailing|sailings|departure|departures|route|vessel|vessels|laev|reis)\b/i;
+/** Kontekst promowy — łącznie z armator+cancel (F7 B5/r2: +trip/crossing; bez ET). */
+const FERRY_CONTEXT_RE =
+  /\b(?:ferry|ferries|sailing|sailings|departure|departures|route|vessel|vessels|trip|trips|crossing)\b/i;
 
 function stripHtml(s: string): string {
   return s.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();

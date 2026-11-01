@@ -7457,6 +7457,17 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (odbiór prod):** SELECT `here_road_legs` — **12** / active 12 / `browser_fetch` 5; core bez zmian (3495/12561/3742/18854/19408); BN7 7× null. `here-roads` **#108803** @ 04:49Z ok (0 prób — core świeże; BN7 poza cronem). Komentarz w #667. **Dalej:** BN3 (#573).
 - Bez push na main.
 
+## 2026-11-01 13:10 — #699 F7 r2 POPRAWKI (R2-B1 + filtr)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE; #697 `do-potwierdzenia`. Bez nowych `pilne`.
+- Scalanie: brak „F7: gotowe do scalenia” (F7 r2 @ b2784c70: R2-B1 + dopasowanie; 3317fee4 tylko flaga). Bez push na main.
+- **Krok (F7 r2 POPRAWKI):**
+  - **R2-B1:** pusty kanał (0 itemów) → bez `resolveStaleRisks` (nie zamyka ERR; hasRiskDedup nie blokuje powrotu);
+  - filtr: zaprzeczenia `not|won't|will not|no longer` + cancel; `cancellations`; kontekst `trip|trips|crossing`; bez ET `laev|reis`;
+  - testy M2/M2b/M2c, M5, B2c, B4a/B4c, T1/T2, R2-B1; vitest bn3-err-rss **17**.
+- **Dalej:** push → CI → gotowe do F7 @ sha. Po F7: Imperva/tolerancja; SMS DP-125 (#697).
+- Bez push na main.
+
 ## 2026-11-01 12:40 — #699 F7 r2: ERR RSS domyślnie ON (zgoda właściciela)
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE; #697 `do-potwierdzenia`. Bez nowych `pilne`.

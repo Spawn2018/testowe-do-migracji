@@ -2829,7 +2829,7 @@ export async function runFerryStatus(deps: JobDeps): Promise<JobResult> {
     }
   }
 
-  /* BN3 decyzja 61 pkt 3 / 80: RSS ERR (domyślnie wyłączone). Yle → W64 STOP. */
+  /* BN3 decyzja 61 pkt 3 / 80: RSS ERR (domyślnie on; env=0 = off). Yle → W64 STOP. */
   let errRss: { hits: number; risks: number; warnings: string[] } = { hits: 0, risks: 0, warnings: [] };
   try {
     errRss = await applyErrRssConfirmations(deps, since);
@@ -2927,8 +2927,9 @@ export async function applyErrRssConfirmations(deps: JobDeps, _sinceIso: string)
   }
   if (hits.length) warnings.push(`${ERR_ATTRIBUTION}: ${hits.length} trafień`);
 
-  /* B2: zamykaj stare także przy 0 trafień. */
-  if (deps.store.resolveStaleRisks) {
+  /* R2-B1: pusty kanał (0 itemów) nie zamyka ryzyk — hasRiskDedup zablokowałby powrót.
+   * Zamykanie starych: niepusty kanał (także 0 trafień po filtrze) albo validUntil. */
+  if (parsed.items.length > 0 && deps.store.resolveStaleRisks) {
     await deps.store.resolveStaleRisks('FERRY_ERR_RSS:', keep);
   }
   return { hits: hits.length, risks, warnings };
