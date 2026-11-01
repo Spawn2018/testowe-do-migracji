@@ -7457,6 +7457,18 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (odbiór prod):** SELECT `here_road_legs` — **12** / active 12 / `browser_fetch` 5; core bez zmian (3495/12561/3742/18854/19408); BN7 7× null. `here-roads` **#108803** @ 04:49Z ok (0 prób — core świeże; BN7 poza cronem). Komentarz w #667. **Dalej:** BN3 (#573).
 - Bez push na main.
 
+## 2026-11-01 02:20 — #693 F7 r2 POPRAWKI (DP-116 atrapa Fisher–Yates)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE; #685 baza SCALONE (ekran #692); #691 W TOKU. Bez nowych `pilne`.
+- Scalanie: brak „F7: gotowe do scalenia” (F7 r2 POPRAWKI @ `24dc2919`). PR #692 bez F7 — nie scalać. Bez push na main.
+- **Krok F7 #693 r2 (R2-B1):**
+  - atrapa: Fisher–Yates (LCG na zapytanie) → stabilny sort tylko po `order()` (bez `Math.random` w komparatorze);
+  - remisy: 900 przed + 300 na `tieAt` + 50 po (bez kolizji godzin `makeRow(i)`);
+  - test dedupe: wstawka między stronami → offset cofa `s999`, `seen` zostawia 1;
+  - mutacja bez `.order('id')` → remisy padają (1182≠1250); vitest 691-dp116 **9**.
+- **Dalej:** push → CI → gotowe do F7 @ sha. Po scaleniu: BN3 winter-nav / MMSI.
+- Bez push na main.
+
 ## 2026-11-01 02:05 — #693 F7 r1 POPRAWKI (DP-116)
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE; #685 baza SCALONE (ekran #692); #691 W TOKU. Bez nowych `pilne`.

@@ -1,6 +1,6 @@
 /**
  * DP-116 / #691 — max_rows=1000 obcina sailingsSince bez stronicowania.
- * Etap: BN3 / ferry; źródło F7 #690 r2; F7 #693 r1 (R1-B1/B2).
+ * Etap: BN3 / ferry; źródło F7 #690 r2; F7 #693 r1–r2 (R1-B1/B2, R2-B1 Fisher–Yates).
  */
 import { describe, expect, it } from 'vitest';
 import {
@@ -11,6 +11,7 @@ import {
 } from '../supabase/functions/_shared/integrations/store.ts';
 import type { DbSailing } from '../supabase/functions/_shared/integrations/sync.ts';
 
+/** Unikalne czasy co 1 h od 2026-11-01 — nie używaj przy remisach (kolizja z godziną 12 = i=12). */
 function makeRow(i: number, overrides: Partial<DbSailing> = {}): DbSailing {
   const dep = overrides.departure_at
     ?? new Date(Date.UTC(2026, 10, 1, 0, 0, 0) + i * 3600_000).toISOString();
@@ -33,16 +34,39 @@ function makeRow(i: number, overrides: Partial<DbSailing> = {}): DbSailing {
 
 type OrderCol = keyof DbSailing;
 
+/** Prosty LCG — ziarno na każde zapytanie (deterministyczne, różne między page). */
+function makeLcg(seed: number): () => number {
+  let s = seed >>> 0;
+  return () => {
+    s = (Math.imul(1664525, s) + 1013904223) >>> 0;
+    return s / 0x100000000;
+  };
+}
+
+function fisherYates<T>(arr: T[], rand: () => number): T[] {
+  const out = arr.slice();
+  for (let i = out.length - 1; i > 0; i--) {
+    const j = Math.floor(rand() * (i + 1));
+    const tmp = out[i]!;
+    out[i] = out[j]!;
+    out[j] = tmp;
+  }
+  return out;
+}
+
 /**
- * F7 #693 R1-B1: atrapa jak PostgREST —
- * sort tylko po kolumnach z order(); remisy w losowej kolejności przy każdym zapytaniu;
+ * F7 #693 R2-B1: atrapa jak PostgREST —
+ * przy każdym zapytaniu: Fisher–Yates na kopii, potem stabilny sort tylko po order()
+ * (bez Math.random w komparatorze — TimSort prawie nie miesza remisów).
  * range zwraca maks. hardCap wierszy niezależnie od `to`.
  */
 function limitingSailingsClient(
   all: DbSailing[],
   hardCap = SAILINGS_PAGE_SIZE,
-  opts?: { failOnPageFrom?: number },
+  opts?: { failOnPageFrom?: number; seedBase?: number },
 ) {
+  let querySeq = 0;
+  const seedBase = opts?.seedBase ?? 0xC0FFEE;
   return {
     from(_table: string) {
       const state: {
@@ -71,7 +95,9 @@ function limitingSailingsClient(
           let rows = all.filter((s) => !state.fromIso || s.departure_at >= state.fromIso!);
           if (state.sources?.length) rows = rows.filter((s) => state.sources!.includes(s.source));
           const orders = state.orders.slice();
-          rows = rows.slice().sort((a, b) => {
+          const rand = makeLcg(seedBase + (++querySeq) * 9973);
+          /* R2-B1: najpierw pełne przemieszanie, potem stabilny sort po order(). */
+          rows = fisherYates(rows, rand).sort((a, b) => {
             for (const col of orders) {
               const av = a[col];
               const bv = b[col];
@@ -81,7 +107,7 @@ function limitingSailingsClient(
               if (av < bv) return -1;
               if (av > bv) return 1;
             }
-            return Math.random() - 0.5;
+            return 0;
           });
           const end = Math.min(to + 1, from + hardCap);
           const page = rows.slice(from, end);
@@ -98,7 +124,7 @@ function limitingSailingsClient(
   };
 }
 
-describe('DP-116 sailingsSince stronicowanie (#691 / F7 #693 r1)', () => {
+describe('DP-116 sailingsSince stronicowanie (#691 / F7 #693 r1–r2)', () => {
   it('bez range (stary wzorzec) gubi rejsy powyżej max_rows', async () => {
     const all = Array.from({ length: 1205 }, (_, i) => makeRow(i));
     const sb = limitingSailingsClient(all);
@@ -136,21 +162,34 @@ describe('DP-116 sailingsSince stronicowanie (#691 / F7 #693 r1)', () => {
     expect(got.every((s) => s.source === 'VIKING')).toBe(true);
   });
 
-  it('R1-B1: ≥300 remisów departure_at na granicy strony → komplet unikalnych id', async () => {
+  it('R1-B1 / R2-B1: ≥300 remisów departure_at na granicy → komplet unikalnych id', async () => {
+    /* 900 przed + 300 remisów na granicy strony 1000 + 50 po — bez kolizji godzin makeRow(i). */
     const tieAt = new Date(Date.UTC(2026, 10, 1, 12, 0, 0)).toISOString();
-    const before = Array.from({ length: 900 }, (_, i) => makeRow(i));
+    const before = Array.from({ length: 900 }, (_, i) =>
+      makeRow(i, {
+        departure_at: new Date(Date.UTC(2026, 9, 1, 0, 0, 0) + i * 60_000).toISOString(),
+      }),
+    );
     const ties = Array.from({ length: 300 }, (_, i) =>
       makeRow(900 + i, { departure_at: tieAt }),
     );
-    const after = Array.from({ length: 50 }, (_, i) => makeRow(1200 + i));
-    const all = [...before, ...ties, ...after];
-    const sb = limitingSailingsClient(all);
-    const got = await fetchSailingsSincePaged(
-      () => sb.from('sailings') as never,
-      makeRow(0).departure_at,
+    const after = Array.from({ length: 50 }, (_, i) =>
+      makeRow(1200 + i, {
+        departure_at: new Date(Date.UTC(2026, 10, 1, 13, 0, 0) + i * 60_000).toISOString(),
+      }),
     );
-    expect(got.length).toBe(all.length);
-    expect(new Set(got.map((s) => s.id)).size).toBe(all.length);
+    const all = [...before, ...ties, ...after];
+    const fromIso = before[0]!.departure_at;
+    /* Kilka przebiegów: bez order(id) atrapa miesza remisy między stronami → braki/duplikaty. */
+    for (let run = 0; run < 5; run++) {
+      const sb = limitingSailingsClient(all, SAILINGS_PAGE_SIZE, { seedBase: 0xA11CE + run * 17 });
+      const got = await fetchSailingsSincePaged(
+        () => sb.from('sailings') as never,
+        fromIso,
+      );
+      expect(got.length).toBe(all.length);
+      expect(new Set(got.map((s) => s.id)).size).toBe(all.length);
+    }
   });
 
   it('R1-B1: błąd na 2. stronie → wyjątek (bez częściowej listy)', async () => {
@@ -192,23 +231,25 @@ describe('DP-116 sailingsSince stronicowanie (#691 / F7 #693 r1)', () => {
     ).rejects.toThrow(/sailings page cap exceeded/);
   });
 
-  it('nieblokujące: dedupe po id przy powtórzeniu między stronami', async () => {
+  it('R2: dedupe po id przy wstawce między stronami (przesunięcie offsetu)', async () => {
+    /* Strona 0: s0…s999. Między zapytaniami wstawka na początku → strona 1 z offset 1000
+       zawiera s999 ponownie (przesunięcie) + s1000… — bez seen: duplikat s999. */
     const base = Array.from({ length: 1500 }, (_, i) => makeRow(i));
-    /* Atrapa dokłada ten sam wiersz na każdej stronie — helper ma zostawić jeden. */
+    const inserted = makeRow(9999, {
+      departure_at: new Date(Date.UTC(2025, 0, 1)).toISOString(),
+    });
+    let page = 0;
     const sb = {
       from() {
-        let page = 0;
         const api = {
           select() { return api; },
           gte() { return api; },
           in() { return api; },
           order() { return api; },
           async range(from: number, _to: number) {
-            const slice = base.slice(from, from + SAILINGS_PAGE_SIZE);
             page += 1;
-            if (page === 2 && slice[0]) {
-              return { data: [base[0]!, ...slice.slice(1)], error: null };
-            }
+            const live = page === 1 ? base : [inserted, ...base];
+            const slice = live.slice(from, from + SAILINGS_PAGE_SIZE);
             return { data: slice, error: null };
           },
         };
@@ -219,7 +260,9 @@ describe('DP-116 sailingsSince stronicowanie (#691 / F7 #693 r1)', () => {
       () => sb.from() as never,
       makeRow(0).departure_at,
     );
+    /* Strona 2 przesuwa s999 ponownie; bez `seen` → 1501 wierszy / 1500 id. */
+    expect(got.filter((s) => s.id === 's999').length).toBe(1);
+    expect(new Set(got.map((s) => s.id)).size).toBe(got.length);
     expect(got.length).toBe(1500);
-    expect(new Set(got.map((s) => s.id)).size).toBe(1500);
   });
 });
