@@ -239,12 +239,12 @@ export function operatorName(code: string): string {
   return OPERATOR_BY_CODE.get(code)?.name ?? rpcOperatorNames.get(code) ?? code;
 }
 
-/** Armatorzy trasy (pusta lista dla nieznanego kodu). */
+/** Armatorzy trasy (pusta lista dla nieznanego kodu). DP-11: baza (RPC) przed seedem. */
 export function operatorsForRoute(code: string | null | undefined): readonly FerryOperator[] {
   if (!code) return [];
-  return routeByCode(code)?.operators
+  return rpcOperatorsByRoute.get(code)
+    ?? routeByCode(code)?.operators
     ?? SEED_ROUTE_ALIASES.get(code)?.operators
-    ?? rpcOperatorsByRoute.get(code)
     ?? [];
 }
 

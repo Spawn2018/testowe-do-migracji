@@ -31,6 +31,11 @@ import {
 } from '../ferry/digitrafficPortCalls.ts';
 export { DIGITRAFFIC_USER };
 import {
+  PORT_CALL_V2_CANCELLED_URL, WINTER_NAV_LOCATIONS_URL,
+  parseWinterNavigationLocations, portCallV2CancelledAppearedRisk, portCallV2CancelledHasFihel,
+  winterNavIceRisk,
+} from '../ferry/winterNavigation.ts';
+import {
   PORT_TALLINN_ARRIVALS_URL, PORT_TALLINN_DEPARTURES_URL, PORT_TALLINN_UA,
   parsePortTallinnHtml,
 } from '../ferry/portTallinn.ts';
@@ -1675,11 +1680,105 @@ export async function runFerryPortnet(deps: JobDeps): Promise<JobResult> {
   } else {
     await deps.store.resolveRisks('SOURCE_DOWN:PORT_TALLINN:');
   }
+
+  /* BN3 pkt 7: Digitraffic winter-navigation v2 — ograniczenie lodowe / zawieszenie portu → FERRY MEDIUM. */
+  const winter = await applyWinterNavigation(deps, now);
+  warnings.push(...winter.warnings);
+  risks += winter.risks;
+
+  /* BN3 pkt 7: obserwacja port-call/v2/visits?status=cancelled — zgłoś gdy FIHEL się pojawi. */
+  const v2c = await observePortCallV2Cancelled(deps, now);
+  warnings.push(...v2c.warnings);
+  risks += v2c.risks;
+
   return {
-    job: 'ferry-portnet', mode: 'LIVE', ok: !portnet.fail,
+    job: 'ferry-portnet', mode: 'LIVE', ok: !portnet.fail && !winter.fail,
     updated, risks, warnings,
-    observations: closed ? { closed_without_ata: String(closed) } : undefined,
+    observations: {
+      ...(closed ? { closed_without_ata: String(closed) } : {}),
+      ...(winter.hits ? { winter_hits: String(winter.hits) } : {}),
+      ...(v2c.fihel ? { port_call_v2_fihel_cancelled: '1' } : {}),
+      port_call_v2_cancelled_n: String(v2c.count),
+    },
   };
+}
+
+/** BN3: winter-navigation/v2/locations → ryzyka FERRY_WINTER:* (MEDIUM). */
+async function applyWinterNavigation(deps: JobDeps, nowIso: string): Promise<{
+  hits: number; risks: number; warnings: string[]; fail: boolean;
+}> {
+  const page = await readText(deps, WINTER_NAV_LOCATIONS_URL, {
+    headers: {
+      'User-Agent': USER_AGENT,
+      Accept: 'application/json',
+      'Accept-Encoding': 'gzip',
+      'Digitraffic-User': DIGITRAFFIC_USER,
+    },
+  });
+  if (!page.ok) {
+    await deps.store.raiseRisk(sourceDownRisk(
+      'DIGITRAFFIC_WINTER',
+      [page.warning],
+      nowIso,
+      WINTER_NAV_LOCATIONS_URL,
+    ));
+    return { hits: 0, risks: 1, warnings: [page.warning], fail: true };
+  }
+  await deps.store.resolveRisks('SOURCE_DOWN:DIGITRAFFIC_WINTER:');
+  let json: unknown;
+  try { json = JSON.parse(page.text); } catch {
+    const w = 'winter-nav: nieczytelny JSON';
+    await deps.store.raiseRisk(sourceDownRisk('DIGITRAFFIC_WINTER', [w], nowIso, WINTER_NAV_LOCATIONS_URL));
+    return { hits: 0, risks: 1, warnings: [w], fail: true };
+  }
+  const parsed = parseWinterNavigationLocations(json, nowIso);
+  const warnings = [...parsed.warnings];
+  if (parsed.warnings.some((w) => /struktura/i.test(w))) {
+    await deps.store.raiseRisk(sourceDownRisk('DIGITRAFFIC_WINTER', parsed.warnings, nowIso, WINTER_NAV_LOCATIONS_URL));
+    return { hits: 0, risks: 1, warnings, fail: true };
+  }
+  const keep: string[] = [];
+  let risks = 0;
+  for (const hit of parsed.hits) {
+    const risk = winterNavIceRisk(hit, nowIso);
+    keep.push(risk.dedup);
+    if (await deps.store.raiseRisk(risk)) risks += 1;
+  }
+  if (deps.store.resolveStaleRisks) {
+    await deps.store.resolveStaleRisks('FERRY_WINTER:', keep);
+  } else if (!keep.length) {
+    await deps.store.resolveRisks('FERRY_WINTER:');
+  }
+  return { hits: parsed.hits.length, risks, warnings, fail: false };
+}
+
+/** BN3: obserwacja cancelled v2 FIHEL — ryzyko gdy pojawią się anulowane wizyty. */
+async function observePortCallV2Cancelled(deps: JobDeps, nowIso: string): Promise<{
+  count: number; fihel: boolean; risks: number; warnings: string[];
+}> {
+  const page = await readText(deps, PORT_CALL_V2_CANCELLED_URL, {
+    headers: {
+      'User-Agent': USER_AGENT,
+      Accept: 'application/json',
+      'Accept-Encoding': 'gzip',
+      'Digitraffic-User': DIGITRAFFIC_USER,
+    },
+  });
+  if (!page.ok) {
+    return { count: 0, fihel: false, risks: 0, warnings: [`port-call v2 cancelled: ${page.warning}`] };
+  }
+  let json: unknown;
+  try { json = JSON.parse(page.text); } catch {
+    return { count: 0, fihel: false, risks: 0, warnings: ['port-call v2 cancelled: nieczytelny JSON'] };
+  }
+  const obs = portCallV2CancelledHasFihel(json);
+  let risks = 0;
+  if (obs.hasFihel) {
+    if (await deps.store.raiseRisk(portCallV2CancelledAppearedRisk(obs.count, nowIso))) risks = 1;
+  } else {
+    await deps.store.resolveRisks('FERRY_PORTCALL_V2_CANCELLED:FIHEL:');
+  }
+  return { count: obs.count, fihel: obs.hasFihel, risks, warnings: obs.warnings };
 }
 
 
@@ -2879,7 +2978,6 @@ export async function runFerryWeather(deps: JobDeps): Promise<JobResult> {
     },
   };
 }
-
 
 /**
  * emtrack-web / TELM-EMTRACK-WEB — odczyt pozycji naczepy (D-36 zapas).

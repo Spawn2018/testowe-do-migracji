@@ -7457,6 +7457,16 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (odbiór prod):** SELECT `here_road_legs` — **12** / active 12 / `browser_fetch` 5; core bez zmian (3495/12561/3742/18854/19408); BN7 7× null. `here-roads` **#108803** @ 04:49Z ok (0 prób — core świeże; BN7 poza cronem). Komentarz w #667. **Dalej:** BN3 (#573).
 - Bez push na main.
 
+## 2026-11-01 02:55 — #693 SCALONE; start BN3 winter-nav / MMSI
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE; #685/#691 baza SCALONE (ekran #692 bez F7). Bez nowych `pilne`.
+- Scalanie: **#693 SCALONE** `67b3af12` (F7: gotowe do scalenia @ `ec403152`; CI unit/db/visual ✔). Bez push na main.
+- **Krok BN3 pkt 7–8 (`pakiet/bn3-winter-nav-mmsi`):**
+  - migracja **0361**: MMSI XPRS 230705000 / Finbo 230685000 (+ potwierdzenie Megastar/MyStar/Finlandia; vessel-details);
+  - `winterNavigation.ts` + `ferry-portnet`: winter-nav v2 → `FERRY_WINTER:*` MEDIUM; SOURCE_DOWN `DIGITRAFFIC_WINTER`; obserwacja port-call v2 cancelled FIHEL;
+  - DP-11: `operatorsForRoute` — RPC przed seedem; DP-1 DONE (BN1); vitest bn3-winter-nav-mmsi **5**.
+- **Dalej:** push → CI → gotowe do F7 @ sha. Potem Urząd Morski Gdynia. Bez push na main.
+
 ## 2026-11-01 02:20 — #693 F7 r2 POPRAWKI (DP-116 atrapa Fisher–Yates)
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE; #685 baza SCALONE (ekran #692); #691 W TOKU. Bez nowych `pilne`.
