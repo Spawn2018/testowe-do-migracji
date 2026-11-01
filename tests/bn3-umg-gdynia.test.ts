@@ -1,6 +1,7 @@
 /**
  * BN3 pkt 7 — Urząd Morski Gdynia: zapas ETA/ATA/ETD Stena GDY↔KAA.
- * F7 #695 r1: B1 przyszłe ETD; B2 ETA+próg; B3 tr[^>]*> + SOURCE_DOWN tylko po 3×OK.
+ * F7 #695 r1: B1 przyszłe ETD; B3 tr[^>]*> + SOURCE_DOWN tylko po 3×OK.
+ * F7 #695 r2: B2 delayed tylko przy SOURCE_DOWN:STENA_STATUS; B4 past ETD wymaga OK „w porcie”.
  */
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -64,6 +65,9 @@ class MemStore implements SyncStore {
   async raiseRisk(r: RiskInput & { loadId?: string }) {
     if (this.risks.some((x) => x.dedup === r.dedup)) return false;
     this.risks.push(r); return true;
+  }
+  async hasOpenRisk(prefix: string) {
+    return this.risks.some((r) => r.dedup.startsWith(prefix));
   }
   async resolveRisks(prefix: string) {
     const hit = this.risks.filter((r) => r.dedup.startsWith(prefix));
@@ -225,11 +229,16 @@ describe('BN3 UMG × ferry-portnet', () => {
     expect(st.sailings.find((s) => s.id === 'gdy-este')).toMatchObject({
       status: 'W_REJSIE', actual_departure_at: expect.stringMatching(/^2026-10-31T/),
     });
-    expect(st.sailings.find((s) => s.id === 'kaa-spir')?.delayed_arrival_at).toBe('2026-10-31T13:00:00.000Z');
+    /* F7 r2 B2: bez SOURCE_DOWN:STENA_STATUS — UMG nie pisze delayed. */
+    expect(st.sailings.find((s) => s.id === 'kaa-spir')?.delayed_arrival_at).toBeNull();
   });
 
-  it('F7 B1: przyszłe ETD → delayed_departure (≥ próg), bez actual / W_REJSIE', async () => {
+  it('F7 B1: przyszłe ETD → delayed_departure (≥ próg) tylko przy STENA_STATUS down', async () => {
     const st = new MemStore();
+    st.risks.push({
+      kind: 'INTEGRATION', severity: 'MEDIUM', title: 'Stena status', titleKey: 'rk_source_down',
+      params: {}, detail: {}, dedup: 'SOURCE_DOWN:STENA_STATUS:x',
+    });
     st.sailings.push({
       id: 'gdy-este-fut', vessel_id: ESTE, route: 'GDY-KAA',
       departure_at: '2026-10-31T17:00:00.000Z', arrival_at: '2026-10-31T21:00:00.000Z',
@@ -251,8 +260,54 @@ describe('BN3 UMG × ferry-portnet', () => {
     expect(s.delayed_departure_at).toMatch(/^2026-10-31T18:00:00/);
   });
 
-  it('F7 B2: ETA = plan (< próg) nie zapisuje delayed; istniejący delayed armatora nietknięty', async () => {
+  it('F7 r2 B2: sekwencja Stena planowo → UMG → Stena → UMG — stabilne = armator', async () => {
     const st = new MemStore();
+    st.sailings.push({
+      id: 'kaa-spir', vessel_id: SPIR, route: 'KAA-GDY',
+      departure_at: '2026-10-31T08:00:00.000Z', arrival_at: '2026-10-31T12:00:00.000Z',
+      delayed_departure_at: null, delayed_arrival_at: null,
+      actual_departure_at: null, actual_arrival_at: null,
+      status: 'ZAPLANOWANY', source: 'STENA',
+    });
+    const pages = {
+      'port-calls': PORTNET,
+      'statki-spodziewane': UMG_ETA,
+      'statki-wychodzace': EMPTY_TABLE,
+      'statki-w-porcie': EMPTY_TABLE,
+    };
+    /* 1) Sync Steny „planowo” — delayed null (symulacja feedu). */
+    const clearStena = async () => {
+      await st.resolveRisks('SOURCE_DOWN:STENA_STATUS:');
+      const s = st.sailings.find((x) => x.id === 'kaa-spir')!;
+      s.delayed_arrival_at = null;
+      s.delayed_departure_at = null;
+    };
+    /* 2) UMG przy działającym Stena — milczy. */
+    await clearStena();
+    await runFerryPortnet(deps(st, pages));
+    expect(st.sailings.find((s) => s.id === 'kaa-spir')?.delayed_arrival_at).toBeNull();
+    /* 3) Awaria Steny → UMG wpisuje ETA. */
+    st.risks.push({
+      kind: 'INTEGRATION', severity: 'MEDIUM', title: 'Stena status', titleKey: 'rk_source_down',
+      params: {}, detail: {}, dedup: 'SOURCE_DOWN:STENA_STATUS:x',
+    });
+    await runFerryPortnet(deps(st, pages));
+    expect(st.sailings.find((s) => s.id === 'kaa-spir')?.delayed_arrival_at)
+      .toBe('2026-10-31T13:00:00.000Z');
+    /* 4) Sync Steny wraca (planowo) → null; UMG nie przywraca. */
+    await clearStena();
+    await runFerryPortnet(deps(st, pages));
+    expect(st.sailings.find((s) => s.id === 'kaa-spir')?.delayed_arrival_at).toBeNull();
+    await runFerryPortnet(deps(st, pages));
+    expect(st.sailings.find((s) => s.id === 'kaa-spir')?.delayed_arrival_at).toBeNull();
+  });
+
+  it('F7 r2 B2: ETA = plan (< próg) nie zapisuje; armatorowy delayed nietknięty (także przy down)', async () => {
+    const st = new MemStore();
+    st.risks.push({
+      kind: 'INTEGRATION', severity: 'MEDIUM', title: 'Stena status', titleKey: 'rk_source_down',
+      params: {}, detail: {}, dedup: 'SOURCE_DOWN:STENA_STATUS:x',
+    });
     st.sailings.push(
       {
         id: 'kaa-spir-eq', vessel_id: SPIR, route: 'KAA-GDY',
@@ -276,8 +331,29 @@ describe('BN3 UMG × ferry-portnet', () => {
       'statki-w-porcie': EMPTY_TABLE,
     }));
     expect(st.sailings.find((s) => s.id === 'kaa-spir-eq')?.delayed_arrival_at).toBeNull();
+    /* kaa-spir-arm: ETA fixture 13:00 nie pasuje do planu 19:00 (±3 h) — bez zmiany. */
     expect(st.sailings.find((s) => s.id === 'kaa-spir-arm')?.delayed_arrival_at)
       .toBe('2026-10-31T19:30:00.000Z');
+  });
+
+  it('F7 r2 B4: past ETD bez OK strony „w porcie” → bez actual / W_REJSIE', async () => {
+    const st = new MemStore();
+    st.sailings.push({
+      id: 'gdy-este', vessel_id: ESTE, route: 'GDY-KAA',
+      departure_at: '2026-10-31T09:00:00.000Z', arrival_at: '2026-10-31T13:00:00.000Z',
+      delayed_departure_at: null, delayed_arrival_at: null,
+      actual_departure_at: null, actual_arrival_at: null,
+      status: 'ZAPLANOWANY', source: 'STENA',
+    });
+    await runFerryPortnet(deps(st, {
+      'port-calls': PORTNET,
+      'statki-spodziewane': EMPTY_TABLE,
+      'statki-wychodzace': UMG_ETD,
+      'statki-w-porcie': 503,
+    }));
+    const s = st.sailings.find((x) => x.id === 'gdy-este')!;
+    expect(s.actual_departure_at).toBeNull();
+    expect(s.status).toBe('ZAPLANOWANY');
   });
 
   it('pierwszeństwo: ATA/ETD/ETA pomija gdy actual już jest (Portnet/AIS/armator)', async () => {

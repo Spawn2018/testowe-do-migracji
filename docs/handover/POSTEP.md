@@ -7457,6 +7457,18 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (odbiór prod):** SELECT `here_road_legs` — **12** / active 12 / `browser_fetch` 5; core bez zmian (3495/12561/3742/18854/19408); BN7 7× null. `here-roads` **#108803** @ 04:49Z ok (0 prób — core świeże; BN7 poza cronem). Komentarz w #667. **Dalej:** BN3 (#573).
 - Bez push na main.
 
+## 2026-11-01 05:10 — #695 F7 r2 POPRAWKI (UMG B2/B4)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne`.
+- Scalanie: brak „F7: gotowe do scalenia” (F7 r2 BLOKERY B2/B4 @ 4b1cb52c). Bez push na main.
+- **Krok F7 #695 r2:**
+  - **B2:** `delayed_*` (ETA + przyszłe ETD) tylko przy otwartym `SOURCE_DOWN:STENA_STATUS:`; wtedy UMG może aktualizować własną wartość; gdy Stena wraca — milczy (sekwencja planowo→UMG→Stena→UMG stabilna).
+  - **B4:** przeszłe ETD → `actual`/`W_REJSIE` tylko gdy strona „w porcie” OK w tym przebiegu i statku na niej nie ma (503/awaria → pomiń).
+  - `hasOpenRisk` w SyncStore + store.ts.
+  - vitest bn3-umg-gdynia **14**.
+- **Dalej:** push → CI → gotowe do F7 @ sha. Po F7: podejrzenie 45 min+AIS (decyzja 61).
+- Bez push na main.
+
 ## 2026-11-01 04:55 — #695 F7 r1 POPRAWKI (UMG B1–B3)
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne`.

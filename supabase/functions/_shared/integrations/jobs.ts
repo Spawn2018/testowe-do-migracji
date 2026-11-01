@@ -253,6 +253,8 @@ export interface SyncStore {
   lastRun(job: string): Promise<string | null>;
   /** F7 #689 R1-B3: ostatnie N wyników joba z integration_runs (od najnowszego). */
   recentJobResults?(job: string, limit: number): Promise<JobResult[]>;
+  /** F7 #695 r2 B2: czy jest otwarte ryzyko z prefiksem dedup (np. SOURCE_DOWN:STENA_STATUS:). */
+  hasOpenRisk?(dedupPrefix: string): Promise<boolean>;
   /** zamyka otwarte ryzyka o kluczu z prefiksem (np. źródło znów działa) — zwraca liczbę */
   resolveRisks(dedupPrefix: string): Promise<number>;
   /** zamyka otwarte ryzyka z prefiksu, których klucza nie ma na liście (sytuacja zniknęła) */
@@ -1768,8 +1770,10 @@ async function applyWinterNavigation(deps: JobDeps, nowIso: string): Promise<{
 /**
  * BN3: UMG Gdynia — zapas ATA (KAA-GDY) / ETD (GDY-KAA) / ETA→delayed_arrival (KAA-GDY).
  * Tylko gdy primary (Stena/Portnet/AIS) nie ustawił actual_*; ±3 h; RECZNIE/ODWOLANY jak Portnet.
- * F7 #695 r1: przyszłe ETD → delayed_departure (próg); ETA tylko przy pustym delayed + próg;
- * SOURCE_DOWN zamykane wyłącznie gdy wszystkie 3 strony OK.
+ * F7 #695 r1: przyszłe ETD → delayed_departure (próg); SOURCE_DOWN tylko po 3×OK.
+ * F7 #695 r2 B2: delayed_* tylko przy otwartym SOURCE_DOWN:STENA_STATUS (bez skakania z feedem Steny);
+ *   wtedy UMG może aktualizować własną poprzednią wartość.
+ * F7 #695 r2 B4: przeszłe ETD→actual tylko gdy strona „w porcie” OK i statku na niej nie ma.
  */
 async function applyUmgdyStenaBackup(deps: JobDeps, sinceIso: string): Promise<{
   updated: number; rows: number; risks: number; warnings: string[];
@@ -1785,6 +1789,7 @@ async function applyUmgdyStenaBackup(deps: JobDeps, sinceIso: string): Promise<{
   const warnings: string[] = [];
   const allRows: UmgShipRow[] = [];
   let okPages = 0;
+  let inPortPageOk = false;
   const umgStructureFail = (ws: string[]) =>
     ws.some((w) => /struktura|pusta tabela/i.test(w));
   for (const p of pages) {
@@ -1797,6 +1802,7 @@ async function applyUmgdyStenaBackup(deps: JobDeps, sinceIso: string): Promise<{
     warnings.push(...parsed.warnings);
     if (umgStructureFail(parsed.warnings)) continue;
     okPages += 1;
+    if (p.kind === 'ATA') inPortPageOk = true;
     allRows.push(...parsed.rows);
   }
   /* F7 #695 r1 B3: zamykać SOURCE_DOWN tylko gdy wszystkie 3 strony OK. */
@@ -1822,6 +1828,10 @@ async function applyUmgdyStenaBackup(deps: JobDeps, sinceIso: string): Promise<{
     ? await deps.store.ferryPortDelayMin()
     : FERRY_PORT_DELAY_MIN_DEFAULT;
   const delayMinMs = Math.max(0, delayMin) * 60_000;
+  /* F7 #695 r2 B2: delayed_* tylko gdy status Steny nie działa. */
+  const stenaStatusDown = deps.store.hasOpenRisk
+    ? await deps.store.hasOpenRisk('SOURCE_DOWN:STENA_STATUS:')
+    : false;
   /* Statki nadal na liście „w porcie” — past ETD nie może stać się actual. */
   const inPortNames = new Set(allRows.filter((r) => r.kind === 'ATA').map((r) => r.vessel));
   let updated = 0;
@@ -1863,13 +1873,13 @@ async function applyUmgdyStenaBackup(deps: JobDeps, sinceIso: string): Promise<{
     }
 
     if (c.kind === 'ETD') {
-      /* F7 #695 r1 B1: przyszłe ETD nigdy do actual_* ani statusu — najwyżej delayed_departure. */
+      /* F7 #695 r1 B1 + r2 B2: przyszłe ETD → delayed_departure tylko przy SOURCE_DOWN:STENA_STATUS. */
       if (t > nowMs) {
+        if (!stenaStatusDown) continue;
         const pool = existing.filter((s) =>
           s.vessel_id === vesselId
           && s.route === 'GDY-KAA'
           && s.actual_departure_at == null
-          && s.delayed_departure_at == null
           && s.source !== 'RECZNIE'
           && s.status !== 'ODWOLANY');
         const pick = pickUniqueInWindow(pool, t, (s) => Date.parse(s.departure_at), WINDOW_MS);
@@ -1888,14 +1898,15 @@ async function applyUmgdyStenaBackup(deps: JobDeps, sinceIso: string): Promise<{
         if (pick.kind !== 'hit') continue;
         const hit = pick.item;
         if (t - Date.parse(hit.departure_at) < delayMinMs) continue;
+        if (hit.delayed_departure_at === c.atUtc) continue;
         if (await deps.store.updateSailing(hit.id, { delayed_departure_at: c.atUtc })) {
           updated += 1;
           hit.delayed_departure_at = c.atUtc;
         }
         continue;
       }
-      /* ETD z przeszłości → actual tylko gdy statek już nie jest „w porcie”. */
-      if (inPortNames.has(c.vessel)) continue;
+      /* F7 #695 r2 B4: przeszłe ETD→actual tylko gdy „w porcie” OK i statku nie ma. */
+      if (!inPortPageOk || inPortNames.has(c.vessel)) continue;
       const pool = existing.filter((s) =>
         s.vessel_id === vesselId
         && s.route === 'GDY-KAA'
@@ -1925,13 +1936,13 @@ async function applyUmgdyStenaBackup(deps: JobDeps, sinceIso: string): Promise<{
       continue;
     }
 
-    /* F7 #695 r1 B2: ETA zapas — tylko pusty delayed_arrival + próg; bez wypierania armatora. */
+    /* F7 #695 r2 B2: ETA→delayed tylko przy SOURCE_DOWN:STENA_STATUS; może aktualizować własne. */
     if (c.kind === 'ETA') {
+      if (!stenaStatusDown) continue;
       const pool = existing.filter((s) =>
         s.vessel_id === vesselId
         && s.route === 'KAA-GDY'
         && s.actual_arrival_at == null
-        && s.delayed_arrival_at == null
         && s.source !== 'RECZNIE'
         && s.status !== 'ODWOLANY');
       const pick = pickUniqueInWindow(pool, t, (s) => Date.parse(s.arrival_at), WINDOW_MS);
@@ -1950,6 +1961,7 @@ async function applyUmgdyStenaBackup(deps: JobDeps, sinceIso: string): Promise<{
       if (pick.kind !== 'hit') continue;
       const hit = pick.item;
       if (t - Date.parse(hit.arrival_at) < delayMinMs) continue;
+      if (hit.delayed_arrival_at === c.atUtc) continue;
       if (await deps.store.updateSailing(hit.id, { delayed_arrival_at: c.atUtc })) {
         updated += 1;
         hit.delayed_arrival_at = c.atUtc;

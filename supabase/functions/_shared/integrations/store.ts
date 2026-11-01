@@ -182,6 +182,15 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
       });
       return must(res, 'raise_integration_risk') === true;
     },
+    /** F7 #695 r2 B2: otwarte ryzyko z prefiksem (UMG delayed tylko przy SOURCE_DOWN:STENA_STATUS). */
+    async hasOpenRisk(dedupPrefix: string) {
+      const like = `${dedupPrefix.replace(/[%_]/g, (c) => `\\${c}`)}%`;
+      const rows = must(
+        await sb.from('risk_signals').select('id').like('dedup_key', like).is('resolved_at', null).limit(1),
+        'risk_signals hasOpenRisk',
+      ) as unknown[];
+      return rows.length > 0;
+    },
     async resolveRisks(dedupPrefix: string) {
       const r = must(await sb.from('risk_signals').update({ resolved_at: new Date().toISOString() })
         .like('dedup_key', `${dedupPrefix.replace(/[%_]/g, (c) => `\\${c}`)}%`).is('resolved_at', null).select('id'), 'risk_signals resolve') as unknown[];
