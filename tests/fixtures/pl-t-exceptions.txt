@@ -25,6 +25,7 @@ sefs
 Trafikverket
 Supabase
 Digitraffic
+IBNet
 TomTom
 Umeå
 Gävle

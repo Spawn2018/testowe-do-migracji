@@ -108,6 +108,13 @@ class MemStore implements SyncStore {
     this.risks = this.risks.filter((r) => !r.dedup.startsWith(prefix));
     return hit.length;
   }
+  /** F7 #694 R1-B3 — zamykanie nieaktualnych FERRY_WINTER:*. */
+  async resolveStaleRisks(prefix: string, keep: string[]) {
+    const keepSet = new Set(keep);
+    const hit = this.risks.filter((r) => r.dedup.startsWith(prefix) && !keepSet.has(r.dedup));
+    this.risks = this.risks.filter((r) => !(r.dedup.startsWith(prefix) && !keepSet.has(r.dedup)));
+    return hit.length;
+  }
   async latestPositions() { return []; }
   async lastRun(job: string) { return this.runs.filter((r) => r.job === job).at(-1)?.at ?? null; }
   async recordRun(job: string, ok: boolean, result: JobResult) {
@@ -139,6 +146,13 @@ function deps(store: MemStore, pages: Record<string, string | number>, now = NOW
     }
     if (url.includes('ts.ee') || url.includes('portsofstockholm')) {
       return new Response('niedostepne', { status: 503 });
+    }
+    /* BN3: winter-nav / port-call v2 — domyślnie puste (bez aktywnych ograniczeń). */
+    if (url.includes('winter-navigation')) {
+      return new Response(JSON.stringify({ type: 'FeatureCollection', features: [] }), { status: 200 });
+    }
+    if (url.includes('port-call/v2')) {
+      return new Response('[]', { status: 200 });
     }
     throw new Error(`nieoczekiwane zapytanie: ${url}`);
   }) as typeof fetch;

@@ -7457,6 +7457,35 @@ Tempo 3 dni: ~1–2 paczki bazy/dzień przy 1–3 rundach F7; wygląd koordynato
 - **Krok (odbiór prod):** SELECT `here_road_legs` — **12** / active 12 / `browser_fetch` 5; core bez zmian (3495/12561/3742/18854/19408); BN7 7× null. `here-roads` **#108803** @ 04:49Z ok (0 prób — core świeże; BN7 poza cronem). Komentarz w #667. **Dalej:** BN3 (#573).
 - Bez push na main.
 
+## 2026-11-01 03:45 — #694 F7 r1 POPRAWKI (winter-nav)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE. Bez nowych `pilne`.
+- Scalanie: brak „F7: gotowe do scalenia” (F7 r1 POPRAWKI). Bez push na main.
+- **Krok F7 #694 r1:**
+  - R1-B1: usunięta ścieżka ryzyka port-call v2 cancelled (żywy HTTP 400); sonda → tylko `observations`; nieznana struktura → `count=0` + ostrzeżenie; **DP-121** (właściwy endpoint/filtr — po BN3 cz. 4; F7 nazwał DP-119 — zajęte).
+  - R1-B2: `WINTER_NAV_WATCHED_LOCODES` tylko porty tras (bez SEMMA/LTKLJ/LVRIX); test spoza tras → 0 hitów.
+  - R1-B3: testy `runFerryPortnet` — 1× MEDIUM, dedup, zamykanie, SOURCE_DOWN HTTP/struktura, v2 bez ryzyka; vitest bn3-winter-nav-mmsi **10**.
+  - **DP-120**: ryzyko zimowe vs dzień rejsu + klasa lodowa (nieblokujące).
+- **Dalej:** push → CI → gotowe do F7 @ sha. Po F7: Urząd Morski Gdynia / podejrzenie 45 min+AIS.
+- Bez push na main.
+
+## 2026-11-01 03:12 — #692 SCALONE; #694 unit PL-T (cancelled → PL)
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE; #538/#537/#500/#499 w planie. Bez nowych `pilne`.
+- Scalanie: **#692 SCALONE** `b24b95ba` (F7: gotowe do scalenia @ `bcd068c1`; CI unit/visual ✔; db nie dotyczy). DP-86/87/104 → DONE. Bez push na main.
+- **Krok BN3 #694:** CI unit FAIL — `pl-t` słowo „cancelled” w `rk_ferry_portcall_v2_fihel` → tekst PL: „anulowane wizyty FIHEL”. PLAN §4/§8. **Dalej:** push → CI → gotowe do F7 @ sha; potem Urząd Morski Gdynia / podejrzenie 45 min+AIS.
+- Bez push na main.
+
+## 2026-11-01 02:55 — #693 SCALONE; start BN3 winter-nav / MMSI
+
+- Skrzynka: #608 w planie; #550 WSTRZYMANE; #685/#691 baza SCALONE (ekran #692 bez F7). Bez nowych `pilne`.
+- Scalanie: **#693 SCALONE** `67b3af12` (F7: gotowe do scalenia @ `ec403152`; CI unit/db/visual ✔). Bez push na main.
+- **Krok BN3 pkt 7–8 (`pakiet/bn3-winter-nav-mmsi`):**
+  - migracja **0361**: MMSI XPRS 230705000 / Finbo 230685000 (+ potwierdzenie Megastar/MyStar/Finlandia; vessel-details);
+  - `winterNavigation.ts` + `ferry-portnet`: winter-nav v2 → `FERRY_WINTER:*` MEDIUM; SOURCE_DOWN `DIGITRAFFIC_WINTER`; obserwacja port-call v2 cancelled FIHEL;
+  - DP-11: `operatorsForRoute` — RPC przed seedem; DP-1 DONE (BN1); vitest bn3-winter-nav-mmsi **5**.
+- **Dalej:** push → CI → gotowe do F7 @ sha. Potem Urząd Morski Gdynia. Bez push na main.
+
 ## 2026-11-01 02:20 — #693 F7 r2 POPRAWKI (DP-116 atrapa Fisher–Yates)
 
 - Skrzynka: #608 w planie; #550 WSTRZYMANE; #685 baza SCALONE (ekran #692); #691 W TOKU. Bez nowych `pilne`.
