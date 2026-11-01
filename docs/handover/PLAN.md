@@ -1232,7 +1232,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-131 | Cursor | Alarm HIGH gdy transport status FERRY („na promie”), a telematyka stoi ≤3 km od portu wyjścia po ATD/ATA rejsu (dedup per transport+rejs; bez zmiany statusu); przypadek 01.11 GDN-NYN ATA 10:45Z / GPS 0,2 km Gdańsk do 12:12Z | F7 #703 komentarz 01.11 15:02 | BN4 / ferry+GPS | SCALONE #705 `aa6ab71c` / **0365** |
 | DP-134 | Cursor | `ferry_sailings_map` filtr `fr.active` — wyłączenie trasy w trakcie rejsu z ładunkami usuwa rejs z mapy; join bez `fr.active` na mapie | F7 #706 r1 | BN4 / map | SCALONE #711 `ac81bdd7` / **0370** |
 | DP-135 | Cursor | Test behawioralny SQL `ferry_sailings_map` zamiast samego grepa w `status.sh` | F7 #706 r1 | BN4 / testy | SCALONE #711 (z DP-134) |
-| DP-136 | Cursor | Przepięcie rejsu (0344) patrzy tylko na `sweden_land_geom` — dodać FI / `finland_land_geom` | F7 #708 r1 | BN4 / ferry | W TOKU (**0371**) |
+| DP-136 | Cursor | Przepięcie rejsu (0344) patrzy tylko na `sweden_land_geom` — dodać FI / `finland_land_geom` | F7 #708 r1 | BN4 / ferry | W TOKU (**0371**, F7 #712 r1 fixture) |
 | DP-137 | Cursor | Status `IN_TRANSIT_SE` („Droga SE”) i `synthetic_port_se` dla Finlandii — potwierdzić z UI i ETA (etykiety FI) | F7 #708 r1 | BN4 / UI+ETA | w kolejce |
 | DP-138 | Cursor | AT_PORT → IN_TRANSIT_SE bez kontroli świeżości pozycji | F7 #708 r1 | BN4 / AIS backup | w kolejce |
 | DP-122 | Cursor | `viking_schedule_imports` (0360) brak w kopii 01.11 01:30 — koordynator #697: **nie wymaga zmian** (0360 po kopii 00:30; kontrola kopii 02.11) | #697 | backup | bez zmian (koord. 01.11) |
@@ -2445,6 +2445,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 01.11.2026 20:35 | #710 SCALONE `ebd92f55` / **0369** (F7: gotowe @ e479a04c); start DP-134/135 **0370** mapa bez `fr.active` | pętla / F7 #710 |
 | 01.11.2026 20:55 | #711 F7 r1: usuń `::text` z asercji DP-134 (boolean → `t`, nie `true`); EXPECTED 550 | pętla / F7 #711 |
 | 01.11.2026 21:25 | #711 SCALONE `ac81bdd7` / **0370** (F7: gotowe @ fbde97d2); start DP-136 **0371** ląd SE\|FI w przepięciu | pętla / F7 #711 |
+| 01.11.2026 21:50 | #712 F7 r1: S136a kolizja vessel+departure z S649o → osobny vessel …0136; EXPECTED 556; timeout DP-116 60 s | pętla / F7 #712 |
 | 31.10.2026 — | Decyzja 73: TLLA-HEL ETA−150 min / HELA-TLL ETD+160 min (fixture Cargo; nocny 165 min OK). Decyzja 74: `sailings.source_ref` 0359; Digitraffic `digitraffic:portcall:<id>:<route>`; HTML/RECZNIE/DANE_STARTOWE wygrywają; #685-b RPC zastępuje digitraffic:% w ±3 h | F7 #688 r1–r4 |
 | 31.10.2026 — | F7 #683 nieblokujące (osobna poprawka): Scheduler grudzień + „on 2 January” → rok bieżący, ciche wygaśnięcie; Alert INFO bez ryzyka/historii — świadomie | F7 #683 r7 |
 | 31.10.2026 — | F7 #683 r8 nieblokujące (osobno): Alert poza Schedulerem obok Schedulera; sprzeczne bloki (resume→cofnięcie auto); rok przy długim oknie Schedulera; mutanty M10/M15–M17/M22 świadomie bez testów | F7 #683 r8 |
