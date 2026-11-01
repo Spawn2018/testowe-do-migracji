@@ -2722,11 +2722,7 @@ export async function runFerryStatus(deps: JobDeps): Promise<JobResult> {
               : beyond
                 ? 'Tallink Alert: przywrócenie poza horyzontem rozkładu — weryfikacja HHL'
                 : 'Tallink Alert: przywrócenie bez jednoznacznego rejsu — weryfikacja HHL',
-            titleKey: ambiguous
-              ? 'rk_tallink_alert_restore_ambiguous'
-              : beyond
-                ? 'rk_tallink_alert_restore_beyond'
-                : 'rk_tallink_alert_restore_unmatched',
+            titleKey: ambiguous ? 'rk_tallink_alert_restore_ambiguous' : beyond ? 'rk_tallink_alert_restore_beyond' : 'rk_tallink_alert_restore_unmatched',
             params: { vessel: alert.vessel ?? '' },
             detail: {
               tekst: alert.text.slice(0, 400),
