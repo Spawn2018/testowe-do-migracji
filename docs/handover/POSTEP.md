@@ -1,4 +1,16 @@
 
+## 2026-11-02 01:45 — BN5 cz.2 PR #721 (snow1g / NaN / DMI 429)
+
+- Skrzynka: #714/#716/#718/#720 wpisane; #550 WSTRZYMANE; #608 w planie. Bez nowego `pilne`.
+- Scalanie: brak F7 „gotowe” na #721 (CI cz.1 było zielone; nowy commit → nowa CI).
+- **Krok:** BN5 cz.2 na `pakiet/bn5-baltic-marine-weather`:
+  - SMHI snow1g zapas wiatru gdy Harmonie bez próbek (`smhiSnow1gUrl` / `parseSmhiSnow1g`; nie pmp3g);
+  - FMI WAM NaN → `nanSkipped` + ostrzeżenie w `detail` (nie zero);
+  - regresja DMI 429 przy FMI OK → bez `SOURCE_DOWN:MARINE_WEATHER`;
+  - vitest marine-weather + integrations ferry-weather (stub `forecast::wam`/`::harmonie`).
+- **Dalej:** push → CI → F7. Po F7 / dalej: cz.3 FERRY_ICE → BN6 (#716).
+- Bez push na main.
+
 ## 2026-11-02 01:20 — BN5 #721 CI zielone `acd96196`; decyzja 82-C w planie
 
 - Skrzynka: #720 decyzja **82-C** wpisana §4/#720 + §5; #550 WSTRZYMANE. Bez `pilne`.

@@ -1360,10 +1360,10 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 4. **Praca równoległa koordynatora** (`wyglad/*`, spec) bez kolizji ścieżek.
 5. ~~`wyglad/BN9-c2`~~ SCALONE (#717); ~~DP-139~~ SCALONE (#719); spec BN5 (#714) W TOKU; BN6 (#716), BN7 (#718), BN8 (#720).
 
-### #714 · BN5 — pogoda bałtycka — W TOKU (`pakiet/bn5-baltic-marine-weather`, **0375**)
+### #714 · BN5 — pogoda bałtycka — W TOKU (`pakiet/bn5-baltic-marine-weather`, **0375**; PR #721)
 Źródło: #714 (Spawn2018). Spec w treści zgłoszenia (korytarze `BALTIC_GULF_FI` / `PLD_KPS` / `TLL_STO`, FMI/DMI/SMHI, lód Digitraffic, bez domyślnego GDN-NYN). Ekrany BN9-c3 — koordynator.
 1. ~~**cz.1 mapowanie + baza**~~ — **0375** CHECK + seed 3 korytarzy; `marineCorridorForRoute` / `marinePointsForRoute` po `family_key`; trasa nieznana → `null`; job `ferry-weather` zapisuje 5 korytarzy; vitest `bn5-marine-corridors`.
-2. **cz.2** — SMHI snow1g (zapas wiatru); NaN WAM → ostrzeżenie w `detail`; DMI 429 bez SOURCE_DOWN gdy FMI OK (regresja).
+2. ~~**cz.2**~~ — SMHI snow1g (zapas wiatru gdy Harmonie bez próbek; nie pmp3g); NaN WAM → ostrzeżenie w `detail` (nie zero); DMI 429 bez SOURCE_DOWN gdy FMI OK.
 3. **cz.3** — lód Digitraffic → `FERRY_ICE` (vs istniejące FERRY_WINTER z BN3); atrybucja Fintraffic.
 4. Testy ryzyka per korytarz (fala 4 m na GULF_FI nie na GDN-NYN).
 
@@ -2486,6 +2486,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 02.11.2026 00:34 | #719 SCALONE `eddc4bae` / **0374** (F7: gotowe @ ebc05bbd); DP-140 = 28 przeterminowanych rejsów (F7); #720 BN8 wpisane §4; start BN5 **0375** | pętla / F7 #719 |
 | 02.11.2026 00:45 | BN5 cz.1 (#714): **0375** + mapowanie korytarzy bałtyckich + job 5×; #720 w §4; bez F7 jeszcze | pętla / BN5 |
 | 02.11.2026 01:20 | PR #721 CI zielone `acd96196`; decyzja **82-C** wpisana §4/#720 + §5; czekam F7 | pętla / BN5 |
+| 02.11.2026 01:45 | BN5 cz.2 (#714/#721): snow1g + NaN WAM + DMI 429 regresja; dalej cz.3 FERRY_ICE | pętla / BN5 |
 | 31.10.2026 — | Decyzja 73: TLLA-HEL ETA−150 min / HELA-TLL ETD+160 min (fixture Cargo; nocny 165 min OK). Decyzja 74: `sailings.source_ref` 0359; Digitraffic `digitraffic:portcall:<id>:<route>`; HTML/RECZNIE/DANE_STARTOWE wygrywają; #685-b RPC zastępuje digitraffic:% w ±3 h | F7 #688 r1–r4 |
 | 31.10.2026 — | F7 #683 nieblokujące (osobna poprawka): Scheduler grudzień + „on 2 January” → rok bieżący, ciche wygaśnięcie; Alert INFO bez ryzyka/historii — świadomie | F7 #683 r7 |
 | 31.10.2026 — | F7 #683 r8 nieblokujące (osobno): Alert poza Schedulerem obok Schedulera; sprzeczne bloki (resume→cofnięcie auto); rok przy długim oknie Schedulera; mutanty M10/M15–M17/M22 świadomie bez testów | F7 #683 r8 |

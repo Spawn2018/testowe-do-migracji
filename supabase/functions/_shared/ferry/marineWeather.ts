@@ -1,5 +1,5 @@
 /**
- * II-8 / BN5 (#714) — pogoda morska Bałtyk (FMI WAM + DMI WAM + SMHI ocobs).
+ * II-8 / BN5 (#714) — pogoda morska Bałtyk (FMI WAM + DMI WAM + SMHI ocobs/snow1g).
  * Licencje CC BY 4.0 — w UI podać źródło. Bez klucza API.
  * Progi: WAVE_M (m) / GUST_KN (kn) z ops_thresholds (D-39: 3,8 m / 40 kn).
  * Trasa bez mapy → null (nigdy domyślny GDN-NYN).
@@ -119,6 +119,9 @@ export const DMI_WAM_URL =
   'https://opendataapi.dmi.dk/v1/forecastedr/collections/wam_nsb/position';
 export const SMHI_OCOBS_URL =
   `https://opendata-download-ocobs.smhi.se/api/version/1.0/parameter/1/station/${SMHI_KNOLLS_STATION}/period/latest-hour/data.json`;
+/** BN5: zapas wiatru (nie pmp3g — 404 od 2026-03-31). */
+export const SMHI_SNOW1G_BASE =
+  'https://opendata-download-metfcst.smhi.se/api/category/snow1g/version/1/geotype/point';
 
 export type MarineSource = 'FMI' | 'DMI' | 'SMHI';
 export type MarineRiskLevel = 'niskie' | 'podwyższone' | 'wysokie';
@@ -131,6 +134,12 @@ export interface MarineSample {
   periodS: number | null;
   source: MarineSource;
   point: MarineEvalPoint;
+}
+
+export interface FmiParseResult {
+  samples: MarineSample[];
+  /** Wartości NaN (poza siatką WAM) — pominięte, nie zero. */
+  nanSkipped: number;
 }
 
 export interface MarineEval {
@@ -191,13 +200,19 @@ export function dmiWamUrl(lon: number, lat: number, fromIso: string, toIso: stri
   return `${DMI_WAM_URL}?${params.toString()}`;
 }
 
-/** Parsuje FMI WFS TimeValuePair XML → próbki (wave / gust / wind). */
+/** SMHI snow1g — zapas wiatru (BN5 #714; nie pmp3g). */
+export function smhiSnow1gUrl(lon: number, lat: number): string {
+  return `${SMHI_SNOW1G_BASE}/lon/${lon}/lat/${lat}/data.json`;
+}
+
+/** Parsuje FMI WFS TimeValuePair XML → próbki (wave / gust / wind). NaN = pominięte. */
 export function parseFmiTimeValuePair(
   xml: string,
   point: MarinePointCode,
   kind: 'wave' | 'gust',
-): MarineSample[] {
+): FmiParseResult {
   const out: MarineSample[] = [];
+  let nanSkipped = 0;
   // Każdy member ma własną serię; identyfikujemy po gml:id / phenomenon
   const members = xml.split(/<wfs:member>/i).slice(1);
   for (const mem of members) {
@@ -210,9 +225,16 @@ export function parseFmiTimeValuePair(
     for (const m of pairs) {
       const at = new Date(m[1]).toISOString();
       const raw = m[2].trim();
-      if (!raw || raw === 'NaN' || raw.toLowerCase() === 'nan') continue;
+      if (!raw) continue;
+      if (raw === 'NaN' || raw.toLowerCase() === 'nan') {
+        nanSkipped++;
+        continue;
+      }
       const num = Number(raw);
-      if (!Number.isFinite(num)) continue;
+      if (!Number.isFinite(num)) {
+        nanSkipped++;
+        continue;
+      }
       const sample: MarineSample = {
         at, waveM: null, gustKn: null, windMs: null, periodS: null, source: 'FMI', point,
       };
@@ -228,7 +250,7 @@ export function parseFmiTimeValuePair(
       out.push(sample);
     }
   }
-  return mergeSamples(out);
+  return { samples: mergeSamples(out), nanSkipped };
 }
 
 /** CoverageJSON DMI (PointSeries) → próbki. */
@@ -282,6 +304,36 @@ export function parseSmhiOcobs(json: unknown): MarineSample[] {
       source: 'SMHI' as const,
       point: 'SMHI_KNOLLS' as const,
     }));
+}
+
+/** SMHI snow1g JSON → próbki wiatru (zapas BN5). */
+export function parseSmhiSnow1g(json: unknown, point: MarinePointCode): MarineSample[] {
+  const body = json as {
+    timeSeries?: Array<{
+      time?: string;
+      data?: { wind_speed?: number; wind_speed_of_gust?: number };
+    }>;
+  };
+  const series = body.timeSeries ?? [];
+  const out: MarineSample[] = [];
+  for (const row of series) {
+    if (!row.time) continue;
+    const speed = row.data?.wind_speed;
+    const gust = row.data?.wind_speed_of_gust;
+    const windMs = typeof speed === 'number' && Number.isFinite(speed) ? speed : null;
+    const gustMs = typeof gust === 'number' && Number.isFinite(gust) ? gust : null;
+    if (windMs == null && gustMs == null) continue;
+    out.push({
+      at: new Date(row.time).toISOString(),
+      waveM: null,
+      gustKn: gustMs != null ? msToKnots(gustMs) : (windMs != null ? msToKnots(windMs) : null),
+      windMs,
+      periodS: null,
+      source: 'SMHI',
+      point,
+    });
+  }
+  return out;
 }
 
 function mergeSamples(rows: MarineSample[]): MarineSample[] {

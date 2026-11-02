@@ -34,6 +34,7 @@ class MemStore implements SyncStore {
   corridor: { corridor: string; slowdownMult: number; reason: string | null; detail?: unknown } | null = null;
   corridors: { corridor: string; slowdownMult: number; detail?: unknown }[] = [];
   marine: { maxWaveM: number | null; maxGustKn: number | null; risk: string; sources: string } | null = null;
+  marineWarnings: string[] = [];
   thr = { waveM: 3.8, gustKn: 40 };
   n = 0;
   /** F7 #706 B1: INFO AIS_<port> tylko przy >0 transportach. */
@@ -134,9 +135,11 @@ class MemStore implements SyncStore {
   async opsThresholds() { return this.thr; }
   async saveMarineCondition(row: {
     corridor: 'BALTIC_GDN_NYN' | 'BALTIC_GDY_KAA' | 'BALTIC_GULF_FI' | 'BALTIC_PLD_KPS' | 'BALTIC_TLL_STO'; maxWaveM: number | null; maxGustKn: number | null;
-    risk: 'niskie' | 'podwyższone' | 'wysokie'; sources: string;
+    risk: 'niskie' | 'podwyższone' | 'wysokie'; sources: string; detail?: unknown;
   }) {
     this.marine = { maxWaveM: row.maxWaveM, maxGustKn: row.maxGustKn, risk: row.risk, sources: row.sources };
+    const detail = row.detail as { warnings?: string[] } | undefined;
+    if (detail?.warnings?.length) this.marineWarnings = detail.warnings;
   }
   hereNotes: { service: string; n: number }[] = [];
   async noteHereUsage(service: 'tiles' | 'routing' | 'matching' | 'attributes' | 'traffic', n: number) {
@@ -733,14 +736,17 @@ describe('planSailingSync — zasady', () => {
 describe('ferry-weather — II-8 FMI+DMI+SMHI', () => {
   const FMI_WAM = fx('fmi-wam-mid-2026-10-02.xml');
   const FMI_GUST = fx('fmi-harmonie-gust-2026-10-02.xml');
+  const FMI_NAN = fx('fmi-wam-nan-offgrid.xml');
   const DMI = fx('dmi-wam-nsb-2026-10-02.json');
   const SMHI = fx('smhi-ocobs-knolls-latest.json');
+  const SNOW1G = fx('smhi-snow1g-gulf-mid.json');
   const WX_NOW = new Date('2026-10-02T04:00:00Z');
 
   function wxPages(): Record<string, string | number> {
     return {
-      'forecast%3A%3Awam': FMI_WAM,
-      'forecast%3A%3Aharmonie': FMI_GUST,
+      // fmiWamUrl/fmiHarmonieUrl trzymają `::` (nie %3A%3A) w storedquery_id
+      'forecast::wam': FMI_WAM,
+      'forecast::harmonie': FMI_GUST,
       'forecastedr/collections/wam_nsb': DMI,
       'ocobs.smhi.se': SMHI,
     };
@@ -782,6 +788,7 @@ describe('ferry-weather — II-8 FMI+DMI+SMHI', () => {
       'opendata.fmi.fi': 503,
       'opendataapi.dmi.dk': 429,
       'ocobs.smhi.se': 500,
+      'snow1g': 500,
     }, {}, WX_NOW).d);
     expect(r.ok).toBe(false);
     expect(st.risks[0]?.dedup).toMatch(/^SOURCE_DOWN:MARINE_WEATHER:/);
@@ -804,9 +811,40 @@ describe('ferry-weather — II-8 FMI+DMI+SMHI', () => {
       'opendata.fmi.fi': 503,
       'opendataapi.dmi.dk': 429,
       'ocobs.smhi.se': SMHI,
+      'snow1g': SNOW1G,
     }, {}, WX_NOW).d);
     expect(r.ok).toBe(false);
     expect(down.risks[0]?.dedup).toMatch(/^SOURCE_DOWN:MARINE_WEATHER:/);
+  });
+
+  it('BN5 cz.2: DMI 429 przy FMI OK → bez SOURCE_DOWN', async () => {
+    const st = new MemStore();
+    const r = await runFerryWeather(deps(st, {
+      'forecast::wam': FMI_WAM,
+      'forecast::harmonie': FMI_GUST,
+      'forecastedr/collections/wam_nsb': 429,
+      'ocobs.smhi.se': SMHI,
+    }, {}, WX_NOW).d);
+    expect(r.ok).toBe(true);
+    expect(st.risks.filter((x) => x.dedup.startsWith('SOURCE_DOWN:MARINE_WEATHER:'))).toHaveLength(0);
+    expect(r.warnings?.some((w) => /DMI .*HTTP 429/.test(w))).toBe(true);
+  });
+
+  it('BN5 cz.2: Harmonie padł → snow1g zapas wiatru; WAM NaN → ostrzeżenie w detail', async () => {
+    const st = new MemStore();
+    const { d, calls } = deps(st, {
+      'forecast::wam': FMI_NAN,
+      'forecast::harmonie': 503,
+      'forecastedr/collections/wam_nsb': DMI,
+      'ocobs.smhi.se': SMHI,
+      'snow1g': SNOW1G,
+    }, {}, WX_NOW);
+    const r = await runFerryWeather(d);
+    expect(r.ok).toBe(true);
+    expect(calls.some((u) => u.includes('/category/snow1g/'))).toBe(true);
+    expect(calls.every((u) => !u.includes('pmp3g'))).toBe(true);
+    expect(st.marineWarnings.some((w) => /NaN poza siatką/.test(w))).toBe(true);
+    expect(st.marine!.sources).toMatch(/SMHI|DMI/);
   });
 });
 

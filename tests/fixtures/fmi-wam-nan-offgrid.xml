@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<wfs:FeatureCollection
+    timeStamp="2026-10-02T00:00:00Z"
+    numberMatched="1"
+    numberReturned="1"
+    xmlns:wfs="http://www.opengis.net/wfs/2.0"
+    xmlns:gml="http://www.opengis.net/gml/3.2"
+    xmlns:omso="http://inspire.ec.europa.eu/schemas/omso/3.0"
+    xmlns:wml2="http://www.opengis.net/waterml/2.0">
+    <wfs:member>
+        <omso:PointTimeSeriesObservation gml:id="WFS-offgrid-SigWaveHeight">
+            <om:result xmlns:om="http://www.opengis.net/om/2.0">
+                <wml2:MeasurementTimeseries gml:id="mts-nan-SigWaveHeight">
+                    <wml2:point>
+                        <wml2:MeasurementTVP>
+                            <wml2:time>2026-10-02T00:00:00Z</wml2:time>
+                            <wml2:value>NaN</wml2:value>
+                        </wml2:MeasurementTVP>
+                    </wml2:point>
+                    <wml2:point>
+                        <wml2:MeasurementTVP>
+                            <wml2:time>2026-10-02T01:00:00Z</wml2:time>
+                            <wml2:value>NaN</wml2:value>
+                        </wml2:MeasurementTVP>
+                    </wml2:point>
+                    <wml2:point>
+                        <wml2:MeasurementTVP>
+                            <wml2:time>2026-10-02T02:00:00Z</wml2:time>
+                            <wml2:value>nan</wml2:value>
+                        </wml2:MeasurementTVP>
+                    </wml2:point>
+                </wml2:MeasurementTimeseries>
+            </om:result>
+        </omso:PointTimeSeriesObservation>
+    </wfs:member>
+</wfs:FeatureCollection>

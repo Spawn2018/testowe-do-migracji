@@ -1,5 +1,6 @@
 /**
- * II-8 — unit: parsery FMI/DMI/SMHI + progi WAVE_M / GUST_KN (D-39).
+ * II-8 / BN5 — unit: parsery FMI/DMI/SMHI + progi WAVE_M / GUST_KN (D-39).
+ * BN5 cz.2 (#714): NaN WAM, snow1g (nie pmp3g).
  */
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -10,7 +11,9 @@ import {
   parseDmiCoverageJson,
   parseFmiTimeValuePair,
   parseSmhiOcobs,
+  parseSmhiSnow1g,
   samplesInWindow,
+  smhiSnow1gUrl,
 } from '../supabase/functions/_shared/ferry/marineWeather';
 
 const fx = (n: string) => readFileSync(new URL(`./fixtures/${n}`, import.meta.url), 'utf8');
@@ -24,7 +27,8 @@ describe('marineWeather — jednostki', () => {
 describe('marineWeather — FMI WFS', () => {
   it('parsuje SigWaveHeight z fixture mid-route', () => {
     const xml = fx('fmi-wam-mid-2026-10-02.xml');
-    const rows = parseFmiTimeValuePair(xml, 'MID', 'wave');
+    const { samples: rows, nanSkipped } = parseFmiTimeValuePair(xml, 'MID', 'wave');
+    expect(nanSkipped).toBe(0);
     expect(rows.length).toBeGreaterThan(5);
     const withWave = rows.filter((r) => r.waveM != null);
     expect(withWave[0]!.waveM).toBeGreaterThan(0.5);
@@ -33,11 +37,18 @@ describe('marineWeather — FMI WFS', () => {
   });
   it('parsuje WindGust z Harmonie → kn', () => {
     const xml = fx('fmi-harmonie-gust-2026-10-02.xml');
-    const rows = parseFmiTimeValuePair(xml, 'MID', 'gust');
+    const { samples: rows } = parseFmiTimeValuePair(xml, 'MID', 'gust');
     const withGust = rows.filter((r) => r.gustKn != null);
     expect(withGust.length).toBeGreaterThan(3);
     expect(withGust[0]!.gustKn).toBeGreaterThan(5);
     expect(withGust[0]!.gustKn).toBeLessThan(80);
+  });
+  it('BN5: WAM NaN → brak próbek (nie zero) + nanSkipped', () => {
+    const xml = fx('fmi-wam-nan-offgrid.xml');
+    const { samples, nanSkipped } = parseFmiTimeValuePair(xml, 'GULF_MID', 'wave');
+    expect(samples).toHaveLength(0);
+    expect(nanSkipped).toBe(3);
+    expect(samples.every((r) => r.waveM !== 0)).toBe(true);
   });
 });
 
@@ -52,13 +63,26 @@ describe('marineWeather — DMI CoverageJSON', () => {
   });
 });
 
-describe('marineWeather — SMHI ocobs', () => {
+describe('marineWeather — SMHI ocobs + snow1g', () => {
   it('parsuje boję Knolls Grund', () => {
     const json = JSON.parse(fx('smhi-ocobs-knolls-latest.json'));
     const rows = parseSmhiOcobs(json);
     expect(rows.length).toBeGreaterThanOrEqual(1);
     expect(rows[0]!.waveM).toBe(1.18);
     expect(rows[0]!.source).toBe('SMHI');
+  });
+  it('BN5: snow1g URL i JSON wiatru (nie pmp3g)', () => {
+    const url = smhiSnow1gUrl(24.85, 59.8);
+    expect(url).toContain('/category/snow1g/');
+    expect(url).not.toContain('pmp3g');
+    expect(url).toContain('/lon/24.85/lat/59.8/');
+    const rows = parseSmhiSnow1g(JSON.parse(fx('smhi-snow1g-gulf-mid.json')), 'GULF_MID');
+    expect(rows).toHaveLength(3);
+    expect(rows[0]!.source).toBe('SMHI');
+    expect(rows[0]!.point).toBe('GULF_MID');
+    expect(rows[0]!.windMs).toBe(8.5);
+    expect(rows[0]!.gustKn).toBeCloseTo(msToKnots(12.0), 1);
+    expect(rows.every((r) => r.waveM == null)).toBe(true);
   });
 });
 

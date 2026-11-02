@@ -89,7 +89,7 @@ import {
 import {
   MARINE_CORRIDORS, MARINE_POINTS, SMHI_OCOBS_URL, dmiWamUrl, evaluateMarineWindow, fmiHarmonieUrl, fmiWamUrl,
   marinePointsForCorridor, marinePointsForRoute, marineWeatherRisk, parseDmiCoverageJson, parseFmiTimeValuePair,
-  parseSmhiOcobs, samplesInWindow, type MarineSample, type MarinePointCode,
+  parseSmhiOcobs, parseSmhiSnow1g, samplesInWindow, smhiSnow1gUrl, type MarineSample, type MarinePointCode,
 } from '../ferry/marineWeather.ts';
 import {
   integrationMode, parseDatexSituations, parseTrafikverketRoadConditions,
@@ -3738,16 +3738,45 @@ export async function runFerryWeather(deps: JobDeps): Promise<JobResult> {
     const gRes = await readText(deps, gUrl, { headers: { 'User-Agent': USER_AGENT, Accept: 'application/xml' } });
     if (wRes.ok) {
       const parsed = parseFmiTimeValuePair(wRes.text, code, 'wave');
-      samples.push(...parsed);
-      if (parsed.length) fmiOk++;
+      samples.push(...parsed.samples);
+      if (parsed.nanSkipped > 0) {
+        warnings.push(`FMI WAM ${code}: NaN poza siatką — punkt pominięty (${parsed.nanSkipped})`);
+      }
+      if (parsed.samples.length) fmiOk++;
     } else warnings.push(`FMI WAM ${code}: ${wRes.warning}`);
+    let gustOk = false;
     if (gRes.ok) {
       const parsed = parseFmiTimeValuePair(gRes.text, code, 'gust');
-      samples.push(...parsed);
-      if (parsed.length) fmiOk++;
+      samples.push(...parsed.samples);
+      if (parsed.nanSkipped > 0) {
+        warnings.push(`FMI Harmonie ${code}: NaN poza siatką — punkt pominięty (${parsed.nanSkipped})`);
+      }
+      if (parsed.samples.length) {
+        fmiOk++;
+        gustOk = true;
+      }
     } else warnings.push(`FMI Harmonie ${code}: ${gRes.warning}`);
 
-    // DMI zapas — retry 1× przy 429
+    // BN5: SMHI snow1g — zapas wiatru gdy Harmonie bez próbek
+    if (!gustOk) {
+      const sUrl = smhiSnow1gUrl(p.lon, p.lat);
+      const sRes = await readText(deps, sUrl, {
+        headers: { 'User-Agent': USER_AGENT, Accept: 'application/json' },
+      });
+      if (sRes.ok) {
+        try {
+          const parsed = parseSmhiSnow1g(JSON.parse(sRes.text), code);
+          samples.push(...parsed);
+          if (parsed.length) smhiOk++;
+        } catch {
+          warnings.push(`SMHI snow1g ${code}: nieczytelna odpowiedź`);
+        }
+      } else {
+        warnings.push(`SMHI snow1g ${code}: ${sRes.warning}`);
+      }
+    }
+
+    // DMI zapas — retry 1× przy 429 (brak DMI ≠ SOURCE_DOWN gdy FMI OK)
     const dUrl = dmiWamUrl(p.lon, p.lat, fFrom, fTo);
     let dRes = await readText(deps, dUrl, {
       headers: { 'User-Agent': USER_AGENT, Accept: 'application/prs.coverage+json,application/json' },
@@ -3814,7 +3843,7 @@ export async function runFerryWeather(deps: JobDeps): Promise<JobResult> {
         detail: {
           fmi: fmiOk, dmi: dmiOk, smhi: smhiOk,
           samples: slice.length, sailings: upcoming.length,
-          warnings: warnings.slice(0, 8),
+          warnings: warnings.slice(0, 24),
           punkty: [...pts],
         },
         observedAt: nowIso,
