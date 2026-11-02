@@ -1,4 +1,12 @@
 
+## 2026-11-03 00:45 — BN8a F7 r6 (cleanup load_events replica) + #740 SCALONE
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie.
+- Scalanie: **#740 SCALONE** `4b2c6f08` (F7 @ `7a704062`). **#743** konflikt po #740 — rebase wyglądu u koordynatora. #741 @ `9ecab5a7`: unit/visual ✔; db FAIL — status W5 cleanup `load_events` append-only → ryzyka L820* w risks.sh.
+- **Krok F7 r6:** sprzątanie L820* — `delete load_events` przy `session_replication_role=replica` (i2); DP-175/DP-177 w rejestrze. Po deploy #740: `cron_fetch=true` (osobny krok).
+- **Dalej:** push → CI → F7. Po F7: cron_fetch=true → DP-171 (#735) → DP-172 (#742); front `src/lib` / BN8b.
+- Bez push na main.
+
 ## 2026-11-03 00:15 — BN8a F7 r5 (W5 rollback + sprzątanie L820*)
 
 - Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. #740/#743 wygląd bez F7.

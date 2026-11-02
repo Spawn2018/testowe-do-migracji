@@ -2516,8 +2516,10 @@ chk "BN8a W5d: ląd FI po ATA → bez ferry_check_after" \
   "begin; select detect_ferry_overdue('2026-10-21 12:00+00');
    select count(*) from risk_signals where load_id='$L820g' and title_key='rk_ferry_check_after_arrival' and resolved_at is null;
    rollback" 0
-# F7 r5: sprzątanie tylko L820* (wzorzec #487); bez globalnego title_key;
-# chk count — ciche przerwanie ON_ERROR_STOP+>/dev/null nie może się powtórzyć.
+# F7 r5/r6: sprzątanie tylko L820* (wzorzec #487); bez globalnego title_key.
+# load_events = append-only → DELETE tylko przy session_replication_role=replica (i2.sh).
+# Bez tego chk padał na append-only, transakcja cofała kasowanie ryzyk, a risks.sh
+# widział rk_off_corridor/rk_eta_breach z L820c (W5b) przy automacie.
 chk "BN8a W5 po teście brak risk_signals/loads L820*" \
   "delete from notifications where load_id in ('$L820b','$L820c','$L820d','$L820e','$L820f','$L820g');
    delete from decision_events where decision_id in (
@@ -2531,7 +2533,9 @@ chk "BN8a W5 po teście brak risk_signals/loads L820*" \
    delete from risk_signals
     where load_id in ('$L820b','$L820c','$L820d','$L820e','$L820f','$L820g');
    delete from positions where load_id in ('$L820b','$L820c','$L820d','$L820e','$L820f','$L820g');
+   set session_replication_role=replica;
    delete from load_events where load_id in ('$L820b','$L820c','$L820d','$L820e','$L820f','$L820g');
+   set session_replication_role=origin;
    update loads set sailing_id = null where id in ('$L820b','$L820c','$L820d','$L820e','$L820f','$L820g');
    delete from loads where id in ('$L820b','$L820c','$L820d','$L820e','$L820f','$L820g');
    delete from sailings where id in ('$S820e','$S820f','$S820g');
