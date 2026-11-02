@@ -353,16 +353,19 @@ err "anon nie wywoła latest_vehicle_positions"                          $KSH "s
 err "zalogowany nie wywoła latest_vehicle_positions"                    $SCX "select * from latest_vehicle_positions(30)" "permission denied"
 chk "system: ryzyko projektowe (bez transportu) zapisane"               "$(Q "select raise_integration_risk('$P',null,'FERRY','HIGH','Źródło niedostępne','{}','SOURCE_DOWN:T12:2026-09-26')")" t
 chk "system: ten sam klucz → bez duplikatu (false)"                     "$(Q "select raise_integration_risk('$P',null,'FERRY','HIGH','Źródło niedostępne','{}','SOURCE_DOWN:T12:2026-09-26')")" f
-# DP-167 / F7 #734 r1: ROAD_* bez load_id — update otwartego; identyczne → bez UPDATE (xmin);
+# DP-167 / F7 #734 r1–r2: ROAD_* bez load_id — update otwartego; detail z title_key
+# znormalizowany jak trigger → identyczne raise bez UPDATE (xmin); zmiana title_key → kolumna.
 # FERRY+load_id — waga zamrożona (wariant a).
 # L xx: dedup ROAD_FI:DP167:* / FERRY:DP167:* (unikatowy); vessel niepotrzebny.
 sys "select raise_integration_risk('$P',null,'ROAD_FI','LOW','roboty drogowe','{\"title_key\":\"rk_road_fi\",\"params\":{\"road\":\"4\"}}','ROAD_FI:DP167:open-update')"
 chk "DP-167: ponowne raise → false (bez duplikatu)"                     "$(Q "select raise_integration_risk('$P',null,'ROAD_FI','HIGH','limit masy','{\"title_key\":\"rk_road_fi\",\"params\":{\"road\":\"4\",\"weight_t\":12}}','ROAD_FI:DP167:open-update')")" f
-chk "DP-167: otwarte — severity/title zaktualizowane"                   "$(Q "select severity||'|'||title from risk_signals where dedup_key='ROAD_FI:DP167:open-update' and resolved_at is null")" "HIGH|limit masy"
+chk "DP-167: otwarte — severity/title/title_key"                        "$(Q "select severity||'|'||title||'|'||title_key from risk_signals where dedup_key='ROAD_FI:DP167:open-update' and resolved_at is null")" "HIGH|limit masy|rk_road_fi"
 chk "DP-167: jeden otwarty wiersz"                                      "$(Q "select count(*) from risk_signals where dedup_key='ROAD_FI:DP167:open-update'")" 1
 XMIN167=$(Q "select xmin::text from risk_signals where dedup_key='ROAD_FI:DP167:open-update' and resolved_at is null")
 chk "DP-167 F7: identyczne raise → false"                               "$(Q "select raise_integration_risk('$P',null,'ROAD_FI','HIGH','limit masy','{\"title_key\":\"rk_road_fi\",\"params\":{\"road\":\"4\",\"weight_t\":12}}','ROAD_FI:DP167:open-update')")" f
 chk "DP-167 F7: identyczne raise → xmin bez zmian"                      "$(Q "select xmin::text from risk_signals where dedup_key='ROAD_FI:DP167:open-update' and resolved_at is null")" "$XMIN167"
+chk "DP-167 F7 r2: zmiana title_key → false"                            "$(Q "select raise_integration_risk('$P',null,'ROAD_FI','HIGH','limit masy','{\"title_key\":\"rk_road_baltic_weight_check\",\"params\":{\"road\":\"4\",\"weight_t\":12}}','ROAD_FI:DP167:open-update')")" f
+chk "DP-167 F7 r2: title_key zaktualizowany"                            "$(Q "select title_key from risk_signals where dedup_key='ROAD_FI:DP167:open-update' and resolved_at is null")" "rk_road_baltic_weight_check"
 sys "update risk_signals set resolved_at = now() where dedup_key='ROAD_FI:DP167:open-update' and resolved_at is null"
 sys "select raise_integration_risk(null,'$L1','FERRY','LOW','prom low','{}','FERRY:DP167:load-frozen')"
 chk "DP-167 F7(a): FERRY+load_id raise HIGH → false"                    "$(Q "select raise_integration_risk(null,'$L1','FERRY','HIGH','prom high','{}','FERRY:DP167:load-frozen')")" f

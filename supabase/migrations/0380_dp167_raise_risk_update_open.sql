@@ -2,6 +2,9 @@
 -- (zmiana wag FI/EE po wdrożeniu trafia do otwartych). Bez nowego RISK_OPEN (return false).
 -- F7 #734 r1: (a) tylko ROAD_* bez load_id; UPDATE wyłącznie gdy pola się zmieniają;
 -- valid_until = coalesce(p_valid_until, valid_until) — job bez końca nie kasuje istniejącej daty.
+-- F7 #734 r2: przed porównaniem/zapisem znormalizuj detail jak risk_signals_title_key
+-- (usuń title_key z JSON, dołóż params); title_key z p_detail → kolumna; title jak
+-- tower_public_title(null, …, 'CODE') — inaczej is distinct always true / title_key nie wchodzi.
 
 create or replace function raise_integration_risk(
   p_project uuid, p_load uuid, p_kind risk_kind, p_sev risk_severity, p_title text, p_detail jsonb,
@@ -11,6 +14,8 @@ declare
   n int;
   v_id uuid;
   v_detail jsonb;
+  v_title_key text;
+  v_title text;
 begin
   if p_dedup is null or length(p_dedup) = 0 then
     raise exception 'raise_integration_risk: wymagany klucz deduplikacji';
@@ -25,17 +30,25 @@ begin
   ) then
     if p_kind in ('ROAD_SE', 'ROAD_PL', 'ROAD_LT', 'ROAD_LV', 'ROAD_EE', 'ROAD_FI')
        and p_load is null then
-      v_detail := coalesce(p_detail, '{}'::jsonb);
+      -- Jak risk_signals_title_key: title_key z JSON → kolumna; w detail bez title_key + params.
+      v_title_key := nullif(coalesce(p_detail, '{}'::jsonb)->>'title_key', '');
+      v_detail := coalesce(p_detail, '{}'::jsonb) - 'title_key';
+      if (v_detail ? 'params') is not true then
+        v_detail := v_detail || '{"params":{}}'::jsonb;
+      end if;
+      -- Jak trg_risks_public_title (load_id null → bez kodu transportu).
+      v_title := public.tower_public_title(null, p_title, 'CODE');
       update risk_signals
          set severity = p_sev,
-             title = p_title,
+             title = v_title,
+             title_key = coalesce(v_title_key, title_key),
              detail = v_detail,
              source_url = coalesce(p_source_url, source_url),
              valid_until = coalesce(p_valid_until, valid_until)
        where dedup_key = p_dedup and resolved_at is null
-         and (severity, title, detail, coalesce(source_url, ''), valid_until)
+         and (severity, title, title_key, detail, coalesce(source_url, ''), valid_until)
              is distinct from
-             (p_sev, p_title, v_detail,
+             (p_sev, v_title, coalesce(v_title_key, title_key), v_detail,
               coalesce(coalesce(p_source_url, source_url), ''),
               coalesce(p_valid_until, valid_until));
     end if;
