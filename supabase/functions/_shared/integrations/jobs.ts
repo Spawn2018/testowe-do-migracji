@@ -100,10 +100,13 @@ import {
 import {
   FI_ANNOUNCEMENTS_URL, FI_ATTRIBUTION, FI_ROADWORKS_URL, FI_WEIGHT_URL,
   LT_ATTRIBUTION, LT_RESTRICTIONS_URL, LT_UA, LT_WEATHER_URL,
-  balticRoadRisk, balticSlowdownMult, fiCorridorBboxes, fiTrafficUrl, filterInFiBboxes,
-  dimensionLimitRisk, filterInLtBboxes, isDimensionLimitEvent, ltWeatherToSlowdownEvents,
-  parseFiTrafficMessages, parseLtRestrictions, parseLtWeather, weightLimitRisk,
-  type BalticRoadEvent,
+  LV_ATTRIBUTION, LV_NAP_CODES, LV_NAP_KEY_HEADER, LV_SOURCE_REF, LV_UA,
+  balticRoadRisk, balticSlowdownMult, dedupeLvSlippery, fiCorridorBboxes, fiTrafficUrl,
+  filterInFiBboxes, filterInLvBboxes, dimensionLimitRisk, filterInLtBboxes,
+  isDimensionLimitEvent, ltWeatherToSlowdownEvents, lvNapKeyEnv, lvNapUrlEnv,
+  lvWeatherToSlowdownEvents, parseFiTrafficMessages, parseLtRestrictions, parseLtWeather,
+  parseLvFeedBody, weightLimitRisk,
+  type BalticRoadEvent, type LvNapCode,
 } from './roadBaltic.ts';
 import { buildTrafficIncidentsUrl, parseHereTrafficIncidents } from '../here/trafficIncidents.ts';
 import { HERE_BILLING_DEFAULTS } from '../here/billing.ts';
@@ -3893,6 +3896,175 @@ async function roadLtFailStreak(deps: JobDeps): Promise<number> {
   return streak;
 }
 
+/**
+ * BN6 (#716) cz.3 / #589 — drogi LV (22 zbiory LV_NAP_*_KEY/URL).
+ * Bez URL/kluczy w warnings i observations; SOURCE_DOWN po 3× fetched_ok===0
+ * gdy są skonfigurowane zbiory; resolveStale tylko przy komplecie.
+ */
+export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
+  const now = deps.now().toISOString();
+  const warnings: string[] = [];
+  const configured: { code: LvNapCode; url: string; key: string }[] = [];
+  for (const code of LV_NAP_CODES) {
+    const key = (deps.env[lvNapKeyEnv(code)] ?? '').trim();
+    const url = (deps.env[lvNapUrlEnv(code)] ?? '').trim();
+    if (key && url) configured.push({ code, url, key });
+    else if (key || url) warnings.push(`LV ${code}: niepełna para sekretów KEY/URL`);
+  }
+  const expectedFetches = configured.length;
+  if (expectedFetches === 0) {
+    return {
+      job: 'road-lv', mode: 'LIVE', ok: false, risks: 0,
+      warnings: [...warnings, 'LV: brak skonfigurowanych par LV_NAP_*_KEY/URL'],
+      observations: {
+        source: 'lvc_nap',
+        fetched_ok: '0',
+        expected_fetches: '0',
+        configured: '0',
+        header: LV_NAP_KEY_HEADER,
+      },
+    };
+  }
+
+  let fetchedOk = 0;
+  const allEvents: BalticRoadEvent[] = [];
+  const perCode: Record<string, string> = {};
+  const formats: Record<string, string> = {};
+
+  for (const { code, url, key } of configured) {
+    const headers: Record<string, string> = {
+      'User-Agent': LV_UA,
+      Accept: 'application/json, application/xml, text/xml, */*',
+      [LV_NAP_KEY_HEADER]: key,
+    };
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), READ_TEXT_TIMEOUT_MS);
+    try {
+      const res = await deps.fetch(url, { headers, signal: ctrl.signal });
+      if (!res.ok) {
+        warnings.push(`LV ${code}: HTTP ${res.status}`);
+        perCode[code] = `http_${res.status}`;
+        continue;
+      }
+      const text = await res.text();
+      fetchedOk++;
+      const parsed = parseLvFeedBody(text, code);
+      formats[code] = parsed.format;
+      perCode[code] = `ok:${parsed.events.length}:${parsed.format}`;
+      if (parsed.format === 'unknown' || parsed.format === 'empty') {
+        warnings.push(`LV ${code}: pusty lub nieznany format`);
+      }
+      for (const e of parsed.events) allEvents.push(e);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      warnings.push(`LV ${code}: ${/abort/i.test(msg) ? 'timeout' : 'błąd sieci'}`);
+      perCode[code] = 'error';
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  if (fetchedOk === 0) {
+    const streak = await roadLvFailStreak(deps);
+    if (streak >= 3) {
+      await deps.store.raiseRisk(sourceDownRisk(
+        'ROAD_LV',
+        warnings.length ? warnings : ['LV NAP niedostępne'],
+        now,
+        LV_SOURCE_REF,
+      ));
+      return {
+        job: 'road-lv', mode: 'LIVE', ok: false, risks: 1, warnings,
+        observations: {
+          road_lv_fail_streak: String(streak),
+          source: 'lvc_nap',
+          fetched_ok: '0',
+          expected_fetches: String(expectedFetches),
+          configured: String(expectedFetches),
+          header: LV_NAP_KEY_HEADER,
+        },
+      };
+    }
+    return {
+      job: 'road-lv', mode: 'LIVE', ok: false, risks: 0, warnings,
+      observations: {
+        road_lv_fail_streak: String(streak),
+        source: 'lvc_nap',
+        fetched_ok: '0',
+        expected_fetches: String(expectedFetches),
+        configured: String(expectedFetches),
+        header: LV_NAP_KEY_HEADER,
+      },
+    };
+  }
+
+  await deps.store.resolveRisks('SOURCE_DOWN:ROAD_LV:');
+  const deduped = dedupeLvSlippery(allEvents);
+  const near = filterInLvBboxes(deduped);
+  const complete = fetchedOk === expectedFetches;
+  let risks = 0;
+  const keep: string[] = [];
+  for (const e of near) {
+    const risk = e.weightLimitT != null
+      ? weightLimitRisk('LV', e, null, LV_SOURCE_REF, LV_ATTRIBUTION)
+      : isDimensionLimitEvent(e)
+        ? dimensionLimitRisk('LV', e, LV_SOURCE_REF, LV_ATTRIBUTION)
+        : balticRoadRisk('LV', e, LV_SOURCE_REF, LV_ATTRIBUTION);
+    keep.push(risk.dedup);
+    if (await deps.store.raiseRisk(risk)) risks++;
+  }
+  if (complete && deps.store.resolveStaleRisks) {
+    await deps.store.resolveStaleRisks('ROAD_LV:', keep);
+  }
+
+  const weatherSlow = lvWeatherToSlowdownEvents(near);
+  const slow = balticSlowdownMult(near);
+  if (deps.store.saveCorridorCondition) {
+    await deps.store.saveCorridorCondition({
+      corridor: 'ROAD_LV',
+      slowdownMult: slow.mult,
+      reason: slow.reason,
+      observedAt: now,
+      detail: {
+        events: near.length,
+        weather_adverse: weatherSlow.length,
+        zrodlo: LV_ATTRIBUTION,
+        complete,
+        formats,
+      },
+    });
+  }
+
+  return {
+    job: 'road-lv', mode: 'LIVE', ok: complete && warnings.length === 0,
+    risks, warnings,
+    observations: {
+      source: 'lvc_nap',
+      fetched_ok: String(fetchedOk),
+      expected_fetches: String(expectedFetches),
+      complete: complete ? '1' : '0',
+      events_raw: String(deduped.length),
+      events_near: String(near.length),
+      configured: String(expectedFetches),
+      header: LV_NAP_KEY_HEADER,
+      /* per-code: status bez URL/kluczy */
+      ...Object.fromEntries(Object.entries(perCode).map(([k, v]) => [`lv_${k.toLowerCase()}`, v])),
+    },
+  };
+}
+
+async function roadLvFailStreak(deps: JobDeps): Promise<number> {
+  let streak = 1;
+  if (!deps.store.recentJobResults) return streak;
+  const rows = await deps.store.recentJobResults('road-lv', 5);
+  for (const row of rows) {
+    const fo = Number(row.observations?.fetched_ok ?? NaN);
+    if (fo === 0) streak++;
+    else break;
+  }
+  return streak;
+}
+
 const HERE_TRAFFIC_ATTR = 'https://www.here.com/docs/bundle/traffic-api-developer-guide-v7';
 
 async function runRoadPlKpd(deps: JobDeps, now: string, url: string): Promise<JobResult> {
@@ -5267,6 +5439,7 @@ export const JOBS = {
   'ferry-portnet': runFerryPortnet,
   'ferry-weather': runFerryWeather,
   'road-se': runRoadSe, 'road-pl': runRoadPl, 'road-fi': runRoadFi, 'road-lt': runRoadLt,
+  'road-lv': runRoadLv,
   'traffic-flow': runTrafficFlow,
   'here-roads': runHereRoads,
   'emtrack-web': runEmtrackWeb,
@@ -5282,7 +5455,8 @@ export const MIN_INTERVAL_MIN: Record<JobName, number> = {
   'ferry-schedule': 60, 'ferry-status': 10, 'ferry-ais': 3, 'ferry-ais-listen': 0,
   'ferry-portnet': 15, 'ferry-weather': 60,
   // #667 F7 r2: 1380 min — dzienny cron (ran_at po zakończeniu) nie pomija kolejnego dnia.
-  'road-se': 15, 'road-pl': 10, 'road-fi': 15, 'road-lt': 15, 'traffic-flow': 15, 'here-roads': 1380,
+  'road-se': 15, 'road-pl': 10, 'road-fi': 15, 'road-lt': 15, 'road-lv': 15,
+  'traffic-flow': 15, 'here-roads': 1380,
   'emtrack-web': 2, 'rio-links': 2,
   'safefleet-poll': 2, 'route-hazards': 60,
   'translate-retry': 5,

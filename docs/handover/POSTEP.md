@@ -1,4 +1,12 @@
 
+## 2026-11-02 07:35 — #727 SCALONE; BN6 cz.3 LV + DP-160
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. #728 wygląd (koordynator, bez F7).
+- Scalanie: **#727 SCALONE** `7ef5e230` (F7: gotowe @ `35db337e`, CI unit/visual/db ✔). DP-160/161/162 z F7 wpisane do rejestru.
+- **Krok:** BN6 cz.3 LV — job `road-lv` (22× `LV_NAP_*_KEY/URL`, nagłówek `Ocp-Apim-Subscription-Key`); DATEX XML/JSON + GeoJSON WEIGHT_DIM; dedup śliskości; cron **0378**; vitest `bn6-road-lv`; status **580**; DP-160 `LT_ICY_RE` (apled/ledas/šlapdriba/sniegas). Bez URL/kluczy w warnings.
+- **Dalej:** push → CI → F7. Po F7: BN6 cz.4 EE.
+- Bez push na main.
+
 ## 2026-11-02 06:50 — #727 F7 r1 poprawki LT (B1/B2/B3/N1–N3)
 
 - Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. #728 wygląd (koordynator).

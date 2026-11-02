@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<d2LogicalModel xmlns="http://datex2.eu/schema/3/datex3" modelBaseVersion="3">
+  <payloadPublication>
+    <situation>
+      <situationRecord id="bn6-lv-rw-riga" xsi:type="MaintenanceWorks" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+        <situationRecordCreationTime>2026-11-02T05:00:00Z</situationRecordCreationTime>
+        <validity>
+          <validityStatus>definedByValidityTimeSpec</validityStatus>
+          <validityTimeSpecification>
+            <overallStartTime>2026-11-02T04:00:00Z</overallStartTime>
+            <overallEndTime>2026-11-03T20:00:00Z</overallEndTime>
+          </validityTimeSpecification>
+        </validity>
+        <groupOfLocations>
+          <pointByCoordinates>
+            <pointCoordinates>
+              <latitude>56.950000</latitude>
+              <longitude>24.100000</longitude>
+            </pointCoordinates>
+          </pointByCoordinates>
+        </groupOfLocations>
+        <probabilityOfOccurrence>certain</probabilityOfOccurrence>
+        <severity>medium</severity>
+        <roadNumber>A7</roadNumber>
+        <generalPublicComment>
+          <comment>
+            <values>
+              <value lang="lv">Ceļa remontdarbi A7</value>
+            </values>
+          </comment>
+        </generalPublicComment>
+      </situationRecord>
+      <situationRecord id="bn6-lv-rw-far-east" xsi:type="MaintenanceWorks" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+        <validity>
+          <validityTimeSpecification>
+            <overallStartTime>2026-11-02T04:00:00Z</overallStartTime>
+          </validityTimeSpecification>
+        </validity>
+        <groupOfLocations>
+          <pointByCoordinates>
+            <pointCoordinates>
+              <latitude>56.500000</latitude>
+              <longitude>27.300000</longitude>
+            </pointCoordinates>
+          </pointByCoordinates>
+        </groupOfLocations>
+        <severity>medium</severity>
+        <roadNumber>A12</roadNumber>
+        <generalPublicComment>
+          <comment><values><value>Darbi daleko na wschodzie</value></values></comment>
+        </generalPublicComment>
+      </situationRecord>
+    </situation>
+  </payloadPublication>
+</d2LogicalModel>

@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<d2LogicalModel xmlns="http://datex2.eu/schema/3/datex3" modelBaseVersion="3">
+  <payloadPublication>
+    <situation>
+      <situationRecord id="bn6-lv-slip-wm-1" xsi:type="WinterDrivingConditions" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+        <validity>
+          <validityTimeSpecification>
+            <overallStartTime>2026-11-02T05:30:00Z</overallStartTime>
+          </validityTimeSpecification>
+        </validity>
+        <groupOfLocations>
+          <pointByCoordinates>
+            <pointCoordinates>
+              <latitude>56.950200</latitude>
+              <longitude>24.100300</longitude>
+            </pointCoordinates>
+          </pointByCoordinates>
+        </groupOfLocations>
+        <severity>high</severity>
+        <roadNumber>A7</roadNumber>
+        <generalPublicComment>
+          <comment><values><value lang="lv">Slidens ceļš (WM)</value></values></comment>
+        </generalPublicComment>
+      </situationRecord>
+    </situation>
+  </payloadPublication>
+</d2LogicalModel>
