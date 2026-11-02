@@ -1,4 +1,12 @@
 
+## 2026-11-02 21:10 — #739 SCALONE; start BN8a
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. #735 — krok 2 po prod DP-170 (koordynator odczyta `ee_probe_api`/`lv_shape_*`). #740 BN9-c5 wygląd otwarty (CI, bez F7).
+- Scalanie: **#739 SCALONE** `d4214676` (F7: gotowe @ `7af710a5`, CI 8/8). `deploy-main` w toku.
+- **Krok BN8a** (`pakiet/bn8a-ferry-all-routes`): migracja **0382** — `loads.ferry_route` + `load_route_family`; kraje SE/FI; `assume_dep_min`/`overdue_tolerance_min`; OFF_CORRIDOR ze słownika legów; mismatch PL/EE; `eta_record` po trasie; status **595** (+12).
+- **Dalej:** push → CI → F7. Po F7: BN8 front `src/lib` / BN8b; równolegle BN9-c5 → cron_fetch=true.
+- Bez push na main.
+
 ## 2026-11-02 20:40 — #739 merge main po #738 (konflikt docs)
 
 - Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. #735 — krok 2 po prod DP-170.

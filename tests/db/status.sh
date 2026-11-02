@@ -2411,6 +2411,37 @@ chk "BN1: promote outbound ze słownika" \
 chk "BN1: apply_geofence_status pomija REMOVED" \
   "select pg_get_functiondef('public.apply_geofence_status()'::regprocedure) ilike '%REMOVED%'" t
 
+# BN8a (#720 / 0382): kraje ze słownika, ferry_route, OFF_CORRIDOR bez PL_ROAD na sztywno.
+chk "BN8a: departure_country GDN-NYN = PL" \
+  "select public.ferry_route_departure_country('GDN-NYN')" PL
+chk "BN8a: arrival_country TLL-HEL = FI" \
+  "select public.ferry_route_arrival_country('TLL-HEL')" FI
+chk "BN8a: arrival_country GDY-KAA = SE" \
+  "select public.ferry_route_arrival_country('GDY-KAA')" SE
+chk "BN8a: assume_dep TLL-HEL = 20" \
+  "select min(assume_dep_min)::text from ferry_routes where family_key='TLL-HEL' and active" 20
+chk "BN8a: assume_dep GDN-NYN = 60" \
+  "select assume_dep_min::text from ferry_routes where code='GDN-NYN'" 60
+chk "BN8a: corridor_code PL-GDN = PL_ROAD" \
+  "select corridor_code from here_road_legs where leg='PL-GDN'" PL_ROAD
+chk "BN8a: refresh_load_eta bez sztywnego PL_ROAD" \
+  "select pg_get_functiondef('public.refresh_load_eta(uuid)'::regprocedure) like '%road_corridor_pre%'" t
+chk "BN8a: process_position ląd FI" \
+  "select pg_get_functiondef('public.process_position(uuid,double precision,double precision,timestamptz,position_source,numeric,numeric,boolean,jsonb)'::regprocedure) like '%finland_land_geom%'" t
+chk "BN8a: eta_record filtr po v_route" \
+  "select (pg_get_functiondef('public.eta_record_segment_observations(uuid)'::regprocedure) like '%PORT_OUT%, v_route)%'
+     and pg_get_functiondef('public.eta_record_segment_observations(uuid)'::regprocedure) not like '%PORT_OUT%, v_op)%')" t
+chk "BN8a: assign bez ograniczenia do PL" \
+  "select pg_get_functiondef('public.sailing_mismatch_assign(uuid,uuid)'::regprocedure) not like '%pf.country = ''PL''%'" t
+L820=aaaaaaaa-0000-0000-0000-00000000820a
+q "insert into loads (id, project_id, carrier_org_id, hhl_order_no, carrier_order_no, status, plan_load_date, plan_delivery_date, ferry_route)
+    values ('$L820','$P','$SCXO','HHL/BN8A-820','SCX/BN8A-820','PLANNED', current_date, current_date + 3, 'TLL-HEL')" >/dev/null
+chk "BN8a: load_route_family z ferry_route" \
+  "select public.load_route_family('$L820')" TLL-HEL
+chk "BN8a: ferry_route count fixture" \
+  "select count(*)::text from loads where id='$L820' and ferry_route='TLL-HEL'" 1
+q "delete from loads where id='$L820'" >/dev/null
+
 # F7 #649 r2: AIS backup — OTHER/TLL-HEL false; NYN-GDN/GDN-NYN true (rodzina z SE).
 # PORT_IN wyłączony tylko na backup (inaczej early-return „strefa aktywna”).
 # Jak #496: CHECK zdjęty na OTHER; osobne INSERT; UUID fa–fd (nie e8/e9).
