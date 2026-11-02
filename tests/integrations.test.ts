@@ -1007,6 +1007,48 @@ describe('ferry-weather — II-8 FMI+DMI+SMHI', () => {
     expect(ice[0]!.dedup).toBe('FERRY_ICE:s-muu:FIHEL:RESTRICTION');
     expect(ice[0]!.severity).toBe('MEDIUM');
   });
+
+  it('BN5 pkt 4: fala 4 m na GULF_FI → FERRY_WEATHER TLL-HEL/MUU-VUO, nie GDN-NYN', async () => {
+    // #714 §6: breach tylko na rejsach korytarza GULF_FI (nie GDN-NYN).
+    const FMI_WAM_HIGH = FMI_WAM.replace(
+      /<wml2:value>1\.\d+<\/wml2:value>/g,
+      '<wml2:value>4.0</wml2:value>',
+    );
+    const st = new MemStore();
+    st.thr = { waveM: 3.8, gustKn: 40 };
+    st.sailings = [
+      {
+        id: 's-tll', vessel_id: WAW, route: 'TLL-HEL',
+        departure_at: '2026-10-02T10:00:00.000Z', arrival_at: '2026-10-02T12:00:00.000Z',
+        delayed_departure_at: null, delayed_arrival_at: null, status: 'ZAPLANOWANY', source: 'TALLINK',
+      },
+      {
+        id: 's-muu', vessel_id: WAW, route: 'MUU-VUO',
+        departure_at: '2026-10-02T10:30:00.000Z', arrival_at: '2026-10-02T13:00:00.000Z',
+        delayed_departure_at: null, delayed_arrival_at: null, status: 'ZAPLANOWANY', source: 'ECKERO',
+      },
+      {
+        id: 's-gdn', vessel_id: WAW, route: 'GDN-NYN',
+        departure_at: '2026-10-02T10:00:00.000Z', arrival_at: '2026-10-03T04:00:00.000Z',
+        delayed_departure_at: null, delayed_arrival_at: null, status: 'ZAPLANOWANY', source: 'POLFERRIES',
+      },
+    ];
+    const { d } = deps(st, wxPages(), {}, WX_NOW);
+    const inner = d.fetch!;
+    d.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      // GULF_MID 59.80,24.85 — tylko WAM z wysoką falą; reszta punktów spokojna.
+      if (url.includes('forecast::wam') && url.includes('latlon=59.8')) {
+        return new Response(FMI_WAM_HIGH, { status: 200 });
+      }
+      return inner(input, init);
+    }) as typeof fetch;
+    const r = await runFerryWeather(d);
+    expect(r.ok).toBe(true);
+    const wx = st.risks.filter((x) => x.dedup.startsWith('FERRY_WEATHER:'));
+    expect(wx.map((x) => x.dedup).sort()).toEqual(['FERRY_WEATHER:s-muu', 'FERRY_WEATHER:s-tll']);
+    expect(st.risks.some((x) => x.dedup === 'FERRY_WEATHER:s-gdn')).toBe(false);
+  });
 });
 
 

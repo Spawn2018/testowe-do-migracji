@@ -1367,7 +1367,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 1. ~~**cz.1 mapowanie + baza**~~ — SCALONE (#721 `a56d022f` / **0375**) CHECK + seed 3 korytarzy; `marineCorridorForRoute` / `marinePointsForRoute` po `family_key`; trasa nieznana → `null`; job `ferry-weather` zapisuje 5 korytarzy; vitest `bn5-marine-corridors`.
 2. ~~**cz.2**~~ — SCALONE (#721): SMHI snow1g (zapas wiatru gdy Harmonie bez próbek; nie pmp3g); NaN WAM → ostrzeżenie w `detail` (nie zero); DMI 429 bez SOURCE_DOWN gdy FMI OK.
 3. **cz.3** — W TOKU (PR #722): Digitraffic → `FERRY_ICE`; F7 r1 B1 Vuosaari=`FIHEL`; **DP-145** `ferryRouteFamilies()`; gzip + Digitraffic-User; atrybucja Fintraffic; pusto = OK.
-4. Testy ryzyka per korytarz (fala 4 m na GULF_FI nie na GDN-NYN).
+4. ~~Testy ryzyka per korytarz~~ — W TOKU (PR #722): fala 4 m na `GULF_MID` → `FERRY_WEATHER` TLL-HEL/MUU-VUO, nie GDN-NYN.
 
 ### #716 · BN6 — drogi LT/LV/EE/FI: specyfikacja — W KOLEJCE (po BN5)
 Źródło: #716 (Spawn2018). Spec w treści zgłoszenia (Digitraffic FI, eismoinfo LT, LVC LV, Tark Tee EE; `ROAD_LT/LV/EE/FI`; bufor 2 km; limity masy). Ekrany BN9-c4 — koordynator.
@@ -2492,6 +2492,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 02.11.2026 02:15 | #721 SCALONE `a56d022f` (cz.1+cz.2); start BN5 cz.3 `pakiet/bn5-ferry-ice` FERRY_ICE; DP-145/146 z F7 #721 | pętla / BN5 |
 | 02.11.2026 02:25 | BN5 cz.3+DP-145: FERRY_ICE + `ferryRouteFamilies`; push `pakiet/bn5-ferry-ice` → PR | pętla / BN5 |
 | 02.11.2026 02:30 | #722 F7 r1 B1 VUO→FIHEL + DP-145 w tym samym PR | pętla / F7 #722 |
+| 02.11.2026 02:40 | #722 CI zielone `405fa848`; BN5 pkt 4 test izolacji GULF_FI≠GDN-NYN | pętla / BN5 |
 | 31.10.2026 — | Decyzja 73: TLLA-HEL ETA−150 min / HELA-TLL ETD+160 min (fixture Cargo; nocny 165 min OK). Decyzja 74: `sailings.source_ref` 0359; Digitraffic `digitraffic:portcall:<id>:<route>`; HTML/RECZNIE/DANE_STARTOWE wygrywają; #685-b RPC zastępuje digitraffic:% w ±3 h | F7 #688 r1–r4 |
 | 31.10.2026 — | F7 #683 nieblokujące (osobna poprawka): Scheduler grudzień + „on 2 January” → rok bieżący, ciche wygaśnięcie; Alert INFO bez ryzyka/historii — świadomie | F7 #683 r7 |
 | 31.10.2026 — | F7 #683 r8 nieblokujące (osobno): Alert poza Schedulerem obok Schedulera; sprzeczne bloki (resume→cofnięcie auto); rok przy długim oknie Schedulera; mutanty M10/M15–M17/M22 świadomie bez testów | F7 #683 r8 |

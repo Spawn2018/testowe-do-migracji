@@ -1,4 +1,12 @@
 
+## 2026-11-02 02:40 — BN5 #722 pkt 4 izolacja GULF_FI
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #714/#716/#718/#720 w planie.
+- Scalanie: brak F7 „gotowe” na #722; CI na `405fa848` było zielone (unit/db/visual).
+- **Krok:** BN5 pkt 4 — test `FERRY_WEATHER` przy fali 4 m tylko na `GULF_MID` → TLL-HEL/MUU-VUO, nie GDN-NYN; PLAN §4.
+- **Dalej:** push → CI → F7. Po F7/#722: BN6 (#716).
+- Bez push na main.
+
 ## 2026-11-02 02:30 — BN5 #722 F7 r1 B1 + DP-145
 
 - Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #721 SCALONE.
