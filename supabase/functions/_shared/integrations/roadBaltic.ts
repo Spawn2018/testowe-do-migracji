@@ -508,6 +508,9 @@ export function weightLimitRisk(
 function balticIsWeatherSlowEvent(e: BalticRoadEvent): boolean {
   const k = String(e.kind ?? '');
   return k === 'weather'
+    || k === 'EE_WEATHER'
+    || k === 'WEATHER'
+    || k.startsWith('EE_WEATHER')
     || k.startsWith('SLIPPERY_')
     || k.startsWith('EXC_WEATHER_')
     || k.startsWith('WEATHER_SAFETY_')
@@ -1875,8 +1878,9 @@ export function lvWeatherToSlowdownEvents(events: BalticRoadEvent[]): BalticRoad
 /* ---------- Estonia — Tark Tee DATEX (#716 cz.4) ---------- */
 
 /**
- * F7 #733 B3 — Via Baltica T4 (Ikla→Pärnu→Märjamaa→Kernu→Laagri) + T11 + T1 ku Muuga.
- * Punkty co ≤ ~15 km na prawdziwej T4 (nie 15 km na wschód). Paldiski: T8 + port (nie linia przez zatokę).
+ * F7 #733 B3 / r2 B3 — Via Baltica T4 (Ikla→Pärnu→Märjamaa→Kernu→Laagri);
+ * T11 Laagri–Jüri–Väo; T1 Väo–Muuga; T8 Tallinn–Keila–Paldiski.
+ * Punkty co ≤ ~10 km (nie Nõmme zamiast T11; nie linia przez zatokę do Paldiski).
  */
 export const CORRIDOR_EE: LatLon[] = [
   [57.87, 24.36], // Ikla / Ainaži (granica LV/EE)
@@ -1890,13 +1894,23 @@ export const CORRIDOR_EE: LatLon[] = [
   [59.02, 24.42],
   [59.13, 24.43], // Kernu
   [59.25, 24.50],
-  [59.35, 24.56], // Laagri
-  [59.38, 24.62], // Tallinn SW / T4
-  [59.39, 24.70], // T11 Keila–Jüri (południe)
-  [59.40, 24.80], // T11 / Jüri
-  [59.44, 24.75], // Tallinn Vanasadam
-  [59.47, 24.85], // T1 ku Muuga
+  [59.35, 24.56], // Laagri (T4/T11)
+  /* T11 obwodnica Laagri → Jüri → Väo */
+  [59.35, 24.70],
+  [59.354, 24.893], // Jüri (T11)
+  [59.39, 24.90],
+  [59.413, 24.884], // Väo (T1/T11)
+  /* T1 Väo → Muuga */
+  [59.45, 24.92],
   [59.50, 24.96], // Muuga
+  /* T8 Tallinn → Keila → Paldiski (po ≤ 10 km) */
+  [59.44, 24.75], // Tallinn Vanasadam / centrum
+  [59.40, 24.55],
+  [59.35, 24.45],
+  [59.308, 24.413], // Keila (T8)
+  [59.32, 24.25],
+  [59.34, 24.10],
+  [59.352, 24.058], // Paldiski
 ];
 
 /** Terminale portowe — zdarzenie ≤ 2 km → corridorMatch=on niezależnie od numeru. */
@@ -2182,6 +2196,9 @@ export type EeParseStats = {
   /** F7 #733 N8 — skąd numer drogi. */
   roadFromPole?: number;
   roadFromOpis?: number;
+  /** F7 #733 r2 B2 — bloki weather / pominięte bez stacji. */
+  weatherBlocks?: number;
+  weatherNoSite?: number;
 };
 
 /** DATEX II 2.3 XML (restrictions / safety). Weather → parseEeWeatherData. */
@@ -2280,9 +2297,35 @@ export function parseEeMeasurementSites(xml: string): Map<string, LatLon> {
 }
 
 /**
- * F7 #733 B5 — MeasuredDataPublication: połącz z measurementSites;
- * niekorzystne: lód/śnieg/szron w treści, temp. nawierzchni ≤ 0 + wilgoć, widoczność < 200 m.
- * „märg” (mokro) samo → nie.
+ * F7 #733 r2 B1 — `lvTag(kontener)` zwraca '' gdy w środku jest element (temperature /
+ * percentage / integerMetreDistance); czytaj zagnieżdżone jak B9 vehicleHeight.
+ */
+function eeNestedMeasure(
+  block: string,
+  container: string,
+  innerTags: string[],
+): string {
+  const direct = lvTag(block, container);
+  if (direct) return direct;
+  const chunk = block.match(
+    new RegExp(`<(?:\\w+:)?${container}\\b[\\s\\S]*?</(?:\\w+:)?${container}>`, 'i'),
+  )?.[0] ?? '';
+  const scope = chunk || block;
+  for (const tag of innerTags) {
+    const v = lvTag(scope, tag);
+    if (v) return v;
+  }
+  for (const tag of innerTags) {
+    const v = lvTag(block, tag);
+    if (v) return v;
+  }
+  return '';
+}
+
+/**
+ * F7 #733 B5 / r2 B1 — MeasuredDataPublication: połącz z measurementSites;
+ * niekorzystne: lód/śnieg/szron w treści, temp. ≤ 0 °C + (RH≥90 | opad | mokra nawierzchnia),
+ * widoczność < 200 m. „märg” samo → nie. Zimno+mokro → HIGH (spowolnienie).
  */
 export function parseEeWeatherData(
   xml: string,
@@ -2290,10 +2333,13 @@ export function parseEeWeatherData(
   stats?: EeParseStats,
 ): BalticRoadEvent[] {
   if (!xml || typeof xml !== 'string') return [];
-  const out: BalticRoadEvent[] = [];
+  const byId = new Map<string, BalticRoadEvent>();
   let skipped = 0;
+  let weatherBlocks = 0;
+  let weatherNoSite = 0;
   const blocks = xml.split(/<(?:\w+:)?siteMeasurements\b/i).slice(1);
   for (const raw of blocks) {
+    weatherBlocks++;
     const block = raw.split(/<\/(?:\w+:)?siteMeasurements>/i)[0] ?? raw;
     const ref = (block.match(
       /<(?:\w+:)?measurementSiteReference\b[^>]*(?:id|idRef|reference)="([^"]+)"/i,
@@ -2301,27 +2347,41 @@ export function parseEeWeatherData(
       ?? block.match(/<(?:\w+:)?measurementSiteReference\b[^>]*>([^<]+)</i)?.[1]
       ?? '').trim();
     const site = ref ? sites.get(ref) : undefined;
-    if (!site) { skipped++; continue; }
+    if (!site) { skipped++; weatherNoSite++; continue; }
     const [lat, lon] = site;
     const textBlob = [
       ...[...block.matchAll(/<(?:\w+:)?value\b[^>]*>([^<]*)</gi)].map((m) => m[1]),
       ...[...block.matchAll(/<(?:\w+:)?weatherRelatedRoadConditionType\b[^>]*>([^<]*)</gi)].map((m) => m[1]),
       ...[...block.matchAll(/<(?:\w+:)?roadSurfaceConditionType\b[^>]*>([^<]*)</gi)].map((m) => m[1]),
     ].join(' ');
-    const visRaw = lvTag(block, 'minimumVisibilityDistance')
-      ?? lvTag(block, 'visibility')
-      ?? block.match(/visibility[^>]{0,40}>([\d.]+)/i)?.[1];
-    const visibilityM = visRaw != null && visRaw !== ''
+    const visRaw = eeNestedMeasure(block, 'minimumVisibilityDistance', [
+      'integerMetreDistance', 'metreDistance', 'distance',
+    ])
+      || lvTag(block, 'visibility')
+      || block.match(/visibility[^>]{0,40}>([\d.]+)/i)?.[1]
+      || '';
+    const visibilityM = visRaw !== ''
       ? Number(String(visRaw).replace(/[^\d.]/g, ''))
       : null;
-    const tempRaw = lvTag(block, 'roadSurfaceTemperature')
-      ?? lvTag(block, 'temperature')
-      ?? block.match(/surfaceTemperature[^>]{0,40}>([-\d.]+)/i)?.[1];
-    const surfaceTempC = tempRaw != null && tempRaw !== ''
+    const tempRaw = eeNestedMeasure(block, 'roadSurfaceTemperature', ['temperature'])
+      || lvTag(block, 'temperature')
+      || block.match(/surfaceTemperature[^>]{0,40}>([-\d.]+)/i)?.[1]
+      || '';
+    const surfaceTempC = tempRaw !== ''
       ? Number(String(tempRaw).replace(/[^\d.-]/g, ''))
       : null;
-    const moist = /wet|moisture|niisk|märg|vihm|rain/i.test(textBlob)
-      || /<(?:\w+:)?(?:humidity|relativeHumidity|precipitation)\b/i.test(block);
+    const humidityRaw = eeNestedMeasure(block, 'relativeHumidity', ['percentage']);
+    const humidityPct = humidityRaw !== ''
+      ? Number(String(humidityRaw).replace(/[^\d.]/g, ''))
+      : null;
+    const precip = /precipitation|opad|vihm|rain/i.test(textBlob)
+      || /<(?:\w+:)?precipitation\b/i.test(block);
+    const wetSurface = /wet|moisture|niisk|märg/i.test(textBlob)
+      || /roadSurfaceConditionType[^>]*>\s*wet/i.test(block);
+    /* F7 r2 B1: wilgoć tylko RH≥90 albo opad / mokra nawierzchnia — nie dowolny <humidity>. */
+    const moist = (humidityPct != null && Number.isFinite(humidityPct) && humidityPct >= 90)
+      || precip
+      || wetSurface;
     const lowVis = visibilityM != null && Number.isFinite(visibilityM)
       && visibilityM > 0 && visibilityM < 200;
     const icyText = EE_ICY_CONTENT_RE.test(textBlob)
@@ -2333,29 +2393,50 @@ export function parseEeWeatherData(
     const bits = [
       icyText ? textBlob.trim().slice(0, 120) : '',
       surfaceTempC != null ? `temp nawierzchni ${surfaceTempC} C` : '',
+      humidityPct != null ? `wilgotnosc ${humidityPct} %` : '',
       visibilityM != null ? `widocznosc ${visibilityM} m` : '',
     ].filter(Boolean);
     const detail = bits.join(' · ') || 'pogoda drogowa';
-    const severity = eeSeverityForRecord('EE_WEATHER', detail, {
+    /* F7 r2 B1: zimno+mokro → HIGH (spowolnienie); nie MEDIUM. */
+    let severity = eeSeverityForRecord('EE_WEATHER', detail, {
       contentText: detail, visibilityM,
     });
-    out.push({
-      id: `ee-wx:${ref}`,
+    if (coldWet || icyText || lowVis) severity = 'HIGH';
+    const measuredAt = (
+      lvTag(block, 'measurementTimeDefault')
+      || lvTag(block, 'timeDefault')
+      || block.match(/<(?:\w+:)?(?:measurementTimeDefault|timeDefault)\b[^>]*>([^<]+)</i)?.[1]
+      || ''
+    ).trim();
+    /* F7 r2 drobne: dwa pomiary tej samej stacji — id z czasem; dedup po gorszej wadze. */
+    const id = measuredAt ? `ee-wx:${ref}:${measuredAt}` : `ee-wx:${ref}`;
+    const next: BalticRoadEvent = {
+      id,
       title: 'Pogoda drogowa',
       detail,
       severity,
       lat,
       lon,
       kind: 'EE_WEATHER',
-      start: null,
+      start: measuredAt || null,
       end: null,
       visibilityM: visibilityM != null && Number.isFinite(visibilityM) ? visibilityM : null,
       corridorMatch: 'on',
-    });
+    };
+    const prev = byId.get(id);
+    if (!prev) {
+      byId.set(id, next);
+    } else {
+      const rank = (s: RiskSeverity) => (s === 'HIGH' ? 3 : s === 'MEDIUM' ? 2 : 1);
+      if (rank(next.severity) > rank(prev.severity)) byId.set(id, next);
+    }
   }
+  const out = [...byId.values()];
   if (stats) {
     stats.parsed += out.length;
     stats.skipped += skipped;
+    stats.weatherBlocks = (stats.weatherBlocks ?? 0) + weatherBlocks;
+    stats.weatherNoSite = (stats.weatherNoSite ?? 0) + weatherNoSite;
   }
   return out;
 }
@@ -2549,10 +2630,35 @@ export function parseEeFeedBody(
         if (stats) stats.skipped += 1;
         return { events: [], format: 'unknown' };
       }
+      /* F7 #733 r2 drobne: {"message",payload:null} / {"features":[]} → unknown. */
+      if (!eeJsonPayloadNonEmpty(json)) {
+        if (stats) stats.skipped += 1;
+        return { events: [], format: 'unknown' };
+      }
       return { events: parseEeSrtiJson(json, code, stats), format: 'datex-json' };
     } catch {
       return { events: [], format: 'unknown' };
     }
   }
   return { events: [], format: 'unknown' };
+}
+
+/** F7 #733 r2 — niepusty payload / situation / features (klucz w JSON ≠ treść). */
+function eeJsonPayloadNonEmpty(json: unknown): boolean {
+  if (json == null) return false;
+  if (Array.isArray(json)) return json.length > 0;
+  if (typeof json !== 'object') return false;
+  const o = json as Record<string, unknown>;
+  if (Array.isArray(o.features)) return o.features.length > 0;
+  if ('payload' in o) {
+    const p = o.payload;
+    if (p == null) return false;
+    if (Array.isArray(p)) return p.length > 0;
+    if (typeof p === 'object') return Object.keys(p as object).length > 0;
+    return false;
+  }
+  if (o.situationRecord != null || o.situations != null || o.payloadPublication != null) {
+    return true;
+  }
+  return /"situationRecord"\s*:/i.test(JSON.stringify(json));
 }

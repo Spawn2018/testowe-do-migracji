@@ -182,9 +182,12 @@ describe('BN6 road-ee parsers', () => {
     expect(capped.severity).toBe('MEDIUM');
   });
 
-  it('F7 B3: CORRIDOR_EE przez Märjamaa/Kernu; punkt 15 km na wschód > 3 km', () => {
+  it('F7 B3 / r2 B3: CORRIDOR_EE T4 + T11 Jüri/Väo + T8 Keila; wschód > 3 km', () => {
     expect(minDistToCorridorKm(58.904, 24.425, CORRIDOR_EE)).toBeLessThan(1);
     expect(minDistToCorridorKm(59.13, 24.43, CORRIDOR_EE)).toBeLessThan(1);
+    expect(minDistToCorridorKm(59.354, 24.893, CORRIDOR_EE)).toBeLessThan(3); // Jüri T11
+    expect(minDistToCorridorKm(59.413, 24.884, CORRIDOR_EE)).toBeLessThan(3); // Väo
+    expect(minDistToCorridorKm(59.308, 24.413, CORRIDOR_EE)).toBeLessThan(3); // Keila T8
     expect(minDistToCorridorKm(58.80, 24.70, CORRIDOR_EE)).toBeGreaterThan(3);
     expect(minDistToCorridorKm(59.20, 24.70, CORRIDOR_EE)).toBeGreaterThan(3);
   });
@@ -200,21 +203,36 @@ describe('BN6 road-ee parsers', () => {
       'RESTRICTIONS',
       'xml',
     ).format).toBe('unknown');
+    /* F7 r2 drobne: pusty payload / features */
+    expect(parseEeFeedBody(
+      '{"message":"x","payload":null}',
+      'SRTI_ACCIDENT',
+      'json',
+    ).format).toBe('unknown');
+    expect(parseEeFeedBody('{"features":[]}', 'SRTI_ACCIDENT', 'json').format).toBe('unknown');
   });
 
-  it('F7 B5: measurementSites + weather — jäide/libedus → HIGH; märg → nie', () => {
+  it('F7 B5 / r2 B1: nested weather — jäide / zimno+RH / mgła → HIGH+slow; märg → nie', () => {
     const sites = parseEeMeasurementSites(sitesXml);
     expect(sites.has('ee-site-t4-marjamaa')).toBe(true);
-    const wx = parseEeWeatherData(weatherXml, sites);
+    const stats = { parsed: 0, skipped: 0, swapped: 0, weatherBlocks: 0, weatherNoSite: 0 };
+    const wx = parseEeWeatherData(weatherXml, sites, stats);
     expect(wx.some((e) => /jäide|libedus/i.test(e.detail ?? ''))).toBe(true);
     const icy = wx.find((e) => /jäide|libedus/i.test(e.detail ?? ''))!;
     expect(icy.severity).toBe('HIGH');
+    expect(wx.some((e) => /temp nawierzchni -1/i.test(e.detail ?? '') && e.severity === 'HIGH')).toBe(true);
+    expect(wx.some((e) => /widocznosc 120/i.test(e.detail ?? '') && e.severity === 'HIGH')).toBe(true);
+    /* id z czasem pomiaru (dwa pomiary tej samej stacji) */
+    expect(wx.filter((e) => e.id.startsWith('ee-wx:ee-site-t4-marjamaa')).length).toBeGreaterThanOrEqual(2);
     const near = applyBalticCorridorRoadFilter('EE', wx);
     const onIcy = near.find((e) => e.id === icy.id)!;
     expect(onIcy.corridorMatch).toBe('on');
-    expect(balticSlowdownMult(near.filter((e) => e.corridorMatch === 'on')).mult).toBeGreaterThan(1);
+    const slow = balticSlowdownMult(near.filter((e) => e.corridorMatch === 'on'));
+    expect(slow.mult).toBeGreaterThan(1);
+    expect(slow.reason ?? '').toMatch(/pogoda/);
     /* sama mokra nawierzchnia bez lodu — brak zdarzenia z samym „märg” */
-    expect(wx.filter((e) => /^märg$/i.test((e.detail ?? '').trim()))).toHaveLength(0);
+    expect(wx.filter((e) => /märg/i.test(e.detail ?? '') && !/temp|widocznosc|jäide|libedus/i.test(e.detail ?? ''))).toHaveLength(0);
+    expect(stats.weatherNoSite).toBeGreaterThanOrEqual(1);
   });
 
   it('F7 B7: atrybucja Transpordiamet / Tark Tee (tarktee.ee)', () => {
@@ -333,6 +351,30 @@ describe('BN6 runRoadEe', () => {
     const { d } = deps(store, pages);
     const res = await runRoadEe(d);
     expect(res.observations?.complete).toBe('0');
+    expect(store.staleCalls.some((s) => s.prefix === 'ROAD_EE:')).toBe(false);
+  });
+
+  it('F7 r2 B2: 0 measurementSites → complete=0, ostrzeżenie brak stacji, bez resolveStale', async () => {
+    const store = new MemStore();
+    const emptySites =
+      '<?xml version="1.0"?><d2LogicalModel><payloadPublication xsi:type="MeasurementSiteTablePublication">'
+      + '<measurementSiteTable></measurementSiteTable></payloadPublication></d2LogicalModel>';
+    const pages: Record<string, string | number> = {};
+    for (const f of EE_DATEX_FEEDS) {
+      const url = eeDatexFeedUrl(f.path);
+      if (f.code === 'RESTRICTIONS') pages[url] = restXml;
+      else if (f.code === 'MEASUREMENT_SITES') pages[url] = emptySites;
+      else if (f.code === 'WEATHER') pages[url] = weatherXml;
+      else if (f.code.startsWith('SRTI_')) pages[url] = JSON.stringify(srtiJson);
+      else {
+        pages[url] = '<?xml version="1.0"?><d2LogicalModel><payloadPublication></payloadPublication></d2LogicalModel>';
+      }
+    }
+    const { d } = deps(store, pages);
+    const res = await runRoadEe(d);
+    expect(res.observations?.measurement_sites).toBe('0');
+    expect(res.observations?.complete).toBe('0');
+    expect(res.warnings?.some((w) => /brak stacji/i.test(w))).toBe(true);
     expect(store.staleCalls.some((s) => s.prefix === 'ROAD_EE:')).toBe(false);
   });
 

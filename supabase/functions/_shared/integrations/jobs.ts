@@ -4219,6 +4219,7 @@ async function fetchEeFeedPart(
   parseStats: {
     parsed: number; skipped: number; swapped: number;
     roadFromPole: number; roadFromOpis: number;
+    weatherBlocks: number; weatherNoSite: number;
   },
 ): Promise<EeFeedPart> {
   if (Date.now() - started > EE_FEED_BUDGET_MS) {
@@ -4274,6 +4275,7 @@ async function fetchEeFeedPart(
     const text = new TextDecoder('utf-8', { fatal: false }).decode(buf);
     const localStats = {
       parsed: 0, skipped: 0, swapped: 0, roadFromPole: 0, roadFromOpis: 0,
+      weatherBlocks: 0, weatherNoSite: 0,
     };
     const parsed = parseEeFeedBody(text, feed.code, feed.format, localStats, sites);
     parseStats.parsed += localStats.parsed;
@@ -4281,6 +4283,8 @@ async function fetchEeFeedPart(
     parseStats.swapped += localStats.swapped;
     parseStats.roadFromPole += localStats.roadFromPole ?? 0;
     parseStats.roadFromOpis += localStats.roadFromOpis ?? 0;
+    parseStats.weatherBlocks += localStats.weatherBlocks ?? 0;
+    parseStats.weatherNoSite += localStats.weatherNoSite ?? 0;
     const recognized = parsed.format === 'datex-xml' || parsed.format === 'datex-json';
     if (!recognized) {
       return {
@@ -4332,6 +4336,7 @@ export async function runRoadEe(deps: JobDeps): Promise<JobResult> {
   const started = Date.now();
   const parseStats = {
     parsed: 0, skipped: 0, swapped: 0, roadFromPole: 0, roadFromOpis: 0,
+    weatherBlocks: 0, weatherNoSite: 0,
   };
   const sites = new Map<string, [number, number]>();
   const parts: EeFeedPart[] = [];
@@ -4404,7 +4409,15 @@ export async function runRoadEe(deps: JobDeps): Promise<JobResult> {
 
   await deps.store.resolveRisks('SOURCE_DOWN:ROAD_EE:');
   const near = applyBalticCorridorRoadFilter('EE', filterInEeBboxes(allEvents));
-  const complete = fetchedOk === expectedFetches;
+  /* F7 #733 r2 B2: 0 stacji albo >50% pomiarów bez stacji → pogoda niekompletna. */
+  const wxBlocks = parseStats.weatherBlocks ?? 0;
+  const wxNoSite = parseStats.weatherNoSite ?? 0;
+  const noSiteRatio = wxBlocks > 0 ? wxNoSite / wxBlocks : 0;
+  const weatherIncomplete = sites.size === 0 || noSiteRatio > 0.5;
+  if (weatherIncomplete) {
+    warnings.push('EE: brak stacji');
+  }
+  const complete = fetchedOk === expectedFetches && !weatherIncomplete;
   let risks = 0;
   const keep: string[] = [];
   for (const e of near) {

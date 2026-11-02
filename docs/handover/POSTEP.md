@@ -1,4 +1,12 @@
 
+## 2026-11-02 13:55 — #733 F7 r2 B1–B3 EE
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie.
+- Scalanie: brak F7 „gotowe” (#733 F7 r2 „nie scalaj”, 3 blokery). CI @ `0dfecb04` unit/db/visual ✔ przed poprawkami.
+- **Krok F7 #733 r2:** R2-B1 nested DATEX weather (`temperature`/`percentage`/`integerMetreDistance`; RH≥90|opad; zimno+mokro→HIGH); R2-B2 0 stacji / >50% no-site → complete=0 + „brak stacji” bez resolveStale; R2-B3 CORRIDOR_EE T11 Jüri/Väo + T8 Keila–Paldiski; drobne: `EE_WEATHER`→„pogoda: N”, id+czas, pusty payload/features→unknown. Vitest BN6 drogi **82**. DP-168 w rejestrze (osobny PR przed BN7).
+- **Dalej:** push → CI → F7. Po F7: DP-166+167 → DP-165 → BN7 (#718).
+- Bez push na main.
+
 ## 2026-11-02 13:15 — #733 F7 r1 B1–B9 EE
 
 - Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie.
