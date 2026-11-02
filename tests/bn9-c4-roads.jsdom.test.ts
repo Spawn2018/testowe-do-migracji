@@ -12,11 +12,12 @@ import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter } from 'react-router-dom';
 import { RoutePanel } from '../src/components/risks/RoutePanel';
 import {
-  balticCountriesOfLoads, balticCountriesOfRoute, balticCountryOf, balticRoadSections, roadInfoFromDetail, withBalticRoad,
+  attributionView, balticCountriesOfLoads, balticCountriesOfRoute, balticCountryOf, balticRoadSections, roadInfoFromDetail, withBalticRoad,
 } from '../src/lib/bn9c4Roads';
 import { isRouteOnly, isTodoRisk, routeRisks } from '../src/lib/todoRules';
 import { sampleBalticRoadRisksOf } from '../src/lib/p6Source';
 import { todoQueue } from '../src/lib/cockpitE9';
+import { textHits } from './e21Rules';
 import { BN9C4_EN, I18N_ALL } from '../src/i18n/messages';
 import type { Load, Risk, Sailing } from '../src/types';
 
@@ -204,7 +205,10 @@ describe('BN9-c4 — Ryzyka › Drogi: sekcje krajów', () => {
       loads, sailings: SAILS,
       risks: [road('f1', 'FI'), road('f2', 'FI'), road('l1', 'LV', {}, { zrodlo: 'LVC / transportdata.gov.lv (CC0)' }), road('t1', 'LT', {}, { zrodlo: null })],
     });
-    expect(el.querySelector('[data-attribution="road-fi"]')!.textContent).toBe(`Dane: ${FI_SRC}`);
+    /* zapis z bazy „Source: …, license CC 4.0 BY” → po polsku i „CC BY 4.0” (strażnik E21) */
+    expect(el.querySelector('[data-attribution="road-fi"]')!.textContent).toBe('Źródło: Fintraffic / digitraffic.fi, licencja CC BY 4.0');
+    expect(attributionView(FI_SRC, 'en')).toBe('Source: Fintraffic / digitraffic.fi, licence CC BY 4.0');
+    expect(attributionView('Via Lietuva (eismoinfo.lt)')).toBe('Via Lietuva (eismoinfo.lt)');
     expect(el.querySelector('[data-attribution="road-lv"]')!.textContent).toBe('Dane: LVC / transportdata.gov.lv (CC0)');
     expect(el.querySelector('[data-attribution="road-lt"]')).toBeNull();
     expect(el.querySelector('[data-attribution="road-ee"]')).toBeNull();
@@ -288,6 +292,13 @@ describe('BN9-c4 — Ryzyka › Drogi: sekcje krajów', () => {
     const many = Array.from({ length: 146 }, (_, i) => road(`m${i}`, 'FI'));
     expect(todoQueue('HHL', [...base, ...many])).toEqual(todoQueue('HHL', base));
     expect(todoQueue('SCX', [...base, ...many])).toEqual(todoQueue('SCX', base));
+  });
+  it('strażnik tekstów E21: demo (rozwinięte, także niski wpływ) bez trafień — atrybucja „CC BY 4.0”', () => {
+    const el = expand(panel({ balticDemo: true }));
+    for (const d of [...el.querySelectorAll('details')]) d.open = true;
+    const text = [...el.querySelectorAll('[data-baltic]')].map((x) => (x as HTMLElement).textContent).join('\n');
+    expect(textHits(text, '/ryzyka')).toEqual([]);
+    expect(text).toContain('licencja CC BY 4.0');
   });
   it('sekcje z modułu: bez krajów na trasie → pusta lista', () => {
     expect(balticRoadSections([road('f', 'FI')], new Set())).toEqual([]);

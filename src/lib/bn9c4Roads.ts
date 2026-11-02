@@ -161,3 +161,16 @@ export function balticRoadSections(risks: readonly Risk[], onRoute: ReadonlySet<
     })
     .filter((s) => s.onRoute || s.rows.length > 0);
 }
+
+/**
+ * Atrybucja na ekranie (przegląd #728, strażnik E21): zapis źródła z bazy po polsku i w formie licencji „CC BY 4.0”
+ * („Source: …, license CC 4.0 BY” → „Źródło: …, licencja CC BY 4.0”; EN: „Source: …, licence CC BY 4.0”).
+ * Nazwy źródła bez zmian — tylko słowa „Source/license” i kolejność „CC 4.0 BY”.
+ */
+export function attributionView(src: string, locale: 'pl' | 'en' | string = 'pl'): string {
+  const en = locale === 'en';
+  return src.trim()
+    .replace(/^(?:source|źródło)\s*:\s*/i, en ? 'Source: ' : 'Źródło: ')
+    .replace(/\blicen[cs]e\b/gi, en ? 'licence' : 'licencja')
+    .replace(/\bCC (\d\.\d) BY\b/g, 'CC BY $1');
+}

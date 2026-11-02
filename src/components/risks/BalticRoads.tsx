@@ -7,7 +7,7 @@
  */
 import { useState, type ReactNode } from 'react';
 import type { Locale } from '../../types';
-import type { BalticRoadRow, BalticRoadSection } from '../../lib/bn9c4Roads';
+import { attributionView, type BalticRoadRow, type BalticRoadSection } from '../../lib/bn9c4Roads';
 import { formatListDateTime, formatPlNumber } from '../../lib/format';
 import { rt, rtn, rtp } from '../../i18n/p6';
 import { DemoMark } from '../ui/DemoMark';
@@ -125,7 +125,8 @@ function CountrySection({ s, locale, phone, demo }: { s: BalticRoadSection; loca
       ) : null}
       {s.sources.length ? (
         <p className="rk-muted rk-road-attr" data-attribution={`road-${lc}`}>
-          {rtp(locale, 'bn9c4_attr', { src: s.sources.join(' · ') })}
+          {s.sources.map((src) => attributionView(src, locale))
+            .map((v) => (/^(?:Źródło|Source): /.test(v) ? v : rtp(locale, 'bn9c4_attr', { src: v }))).join(' · ')}
         </p>
       ) : null}
     </section>
