@@ -332,8 +332,9 @@ export function balticSlowdownMult(
       && e.widthLimitM == null
       && e.lat != null
       && e.lon != null
-      && (e.corridorMatch === 'on'
-        || (e.corridorMatch == null && balticIsWeatherSlowEvent(e))),
+      /* DP-164: off/unknown bez slowdown; null = FI (i inne) bez filtra jeszcze. */
+      && e.corridorMatch !== 'off'
+      && e.corridorMatch !== 'unknown',
   );
   if (!adverse.length) return { mult: 1, reason: null };
   const weatherN = adverse.filter(balticIsWeatherSlowEvent).length;
