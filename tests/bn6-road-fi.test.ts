@@ -198,7 +198,7 @@ describe('BN6 road-fi — Digitraffic', () => {
     const ev = parseFiTrafficMessages(rw)[0]!;
     const r = balticRoadRisk('FI', ev, FI_ROADWORKS_URL, 'Source: Fintraffic');
     expect(r.kind).toBe('ROAD_FI');
-    expect(r.dedup).toBe(`ROAD_FI:${ev.id}`);
+    expect(r.dedup).toBe(`ROAD_FI:v2:${ev.id}`);
     expect(r.detail.zrodlo).toMatch(/Fintraffic/);
   });
 
@@ -311,7 +311,7 @@ describe('BN6 runRoadFi — F7 #726', () => {
       'traffic-message/v2/traffic-announcements': body,
       'traffic-message/v2/weight-restrictions': EMPTY_FC,
     }).d);
-    const hit = st.risks.find((r) => r.dedup === 'ROAD_FI:GUID-ANN-BN6');
+    const hit = st.risks.find((r) => r.dedup === 'ROAD_FI:v2:GUID-ANN-BN6');
     expect(hit?.sourceUrl).toBe(FI_ANNOUNCEMENTS_URL);
     expect(hit?.detail?.zrodlo).toBe(FI_ATTRIBUTION);
   });

@@ -1,0 +1,45 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": "bn6-lv-wd-riga-bridge",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [24.105, 56.948]
+      },
+      "properties": {
+        "restrictionClass": "shortTerm",
+        "heightRestrictionInMeters": 4.0,
+        "street": "A7 Rīga",
+        "start": 12.4
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "bn6-lv-wd-weight",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [24.40, 57.35]
+      },
+      "properties": {
+        "restrictionClass": "permanent",
+        "weightRestrictionInTonnes": 40,
+        "street": "A1 Saulkrasti"
+      }
+    },
+    {
+      "type": "Feature",
+      "id": "bn6-lv-wd-far",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [27.5, 56.2]
+      },
+      "properties": {
+        "restrictionClass": "virtual",
+        "heightRestrictionInMeters": 3.5,
+        "street": "far east"
+      }
+    }
+  ]
+}

@@ -1,4 +1,52 @@
 
+## 2026-11-02 10:16 — #730 F7 r3 + #731 SCALONE
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie.
+- Scalanie: **#731 DP-161 SCALONE** `c72a14d9` (F7: gotowe @ `7507f3db`, CI unit/visual ✔). #730 — F7 r3 „nie scalaj” @ `3daa48b4` (CI r2 unit/db/visual ✔).
+- **Krok F7 #730 r3:** B1 `stripBalticDetourText` z `\p{L}` (apvedceļš/apvedceļa/apbraukšana); B2 `lv_swapped` + per-zbiór w `lv_<kod>`; B3 czas trwania ≤72 h (start=null → od teraz → HIGH); markery DATEX jako element/klucz. Vitest bn6-road-lt/lv **41**.
+- **Dalej:** push → CI → F7. Po F7: BN6 cz.4 EE.
+- Bez push na main.
+
+## 2026-11-02 09:25 — #730 F7 r2 poprawki
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie.
+- Scalanie: F7 r2 „nie scalaj” @ `2fd452e3` (CI unit/db/visual ✔ na docs `fd709b8c`). Bez F7 „gotowe”.
+- **Krok F7 #730 r2:** B1 `extractBalticRoadRefPreferStreet` + strip objazdu + A1 bbox Kowna + fixture `lt-eismoinfo-side-closures-f7.json`; B2 `roadClosed` / objazd bez końca → MEDIUM; B3 dedup `v2`; B4 markery DATEX; B5/B6 wagi + DATEX icy; B7 per-zbiór observations + Content-Length; pogoda ≤3 km; bez dublowania weather w slowdown. Vitest bn6-road-lt/lv **36**.
+- **Dalej:** push → CI → F7. Po F7: BN6 cz.4 EE.
+- Bez push na main.
+
+## 2026-11-02 08:50 — #730 F7 r1 push @ `2fd452e3`
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie.
+- Scalanie: brak F7 „gotowe” po r1 (ostatnie „gotowe” sprzed blokerów). CI przed push @ `586bfdbe` unit/db/visual ✔.
+- **Krok:** push F7 r1 #730 @ `2fd452e3` (B1–B7/N1–N8; DP-160/164 DONE). Vitest bn6-road-lt/lv **27**. Unit pre-push 2979.
+- **Dalej:** CI → F7. Po F7: BN6 cz.4 EE. B6 LIVE po sekretach na PROD.
+- Bez push na main.
+
+## 2026-11-02 08:45 — #728 SCALONE; #730 F7 r1 B1–B7
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie.
+- Scalanie: **#728 BN9-c4 SCALONE** `8cf14273` (F7: gotowe @ `468b3a52`, CI unit/visual ✔). #730 — F7 r1 „nie scalaj” (7 blokerów); CI @ `586bfdbe` unit/db/visual ✔ przed poprawkami.
+- **Krok F7 #730:** B1 decyzja 85 (roboty LOW; HIGH tylko zamknięcie/blokada); B2 pogoda (lód/śnieg/widoczność&lt;200 m); B3 JSON≠XML (pierwszy znak); B4 HTML/empty ≠ fetchedOk + bez resolveStale; B5 równolegle×6 / 10 s / budżet 65 s / cron 90 s / limit 5 MB; B6 posList + licznik pominiętych + etykiety PL; B7 A4/A5 + ≤3 km + długie zamknięcie z objazdem → MEDIUM; N1 LT_ICY_RE rdzenie; N3 configured:0 bez streak; N5 siatka 0,01°; N6 oś/długość → dim; N7/N8. vitest bn6-road-lt/lv **27**.
+- **Dalej:** push → CI → F7. Po F7: BN6 cz.4 EE. B6 LIVE: sekrety LV tylko na Edge — potwierdzenie po pierwszym przebiegu PROD.
+- Bez push na main.
+
+## 2026-11-02 08:05 — #730 DP-164 filtr dróg korytarza LT/LV
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. #728 wygląd (koordynator, bez F7).
+- Scalanie: brak F7 „gotowe” na #730 (CI @ `69c1d400` unit/visual/db ✔ przed DP-164). #728 bez F7.
+- **Krok:** DP-164 (komentarz #730 po odbiorze road-lt): filtr numerów — LT A5/A8/A10/E67 + A1 przy Kownie; LV A7/E67 + A1 do EE; poza listą maks. LOW bez slowdown; bez numeru — bez HIGH i bez slowdown; `corridor_conditions.reason` → `zamknięcia: N` / `pogoda: N` (nie „nawierzchnia N”); test zamknięcie nr 134. DP-160 DONE. vitest bn6-road-lt/lv **24**.
+- **Dalej:** push → CI → F7. Po F7: BN6 cz.4 EE. Po wdrożeniu ROAD_LT → 1.00, 5 HIGH bocznych → resolveStale.
+- Bez push na main.
+
+## 2026-11-02 07:35 — #727 SCALONE; BN6 cz.3 LV + DP-160
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. #728 wygląd (koordynator, bez F7).
+- Scalanie: **#727 SCALONE** `7ef5e230` (F7: gotowe @ `35db337e`, CI unit/visual/db ✔). DP-160/161/162 z F7 wpisane do rejestru.
+- **Krok:** BN6 cz.3 LV — job `road-lv` (22× `LV_NAP_*_KEY/URL`, nagłówek `Ocp-Apim-Subscription-Key`); DATEX XML/JSON + GeoJSON WEIGHT_DIM; dedup śliskości; cron **0378**; vitest `bn6-road-lv`; status **580**; DP-160 `LT_ICY_RE` (apled/ledas/šlapdriba/sniegas). Bez URL/kluczy w warnings.
+- **Dalej:** push → CI → F7. Po F7: BN6 cz.4 EE.
+- Bez push na main.
+
 ## 2026-11-02 06:50 — #727 F7 r1 poprawki LT (B1/B2/B3/N1–N3)
 
 - Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. #728 wygląd (koordynator).

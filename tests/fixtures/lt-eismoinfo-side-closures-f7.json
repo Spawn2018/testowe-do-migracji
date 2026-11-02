@@ -1,0 +1,162 @@
+[
+  {
+    "_id": "f234eea99c44f96216fccbe06afc6b9a",
+    "type": "CONSTRUCTION",
+    "creationTime": "2025-10-07T14:32:39Z",
+    "updateTime": "2025-10-07T16:21:59Z",
+    "startTime": "2025-10-09T00:00:00+03:00",
+    "endTime": "2026-11-30T23:00:00+02:00",
+    "description": "Viaduko kapitalinis remontas. Eismas draudžiamas ir kreipiamas apylanka magistraliniu keliu A1 Vilnius–Kaunas–Klaipėda ir krašto keliu Nr. 196 Ariogala–Raseiniai–Kryžkalnis. Darbų vykdytojas: AB „Kauno tiltai“, tel.: +37061137812.",
+    "shortDescription": "Kelio remontas",
+    "schedule": null,
+    "location": {
+      "polyline": "55.235664 23.513929 55.235735 23.513920 55.235977 23.513902 55.236230 23.513884 55.236486 23.513873 55.236758 23.513861 55.236961 23.513853 55.237223 23.513844 55.237481 23.513834 55.237668 23.513828 55.237804 23.513821 55.237819 23.513821",
+      "direction": "BOTH_DIRECTIONS",
+      "street": "1907 Vilkija–Čekiškė–Ariogala 24.360-24.600km.",
+      "location_description": null
+    },
+    "source": {
+      "reference": "VIA",
+      "name": "AB \"Via Lietuva\"",
+      "url": "https://www.eismoinfo.lt/"
+    },
+    "parentEvent": null,
+    "subtype": null,
+    "restrictions": [
+      {
+        "restrictionType": "roadClosed",
+        "value": null,
+        "transportType": "All"
+      },
+      {
+        "restrictionType": "speedLimit",
+        "value": 70,
+        "transportType": "All"
+      }
+    ]
+  },
+  {
+    "_id": "c1cec48ad86c543d59b1d7a15c310f33",
+    "type": "CONSTRUCTION",
+    "creationTime": "2026-03-18T07:01:46Z",
+    "updateTime": "2026-03-18T07:16:17Z",
+    "startTime": "2026-03-18T00:00:00+02:00",
+    "endTime": "2026-12-15T23:00:00+02:00",
+    "description": "Kelio rekonstravimas. Eismas draudžiamas ir kreipiamas apylanka valstybinės reikšmės krašto keliu Nr. 134 Leipalingis–Lazdijai–Kalvarija ir Lazdijų miesto Dzūkų ir Kalnų gatvėmis. Darbų vykdytojas: UAB „Alkesta“, tel.: +37068794308.",
+    "shortDescription": "Kelio remontas",
+    "schedule": null,
+    "location": {
+      "polyline": "54.235723 23.515271 54.235830 23.514726 54.235950 23.514204 54.236331 23.512530 54.236489 23.511861 54.236822 23.510418 54.237163 23.509036 54.237219 23.508805 54.237244 23.508712 54.237269 23.508616 54.237626 23.507143 54.237790 23.506464 54.237827 23.506302",
+      "direction": "BOTH_DIRECTIONS",
+      "street": "2511 Lazdijai–Galiniai* 0.000-0.630km.",
+      "location_description": null
+    },
+    "source": {
+      "reference": "VIA",
+      "name": "AB \"Via Lietuva\"",
+      "url": "https://www.eismoinfo.lt/"
+    },
+    "parentEvent": null,
+    "subtype": null,
+    "restrictions": [
+      {
+        "restrictionType": "roadClosed",
+        "value": null,
+        "transportType": "All"
+      }
+    ]
+  },
+  {
+    "_id": "76dcc557bdbcb976e09d22bafa005046",
+    "type": "CONSTRUCTION",
+    "creationTime": "2026-09-10T17:41:47Z",
+    "updateTime": "2026-09-11T09:37:47Z",
+    "startTime": "2026-09-10T00:00:00+03:00",
+    "endTime": "2027-03-21T23:00:00+02:00",
+    "description": "Tilto per Šušvę rekonstravimas. Rekonstravimo metu eismas draudžiamas ir kreipiamas apylanka valstybinės reikšmės keliais Nr. 2011 Krakės–Dovydiškiai–Grinkiškis, Nr. 3429 Grinkiškis–Pypliai–Vaitiekūnai bei vietinės reikšmės kelių ruožais. Darbus vykdo: UAB „Ewcon“, tel nr.: +37062024498.",
+    "shortDescription": "Kelio remontas",
+    "schedule": null,
+    "location": {
+      "polyline": "55.454966 23.658402 55.455068 23.657565 55.455074 23.657510 55.455112 23.657181 55.455131 23.657017 55.455171 23.656667 55.455273 23.655770",
+      "direction": "BOTH_DIRECTIONS",
+      "street": "2016 Mantviliškis–Ažytėnai–Vosyliškis 11.230-11.400km.",
+      "location_description": null
+    },
+    "source": {
+      "reference": "VIA",
+      "name": "AB \"Via Lietuva\"",
+      "url": "https://www.eismoinfo.lt/"
+    },
+    "parentEvent": null,
+    "subtype": null,
+    "restrictions": [
+      {
+        "restrictionType": "roadClosed",
+        "value": null,
+        "transportType": "All"
+      }
+    ]
+  },
+  {
+    "_id": "e9487db1f5c14bcc5db95fd8cb8d743e",
+    "type": "CONSTRUCTION",
+    "creationTime": "2026-07-02T13:53:59Z",
+    "updateTime": "2026-10-22T13:05:07Z",
+    "startTime": "2026-07-13T00:00:00+03:00",
+    "endTime": "2026-12-12T23:00:00+02:00",
+    "description": "Tilto rekonstravimas. Eismas kreipiamas apylanka. Darbų vykdytojas: UAB ,,Šiaulių plentas\" tel. nr.: +370 620 53992",
+    "shortDescription": "Kelio remontas",
+    "schedule": null,
+    "location": {
+      "polyline": "56.218054 23.743317 56.218053 23.743425 56.218051 23.743478",
+      "direction": "BOTH_DIRECTIONS",
+      "street": "1609 Bariūnai–Bučiūnai–Pašvitinys–Linkuva 6.240-6.250km.",
+      "location_description": null
+    },
+    "source": {
+      "reference": "VIA",
+      "name": "AB \"Via Lietuva\"",
+      "url": "https://www.eismoinfo.lt/"
+    },
+    "parentEvent": null,
+    "subtype": null,
+    "restrictions": [
+      {
+        "restrictionType": "roadClosed",
+        "value": null,
+        "transportType": "All"
+      }
+    ]
+  },
+  {
+    "_id": "65ea9e0d372fdbf03115dff8d5630967",
+    "type": "CONSTRUCTION",
+    "creationTime": "2026-04-09T12:18:30Z",
+    "updateTime": "2026-04-23T12:12:40Z",
+    "startTime": "2026-04-07T00:00:00+03:00",
+    "endTime": "2027-06-15T23:00:00+03:00",
+    "description": "Viaduko rekonstrukcija. Eismas draudžiamas ir kreipiamas apylanka magistraliniu keliu A2 Vilnius–Panevėžys. Darbų vykdytojas: UAB \"Tilsta\", tel. nr.: +37063847022.",
+    "shortDescription": "Kelio remontas",
+    "schedule": null,
+    "location": {
+      "polyline": "55.396902 24.704923 55.396907 24.704897 55.396971 24.704489 55.397016 24.704196 55.397029 24.704106 55.397066 24.703863 55.397135 24.703432 55.397213 24.702959 55.397284 24.702503 55.397366 24.701958 55.397428 24.701558 55.397477 24.701213 55.397533 24.700842 55.397591 24.700448 55.397648 24.700078 55.397692 24.699812 55.397769 24.699385 55.397820 24.699141 55.397866 24.698912 55.397909 24.698695 55.397928 24.698613 55.397950 24.698521 55.398034 24.698178 55.398100 24.697934",
+      "direction": "BOTH_DIRECTIONS",
+      "street": "1204 Kavarskas–Taujėnai–Vadokliai–Ramygala 15.632-16.095km.",
+      "location_description": null
+    },
+    "source": {
+      "reference": "VIA",
+      "name": "AB \"Via Lietuva\"",
+      "url": "https://www.eismoinfo.lt/"
+    },
+    "parentEvent": null,
+    "subtype": null,
+    "restrictions": [
+      {
+        "restrictionType": "roadClosed",
+        "value": null,
+        "transportType": "All"
+      }
+    ]
+  }
+]

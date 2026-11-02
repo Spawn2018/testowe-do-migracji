@@ -100,10 +100,14 @@ import {
 import {
   FI_ANNOUNCEMENTS_URL, FI_ATTRIBUTION, FI_ROADWORKS_URL, FI_WEIGHT_URL,
   LT_ATTRIBUTION, LT_RESTRICTIONS_URL, LT_UA, LT_WEATHER_URL,
-  balticRoadRisk, balticSlowdownMult, fiCorridorBboxes, fiTrafficUrl, filterInFiBboxes,
-  dimensionLimitRisk, filterInLtBboxes, isDimensionLimitEvent, ltWeatherToSlowdownEvents,
-  parseFiTrafficMessages, parseLtRestrictions, parseLtWeather, weightLimitRisk,
-  type BalticRoadEvent,
+  LV_ATTRIBUTION, LV_NAP_CODES, LV_NAP_KEY_HEADER, LV_SOURCE_REF, LV_UA,
+  applyBalticCorridorRoadFilter, balticRoadRisk, balticSlowdownMult, capBalticRiskSeverity,
+  dedupeLvSlippery, fiCorridorBboxes, fiTrafficUrl,
+  filterInFiBboxes, filterInLvBboxes, dimensionLimitRisk, filterInLtBboxes,
+  isDimensionLimitEvent, ltWeatherToSlowdownEvents, lvNapKeyEnv, lvNapUrlEnv,
+  lvWeatherToSlowdownEvents, parseFiTrafficMessages, parseLtRestrictions, parseLtWeather,
+  parseLvFeedBody, weightLimitRisk,
+  type BalticRoadEvent, type LvNapCode,
 } from './roadBaltic.ts';
 import { buildTrafficIncidentsUrl, parseHereTrafficIncidents } from '../here/trafficIncidents.ts';
 import { HERE_BILLING_DEFAULTS } from '../here/billing.ts';
@@ -3827,20 +3831,27 @@ export async function runRoadLt(deps: JobDeps): Promise<JobResult> {
   }
 
   await deps.store.resolveRisks('SOURCE_DOWN:ROAD_LT:');
-  const near = filterInLtBboxes(restrictionEvents);
+  /* DP-164: filtr numerów dróg korytarza (A5/A8/A10/E67 + A1 przy Kownie) do BN7. */
+  const near = applyBalticCorridorRoadFilter('LT', filterInLtBboxes(restrictionEvents));
+  const weatherOn = applyBalticCorridorRoadFilter('LT', weatherSlow);
   const complete = fetchedOk === expectedFetches;
   let risks = 0;
   const keep: string[] = [];
   for (const e of near) {
-    const risk = e.weightLimitT != null
+    const raw = e.weightLimitT != null
       ? weightLimitRisk('LT', e, null, LT_RESTRICTIONS_URL, LT_ATTRIBUTION)
       : isDimensionLimitEvent(e)
         ? dimensionLimitRisk('LT', e, LT_RESTRICTIONS_URL, LT_ATTRIBUTION)
         : balticRoadRisk('LT', e, LT_RESTRICTIONS_URL, LT_ATTRIBUTION);
+    const risk = capBalticRiskSeverity(raw, e.corridorMatch);
     /* F7 #727 N2: jedna uwaga o braku wypadków w ryzyku (nie w każdym detail zdarzenia). */
     if (risk.detail && typeof risk.detail === 'object') {
       (risk.detail as Record<string, unknown>).uwaga_wypadki =
         'zrodlo LT nie podaje wypadkow';
+      if (e.road) (risk.detail as Record<string, unknown>).droga = e.road;
+      if (e.corridorMatch) {
+        (risk.detail as Record<string, unknown>).korytarz_droga = e.corridorMatch;
+      }
     }
     keep.push(risk.dedup);
     if (await deps.store.raiseRisk(risk)) risks++;
@@ -3849,7 +3860,7 @@ export async function runRoadLt(deps: JobDeps): Promise<JobResult> {
     await deps.store.resolveStaleRisks('ROAD_LT:', keep);
   }
 
-  const slow = balticSlowdownMult([...near, ...weatherSlow]);
+  const slow = balticSlowdownMult([...near, ...weatherOn]);
   if (deps.store.saveCorridorCondition) {
     await deps.store.saveCorridorCondition({
       corridor: 'ROAD_LT',
@@ -3858,10 +3869,13 @@ export async function runRoadLt(deps: JobDeps): Promise<JobResult> {
       observedAt: now,
       detail: {
         events: near.length,
-        weather_adverse: weatherSlow.length,
+        events_corridor: near.filter((e) => e.corridorMatch === 'on').length,
+        events_off_road: near.filter((e) => e.corridorMatch === 'off').length,
+        weather_adverse: weatherOn.length,
         zrodlo: LT_ATTRIBUTION,
         complete,
         note: 'zrodlo LT nie podaje wypadkow',
+        dp164: 'filtr A5/A8/A10/E67+A1 Kaunas',
       },
     });
   }
@@ -3886,6 +3900,274 @@ async function roadLtFailStreak(deps: JobDeps): Promise<number> {
   if (!deps.store.recentJobResults) return streak;
   const rows = await deps.store.recentJobResults('road-lt', 5);
   for (const row of rows) {
+    const fo = Number(row.observations?.fetched_ok ?? NaN);
+    if (fo === 0) streak++;
+    else break;
+  }
+  return streak;
+}
+
+/**
+ * BN6 (#716) cz.3 / #589 — drogi LV (22 zbiory LV_NAP_*_KEY/URL).
+ * F7 #730: równolegle limit 6, timeout 10 s, budżet ~65 s, limit 5 MB;
+ * fetchedOk dopiero po rozpoznanym formacie; resolveStale tylko przy komplecie;
+ * SOURCE_DOWN po 3× fetched_ok===0 gdy configured>0 (N3: bez sekretów nie liczy streak).
+ */
+const LV_FEED_TIMEOUT_MS = 10_000;
+const LV_FEED_BUDGET_MS = 65_000;
+const LV_FEED_MAX_BYTES = 5 * 1024 * 1024;
+const LV_FEED_CONCURRENCY = 6;
+
+export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
+  const now = deps.now().toISOString();
+  const warnings: string[] = [];
+  const configured: { code: LvNapCode; url: string; key: string }[] = [];
+  for (const code of LV_NAP_CODES) {
+    const key = (deps.env[lvNapKeyEnv(code)] ?? '').trim();
+    const url = (deps.env[lvNapUrlEnv(code)] ?? '').trim();
+    if (key && url) configured.push({ code, url, key });
+    else if (key || url) warnings.push(`LV ${code}: niepełna para sekretów KEY/URL`);
+  }
+  const expectedFetches = configured.length;
+  if (expectedFetches === 0) {
+    /* F7 #730 N3: configured:0 — nie ok:false, nie streak SOURCE_DOWN. */
+    return {
+      job: 'road-lv', mode: 'LIVE', ok: true, risks: 0,
+      warnings: [...warnings, 'LV: brak skonfigurowanych par LV_NAP_*_KEY/URL'],
+      observations: {
+        source: 'lvc_nap',
+        fetched_ok: '0',
+        expected_fetches: '0',
+        configured: '0',
+        header: LV_NAP_KEY_HEADER,
+      },
+    };
+  }
+
+  const started = Date.now();
+  const parseStats = { parsed: 0, skipped: 0, swapped: 0 };
+  const parts = await mapPoolLimit(configured, LV_FEED_CONCURRENCY, async ({ code, url, key }) => {
+    if (Date.now() - started > LV_FEED_BUDGET_MS) {
+      return {
+        code,
+        ok: false as const,
+        warning: `niepobrany ${code} (budżet czasu)`,
+        per: 'budget',
+        format: '' as string,
+        events: [] as BalticRoadEvent[],
+        skipped: 0,
+        swapped: 0,
+      };
+    }
+    const headers: Record<string, string> = {
+      'User-Agent': LV_UA,
+      Accept: 'application/json, application/xml, text/xml, */*',
+      [LV_NAP_KEY_HEADER]: key,
+    };
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), LV_FEED_TIMEOUT_MS);
+    try {
+      const res = await deps.fetch(url, { headers, signal: ctrl.signal });
+      if (!res.ok) {
+        return {
+          code, ok: false as const,
+          warning: `LV ${code}: HTTP ${res.status}`,
+          per: `http_${res.status}`, format: '', events: [] as BalticRoadEvent[],
+          skipped: 0, swapped: 0,
+        };
+      }
+      /* F7 #730 r2: Content-Length przed pobraniem ciała, gdy jest. */
+      const clRaw = res.headers.get('content-length');
+      const cl = clRaw != null ? Number(clRaw) : NaN;
+      if (Number.isFinite(cl) && cl > LV_FEED_MAX_BYTES) {
+        return {
+          code, ok: false as const,
+          warning: `nieczytelna odpowiedź ${code}`,
+          per: 'too_large', format: 'unknown', events: [] as BalticRoadEvent[],
+          skipped: 0, swapped: 0,
+        };
+      }
+      const localStats = { parsed: 0, skipped: 0, swapped: 0 };
+      const buf = await res.arrayBuffer();
+      if (buf.byteLength > LV_FEED_MAX_BYTES) {
+        return {
+          code, ok: false as const,
+          warning: `nieczytelna odpowiedź ${code}`,
+          per: 'too_large', format: 'unknown', events: [] as BalticRoadEvent[],
+          skipped: 0, swapped: 0,
+        };
+      }
+      const text = new TextDecoder('utf-8', { fatal: false }).decode(buf);
+      const parsed = parseLvFeedBody(text, code, localStats);
+      parseStats.parsed += localStats.parsed;
+      parseStats.skipped += localStats.skipped;
+      parseStats.swapped += localStats.swapped;
+      const recognized = parsed.format === 'datex-xml'
+        || parsed.format === 'datex-json'
+        || parsed.format === 'geojson';
+      if (!recognized) {
+        return {
+          code, ok: false as const,
+          warning: `nieczytelna odpowiedź ${code}`,
+          per: `bad:${parsed.format}`, format: parsed.format, events: [] as BalticRoadEvent[],
+          skipped: localStats.skipped, swapped: localStats.swapped,
+        };
+      }
+      /* F7 #730 r2 B7 / r3 B2: lv_<kod>=ok:<rekordy>:<pominięte>:<format>:<swapped> */
+      return {
+        code, ok: true as const, warning: null as string | null,
+        per: `ok:${parsed.events.length}:${localStats.skipped}:${parsed.format}:${localStats.swapped}`,
+        format: parsed.format, events: parsed.events,
+        skipped: localStats.skipped, swapped: localStats.swapped,
+      };
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      return {
+        code, ok: false as const,
+        warning: `LV ${code}: ${/abort/i.test(msg) ? 'timeout' : 'błąd sieci'}`,
+        per: 'error', format: '', events: [] as BalticRoadEvent[],
+        skipped: 0, swapped: 0,
+      };
+    } finally {
+      clearTimeout(timer);
+    }
+  });
+
+  let fetchedOk = 0;
+  const allEvents: BalticRoadEvent[] = [];
+  const perCode: Record<string, string> = {};
+  const formats: Record<string, string> = {};
+  for (const p of parts) {
+    perCode[p.code] = p.per;
+    if (p.format) formats[p.code] = p.format;
+    if (p.warning) warnings.push(p.warning);
+    if (p.ok) {
+      fetchedOk++;
+      for (const e of p.events) allEvents.push(e);
+    }
+  }
+
+  if (fetchedOk === 0) {
+    const streak = await roadLvFailStreak(deps);
+    if (streak >= 3) {
+      await deps.store.raiseRisk(sourceDownRisk(
+        'ROAD_LV',
+        warnings.length ? warnings : ['LV NAP niedostępne'],
+        now,
+        LV_SOURCE_REF,
+      ));
+      return {
+        job: 'road-lv', mode: 'LIVE', ok: false, risks: 1, warnings,
+        observations: {
+          road_lv_fail_streak: String(streak),
+          source: 'lvc_nap',
+          fetched_ok: '0',
+          expected_fetches: String(expectedFetches),
+          complete: '0',
+          configured: String(expectedFetches),
+          header: LV_NAP_KEY_HEADER,
+          records_skipped: String(parseStats.skipped),
+        },
+      };
+    }
+    return {
+      job: 'road-lv', mode: 'LIVE', ok: false, risks: 0, warnings,
+      observations: {
+        road_lv_fail_streak: String(streak),
+        source: 'lvc_nap',
+        fetched_ok: '0',
+        expected_fetches: String(expectedFetches),
+        complete: '0',
+        configured: String(expectedFetches),
+        header: LV_NAP_KEY_HEADER,
+        records_skipped: String(parseStats.skipped),
+      },
+    };
+  }
+
+  await deps.store.resolveRisks('SOURCE_DOWN:ROAD_LV:');
+  const deduped = dedupeLvSlippery(allEvents);
+  const near = applyBalticCorridorRoadFilter('LV', filterInLvBboxes(deduped));
+  const complete = fetchedOk === expectedFetches;
+  let risks = 0;
+  const keep: string[] = [];
+  for (const e of near) {
+    const raw = e.weightLimitT != null
+      ? weightLimitRisk('LV', e, null, LV_SOURCE_REF, LV_ATTRIBUTION)
+      : isDimensionLimitEvent(e)
+        ? dimensionLimitRisk('LV', e, LV_SOURCE_REF, LV_ATTRIBUTION)
+        : balticRoadRisk('LV', e, LV_SOURCE_REF, LV_ATTRIBUTION);
+    const risk = capBalticRiskSeverity(raw, e.corridorMatch);
+    if (risk.detail && typeof risk.detail === 'object') {
+      if (e.road) (risk.detail as Record<string, unknown>).droga = e.road;
+      if (e.corridorMatch) {
+        (risk.detail as Record<string, unknown>).korytarz_droga = e.corridorMatch;
+      }
+    }
+    keep.push(risk.dedup);
+    if (await deps.store.raiseRisk(risk)) risks++;
+  }
+  if (complete && deps.store.resolveStaleRisks) {
+    await deps.store.resolveStaleRisks('ROAD_LV:', keep);
+  }
+
+  /* F7 #730 r2: bez dublowania pogody (near już zawiera HIGH pogodę). */
+  const weatherSlow = lvWeatherToSlowdownEvents(near);
+  const slow = balticSlowdownMult(near);
+  if (deps.store.saveCorridorCondition) {
+    await deps.store.saveCorridorCondition({
+      corridor: 'ROAD_LV',
+      slowdownMult: slow.mult,
+      reason: slow.reason,
+      observedAt: now,
+      detail: {
+        events: near.length,
+        events_corridor: near.filter((e) => e.corridorMatch === 'on').length,
+        events_off_road: near.filter((e) => e.corridorMatch === 'off').length,
+        weather_adverse: weatherSlow.length,
+        zrodlo: LV_ATTRIBUTION,
+        complete,
+        formats,
+        records_skipped: parseStats.skipped,
+        dedup_ver: 'v2',
+        dp164: 'filtr A7/E67+A1/A4/A5 + ≤3 km',
+      },
+    });
+  }
+
+  /* N8: ostrzeżenia/observations bez wartości kluczy. */
+  const safeWarnings = warnings.filter((w) =>
+    !configured.some((c) => c.key && w.includes(c.key))
+  );
+
+  return {
+    job: 'road-lv', mode: 'LIVE', ok: complete && safeWarnings.length === 0,
+    risks, warnings: safeWarnings,
+    observations: {
+      source: 'lvc_nap',
+      fetched_ok: String(fetchedOk),
+      expected_fetches: String(expectedFetches),
+      complete: complete ? '1' : '0',
+      events_raw: String(deduped.length),
+      events_near: String(near.length),
+      configured: String(expectedFetches),
+      header: LV_NAP_KEY_HEADER,
+      records_skipped: String(parseStats.skipped),
+      /* F7 #730 r3 B2 — liczba zamian lat/lon. */
+      lv_swapped: String(parseStats.swapped),
+      ...Object.fromEntries(Object.entries(perCode).map(([k, v]) => [`lv_${k.toLowerCase()}`, v])),
+    },
+  };
+}
+
+async function roadLvFailStreak(deps: JobDeps): Promise<number> {
+  let streak = 1;
+  if (!deps.store.recentJobResults) return streak;
+  const rows = await deps.store.recentJobResults('road-lv', 5);
+  for (const row of rows) {
+    const configured = Number(row.observations?.configured ?? NaN);
+    /* F7 #730 N3: przebiegi bez sekretów (configured:0) przerywają streak. */
+    if (Number.isFinite(configured) && configured === 0) break;
     const fo = Number(row.observations?.fetched_ok ?? NaN);
     if (fo === 0) streak++;
     else break;
@@ -5267,6 +5549,7 @@ export const JOBS = {
   'ferry-portnet': runFerryPortnet,
   'ferry-weather': runFerryWeather,
   'road-se': runRoadSe, 'road-pl': runRoadPl, 'road-fi': runRoadFi, 'road-lt': runRoadLt,
+  'road-lv': runRoadLv,
   'traffic-flow': runTrafficFlow,
   'here-roads': runHereRoads,
   'emtrack-web': runEmtrackWeb,
@@ -5282,7 +5565,8 @@ export const MIN_INTERVAL_MIN: Record<JobName, number> = {
   'ferry-schedule': 60, 'ferry-status': 10, 'ferry-ais': 3, 'ferry-ais-listen': 0,
   'ferry-portnet': 15, 'ferry-weather': 60,
   // #667 F7 r2: 1380 min — dzienny cron (ran_at po zakończeniu) nie pomija kolejnego dnia.
-  'road-se': 15, 'road-pl': 10, 'road-fi': 15, 'road-lt': 15, 'traffic-flow': 15, 'here-roads': 1380,
+  'road-se': 15, 'road-pl': 10, 'road-fi': 15, 'road-lt': 15, 'road-lv': 15,
+  'traffic-flow': 15, 'here-roads': 1380,
   'emtrack-web': 2, 'rio-links': 2,
   'safefleet-poll': 2, 'route-hazards': 60,
   'translate-retry': 5,

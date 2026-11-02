@@ -2961,16 +2961,20 @@ if [ -n "$OFF138" ]; then
       where id = any(string_to_array('$OFF138', ',')::uuid[])" >/dev/null
 fi
 
-# BN6 (#716) / 0376+0377 — audience ROAD_FI/LT, CHECK corridor, cron (UUID …0376/0377; #713).
+# BN6 (#716) / 0376+0377+0378 — audience ROAD_FI/LT/LV, CHECK corridor, cron (UUID …0376–0378; #713).
 # title_key + delete: bez rk_generic/rk_key_guard (risks.sh liczy klucze w tower_test_status).
 chk "BN6: risk_audience_for ROAD_FI = WSZYSCY" \
   "select public.risk_audience_for('ROAD_FI', '{}'::jsonb)::text" WSZYSCY
 chk "BN6: risk_audience_for ROAD_LT = WSZYSCY" \
   "select public.risk_audience_for('ROAD_LT', '{}'::jsonb)::text" WSZYSCY
+chk "BN6: risk_audience_for ROAD_LV = WSZYSCY" \
+  "select public.risk_audience_for('ROAD_LV', '{}'::jsonb)::text" WSZYSCY
 chk "BN6: corridor_conditions ROAD_FI" \
   "select count(*) from corridor_conditions where corridor='ROAD_FI'" 1
 chk "BN6: corridor_conditions ROAD_LT" \
   "select count(*) from corridor_conditions where corridor='ROAD_LT'" 1
+chk "BN6: corridor_conditions ROAD_LV" \
+  "select count(*) from corridor_conditions where corridor='ROAD_LV'" 1
 q "insert into risk_signals (id, project_id, kind, severity, title, title_key, detail, dedup_key)
    values ('55555555-0000-0000-0000-000000000376','$P','ROAD_FI','MEDIUM','BN6 FI test','rk_road_baltic',
            '{\"t\":\"bn6fi0376\",\"params\":{\"country\":\"FI\",\"event\":\"BN6 FI test\"}}'::jsonb,
@@ -2991,10 +2995,20 @@ q "delete from risk_signals
     where id='55555555-0000-0000-0000-000000000377'
        or dedup_key='ROAD_LT:bn6-test-0377'
        or detail->>'t'='bn6lt0377'" >/dev/null
-# Jedna asercja cronów FI+LT — ta sama liczba OK z pg_cron i bez (CI gate bez cron.job → 577).
+q "insert into risk_signals (id, project_id, kind, severity, title, title_key, detail, dedup_key)
+   values ('55555555-0000-0000-0000-000000000378','$P','ROAD_LV','MEDIUM','BN6 LV test','rk_road_baltic',
+           '{\"t\":\"bn6lv0378\",\"params\":{\"country\":\"LV\",\"event\":\"BN6 LV test\"}}'::jsonb,
+           'ROAD_LV:bn6-test-0378')" >/dev/null
+chk "BN6: CHECK kind ROAD_LV + audience WSZYSCY" \
+  "select audience::text from risk_signals where id='55555555-0000-0000-0000-000000000378'" WSZYSCY
+q "delete from risk_signals
+    where id='55555555-0000-0000-0000-000000000378'
+       or dedup_key='ROAD_LV:bn6-test-0378'
+       or detail->>'t'='bn6lv0378'" >/dev/null
+# Jedna asercja cronów FI+LT+LV — ta sama liczba OK z pg_cron i bez (CI gate bez cron.job → 580).
 if [ "$(q "select to_regclass('cron.job') is not null")" = "t" ]; then
-  chk "BN6: cron tower-road-fi + tower-road-lt" \
-    "select count(*) from cron.job where jobname in ('tower-road-fi','tower-road-lt')" 2
+  chk "BN6: cron tower-road-fi + tower-road-lt + tower-road-lv" \
+    "select count(*) from cron.job where jobname in ('tower-road-fi','tower-road-lt','tower-road-lv')" 3
 else
   chk "BN6: brak cron.job (stub) — OK" "select 1" 1
 fi
