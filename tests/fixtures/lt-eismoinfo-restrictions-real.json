@@ -1,0 +1,167 @@
+[
+  {
+    "_id": "17b223272702175b5476fa96bc20ef32",
+    "type": "HAZARD",
+    "creationTime": "2025-01-10T19:07:57Z",
+    "updateTime": "2026-03-16T19:57:56Z",
+    "startTime": "2025-01-10T00:00:00+02:00",
+    "endTime": "2027-12-31T23:00:00+02:00",
+    "description": "Pažeista tilto konstrukcija.",
+    "shortDescription": "Silpnas tiltas",
+    "schedule": null,
+    "location": {
+      "polyline": "56.246037 24.850470 56.246034 24.850579 56.246020 24.850749 56.246008 24.850886",
+      "direction": "BOTH_DIRECTIONS",
+      "street": "1307 Biržai–Parovėja–Kyliškiai 5.524-5.550km.",
+      "location_description": null
+    },
+    "source": {
+      "reference": "VIA",
+      "name": "AB \"Via Lietuva\"",
+      "url": "https://www.eismoinfo.lt/"
+    },
+    "parentEvent": null,
+    "subtype": "weakBridge",
+    "restrictions": [
+      {
+        "restrictionType": "speedLimit",
+        "value": 30,
+        "transportType": "All"
+      },
+      {
+        "restrictionType": "widthLimit",
+        "value": 5.8,
+        "transportType": "All"
+      }
+    ]
+  },
+  {
+    "_id": "358f520ebc9724d0034a368a40b4675f",
+    "type": "CONSTRUCTION",
+    "creationTime": "2025-09-01T23:53:24Z",
+    "updateTime": "2025-09-01T23:53:24Z",
+    "startTime": "2025-07-30T00:00:00+03:00",
+    "endTime": "2026-12-03T23:00:00+02:00",
+    "description": "Tilto per Kulpę rekonstravimo darbai. Eismas draudžiamas ir kreipiamas laikinai įrengtu keliu. Darbų vykdytojas: UAB „Gevalda“, tel.: +37062925952. ",
+    "shortDescription": "Kelio remontas",
+    "schedule": null,
+    "location": {
+      "polyline": "56.071878 23.539391 56.071851 23.539565 56.071812 23.539825 56.071773 23.540163 56.071722 23.540595 56.071692 23.540884 56.071649 23.541225 56.071626 23.541399 56.071599 23.541589 56.071588 23.541660",
+      "direction": "BOTH_DIRECTIONS",
+      "street": "1606 Privažiuojamasis kelias prie Šiaulių miesto oro uosto nuo kelio Kepaliai–Gasčiūnai–Meškuičiai 2.840-2.985km.",
+      "location_description": null
+    },
+    "source": {
+      "reference": "VIA",
+      "name": "AB \"Via Lietuva\"",
+      "url": "https://www.eismoinfo.lt/"
+    },
+    "parentEvent": null,
+    "subtype": null,
+    "restrictions": [
+      {
+        "restrictionType": "speedLimit",
+        "value": 30,
+        "transportType": "All"
+      }
+    ]
+  },
+  {
+    "_id": "7b715ad6291ba3f79cab80523e9ee7e2",
+    "type": "HAZARD",
+    "creationTime": "2025-12-31T10:52:44Z",
+    "updateTime": "2025-12-31T10:54:11Z",
+    "startTime": "2025-10-03T00:00:00+03:00",
+    "endTime": "2026-12-31T00:00:00+02:00",
+    "description": "Sutrūkinėjusios tilto perdangos plokštės.",
+    "shortDescription": "Silpnas tiltas",
+    "schedule": null,
+    "location": {
+      "polyline": "55.257730 26.444900 55.257717 26.444901 55.257631 26.444927 55.257557 26.445009 55.257470 26.445122 55.257411 26.445248 55.257152 26.446518 55.256839 26.448143 55.256702 26.448902 55.256562 26.449617 55.255898 26.452997 55.255816 26.453414 55.255658 26.454250 55.255309 26.456050 55.254721 26.459083 55.254572 26.459852 55.254507 26.460186 55.253809 26.463711 55.252899 26.468389 55.252707 26.469377 55.252590 26.469979 55.252444 26.470729 55.251860 26.473730 55.251710 26.474508 55.251642 26.474852 55.251585 26.475141 55.251546 26.475371 55.251524 26.475562 55.251528 26.475645 55.251532 26.475743 55.251611 26.476750 55.251653 26.477289",
+      "direction": "BOTH_DIRECTIONS",
+      "street": "1414 Mielagėnai–Paliesius 0.010-2.200km.",
+      "location_description": null
+    },
+    "source": {
+      "reference": "VIA",
+      "name": "AB \"Via Lietuva\"",
+      "url": "https://www.eismoinfo.lt/"
+    },
+    "parentEvent": null,
+    "subtype": "weakBridge",
+    "restrictions": [
+      {
+        "restrictionType": "roadClosed",
+        "value": null,
+        "transportType": "All"
+      }
+    ]
+  },
+  {
+    "_id": "360bdac8f8dd2fa1ac8442953086c60e",
+    "type": "HAZARD",
+    "creationTime": "2022-05-24T14:33:11Z",
+    "updateTime": "2025-12-31T11:43:20Z",
+    "startTime": "2022-05-01T00:00:00+03:00",
+    "endTime": "2026-12-31T23:00:00+02:00",
+    "description": "Silpna kelio danga nuo 10,697 iki 16,18 km.",
+    "shortDescription": "Pažeista kelio danga",
+    "schedule": null,
+    "location": {
+      "polyline": "54.776060 24.120148 54.772467 24.121056 54.772120 24.121129 54.771929 24.121161 54.771734 24.121181 54.771675 24.121183 54.771516 24.121188 54.771302 24.121160 54.771018 24.121076 54.770810 24.120989 54.770594 24.120873 54.770316 24.120687 54.770069 24.120484 54.768774 24.119388 54.767090 24.117962 54.766971 24.117864 54.766241 24.117264 54.765351 24.116503 54.763579 24.114990 54.762688 24.114247 54.762484 24.114074 54.762284 24.113904 54.761482 24.113142 54.761361 24.113022 54.761255 24.112913 54.761137 24.112788 54.761008 24.112640 54.760868 24.112482 54.760699 24.112291 54.760554 24.112128 54.759777 24.111192 54.759189 24.110469 54.758575 24.109732 54.757294 24.108161 54.756857 24.107616 54.756001 24.106579 54.755521 24.105986 54.754698 24.104962 54.753413 24.103382 54.753130 24.103033 54.752922 24.102775 54.752089 24.101745 54.750764 24.100113 54.750559 24.099863 54.749429 24.098483 54.748161 24.096930 54.746862 24.095341 54.746690 24.095130 54.746302 24.094653 54.745519 24.093689 54.745243 24.093353 54.744652 24.092631 54.744178 24.092052 54.743502 24.091226 54.743008 24.090601 54.742750 24.090259 54.742532 24.089963 54.742256 24.089577 54.741922 24.089084 54.741612 24.088588 54.741494 24.088400 54.741276 24.088050 54.741076 24.087716 54.740913 24.087444 54.740471 24.086627 54.738793 24.083443 54.738591 24.083059 54.736601 24.079274 54.736393 24.078881 54.735735 24.077638 54.735591 24.077356 54.735499 24.077176 54.735398 24.076983",
+      "direction": "BOTH_DIRECTIONS",
+      "street": "1901 Vaišvydava–Piliuona–Pakuonis–Pabališkiai 10.697-16.180km.",
+      "location_description": null
+    },
+    "source": {
+      "reference": "VIA",
+      "name": "AB \"Via Lietuva\"",
+      "url": "https://www.eismoinfo.lt/"
+    },
+    "parentEvent": null,
+    "subtype": "damagedRoadSurface",
+    "restrictions": [
+      {
+        "restrictionType": "weightLimit",
+        "value": 15,
+        "transportType": "All"
+      },
+      {
+        "restrictionType": "speedLimit",
+        "value": 70,
+        "transportType": "All"
+      }
+    ]
+  },
+  {
+    "_id": "dac840c22d6a3c4fff4a33adc9c71632",
+    "type": "HAZARD",
+    "creationTime": "2024-12-05T10:35:42Z",
+    "updateTime": "2025-12-29T21:32:02Z",
+    "startTime": "2024-11-29T00:00:00+02:00",
+    "endTime": "2026-12-31T23:00:00+02:00",
+    "description": "Nelygi, provėžota kelio danga.",
+    "shortDescription": "Pažeista kelio danga",
+    "schedule": null,
+    "location": {
+      "polyline": "55.511161 21.322052 55.510429 21.322870 55.509445 21.323990 55.508282 21.325288 55.507082 21.326778 55.506567 21.327396 55.505990 21.328128 55.505419 21.328848 55.505304 21.328990 55.505240 21.329070 55.505143 21.329179 55.504936 21.329383 55.504290 21.329938 55.503332 21.330755 55.503241 21.330833 55.503136 21.330922 55.502446 21.331512 55.502014 21.331889 55.501865 21.332029 55.501680 21.332220 55.500931 21.333026 55.500254 21.333758 55.499500 21.334576 55.498731 21.335403 55.498356 21.335814 55.497212 21.337041 55.497193 21.337064 55.497083 21.337197 55.496991 21.337320 55.496900 21.337464 55.496829 21.337599 55.496720 21.337820 55.496710 21.337841 55.496690 21.337881 55.496416 21.338524 55.495828 21.339901 55.495703 21.340193 55.495602 21.340428 55.495089 21.341633 55.494470 21.343083 55.494310 21.343464 55.494249 21.343620 55.494163 21.343840 55.494075 21.344074 55.493538 21.345495 55.493356 21.345968 55.493233 21.346251 55.493152 21.346398 55.493017 21.346629 55.492871 21.346856 55.492736 21.347090 55.492643 21.347253 55.492500 21.347500 55.492410 21.347628 55.492328 21.347714 55.492223 21.347788 55.492143 21.347822 55.492056 21.347843 55.491912 21.347857 55.491117 21.347901 55.490745 21.347920 55.490689 21.347923 55.489798 21.347974 55.488918 21.348024 55.487685 21.348067 55.487493 21.348073 55.487060 21.348085 55.486863 21.348081 55.486470 21.348056 55.486257 21.348033",
+      "direction": "BOTH_DIRECTIONS",
+      "street": "2201 Priekulė–Sakūčiai–Ventė 5.100-8.470km.",
+      "location_description": null
+    },
+    "source": {
+      "reference": "VIA",
+      "name": "AB \"Via Lietuva\"",
+      "url": "https://www.eismoinfo.lt/"
+    },
+    "parentEvent": null,
+    "subtype": "damagedRoadSurface",
+    "restrictions": [
+      {
+        "restrictionType": "speedLimit",
+        "value": 70,
+        "transportType": "All"
+      }
+    ]
+  }
+]

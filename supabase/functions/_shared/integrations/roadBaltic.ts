@@ -295,13 +295,21 @@ export function weightLimitRisk(
   };
 }
 
-/** Spowolnienie jak SE — HIGH bez limitu masy (kelirikko nie spowalnia; F7 #726). */
+/**
+ * Spowolnienie jak SE — tylko HIGH bez limitu masy/wysokości/szerokości
+ * (F7 #726 kelirikko; F7 #727 B2: wiadukty/słabe mosty nie spowalniają).
+ */
 export function balticSlowdownMult(
   events: BalticRoadEvent[],
   pct = 15,
 ): { mult: number; reason: string | null } {
   const adverse = events.filter(
-    (e) => e.severity === 'HIGH' && e.weightLimitT == null && e.lat != null && e.lon != null,
+    (e) => e.severity === 'HIGH'
+      && e.weightLimitT == null
+      && e.heightLimitM == null
+      && e.widthLimitM == null
+      && e.lat != null
+      && e.lon != null,
   );
   return seRoadSlowdownMult({
     conditions: adverse.map((e) => ({
@@ -318,6 +326,47 @@ export function balticSlowdownMult(
     weather: [],
     pct,
   });
+}
+
+/**
+ * F7 #727 B2 — limity wysokości/szerokości / słaby most: MEDIUM „sprawdź…”,
+ * bez wpływu na spowolnienie (jak weightLimitRisk bez masy ładunku).
+ */
+export function dimensionLimitRisk(
+  country: BalticRoadCountry,
+  e: BalticRoadEvent,
+  sourceUrl: string,
+  attribution: string,
+): RiskInput {
+  const base = balticRoadRisk(country, e, sourceUrl, attribution);
+  const bits: string[] = [];
+  if (e.heightLimitM != null) bits.push(`wysokość ${e.heightLimitM} m`);
+  if (e.widthLimitM != null) bits.push(`szerokość ${e.widthLimitM} m`);
+  const kindLow = (e.kind ?? '').toLowerCase();
+  if (kindLow.includes('weakbridge') || kindLow.includes('damagedbridge')) {
+    bits.push('słaby most');
+  }
+  const what = bits.length ? bits.join(' / ') : 'wymiary';
+  return {
+    ...base,
+    severity: 'MEDIUM',
+    title: `Trasa ${country}: sprawdź ${what} / trasę`,
+    titleKey: 'rk_road_baltic_dim_check',
+    params: {
+      country,
+      event: e.title,
+      height: e.heightLimitM ?? null,
+      width: e.widthLimitM ?? null,
+    },
+  };
+}
+
+/** Czy zdarzenie to limit wymiarów / most bez limitu masy → dimensionLimitRisk. */
+export function isDimensionLimitEvent(e: BalticRoadEvent): boolean {
+  if (e.weightLimitT != null) return false;
+  if (e.heightLimitM != null || e.widthLimitM != null) return true;
+  const k = (e.kind ?? '').toLowerCase();
+  return k.includes('weakbridge') || k.includes('damagedbridge');
 }
 
 /* ---------- Litwa — Via Lietuva / eismoinfo.lt (#716 cz.2) ---------- */
@@ -382,6 +431,7 @@ function ltRestrictionMeta(restrictions: unknown): {
   heightLimitM: number | null;
   widthLimitM: number | null;
   roadClosed: boolean;
+  speedLimit: number | null;
   unknownCodes: string[];
 } {
   const unknownCodes: string[] = [];
@@ -389,8 +439,11 @@ function ltRestrictionMeta(restrictions: unknown): {
   let heightLimitM: number | null = null;
   let widthLimitM: number | null = null;
   let roadClosed = false;
+  let speedLimit: number | null = null;
   if (!Array.isArray(restrictions)) {
-    return { weightLimitT, heightLimitM, widthLimitM, roadClosed, unknownCodes };
+    return {
+      weightLimitT, heightLimitM, widthLimitM, roadClosed, speedLimit, unknownCodes,
+    };
   }
   for (const raw of restrictions) {
     if (!raw || typeof raw !== 'object') continue;
@@ -404,28 +457,52 @@ function ltRestrictionMeta(restrictions: unknown): {
       if (Number.isFinite(v)) widthLimitM = v;
     } else if (t === 'roadClosed') {
       roadClosed = true;
+    } else if (t === 'speedLimit') {
+      if (Number.isFinite(v)) speedLimit = v;
     } else if (t === 'LD' || t === 'SVKD') {
       /* #716: kody nieznane — surowe w detail.oryginal, bez interpretacji. */
       unknownCodes.push(t);
     }
   }
-  return { weightLimitT, heightLimitM, widthLimitM, roadClosed, unknownCodes };
+  return {
+    weightLimitT, heightLimitM, widthLimitM, roadClosed, speedLimit, unknownCodes,
+  };
 }
 
+/** F7 #727 N1 — zwężenie / wahadło / objazd w opisie LT. */
+function ltNarrowOrDetour(text: string): boolean {
+  return /(?:^|[^a-ząčęėįšųūž])(?:juost|lane|apylank|objazd|detour|wahadl|alternat|vienos\s+juostos)(?:[^a-ząčęėįšųūž]|$)/i
+    .test(text);
+}
+
+/**
+ * F7 #727 B2/N1: HIGH tylko zamknięcie / powódź;
+ * limity H/W i most → MEDIUM; zwykłe CONSTRUCTION + speedLimit → LOW.
+ */
 function ltSeverity(
   type: string,
   subtype: string | null,
   meta: ReturnType<typeof ltRestrictionMeta>,
+  text: string,
 ): RiskSeverity {
   if (meta.roadClosed) return 'HIGH';
-  if (meta.weightLimitT != null || meta.heightLimitM != null || meta.widthLimitM != null) {
-    return 'HIGH';
-  }
   const sub = (subtype ?? '').toLowerCase();
-  if (sub.includes('weakbridge') || sub.includes('damagedbridge') || sub.includes('flood')) {
-    return 'HIGH';
+  if (sub.includes('flood')) return 'HIGH';
+  if (meta.weightLimitT != null) return 'HIGH';
+  if (
+    meta.heightLimitM != null
+    || meta.widthLimitM != null
+    || sub.includes('weakbridge')
+    || sub.includes('damagedbridge')
+  ) {
+    return 'MEDIUM';
   }
-  if (type.toUpperCase() === 'CONSTRUCTION') return 'MEDIUM';
+  if (type.toUpperCase() === 'CONSTRUCTION') {
+    if (ltNarrowOrDetour(text)) return 'MEDIUM';
+    /* Sam speedLimit (albo brak innych limitów) → LOW jak SE. */
+    if (meta.speedLimit != null) return 'LOW';
+    return 'MEDIUM';
+  }
   return 'MEDIUM';
 }
 
@@ -446,16 +523,18 @@ export function parseLtRestrictions(json: unknown): BalticRoadEvent[] {
     const type = String(o.type ?? 'HAZARD');
     const subtype = o.subtype == null ? null : String(o.subtype);
     const title = String(o.shortDescription ?? o.description ?? subtype ?? type).trim() || type;
+    const desc = String(o.description ?? '').trim();
     const detailParts = [
-      String(o.description ?? '').trim(),
+      desc,
       loc.street ? `ul. ${loc.street}` : '',
-      'zrodlo LT nie podaje wypadkow',
     ].filter(Boolean);
+    /* F7 #727 N2: uwaga o wypadkach tylko w corridor / risk.uwaga_wypadki, nie w każdym detail. */
+    const textForSev = `${title} ${desc}`;
     out.push({
       id,
       title,
       detail: detailParts.join(' · '),
-      severity: ltSeverity(type, subtype, meta),
+      severity: ltSeverity(type, subtype, meta, textForSev),
       lat: pt?.[0] ?? null,
       lon: pt?.[1] ?? null,
       kind: subtype ?? type,
@@ -485,6 +564,68 @@ export interface LtWeatherStation {
 /** Próg przyczepności — poniżej = ślisko (spowolnienie korytarza). */
 export const LT_FRICTION_ADVERSE = 0.4;
 
+/**
+ * F7 #727 B1/N3 — lód / gołoledź / szron / śnieg / błoto pośniegowe (granice słów).
+ * Mokro/wilgotno (šlapia/drėgna) NIE jest niekorzystne.
+ */
+export const LT_ICY_RE =
+  /(?:^|[^a-ząčęėįšųūžA-ZĄČĘĖĮŠŲŪŽ])(?:led|plikled(?:is)?|pliklus|lijundr|sniego|snieg|šerkšn|sersn|ice|snow|go[lł]oled(?:ź|z)?|b[lł]ot(?:o)?\s*po[sś]nieg)(?:[^a-ząčęėįšųūžA-ZĄČĘĖĮŠŲŪŽ]|$)/i;
+
+/** Kody ostrzeżeń LT = warunki dobre / deszcz / mokra nawierzchnia — nie adverse. */
+const LT_WARN_BENIGN = /^(NMS|GS|PS|KR\d*|KDB_00[23])$/i;
+
+/** perspejimai: string albo tablica {pavadinimas,kodas} (prawdziwy feed). */
+export function ltPerspejimaiText(raw: unknown): {
+  text: string | null;
+  codes: string[];
+  danger: boolean;
+} {
+  if (raw == null || raw === '') return { text: null, codes: [], danger: false };
+  if (Array.isArray(raw)) {
+    const parts: string[] = [];
+    const codes: string[] = [];
+    for (const item of raw) {
+      if (item && typeof item === 'object') {
+        const o = item as { pavadinimas?: unknown; kodas?: unknown };
+        const code = o.kodas == null ? '' : String(o.kodas).trim();
+        const name = o.pavadinimas == null ? '' : String(o.pavadinimas).trim();
+        if (code) codes.push(code);
+        if (name) parts.push(name);
+        else if (code) parts.push(code);
+      } else if (item != null && String(item).trim()) {
+        parts.push(String(item).trim());
+      }
+    }
+    const text = parts.length ? parts.join('; ') : null;
+    const danger = codes.some((c) => !LT_WARN_BENIGN.test(c))
+      || (codes.length === 0 && text != null && LT_ICY_RE.test(text));
+    return { text, codes, danger };
+  }
+  const text = String(raw).trim() || null;
+  if (!text) return { text: null, codes: [], danger: false };
+  return { text, codes: [], danger: LT_ICY_RE.test(text) };
+}
+
+/** F7 #727 B1 — adverse tylko lód/śnieg/szron, friction&lt;0.4, vis 1–199 m, ostrzeżenie nie-benign. */
+export function ltWeatherIsAdverse(args: {
+  surface: string | null;
+  friction: number | null;
+  visibilityM: number | null;
+  warnDanger: boolean;
+  warnText: string | null;
+}): boolean {
+  const icySurface = args.surface != null && LT_ICY_RE.test(args.surface);
+  const icyWarn = args.warnText != null && LT_ICY_RE.test(args.warnText);
+  const lowFriction = args.friction != null && Number.isFinite(args.friction)
+    && args.friction < LT_FRICTION_ADVERSE;
+  /* null/0 = brak pomiaru (API bywa null → Number null=0); nie traktuj jak mgła. */
+  const lowVis = args.visibilityM != null
+    && Number.isFinite(args.visibilityM)
+    && args.visibilityM > 0
+    && args.visibilityM < 200;
+  return icySurface || icyWarn || lowFriction || lowVis || args.warnDanger;
+}
+
 export function parseLtWeather(json: unknown): LtWeatherStation[] {
   if (!Array.isArray(json)) return [];
   const out: LtWeatherStation[] = [];
@@ -503,23 +644,24 @@ export function parseLtWeather(json: unknown): LtWeatherStation[] {
     const visibilityM = o.matomumas == null || o.matomumas === ''
       ? null
       : Number(o.matomumas);
-    const warning = o.perspejimai == null || o.perspejimai === ''
-      ? null
-      : String(o.perspejimai);
-    const surfaceLow = (surface ?? '').toLowerCase();
-    const wet = /šlap|slap|drėgn|dregn|led|ice|snieg|śnieg|snieg/i.test(surfaceLow);
-    const lowFriction = friction != null && Number.isFinite(friction)
-      && friction < LT_FRICTION_ADVERSE;
-    const lowVis = visibilityM != null && Number.isFinite(visibilityM) && visibilityM < 200;
-    const adverse = Boolean(warning) || lowFriction || wet || lowVis;
+    const warn = ltPerspejimaiText(o.perspejimai);
+    const frictionOk = friction != null && Number.isFinite(friction) ? friction : null;
+    const visOk = visibilityM != null && Number.isFinite(visibilityM) ? visibilityM : null;
+    const adverse = ltWeatherIsAdverse({
+      surface,
+      friction: frictionOk,
+      visibilityM: visOk,
+      warnDanger: warn.danger,
+      warnText: warn.text,
+    });
     out.push({
       id,
       lat,
       lon,
-      friction: Number.isFinite(friction as number) ? friction : null,
+      friction: frictionOk,
       surface,
-      visibilityM: Number.isFinite(visibilityM as number) ? visibilityM : null,
-      warning,
+      visibilityM: visOk,
+      warning: warn.text,
       adverse,
       title: String(o.irenginys ?? o.pavadinimas ?? `stacja ${id}`),
     });

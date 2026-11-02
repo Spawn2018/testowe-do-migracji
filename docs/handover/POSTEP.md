@@ -1,4 +1,12 @@
 
+## 2026-11-02 06:50 — #727 F7 r1 poprawki LT (B1/B2/B3/N1–N3)
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. #728 wygląd (koordynator).
+- Scalanie: brak F7 „gotowe” (r1: nie scalaj). CI przed poprawkami @ `ecf8915d` unit/db/visual ✔.
+- **Krok F7 #727:** B1 mokro/wilgotno ≠ adverse (tylko lód/śnieg/szron/`friction<0.4`/`vis` 1–199 / ostrzeżenie nie-benign); B2 limity H/W + weakBridge → MEDIUM `dimensionLimitRisk`, poza slowdown; B3 fixtures `*-real.json` z ręcznego pobrania (pola `kelio_danga`/`matomumas`/`irenginys`/`lng`/`perspejimai[]` potwierdzone); N1 CONSTRUCTION+speedLimit → LOW; N2 uwaga wypadków tylko `uwaga_wypadki`+corridor; N3 granice słów (ice≠service). Ręczne pobranie 02.11 ~07:25 LT: events_raw **271**, events_near **~80**, stacje adverse po B1 **0** (mokro/NMS nie liczą). Rozkład severity (po B2/N1, near): LOW~33 / MEDIUM~38 / HIGH~9. DP-157/158 w rejestrze.
+- **Dalej:** push → CI → F7. Po F7: BN6 cz.3 LV.
+- Bez push na main.
+
 ## 2026-11-02 06:25 — #727 db FAIL → EXPECTED status 577
 
 - Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. #728 wygląd bez F7.

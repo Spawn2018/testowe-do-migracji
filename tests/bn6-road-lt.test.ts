@@ -1,5 +1,6 @@
 /**
  * BN6 (#716) cz.2 — eismoinfo LT: parser restrictions/weather, bbox Via Baltica, runRoadLt.
+ * F7 #727: B1 mokro≠adverse, B2 limity H/W bez slowdown, B3 fixtures real, N1 LOW roboty, N2/N3.
  */
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -12,8 +13,11 @@ import {
   LT_WEATHER_URL,
   balticRoadRisk,
   balticSlowdownMult,
+  dimensionLimitRisk,
   eventInLtBboxes,
   filterInLtBboxes,
+  isDimensionLimitEvent,
+  ltPerspejimaiText,
   ltWeatherToSlowdownEvents,
   parseLtPolylineCentroid,
   parseLtRestrictions,
@@ -34,6 +38,12 @@ const rest = JSON.parse(
 );
 const wx = JSON.parse(
   readFileSync(resolve('tests/fixtures/lt-eismoinfo-weather-sample.json'), 'utf8'),
+);
+const restReal = JSON.parse(
+  readFileSync(resolve('tests/fixtures/lt-eismoinfo-restrictions-real.json'), 'utf8'),
+);
+const wxReal = JSON.parse(
+  readFileSync(resolve('tests/fixtures/lt-eismoinfo-weather-real.json'), 'utf8'),
 );
 const NOW = new Date('2026-11-02T06:00:00Z');
 
@@ -129,9 +139,9 @@ describe('BN6 road-lt — eismoinfo', () => {
     expect(parseLtPolylineCentroid('')).toBeNull();
   });
 
-  it('parser restrictions → id, limity, LD/SVKD w unknownCodes', () => {
+  it('parser restrictions → id, limity, LD/SVKD; N1 LOW; B2 height MEDIUM', () => {
     const ev = parseLtRestrictions(rest);
-    expect(ev.length).toBe(4);
+    expect(ev.length).toBe(5);
     const w = ev.find((e) => e.id === 'bn6-lt-weight-panevezys')!;
     expect(w.weightLimitT).toBe(40);
     expect(w.severity).toBe('HIGH');
@@ -139,6 +149,12 @@ describe('BN6 road-lt — eismoinfo', () => {
     const closed = ev.find((e) => e.id === 'bn6-lt-closed-marijampole')!;
     expect(closed.heightLimitM).toBe(4);
     expect(closed.severity).toBe('HIGH');
+    const constr = ev.find((e) => e.id === 'bn6-lt-construction-kaunas')!;
+    expect(constr.severity).toBe('LOW');
+    expect(String(constr.detail)).not.toMatch(/nie podaje wypadkow/);
+    const height = ev.find((e) => e.id === 'bn6-lt-height-only-kaunas')!;
+    expect(height.severity).toBe('MEDIUM');
+    expect(height.heightLimitM).toBe(4.2);
   });
 
   it('filtr bbox Via Baltica: Kaunas w; Vilnius wschód poza', () => {
@@ -147,20 +163,21 @@ describe('BN6 road-lt — eismoinfo', () => {
     expect(near.map((e) => e.id).sort()).toEqual([
       'bn6-lt-closed-marijampole',
       'bn6-lt-construction-kaunas',
+      'bn6-lt-height-only-kaunas',
       'bn6-lt-weight-panevezys',
     ].sort());
     const far = ev.find((e) => e.id === 'bn6-lt-far-vilnius-east')!;
     expect(eventInLtBboxes(far)).toBe(false);
   });
 
-  it('balticRoadRisk → ROAD_LT + detail.oryginal + atrybucja', () => {
+  it('balticRoadRisk → ROAD_LT + detail.oryginal; N2 bez wypadkow w opis', () => {
     const w = parseLtRestrictions(rest).find((e) => e.id === 'bn6-lt-weight-panevezys')!;
     const r = balticRoadRisk('LT', w, LT_RESTRICTIONS_URL, LT_ATTRIBUTION);
     expect(r.kind).toBe('ROAD_LT');
     expect(r.dedup).toBe('ROAD_LT:bn6-lt-weight-panevezys');
     expect(r.detail.oryginal).toBe('LD,SVKD');
     expect(r.detail.zrodlo).toBe(LT_ATTRIBUTION);
-    expect(String(r.detail.opis)).toMatch(/nie podaje wypadkow/);
+    expect(String(r.detail.opis)).not.toMatch(/nie podaje wypadkow/);
   });
 
   it('limit masy: ładunek > limit → HIGH; brak masy → MEDIUM sprawdź', () => {
@@ -173,9 +190,22 @@ describe('BN6 road-lt — eismoinfo', () => {
     expect(med.titleKey).toBe('rk_road_baltic_weight_check');
   });
 
-  it('pogoda: niska przyczepność → adverse; stacja poza bbox → poza slowdown', () => {
+  it('B2: height/width → dimensionLimitRisk MEDIUM; bez slowdown', () => {
+    const height = parseLtRestrictions(rest).find((e) => e.id === 'bn6-lt-height-only-kaunas')!;
+    expect(isDimensionLimitEvent(height)).toBe(true);
+    const r = dimensionLimitRisk('LT', height, LT_RESTRICTIONS_URL, LT_ATTRIBUTION);
+    expect(r.severity).toBe('MEDIUM');
+    expect(r.titleKey).toBe('rk_road_baltic_dim_check');
+    expect(r.title).toMatch(/wysokość/);
+    expect(balticSlowdownMult([height]).mult).toBe(1);
+  });
+
+  it('B1: šlapia+friction0.6 nie adverse; plikledis adverse; N3 ice≠service', () => {
     const stations = parseLtWeather(wx);
-    expect(stations.length).toBe(3);
+    expect(stations.length).toBe(4);
+    const wet = stations.find((s) => s.id === 'bn6-lt-wx-wet-ok')!;
+    expect(wet.adverse).toBe(false);
+    expect(wet.friction).toBe(0.6);
     const slip = stations.find((s) => s.id === 'bn6-lt-wx-panevezys-slippery')!;
     expect(slip.adverse).toBe(true);
     expect(slip.friction!).toBeLessThan(LT_FRICTION_ADVERSE);
@@ -184,9 +214,23 @@ describe('BN6 road-lt — eismoinfo', () => {
     const slow = ltWeatherToSlowdownEvents(stations);
     expect(slow.map((e) => e.id)).toEqual(['wx:bn6-lt-wx-panevezys-slippery']);
     expect(slow.every((e) => e.severity === 'HIGH')).toBe(true);
+    expect(ltPerspejimaiText('service road').danger).toBe(false);
+    expect(ltPerspejimaiText('Pliklus kelias').danger).toBe(true);
   });
 
-  it('balticSlowdownMult: zamknięcie spowalnia; sam limit masy nie', () => {
+  it('B3: prawdziwy feed weather — pola lat/lng/kelio_danga/perspejimai[]', () => {
+    const stations = parseLtWeather(wxReal);
+    expect(stations.length).toBeGreaterThanOrEqual(3);
+    expect(stations.every((s) => Number.isFinite(s.lat) && Number.isFinite(s.lon))).toBe(true);
+    const wet = stations.find((s) => (s.surface ?? '').toLowerCase().includes('šlap'));
+    if (wet) expect(wet.adverse).toBe(false);
+    const parsedRest = parseLtRestrictions(restReal);
+    expect(parsedRest.length).toBeGreaterThanOrEqual(3);
+    expect(parsedRest.some((e) => e.kind === 'weakBridge')).toBe(true);
+    expect(parsedRest.some((e) => e.severity === 'LOW')).toBe(true);
+  });
+
+  it('balticSlowdownMult: zamknięcie spowalnia; height i masa nie', () => {
     const closed: BalticRoadEvent = {
       id: 'C', title: 'zamkniecie', detail: 'x', severity: 'HIGH',
       lat: 54.56, lon: 23.35, kind: 'closed', start: null, end: null,
@@ -195,7 +239,12 @@ describe('BN6 road-lt — eismoinfo', () => {
       id: 'W', title: 'limit', detail: 'x', severity: 'HIGH',
       lat: 55.73, lon: 24.35, kind: 'weakBridge', start: null, end: null, weightLimitT: 40,
     };
+    const height: BalticRoadEvent = {
+      id: 'H', title: 'wys', detail: 'x', severity: 'MEDIUM',
+      lat: 54.92, lon: 23.92, kind: 'obstructionType', start: null, end: null, heightLimitM: 4.2,
+    };
     expect(balticSlowdownMult([weight]).mult).toBe(1);
+    expect(balticSlowdownMult([height]).mult).toBe(1);
     expect(balticSlowdownMult([closed]).mult).toBeGreaterThan(1);
   });
 });
@@ -253,10 +302,15 @@ describe('BN6 runRoadLt', () => {
     expect(stOk.risks.some((x) => x.dedup === 'ROAD_LT:OLD')).toBe(false);
     expect(stOk.corridor?.corridor).toBe('ROAD_LT');
     expect(stOk.risks.some((x) => x.dedup === 'ROAD_LT:bn6-lt-construction-kaunas')).toBe(true);
+    const constr = stOk.risks.find((x) => x.dedup === 'ROAD_LT:bn6-lt-construction-kaunas');
+    expect(constr?.severity).toBe('LOW');
     expect(stOk.risks.some((x) => x.dedup === 'ROAD_LT:bn6-lt-far-vilnius-east')).toBe(false);
     const weightRisk = stOk.risks.find((x) => x.dedup === 'ROAD_LT:bn6-lt-weight-panevezys');
     expect(weightRisk?.detail?.oryginal).toBe('LD,SVKD');
     expect(weightRisk?.detail?.uwaga_wypadki).toMatch(/nie podaje wypadkow/);
+    const heightRisk = stOk.risks.find((x) => x.dedup === 'ROAD_LT:bn6-lt-height-only-kaunas');
+    expect(heightRisk?.severity).toBe('MEDIUM');
+    expect(heightRisk?.titleKey).toBe('rk_road_baltic_dim_check');
 
     const stPart = new MemStore();
     stPart.risks.push({

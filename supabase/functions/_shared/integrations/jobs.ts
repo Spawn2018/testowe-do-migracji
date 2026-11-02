@@ -101,8 +101,9 @@ import {
   FI_ANNOUNCEMENTS_URL, FI_ATTRIBUTION, FI_ROADWORKS_URL, FI_WEIGHT_URL,
   LT_ATTRIBUTION, LT_RESTRICTIONS_URL, LT_UA, LT_WEATHER_URL,
   balticRoadRisk, balticSlowdownMult, fiCorridorBboxes, fiTrafficUrl, filterInFiBboxes,
-  filterInLtBboxes, ltWeatherToSlowdownEvents, parseFiTrafficMessages, parseLtRestrictions,
-  parseLtWeather, weightLimitRisk, type BalticRoadEvent,
+  dimensionLimitRisk, filterInLtBboxes, isDimensionLimitEvent, ltWeatherToSlowdownEvents,
+  parseFiTrafficMessages, parseLtRestrictions, parseLtWeather, weightLimitRisk,
+  type BalticRoadEvent,
 } from './roadBaltic.ts';
 import { buildTrafficIncidentsUrl, parseHereTrafficIncidents } from '../here/trafficIncidents.ts';
 import { HERE_BILLING_DEFAULTS } from '../here/billing.ts';
@@ -3833,8 +3834,10 @@ export async function runRoadLt(deps: JobDeps): Promise<JobResult> {
   for (const e of near) {
     const risk = e.weightLimitT != null
       ? weightLimitRisk('LT', e, null, LT_RESTRICTIONS_URL, LT_ATTRIBUTION)
-      : balticRoadRisk('LT', e, LT_RESTRICTIONS_URL, LT_ATTRIBUTION);
-    /* LD/SVKD i brak wypadków — w detail z parsera. */
+      : isDimensionLimitEvent(e)
+        ? dimensionLimitRisk('LT', e, LT_RESTRICTIONS_URL, LT_ATTRIBUTION)
+        : balticRoadRisk('LT', e, LT_RESTRICTIONS_URL, LT_ATTRIBUTION);
+    /* F7 #727 N2: jedna uwaga o braku wypadków w ryzyku (nie w każdym detail zdarzenia). */
     if (risk.detail && typeof risk.detail === 'object') {
       (risk.detail as Record<string, unknown>).uwaga_wypadki =
         'zrodlo LT nie podaje wypadkow';

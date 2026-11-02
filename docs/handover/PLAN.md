@@ -1251,6 +1251,8 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-152 | Cursor | `fHorizonTo` bierze najkrótszy horyzont ze wszystkich punktów; punkt przybrzeżny skraca okno DMI/`window_to` wszystkim — licz per korytarz albo maksimum ważnych | F7 #725 | BN5 / ferry-weather | w kolejce (z BN6 albo osobno) |
 | DP-155 | Cursor | ETA (`compute_load_eta` / `refresh_load_eta` / `yard_drive_quote`) czyta tylko `SE_E4`/`SE_E22` — wiersz `ROAD_FI` w `corridor_conditions` nie wpływa na ETA (#716 §3.5) | F7 #726 | BN8b / ETA | w kolejce |
 | DP-156 | Cursor | `notify_event_key` zna tylko `ROAD_SE`/`ROAD_PL` — uzupełnić gdy ryzyka drogowe LT/LV/EE/FI dostaną `load_id` | F7 #726 | BN6 / notify | w kolejce |
+| DP-157 | Cursor | road-fi: (a) zwykłe Tietyö bez zamknięcia/objazdu/limitu → LOW; (b) do BN7 filtr numerów dróg korytarza (VT4/E75, VT29/E8, Kehä III 50, Vuosaaren 103 + porty); (c) jednorazowo resolve 146 ROAD_FI poza filtrem (przez job, nie ręcznie) | F7 #727 | BN6 / road-fi | w kolejce (z najbliższą zmianą FI) |
+| DP-158 | Cursor | ROAD_FI tytuły: polska etykieta typu (Tietyö→roboty drogowe, Liikennetiedote→komunikat, painorajoitus→limit masy) w params/title_key; surowy fiński w detail | F7 #727 | BN6 / road-fi | w kolejce (z DP-157) |
 | DP-122 | Cursor | `viking_schedule_imports` (0360) brak w kopii 01.11 01:30 — koordynator #697: **nie wymaga zmian** (0360 po kopii 00:30; kontrola kopii 02.11) | #697 | backup | bez zmian (koord. 01.11) |
 | DP-117 | Cursor | `route-check/index.ts` `loads` `.limit(500)` bez sortu/filtra statusu — przy >500 transportach losowy dobór | F7 #693 r1 | ferry / route-check | w kolejce |
 | DP-118 | Cursor | `store.resolveStaleRisks` — `risk_signals` bez limitu (`max_rows`) → część nieaktualnych ryzyk niezamknięta | F7 #693 r1 | BN3 / ryzyka | w kolejce |
@@ -1381,7 +1383,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 ### #716 · BN6 — drogi LT/LV/EE/FI — W TOKU (`pakiet/bn6-cz2-road-lt` / **0377**; cz.1 SCALONE #726 / **0376**)
 Źródło: #716 (Spawn2018). Spec w treści zgłoszenia (Digitraffic FI, eismoinfo LT, LVC LV, Tark Tee EE; `ROAD_LT/LV/EE/FI`; bufor 2 km; limity masy). Ekrany BN9-c4 — koordynator. **Wybór:** 4 osobne rodzaje (spójne z Ryzyka › Drogi per kraj).
 1. ~~**cz.1 FI + baza**~~ — SCALONE (#726 `0c0cb064` / **0376**): enum `ROAD_LT/LV/EE/FI`; `corridor_conditions`; audience WSZYSCY; job `road-fi` Digitraffic (bboxy korytarza do BN7, resolveStale przy komplecie, SOURCE_DOWN po 3× `fetched_ok=0`); vitest `bn6-road-fi`; F7 r1+r2. DP-155/156 w rejestrze.
-2. **cz.2 LT** — W TOKU (#727): eismoinfo restrictions + weather (bez wypadków w źródle); job `road-lt`; cron **0377**; vitest `bn6-road-lt`; `detail.oryginal` LD/SVKD; status EXPECTED **577**.
+2. **cz.2 LT** — W TOKU (#727): eismoinfo restrictions + weather (bez wypadków w źródle); job `road-lt`; cron **0377**; vitest `bn6-road-lt`; `detail.oryginal` LD/SVKD; status EXPECTED **577**. F7 r1: B1 mokro≠adverse, B2 limity H/W bez slowdown, B3 fixtures real, N1 LOW roboty, N2/N3; DP-157/158.
 3. **cz.3 LV** — LVC DATEX / GeoJSON 44751 + dedup śliskości.
 4. **cz.4 EE** — Tark Tee DATEX (klucz `X-DATEX-API-KEY`).
 
@@ -2516,6 +2518,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 02.11.2026 05:25 | #726 CI db FAIL (risks 11/1 vs 9/0) — BN6 fixture bez title_key; fix + delete | pętla / BN6 |
 | 02.11.2026 05:55 | #726 SCALONE `0c0cb064`; start BN6 cz.2 LT `pakiet/bn6-cz2-road-lt` / **0377** (eismoinfo + cron road-lt) | pętla / BN6 |
 | 02.11.2026 06:25 | #727 db FAIL status 574→577 — cron FI+LT jedna asercja; EXPECTED 577 | pętla / BN6 |
+| 02.11.2026 06:45 | #727 F7 r1: B1/B2/B3/N1–N3 LT + DP-157/158; fixtures real eismoinfo; CI @ ecf8915d zielone przed poprawkami | pętla / F7 #727 |
 | 31.10.2026 — | Decyzja 73: TLLA-HEL ETA−150 min / HELA-TLL ETD+160 min (fixture Cargo; nocny 165 min OK). Decyzja 74: `sailings.source_ref` 0359; Digitraffic `digitraffic:portcall:<id>:<route>`; HTML/RECZNIE/DANE_STARTOWE wygrywają; #685-b RPC zastępuje digitraffic:% w ±3 h | F7 #688 r1–r4 |
 | 31.10.2026 — | F7 #683 nieblokujące (osobna poprawka): Scheduler grudzień + „on 2 January” → rok bieżący, ciche wygaśnięcie; Alert INFO bez ryzyka/historii — świadomie | F7 #683 r7 |
 | 31.10.2026 — | F7 #683 r8 nieblokujące (osobno): Alert poza Schedulerem obok Schedulera; sprzeczne bloki (resume→cofnięcie auto); rok przy długim oknie Schedulera; mutanty M10/M15–M17/M22 świadomie bez testów | F7 #683 r8 |

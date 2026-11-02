@@ -125,5 +125,33 @@
         "transportType": "All"
       }
     ]
+  },
+  {
+    "_id": "bn6-lt-height-only-kaunas",
+    "type": "HAZARD",
+    "subtype": "obstructionType",
+    "creationTime": "2026-09-01T08:00:00Z",
+    "updateTime": "2026-11-01T10:00:00Z",
+    "startTime": "2026-09-01T00:00:00+03:00",
+    "endTime": null,
+    "description": "Wiadukt — limit wysokości.",
+    "shortDescription": "Limit aukstis",
+    "location": {
+      "polyline": "54.920000 23.920000 54.921000 23.921000",
+      "direction": "BOTH_DIRECTIONS",
+      "street": "A1 Kaunas wiadukt"
+    },
+    "source": {
+      "reference": "VIA",
+      "name": "AB \"Via Lietuva\"",
+      "url": "https://www.eismoinfo.lt/"
+    },
+    "restrictions": [
+      {
+        "restrictionType": "heightLimit",
+        "value": 4.2,
+        "transportType": "All"
+      }
+    ]
   }
 ]
