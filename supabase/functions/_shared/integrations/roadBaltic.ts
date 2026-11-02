@@ -2185,6 +2185,7 @@ export function eeDatexFeedUrl(path: string): string {
  * DP-170 (#735) — jedno zapytanie diagnostyczne EE: najmniejsza usługa SRTI
  * (`srti/animalObstacle`), timeout 45 s, `Accept-Encoding: gzip`.
  * Wynik: `ee_probe_api=<kod|klasa>:<ms>:<bajty>` — bez zmiany timeoutów pozostałych usług.
+ * F7 #739 B1: ciało przez `readBalticFeedBody` (limit 5 MB); wywołanie równolegle z pulą usług.
  */
 export const EE_PROBE_API_TIMEOUT_MS = 45_000;
 export const EE_PROBE_API_PATH = 'srti/animalObstacle';
@@ -2214,8 +2215,10 @@ export async function probeEeDatexApi(
     const cl = clRaw != null ? Number(clRaw) : NaN;
     let bytes = Number.isFinite(cl) && cl >= 0 ? cl : -1;
     try {
-      const buf = await res.arrayBuffer();
-      if (bytes < 0) bytes = buf.byteLength;
+      const body = await readBalticFeedBody(res);
+      if (bytes < 0) {
+        bytes = body.ok ? new TextEncoder().encode(body.text).byteLength : 0;
+      }
     } catch {
       if (bytes < 0) bytes = 0;
     }

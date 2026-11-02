@@ -1,4 +1,12 @@
 
+## 2026-11-02 20:30 — #738 SCALONE; DP-170 F7 r1 B1
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie.
+- Scalanie: **#738 SCALONE** `645520c0` / **0381** (F7: gotowe @ `078ceadc`, CI unit/db/visual ✔). Dalej BN9-c5 (koordynator) → cron_fetch=true → BN8.
+- **Krok DP-170 F7 r1 B1** (#739): `probeEeDatexApi` równolegle z pulą (`Promise.allSettled` po feedach); ciało przez `readBalticFeedBody` (5 MB); test fake timers < 75 s + feedDuringProbe. PLAN §4/#718 zaktualizowane.
+- **Dalej:** push → CI → F7. Po F7 DP-170: krok 2 #735 wg wyniku prod.
+- Bez push na main.
+
 ## 2026-11-02 20:05 — DP-170 start (równolegle #738)
 
 - Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. #735 — zakres DP-170.

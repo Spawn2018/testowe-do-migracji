@@ -4,7 +4,7 @@
  */
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   BALTIC_DETOUR_RE,
   BALTIC_FEED_MAX_BYTES,
@@ -479,6 +479,68 @@ describe('BN6 runRoadEe', () => {
     expect(out).toMatch(/^200:\d+:\d+$/);
     const bytes = Number(out.split(':')[2]);
     expect(bytes).toBe(body.length);
+  });
+
+  /* F7 #739 B1 — próba 45 s równolegle z pulą; przy wiszącym API całość < 75 s. */
+  it('F7 #739 B1: wiszące ee_probe_api równolegle z feedami — przebieg < 75 s', async () => {
+    vi.useFakeTimers();
+    try {
+      const store = new MemStore();
+      const pages: Record<string, string | number> = {
+        'https://tarktee.ee/': '<html>ok</html>',
+      };
+      for (const feed of EE_DATEX_FEEDS) {
+        const url = eeDatexFeedUrl(feed.path);
+        if (feed.code === 'RESTRICTIONS') pages[url] = restXml;
+        else if (feed.code === 'MEASUREMENT_SITES') pages[url] = sitesXml;
+        else if (feed.code === 'WEATHER') pages[url] = weatherXml;
+        else if (feed.code === 'SRTI_ACCIDENT' || feed.code === 'SRTI_BLOCKAGE') {
+          pages[url] = JSON.stringify(srtiJson);
+        } else {
+          pages[url] = '<?xml version="1.0"?><d2LogicalModel><payloadPublication></payloadPublication></d2LogicalModel>';
+        }
+      }
+      let probeSettled = false;
+      let feedDuringProbe = false;
+      const f = (async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url.includes(EE_PROBE_API_PATH)) {
+          await new Promise<never>((_, reject) => {
+            const abort = () => {
+              probeSettled = true;
+              reject(new DOMException('The operation was aborted.', 'AbortError'));
+            };
+            if (init?.signal?.aborted) abort();
+            else init?.signal?.addEventListener('abort', abort, { once: true });
+          });
+        }
+        if (!probeSettled && url.includes('/api/v1/datex/') && !url.includes(EE_PROBE_API_PATH)) {
+          feedDuringProbe = true;
+        }
+        const body = pages[url];
+        if (body === undefined) return new Response('missing', { status: 404 });
+        if (typeof body === 'number') return new Response('err', { status: body });
+        return new Response(body, {
+          status: 200,
+          headers: { 'Content-Type': url.includes('srti') ? 'application/json' : 'application/xml' },
+        });
+      }) as typeof fetch;
+      const started = Date.now();
+      const runP = runRoadEe({
+        store,
+        fetch: f,
+        env: { TARKTEE_DATEX_TOKEN: 'test-ee-key' },
+        now: () => new Date(Date.now()),
+      });
+      await vi.advanceTimersByTimeAsync(74_000);
+      const res = await runP;
+      expect(Date.now() - started).toBeLessThan(75_000);
+      expect(feedDuringProbe).toBe(true);
+      expect(res.observations?.ee_probe_api).toMatch(/^timeout:\d+:0$/);
+      expect(Number(res.observations?.fetched_ok)).toBeGreaterThan(0);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('F7 #736 B2: EE klucz z \\n → trim, key_trimmed=1, wartość poza obs', async () => {

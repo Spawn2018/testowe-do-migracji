@@ -4385,9 +4385,8 @@ export async function runRoadEe(deps: JobDeps): Promise<JobResult> {
 
   /* F7 #736 B1 — sonda tarktee.ee raz przed zbiorami (bez klucza). */
   const probeEe = await probeBalticHost(deps.fetch, 'tarktee.ee', EE_UA);
-  /* DP-170 — jedno zapytanie API 45 s (animalObstacle + gzip); reszta usług bez zmian. */
-  const probeApi = await probeEeDatexApi(deps.fetch, apiKey, EE_UA);
-  const diag = eeDiagObservations(keyMeta, { probe: probeEe, probeApi });
+  /* F7 #739 B1 — próba API 45 s równolegle z pulą usług (nie przed), by ≤ ~65 s + kilka. */
+  const probeApiP = probeEeDatexApi(deps.fetch, apiKey, EE_UA);
 
   const expectedFetches = EE_DATEX_FEEDS.length;
   const started = Date.now();
@@ -4413,6 +4412,12 @@ export async function runRoadEe(deps: JobDeps): Promise<JobResult> {
   const rest = await mapPoolLimit(otherFeeds, EE_FEED_CONCURRENCY, (feed) =>
     fetchEeFeedPart(deps, feed, apiKey, started, sites, parseStats));
   parts.push(...rest);
+
+  const probeSettled = await Promise.allSettled([probeApiP]);
+  const probeApi = probeSettled[0]!.status === 'fulfilled'
+    ? probeSettled[0].value
+    : `error:0:0`;
+  const diag = eeDiagObservations(keyMeta, { probe: probeEe, probeApi });
 
   let fetchedOk = 0;
   const allEvents: BalticRoadEvent[] = [];
