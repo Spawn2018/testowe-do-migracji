@@ -1,4 +1,12 @@
 
+## 2026-11-02 18:05 — #737 SCALONE; start BN7 (#718) cz.1
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. #735 otwarte (krok 2 po prod).
+- Scalanie: **#737 SCALONE** `4cee7bad` (F7: gotowe @ `79ba8978`, CI unit/db/visual ✔). deploy-main po merge. DP-168 DONE.
+- **Krok BN7 cz.1:** migracja **0381** — `via_points`/`min_km`/`max_km`/`cron_fetch`/`spec=dict`; korytarze OSM `PL_EE_E67`/`FI_E75`/`SE_E4_STO`/`SE_E18_KPS`; ETA bałtyckie + `PORT_CHECKIN_*` (82-C); FK `ferry_routes.road_corridor_*`; `map_display_state.route_legs`; `length_m`/`duration_s`. Edge: `roadSpecFromDict`, via+`exclude[countries]=RUS,BLR`, `resolveLegs`×`cron_fetch` (DP-55). Front: `loadRoadLegs`. **`cron_fetch=false`**. Vitest `bn7-road-dict`.
+- **Dalej:** push → CI → F7. Po F7: cron_fetch=true dopiero po BN9-c5 (koordynator); potem BN8 (#720).
+- Bez push na main.
+
 ## 2026-11-02 17:20 — #736 SCALONE; start DP-168
 
 - Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. #735 otwarte (krok 2 po prod).

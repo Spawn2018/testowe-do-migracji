@@ -783,7 +783,7 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
     async listHereRoadLegs() {
       const r = await sb
         .from('here_road_legs')
-        .select('leg,origin_lat,origin_lng,dest_lat,dest_lng,spec,summary,corridor_code,browser_fetch,map_group')
+        .select('leg,origin_lat,origin_lng,dest_lat,dest_lng,spec,summary,corridor_code,browser_fetch,map_group,via_points,min_km,max_km,cron_fetch')
         .eq('active', true)
         .order('sort_order');
       if (r.error) throw new Error(`here_road_legs: ${r.error.message}`);
@@ -792,9 +792,17 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
       if (rows.length === 0) return [...ROAD_LEGS];
       return rows.map((row) => legDefFromRow(row));
     },
-    async storeHereRoad(leg: string, points: unknown, summary: string, nowIso?: string) {
+    async storeHereRoad(
+      leg: string,
+      points: unknown,
+      summary: string,
+      nowIso?: string,
+      meta?: { lengthM?: number; durationS?: number },
+    ) {
       const args: Record<string, unknown> = { p_leg: leg, p_points: points, p_summary: summary };
       if (nowIso) args.p_now = nowIso;
+      if (meta?.lengthM != null) args.p_length_m = meta.lengthM;
+      if (meta?.durationS != null) args.p_duration_s = meta.durationS;
       must(await sb.rpc('here_store_road', args), 'here_store_road');
     },
     async hereCorridorBundle(code: string) {
