@@ -385,7 +385,9 @@ test.describe('BN9-c4 visual — drogi LT/LV/EE/FI (HHL pl)', () => {
 /* BN9-c5 (#718 BN7 §4) — linie tras BN7. Demo: trasa przykładowa Tallinn – Helsinki z adresu (`demoRoute`, tylko demo;
    dane demo bez zmian) i przykładowe linie dróg BN7 (`roadLinesDemo.ts`, „przykład”). Karta transportu (SG-11, przed oknem
    śledzenia — cała trasa w kadrze): tylko legi PL-TLL i FI-HEL, tor TLL-HEL, dopisek „Trasa orientacyjna…”, komputer 1440
-   i telefon 390. Mapa (1440): rdzeń Polska–Szwecja i korytarz aktywnego transportu bałtyckiego (SG-17), kadr z Bałtykiem. */
+   i telefon 390. Mapa (1440): rdzeń Polska–Szwecja i korytarz aktywnego transportu bałtyckiego (SG-17), kadr z Bałtykiem.
+   Decyzja 88 (02.11 22:32): Mapa i Kokpit pokazują całą sieć (wszystkie legi BN7 i tory bałtyckie) zawsze — także bez
+   `demoRoute`; parametr zostaje do migawek karty. */
 const BN7_DEMO_ROUTE = 'demoRoute=SG-11:TLL-HEL,SG-17:TLL-HEL'
 test.describe('BN9-c5 visual — karta transportu Tallinn – Helsinki (HHL pl)', () => {
   test.describe.configure({ mode: 'serial' })
