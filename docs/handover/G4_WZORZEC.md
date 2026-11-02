@@ -317,3 +317,10 @@ Przyczyna rozbitego układu z BN9-c3/BN9-c4: test ukrywał `nav.tower-nav` takż
 - `pogoda-przeprawy-hhl-pl-1440-light.png` (318×910 → 476×662): cała sekcja w prawej kolumnie, pięć przepraw, atrybucja, NAVTEX i „Mapa lodowa FMI” bez ucięć i bez nachodzącego tekstu.
 - `drogi-baltyckie-hhl-pl-1440-light.png` (nowa, 476×978): obszar „Drogi LT” – „Drogi FI” w prawej kolumnie, sekcje rozwinięte; limity masy LT i FI z dopiskiem „Sprawdź zezwolenie / trasę.”, EE „Brak utrudnień na korytarzu.”, atrybucja Fintraffic.
 Wzorca `shots-baseline` nie zmieniano.
+
+## BN9-c4b (02.11.2026) — Drogi LT / LV / EE / FI otwarte od razu jak Drogi SE (decyzja 89): odświeżone 3 migawki
+Z workflowu `visual` (`update=true`, gałąź `wyglad/BN9-c4b`, przebieg 41539029574, commit `dfbb342`, artefakt `visual-artifacts`). Pozostałe 21 migawek w artefakcie są identyczne co do bajtu (Kokpit, pogoda na przeprawach, Drogi PL i SE bez zmian).
+- `drogi-baltyckie-hhl-pl-1440-light.png` (476×978 → 476×893): sekcje otwarte bez klikania — bez linków „Zwiń” pod nagłówkami; FI w kolejności wpływ, potem najświeższy początek (Wypadek E75 Kemi, Kelirikko 4 Oulu z limitem 12 t, Roboty E75 Vuosaari – Kerava); opis „ograniczenie prędkości 50 km/h” z liczbą przy jednostce. LT z limitem 40 t i dopiskiem o braku wypadków, EE „Brak utrudnień na korytarzu.”, atrybucja Fintraffic.
+- `drogi-baltyckie-hhl-pl-390-light.png` (372×1078 → 372×922): te same sekcje bez „Zwiń”, bez opisów (telefon), tytuły do 2 linii, bez poziomego przewijania.
+- `ryzyka-ksh-pl-1440-light.png` (1230×1635 → 1230×1987): siatka 2 × 2 „Drogi LT/LV/EE/FI” od razu z wierszami (wcześniej zwinięta z licznikiem), w tym samym kształcie co Drogi SE; promy, Drogi PL/SE i pogoda bez zmian.
+Poprawki w tym kroku: `RoadRow` wiąże liczbę z jednostką spacją nierozdzielającą (test `etap6-ui.spec.ts:219` — „50 km” łamało się przy 1280 dla HHL i SCX); test migawki dróg przewija obszar LT–FI do widoku (bez kliknięć przełączników `main` zostawał na górze i wycinek 1440 kończył się na „Drogi LV”, 476×429). Wzorca `shots-baseline` nie zmieniano.
