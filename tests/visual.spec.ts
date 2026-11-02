@@ -268,11 +268,12 @@ test.describe('BN9-c3 visual — pogoda na przeprawach (HHL pl)', () => {
       await page.evaluate(async () => {
         if (document.fonts?.ready) await document.fonts.ready
       })
+      /* dolny pasek telefonu (E8) przykrywa treść — poza migawką sekcji; wyższe okno, cała sekcja w kadrze */
+      await page.addStyleTag({ content: 'nav.tower-nav{display:none !important}' })
+      await page.setViewportSize({ width, height: width < 769 ? 3400 : 2200 })
       await sec.scrollIntoViewIfNeeded()
       await page.waitForTimeout(300)
       await expect(sec).toHaveScreenshot(file, {
-        /* dolny pasek telefonu (E8) przykrywa treść — poza migawką sekcji (także przyciski paska, które mają własne visibility) */
-        style: 'nav,nav *{visibility:hidden !important}',
         maxDiffPixels: 60,
         threshold: 0.28,
         animations: 'disabled',
