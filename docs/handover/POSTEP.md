@@ -1,4 +1,12 @@
 
+## 2026-11-02 12:35 — BN6 cz.4 EE push (0379)
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. DP-165 (road-lv sieć) wpisane do rejestru — po F7 EE.
+- Scalanie: brak otwartego PR z F7 „gotowe”; #732 już SCALONE `74127a7b`.
+- **Krok:** BN6 cz.4 EE (`pakiet/bn6-cz4-road-ee` / **0379**): Tark Tee DATEX (`X-DATEX-API-KEY`; `TARKTEE_DATEX_TOKEN`/`_PASSWORD`); job `road-ee` + cron; filtr E67/T4/T11 + T1/T8 przy portach + ≤2 km; raise tylko `on`; vitest `bn6-road-ee` **12**; status **583** (+3 audience/corridor/CHECK EE).
+- **Dalej:** CI → F7. Po F7: BN7 (#718); DP-165 osobno.
+- Bez push na main.
+
 ## 2026-11-02 11:30 — #730 SCALONE; start DP-157+158+162
 
 - Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie.

@@ -1,0 +1,99 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<d2LogicalModel xmlns="http://datex2.eu/schema/2/2_0" modelBaseVersion="2"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <payloadPublication>
+    <situation>
+      <!-- Zwykłe roboty T4 / E67 — decyzja 85 → LOW -->
+      <situationRecord id="bn6-ee-rw-parnu" xsi:type="MaintenanceWorks">
+        <validity>
+          <validityTimeSpecification>
+            <overallStartTime>2026-11-02T04:00:00Z</overallStartTime>
+            <overallEndTime>2026-11-03T20:00:00Z</overallEndTime>
+          </validityTimeSpecification>
+        </validity>
+        <groupOfLocations>
+          <pointByCoordinates>
+            <pointCoordinates>
+              <latitude>58.390000</latitude>
+              <longitude>24.500000</longitude>
+            </pointCoordinates>
+          </pointByCoordinates>
+        </groupOfLocations>
+        <probabilityOfOccurrence>certain</probabilityOfOccurrence>
+        <severity>medium</severity>
+        <roadNumber>T4</roadNumber>
+        <generalPublicComment>
+          <comment>
+            <values>
+              <value lang="et">Teetööd T4 Pärnu</value>
+            </values>
+          </comment>
+        </generalPublicComment>
+      </situationRecord>
+      <!-- Zamknięcie z blokadą na Via Baltica → HIGH -->
+      <situationRecord id="bn6-ee-closed-t4" xsi:type="RoadOrCarriagewayOrLaneManagement">
+        <validity>
+          <validityTimeSpecification>
+            <overallStartTime>2026-11-02T06:00:00Z</overallStartTime>
+            <overallEndTime>2026-11-02T18:00:00Z</overallEndTime>
+          </validityTimeSpecification>
+        </validity>
+        <groupOfLocations>
+          <pointByCoordinates>
+            <pointCoordinates>
+              <latitude>58.800000</latitude>
+              <longitude>24.700000</longitude>
+            </pointCoordinates>
+          </pointByCoordinates>
+        </groupOfLocations>
+        <roadOrCarriagewayOrLaneManagementType>roadClosed</roadOrCarriagewayOrLaneManagementType>
+        <severity>high</severity>
+        <roadNumber>E67</roadNumber>
+        <generalPublicComment>
+          <comment><values><value>Tee suletud E67</value></values></comment>
+        </generalPublicComment>
+      </situationRecord>
+      <!-- Limit masy bez liczby w tytule — weightCharacteristic -->
+      <situationRecord id="bn6-ee-weight-t4" xsi:type="NetworkManagement">
+        <validity>
+          <validityTimeSpecification>
+            <overallStartTime>2026-11-02T00:00:00Z</overallStartTime>
+          </validityTimeSpecification>
+        </validity>
+        <groupOfLocations>
+          <pointByCoordinates>
+            <pointCoordinates>
+              <latitude>59.200000</latitude>
+              <longitude>24.700000</longitude>
+            </pointCoordinates>
+          </pointByCoordinates>
+        </groupOfLocations>
+        <maxGrossWeightAllowed>40</maxGrossWeightAllowed>
+        <roadNumber>T4</roadNumber>
+        <generalPublicComment>
+          <comment><values><value>Massipiirang 40 t</value></values></comment>
+        </generalPublicComment>
+      </situationRecord>
+      <!-- Daleko na wschodzie (Narva) — poza bboxem korytarza -->
+      <situationRecord id="bn6-ee-far-east" xsi:type="MaintenanceWorks">
+        <validity>
+          <validityTimeSpecification>
+            <overallStartTime>2026-11-02T04:00:00Z</overallStartTime>
+          </validityTimeSpecification>
+        </validity>
+        <groupOfLocations>
+          <pointByCoordinates>
+            <pointCoordinates>
+              <latitude>59.380000</latitude>
+              <longitude>28.190000</longitude>
+            </pointCoordinates>
+          </pointByCoordinates>
+        </groupOfLocations>
+        <roadNumber>T1</roadNumber>
+        <generalPublicComment>
+          <comment><values><value>Tööd Narvas</value></values></comment>
+        </generalPublicComment>
+      </situationRecord>
+    </situation>
+  </payloadPublication>
+</d2LogicalModel>

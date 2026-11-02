@@ -3,6 +3,7 @@
  * cz.1: Finlandia Digitraffic road (bez klucza, CC BY 4.0 Fintraffic).
  * cz.2: Litwa eismoinfo restrictions + weather (bez klucza; Via Lietuva).
  * cz.3: Łotwa LVC/transportdata.gov.lv — 22 zbiory `LV_NAP_<KOD>_{KEY,URL}` (#589).
+ * cz.4: Estonia Tark Tee DATEX (`X-DATEX-API-KEY`; sekrety TARKTEE_DATEX_* bez zmiany nazw).
  * Do BN7 (geometria trasy): filtr bboxami korytarza (F7 #726 B2); FI bbox w [20,59,32,71].
  * LT: źródło nie podaje wypadków — zapis w detail / corridor note.
  */
@@ -536,6 +537,9 @@ export function extractBalticRoadRef(text: string): string | null {
   if (a) return `A${a[1]}`;
   const e = t.match(/\bE\s*(\d{2,3})\b/i);
   if (e) return `E${e[1]}`;
+  /* EE: T4 (Via Baltica), T1, T11… */
+  const tee = t.match(/\bT\s*(\d{1,2})\b/i);
+  if (tee) return `T${tee[1]}`;
   /* LV drogi regionalne P/V — znany numer → corridorMatch=off (F7 #730 B7). */
   const pv = t.match(/\b([PV])\s*(\d{1,4})\b/i);
   if (pv) return `${pv[1].toUpperCase()}${pv[2]}`;
@@ -682,22 +686,29 @@ function balticCapSeverity(
 
 /**
  * DP-164 + F7 #730 B7/r2: oznacz road + corridorMatch; poza listą / bez numeru
- * obniż severity; LV unknown w ≤ 3 km od CORRIDOR_LV → on; długie zamknięcie
- * z objazdem → MEDIUM. Pogoda/śliskość: tylko ≤ 3 km od korytarza (r2 decyzja).
+ * obniż severity; LV unknown w ≤ 3 km od CORRIDOR_LV → on; EE unknown ≤ 2 km
+ * lub ≤ 2 km od portu → on; długie zamknięcie z objazdem → MEDIUM.
+ * Pogoda/śliskość: tylko ≤ 3 km (LT/LV) / ≤ 2 km (EE) od korytarza.
  */
 export function applyBalticCorridorRoadFilter(
-  country: 'LT' | 'LV',
+  country: 'LT' | 'LV' | 'EE',
   events: BalticRoadEvent[],
   nowMs: number = Date.now(),
 ): BalticRoadEvent[] {
-  const densified = densifyCorridor(country === 'LV' ? CORRIDOR_LV : CORRIDOR_LT);
-  const corridor = country === 'LV' ? CORRIDOR_LV : CORRIDOR_LT;
+  const corridor = country === 'EE'
+    ? CORRIDOR_EE
+    : country === 'LV'
+      ? CORRIDOR_LV
+      : CORRIDOR_LT;
+  const densified = densifyCorridor(corridor);
+  const wxKm = country === 'EE' ? 2 : 3;
   return events.map((e) => {
     const capped = balticCapLongDetourClosure(e, nowMs);
-    const weatherLike = capped.kind === 'weather' || balticIsWeatherSlowEvent(capped);
+    const weatherLike = capped.kind === 'weather' || balticIsWeatherSlowEvent(capped)
+      || String(capped.kind ?? '').startsWith('EE_WEATHER');
     if (weatherLike) {
       const nearWx = capped.lat != null && capped.lon != null
-        && minDistToCorridorKm(capped.lat, capped.lon, corridor, densified) <= 3;
+        && minDistToCorridorKm(capped.lat, capped.lon, corridor, densified) <= wxKm;
       return {
         ...capped,
         corridorMatch: (nearWx ? 'on' : 'off') as BalticCorridorRoadMatch,
@@ -709,7 +720,9 @@ export function applyBalticCorridorRoadFilter(
       ?? extractBalticRoadRefPreferStreet(null, capped.title, capped.detail);
     let corridorMatch: BalticCorridorRoadMatch = country === 'LT'
       ? ltRoadOnCorridor(road, capped)
-      : lvRoadOnCorridor(road);
+      : country === 'LV'
+        ? lvRoadOnCorridor(road)
+        : eeRoadOnCorridor(road, capped);
     /* F7 #730 B7: bez numeru, ale ≤ 3 km od polilinii LV → on. */
     if (
       country === 'LV'
@@ -717,6 +730,19 @@ export function applyBalticCorridorRoadFilter(
       && capped.lat != null
       && capped.lon != null
       && minDistToCorridorKm(capped.lat, capped.lon, CORRIDOR_LV, densified) <= 3
+    ) {
+      corridorMatch = 'on';
+    }
+    /* EE: bez numeru ≤ 2 km od Via Baltica / portów → on (#716 bufor 2 km). */
+    if (
+      country === 'EE'
+      && corridorMatch === 'unknown'
+      && capped.lat != null
+      && capped.lon != null
+      && (
+        minDistToCorridorKm(capped.lat, capped.lon, CORRIDOR_EE, densified) <= 2
+        || nearEePortTerminal(capped.lat, capped.lon)
+      )
     ) {
       corridorMatch = 'on';
     }
@@ -1835,4 +1861,473 @@ export function lvWeatherToSlowdownEvents(events: BalticRoadEvent[]): BalticRoad
   return events.filter(
     (e) => lvIsWeatherCode(String(e.kind ?? '')) && e.severity === 'HIGH',
   );
+}
+
+/* ---------- Estonia — Tark Tee DATEX (#716 cz.4) ---------- */
+
+/** Via Baltica LV→EE: Ikla → Pärnu → Tallinn → Muuga / Paldiski. */
+export const CORRIDOR_EE: LatLon[] = [
+  [57.87, 24.36], // Ikla / Ainaži (granica LV/EE)
+  [58.39, 24.50], // Pärnu
+  [58.80, 24.70], // Märjamaa / T4
+  [59.20, 24.70], // Tallinn południe (T4/T11)
+  [59.44, 24.75], // Tallinn Vanasadam
+  [59.50, 24.96], // Muuga
+  [59.35, 24.06], // Paldiski
+];
+
+/** Terminale portowe — zdarzenie ≤ 2 km → corridorMatch=on niezależnie od numeru. */
+export const EE_PORT_TERMINALS: LatLon[] = [
+  [59.444, 24.768], // Tallinn Vanasadam / Old City Harbour
+  [59.500, 24.958], // Muuga
+  [59.352, 24.058], // Paldiski
+];
+
+export const EE_ATTRIBUTION = 'Transpordiamet / Tark Tee (DATEX II)';
+export const EE_UA = 'WatchTower/BN6 (log-mar.pl; road-ee; +48 kontakt HHL)';
+/** Nagłówek z dokumentacji Tark Tee — bez zmiany nazw sekretów (#716). */
+export const EE_DATEX_KEY_HEADER = 'X-DATEX-API-KEY';
+export const EE_SOURCE_REF = 'https://tarktee.ee/';
+export const EE_DATEX_BASE = 'https://tarktee.ee/api/v1/datex';
+
+/**
+ * Kanały DATEX 2.3 + SRTI 3.6 (#716).
+ * Śliskość/widoczność SRTI — w UI „niedostępne”; nie pobieramy temporarySlipperyRoad.
+ */
+export const EE_DATEX_FEEDS = [
+  { code: 'RESTRICTIONS', path: 'restrictions', format: 'xml' as const },
+  { code: 'SAFETY', path: 'safetyData', format: 'xml' as const },
+  { code: 'WEATHER', path: 'weatherData', format: 'xml' as const },
+  { code: 'SRTI_ROADWORKS', path: 'srti/shortTermRoadWorks', format: 'json' as const },
+  { code: 'SRTI_ACCIDENT', path: 'srti/unprotectedAccident', format: 'json' as const },
+  { code: 'SRTI_BLOCKAGE', path: 'srti/unmanagedBlockage', format: 'json' as const },
+  { code: 'SRTI_ANIMAL', path: 'srti/animalObstacle', format: 'json' as const },
+] as const;
+
+export type EeDatexFeedCode = (typeof EE_DATEX_FEEDS)[number]['code'];
+
+export function eeDatexFeedUrl(path: string): string {
+  return `${EE_DATEX_BASE}/${path.replace(/^\//, '')}`;
+}
+
+/**
+ * Klucz API: TARKTEE_DATEX_TOKEN, potem PASSWORD (gdy klucz leży w parze USER/PASSWORD).
+ * Nazw sekretów nie zmieniamy (#716).
+ */
+export function eeDatexApiKey(env: Record<string, string | undefined>): string {
+  return (env.TARKTEE_DATEX_TOKEN ?? env.TARKTEE_DATEX_PASSWORD ?? '').trim();
+}
+
+export function nearEePortTerminal(
+  lat: number,
+  lon: number,
+  maxKm = 2,
+): boolean {
+  for (const p of EE_PORT_TERMINALS) {
+    if (haversineKm([lat, lon], p) <= maxKm) return true;
+  }
+  return false;
+}
+
+/** EE: E67/T4 (Via Baltica) + T11 (obwodnica) + T1 przy Muuga; T8 przy Paldiski. */
+export function eeRoadOnCorridor(
+  road: string | null | undefined,
+  e: Pick<BalticRoadEvent, 'lat' | 'lon'>,
+): BalticCorridorRoadMatch {
+  if (road == null || road === '') return 'unknown';
+  const r = road.toUpperCase().replace(/\s+/g, '');
+  if (r === 'E67' || r === 'T4' || r === 'T11') return 'on';
+  if (r === 'T1') {
+    /* Muuga / Tallinn wschód */
+    if (
+      e.lat != null && e.lon != null
+      && e.lat >= 59.35 && e.lat <= 59.55
+      && e.lon >= 24.70 && e.lon <= 25.20
+    ) {
+      return 'on';
+    }
+    return 'off';
+  }
+  if (r === 'T8') {
+    /* Paldiski */
+    if (
+      e.lat != null && e.lon != null
+      && e.lat >= 59.25 && e.lat <= 59.45
+      && e.lon >= 23.90 && e.lon <= 24.30
+    ) {
+      return 'on';
+    }
+    return 'off';
+  }
+  return 'off';
+}
+
+export function eeCorridorBboxes(): FiBbox[] {
+  const pad = 0.30;
+  const boxes: FiBbox[] = [];
+  for (let i = 0; i + 1 < CORRIDOR_EE.length; i++) {
+    const [lat1, lon1] = CORRIDOR_EE[i]!;
+    const [lat2, lon2] = CORRIDOR_EE[i + 1]!;
+    boxes.push({
+      xMin: Math.min(lon1, lon2) - pad,
+      xMax: Math.max(lon1, lon2) + pad,
+      yMin: Math.min(lat1, lat2) - pad,
+      yMax: Math.max(lat1, lat2) + pad,
+    });
+  }
+  return boxes;
+}
+
+export function eventInEeBboxes(
+  e: Pick<BalticRoadEvent, 'lat' | 'lon'>,
+  boxes: FiBbox[] = eeCorridorBboxes(),
+): boolean {
+  return eventInFiBboxes(e, boxes);
+}
+
+export function filterInEeBboxes(
+  events: BalticRoadEvent[],
+  boxes: FiBbox[] = eeCorridorBboxes(),
+): BalticRoadEvent[] {
+  return events.filter((e) => eventInEeBboxes(e, boxes));
+}
+
+/** Normalizacja lat/lon EE (~57.5–59.8 N, 21.8–28.2 E). */
+export function eeNormalizeLatLon(a: number, b: number): {
+  lat: number; lon: number; swapped: boolean;
+} {
+  const inEe = (lat: number, lon: number) =>
+    lat >= 57.4 && lat <= 59.9 && lon >= 21.5 && lon <= 28.5;
+  if (inEe(a, b)) return { lat: a, lon: b, swapped: false };
+  if (inEe(b, a)) return { lat: b, lon: a, swapped: true };
+  return { lat: a, lon: b, swapped: false };
+}
+
+export function eeCoordsFromRecord(rec: string): {
+  lat: number; lon: number; swapped: number;
+} | null {
+  const lat = Number(lvTag(rec, 'latitude'));
+  const lon = Number(lvTag(rec, 'longitude'));
+  if (Number.isFinite(lat) && Number.isFinite(lon)) {
+    const norm = eeNormalizeLatLon(lat, lon);
+    return { lat: norm.lat, lon: norm.lon, swapped: norm.swapped ? 1 : 0 };
+  }
+  const posRaw = rec.match(/<(?:\w+:)?posList\b[^>]*>([^<]*)<\/(?:\w+:)?posList>/i)?.[1]
+    ?? rec.match(/<(?:\w+:)?pos\b[^>]*>([^<]*)<\/(?:\w+:)?pos>/i)?.[1];
+  if (!posRaw) return null;
+  const nums = posRaw.trim().split(/[\s,]+/).map(Number).filter((n) => Number.isFinite(n));
+  if (nums.length < 2) return null;
+  let sumLat = 0;
+  let sumLon = 0;
+  let n = 0;
+  let swapped = 0;
+  for (let i = 0; i + 1 < nums.length; i += 2) {
+    const norm = eeNormalizeLatLon(nums[i]!, nums[i + 1]!);
+    if (norm.swapped) swapped++;
+    sumLat += norm.lat;
+    sumLon += norm.lon;
+    n++;
+  }
+  return n ? { lat: sumLat / n, lon: sumLon / n, swapped } : null;
+}
+
+const EE_TYPE_PL: Record<string, string> = {
+  ...LV_TYPE_PL,
+  MaintenanceWorks: 'roboty',
+  Roadworks: 'roboty',
+  ShortTermRoadWorks: 'roboty krótkoterminowe',
+  UnprotectedAccident: 'wypadek',
+  UnmanagedBlockage: 'blokada',
+  AnimalPresenceOnRoad: 'zwierzę na drodze',
+  AnimalObstacle: 'zwierzę na drodze',
+};
+
+function eeTypeLabel(type: string): string {
+  const bare = type.replace(/^.*:/, '');
+  return EE_TYPE_PL[bare] ?? 'utrudnienie';
+}
+
+function eeParseWeightLimitT(rec: string): number | null {
+  const raw = lvTag(rec, 'maxGrossWeightAllowed')
+    ?? lvTag(rec, 'grossVehicleWeight')
+    ?? rec.match(/<(?:\w+:)?weightCharacteristic\b[\s\S]*?<(?:\w+:)?comparisonOp[^>]*>[\s\S]*?<(?:\w+:)?vehicleWeight\b[^>]*>([^<]+)</i)?.[1]
+    ?? rec.match(/weight[^>]{0,40}>([\d.]+)\s*(?:t|ton)/i)?.[1];
+  if (raw == null || raw === '') return null;
+  const n = Number(String(raw).replace(/[^\d.]/g, ''));
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+function eeParseHeightLimitM(rec: string): number | null {
+  const raw = lvTag(rec, 'heightCharacteristic')
+    ?? rec.match(/<(?:\w+:)?heightCharacteristic\b[\s\S]*?<(?:\w+:)?vehicleHeight\b[^>]*>([^<]+)</i)?.[1]
+    ?? rec.match(/height[^>]{0,40}>([\d.]+)\s*m/i)?.[1];
+  if (raw == null || raw === '') return null;
+  const n = Number(String(raw).replace(/[^\d.]/g, ''));
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+function eeParseWidthLimitM(rec: string): number | null {
+  const raw = rec.match(/<(?:\w+:)?widthCharacteristic\b[\s\S]*?<(?:\w+:)?vehicleWidth\b[^>]*>([^<]+)</i)?.[1]
+    ?? rec.match(/width[^>]{0,40}>([\d.]+)\s*m/i)?.[1];
+  if (raw == null || raw === '') return null;
+  const n = Number(String(raw).replace(/[^\d.]/g, ''));
+  return Number.isFinite(n) && n > 0 ? n : null;
+}
+
+/**
+ * Decyzja 85 jak LV: zwykłe roboty → LOW; HIGH tylko zamknięcie / blokada / wypadek z blokadą;
+ * limit masy bez liczby → MEDIUM (caller: weightLimitRisk).
+ */
+export function eeSeverityForRecord(
+  code: EeDatexFeedCode | string,
+  recOrText: string,
+  opts: {
+    signals?: ReturnType<typeof lvRecordSignals>;
+    weightLimitT?: number | null;
+    contentText?: string;
+  } = {},
+): RiskSeverity {
+  const sig = opts.signals ?? lvRecordSignals(recOrText);
+  if (opts.weightLimitT != null) return 'HIGH';
+  if (sig.hasDimLimit && !sig.roadClosed && !sig.carriagewayBlocked) return 'MEDIUM';
+  if (code === 'SRTI_ACCIDENT' || /Accident/i.test(recOrText)) {
+    return (sig.roadClosed || sig.carriagewayBlocked) ? 'HIGH' : 'MEDIUM';
+  }
+  if (code === 'SRTI_BLOCKAGE' || sig.roadClosed || sig.carriagewayBlocked) return 'HIGH';
+  if (sig.laneClosures || sig.alternateTraffic || sig.narrowOrContraflow || sig.hasDetour) {
+    return 'MEDIUM';
+  }
+  if (code === 'WEATHER' || code === 'EE_WEATHER') return 'MEDIUM';
+  if (code === 'SRTI_ANIMAL') return 'MEDIUM';
+  if (sig.speedLimitOnly) return 'LOW';
+  /* Zwykłe roboty / restrictions bez zamknięcia */
+  if (
+    code === 'RESTRICTIONS'
+    || code === 'SRTI_ROADWORKS'
+    || code === 'SAFETY'
+    || /MaintenanceWorks|Roadworks|ConstructionWorks|ShortTermRoadWorks/i.test(recOrText)
+  ) {
+    return 'LOW';
+  }
+  return 'LOW';
+}
+
+export type EeParseStats = { parsed: number; skipped: number; swapped: number };
+
+/** DATEX II 2.3 XML (restrictions / safety / weather). */
+export function parseEeDatexXml(
+  xml: string,
+  code: EeDatexFeedCode,
+  stats?: EeParseStats,
+): BalticRoadEvent[] {
+  if (!xml || typeof xml !== 'string') return [];
+  const out: BalticRoadEvent[] = [];
+  const recs = xml.split(/<(?:\w+:)?situationRecord\b/i).slice(1);
+  let skipped = 0;
+  let swapped = 0;
+  for (const raw of recs) {
+    const rec = raw.split(/<\/(?:\w+:)?situationRecord>/i)[0] ?? '';
+    const attr = rec.slice(0, Math.max(0, rec.indexOf('>')));
+    const idRaw = attr.match(/\bid="([^"]+)"/i)?.[1]
+      ?? rec.match(/<(?:\w+:)?id(?:Reference)?\b[^>]*>([^<]+)</i)?.[1]
+      ?? '';
+    const id = String(idRaw).trim();
+    if (!id) { skipped++; continue; }
+    const type = attr.match(/xsi:type="(?:\w+:)?(\w+)"/i)?.[1]
+      ?? attr.match(/type="(?:\w+:)?(\w+)"/i)?.[1]
+      ?? code;
+    const coords = eeCoordsFromRecord(rec);
+    if (!coords) { skipped++; continue; }
+    const { lat, lon } = coords;
+    swapped += coords.swapped;
+    const comment = lvPublicComment(rec) || eeTypeLabel(String(type));
+    const signals = lvRecordSignals(rec);
+    const weightLimitT = eeParseWeightLimitT(rec);
+    const heightLimitM = eeParseHeightLimitM(rec);
+    const widthLimitM = eeParseWidthLimitM(rec);
+    const severity = eeSeverityForRecord(code, rec, {
+      signals, weightLimitT, contentText: comment,
+    });
+    const roadRaw = lvTag(rec, 'roadNumber');
+    const road = roadRaw
+      ? (extractBalticRoadRef(roadRaw) ?? roadRaw.trim())
+      : extractBalticRoadRefPreferStreet(null, comment);
+    const label = eeTypeLabel(String(type));
+    const kind = code === 'WEATHER' ? 'EE_WEATHER' : code;
+    out.push({
+      id,
+      title: road ? `${label} · ${road}` : label,
+      detail: comment,
+      severity,
+      lat,
+      lon,
+      kind,
+      start: lvTag(rec, 'overallStartTime') ?? null,
+      end: lvTag(rec, 'overallEndTime') ?? null,
+      road,
+      hasDetour: signals.hasDetour,
+      roadClosed: signals.roadClosed || signals.carriagewayBlocked,
+      weightLimitT,
+      heightLimitM,
+      widthLimitM,
+    });
+  }
+  if (stats) {
+    stats.parsed += out.length;
+    stats.skipped += skipped;
+    stats.swapped += swapped;
+  }
+  return out;
+}
+
+/** SRTI 3.6 JSON (domyślny format Tark Tee). */
+export function parseEeSrtiJson(
+  json: unknown,
+  code: EeDatexFeedCode,
+  stats?: EeParseStats,
+): BalticRoadEvent[] {
+  const bag: unknown[] = [];
+  const walk = (node: unknown): void => {
+    if (!node) return;
+    if (Array.isArray(node)) {
+      for (const x of node) walk(x);
+      return;
+    }
+    if (typeof node !== 'object') return;
+    const o = node as Record<string, unknown>;
+    const nested = o.situationRecord ?? o.SituationRecord ?? o.situations ?? o.payload;
+    if (nested != null && nested !== o) {
+      walk(nested);
+      return;
+    }
+    if (
+      (typeof o.id === 'string' || typeof o.situationRecordId === 'string')
+      && (o.latitude != null || o.pointCoordinates != null
+        || o.groupOfLocations != null || o.locationReference != null
+        || o.Latitude != null || o.geometry != null)
+    ) {
+      bag.push(node);
+      return;
+    }
+    for (const v of Object.values(o)) {
+      if (v && typeof v === 'object') walk(v);
+    }
+  };
+  walk(json);
+
+  const out: BalticRoadEvent[] = [];
+  let skipped = 0;
+  let swapped = 0;
+  for (const raw of bag) {
+    if (!raw || typeof raw !== 'object') continue;
+    const o = raw as Record<string, unknown>;
+    const rec = (o.situationRecord ?? o.SituationRecord ?? o) as Record<string, unknown>;
+    const id = String(rec.id ?? rec.situationRecordId ?? o.id ?? '').trim();
+    if (!id) { skipped++; continue; }
+    let lat: number | null = null;
+    let lon: number | null = null;
+    let pairSwapped = 0;
+    const latDirect = Number(rec.latitude ?? rec.Latitude);
+    const lonDirect = Number(rec.longitude ?? rec.Longitude);
+    if (Number.isFinite(latDirect) && Number.isFinite(lonDirect)) {
+      const norm = eeNormalizeLatLon(latDirect, lonDirect);
+      lat = norm.lat;
+      lon = norm.lon;
+      if (norm.swapped) pairSwapped = 1;
+    } else {
+      const pc = rec.pointCoordinates ?? rec.PointCoordinates;
+      if (pc && typeof pc === 'object') {
+        const p = pc as { latitude?: unknown; longitude?: unknown };
+        const la = Number(p.latitude);
+        const lo = Number(p.longitude);
+        if (Number.isFinite(la) && Number.isFinite(lo)) {
+          const norm = eeNormalizeLatLon(la, lo);
+          lat = norm.lat;
+          lon = norm.lon;
+          if (norm.swapped) pairSwapped = 1;
+        }
+      }
+      if (lat == null) {
+        const blob = JSON.stringify(rec.locationReference ?? rec.groupOfLocations ?? rec.geometry ?? {});
+        const pos = blob.match(/"posList"\s*:\s*"([^"]+)"/i)?.[1]
+          ?? blob.match(/"pos"\s*:\s*"([^"]+)"/i)?.[1]
+          ?? blob.match(/"coordinates"\s*:\s*\[\s*([-\d.]+)\s*,\s*([-\d.]+)/)?.slice(1).join(' ');
+        if (pos) {
+          const nums = String(pos).trim().split(/[\s,]+/).map(Number).filter((n) => Number.isFinite(n));
+          if (nums.length >= 2) {
+            /* GeoJSON często [lon, lat] */
+            const asLonLat = eeNormalizeLatLon(nums[1]!, nums[0]!);
+            const asLatLon = eeNormalizeLatLon(nums[0]!, nums[1]!);
+            const pick = asLatLon.swapped && !asLonLat.swapped ? asLonLat : asLatLon;
+            lat = pick.lat;
+            lon = pick.lon;
+            if (pick.swapped) pairSwapped = 1;
+          }
+        }
+      }
+    }
+    if (lat == null || lon == null) { skipped++; continue; }
+    swapped += pairSwapped;
+    const type = String(rec.type ?? rec['@type'] ?? rec.situationRecordType ?? code);
+    let comment = '';
+    const gpc = rec.generalPublicComment ?? rec.GeneralPublicComment ?? rec.comment ?? rec.description;
+    if (typeof gpc === 'string') comment = gpc;
+    else if (gpc && typeof gpc === 'object') {
+      comment = JSON.stringify(gpc).match(/"value"\s*:\s*"([^"]*)"/)?.[1] ?? '';
+    }
+    comment = decodeXmlEntities(comment || eeTypeLabel(type));
+    const signals = lvRecordSignals(JSON.stringify(rec));
+    const severity = eeSeverityForRecord(code, JSON.stringify(rec), {
+      signals, contentText: comment,
+    });
+    const roadRaw = rec.roadNumber ?? rec.RoadNumber;
+    const road = roadRaw != null && String(roadRaw).trim()
+      ? (extractBalticRoadRef(String(roadRaw)) ?? String(roadRaw).trim())
+      : extractBalticRoadRefPreferStreet(null, comment);
+    const label = eeTypeLabel(type.replace(/^.*:/, ''));
+    out.push({
+      id,
+      title: road ? `${label} · ${road}` : label,
+      detail: comment,
+      severity,
+      lat,
+      lon,
+      kind: code,
+      start: typeof rec.overallStartTime === 'string' ? rec.overallStartTime : null,
+      end: typeof rec.overallEndTime === 'string' ? rec.overallEndTime : null,
+      road,
+      hasDetour: signals.hasDetour,
+      roadClosed: signals.roadClosed || signals.carriagewayBlocked
+        || code === 'SRTI_BLOCKAGE',
+    });
+  }
+  if (stats) {
+    stats.parsed += out.length;
+    stats.skipped += skipped;
+    stats.swapped += swapped;
+  }
+  return out;
+}
+
+export function parseEeFeedBody(
+  text: string,
+  code: EeDatexFeedCode,
+  prefer: 'xml' | 'json',
+  stats?: EeParseStats,
+): { events: BalticRoadEvent[]; format: string } {
+  const t = String(text ?? '').trim();
+  if (!t) return { events: [], format: 'empty' };
+  if (prefer === 'xml' || t.startsWith('<')) {
+    if (!/situationRecord|d2LogicalModel|payloadPublication/i.test(t)) {
+      if (stats) stats.skipped += 1;
+      return { events: [], format: 'unknown' };
+    }
+    return { events: parseEeDatexXml(t, code, stats), format: 'datex-xml' };
+  }
+  try {
+    const json = JSON.parse(t) as unknown;
+    return { events: parseEeSrtiJson(json, code, stats), format: 'datex-json' };
+  } catch {
+    return { events: [], format: 'unknown' };
+  }
 }
