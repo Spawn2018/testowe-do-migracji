@@ -1,4 +1,12 @@
 
+## 2026-11-02 08:50 — #730 F7 r1 push @ `2fd452e3`
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie.
+- Scalanie: brak F7 „gotowe” po r1 (ostatnie „gotowe” sprzed blokerów). CI przed push @ `586bfdbe` unit/db/visual ✔.
+- **Krok:** push F7 r1 #730 @ `2fd452e3` (B1–B7/N1–N8; DP-160/164 DONE). Vitest bn6-road-lt/lv **27**. Unit pre-push 2979.
+- **Dalej:** CI → F7. Po F7: BN6 cz.4 EE. B6 LIVE po sekretach na PROD.
+- Bez push na main.
+
 ## 2026-11-02 08:45 — #728 SCALONE; #730 F7 r1 B1–B7
 
 - Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie.
