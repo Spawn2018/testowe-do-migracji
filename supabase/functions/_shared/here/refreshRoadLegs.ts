@@ -12,6 +12,7 @@ import {
   roadKaaSpecFromVia,
   looseRoadOk,
   roadGeometryOk,
+  roadSpecFromDict,
   kaaDeviationOk,
   type LatLng,
 } from '../map/draw.ts';
@@ -21,8 +22,8 @@ export const ROAD_CRON_REFRESH_MS = 21 * 864e5;
 
 const RETRY_REJECT_MS = 24 * 3600e3;
 
-/** Spec ze słownika `here_road_legs` (DP-23). */
-export type RoadLegSpecKind = 'pl' | 'se' | 'loose' | 'kaa';
+/** Spec ze słownika `here_road_legs` (DP-23 / BN7 dict). */
+export type RoadLegSpecKind = 'pl' | 'se' | 'loose' | 'kaa' | 'dict';
 
 export type RoadLegDef = {
   leg: string;
@@ -34,6 +35,12 @@ export type RoadLegDef = {
   /** false = tylko cron (#667 E BN7); brak = true. */
   browserFetch?: boolean;
   mapGroup?: 'core' | 'bn7';
+  /** BN7: via passThrough [[lat,lng],…]. */
+  viaPoints?: LatLng[];
+  minKm?: number;
+  maxKm?: number;
+  /** BN7 / DP-55 / F7 #738 B2: cron bierze leg tylko gdy true (brak = false). */
+  cronFetch?: boolean;
 };
 
 /**
@@ -41,9 +48,9 @@ export type RoadLegDef = {
  * Produkcja: `here_road_legs` przez `listLegs`.
  */
 export const ROAD_LEGS: readonly RoadLegDef[] = [
-  { leg: 'PL-GDN', origin: '52.07391,17.0246', destination: '54.40372,18.6813', spec: 'pl', summary: 'Trasa drogowa Śrem–Gdańsk', browserFetch: true, mapGroup: 'core' },
-  { leg: 'SE-NYN', origin: '58.90453,17.95621', destination: '65.80539,21.75914', spec: 'se', summary: 'Trasa drogowa Nynäshamn–Boden', browserFetch: true, mapGroup: 'core' },
-  { leg: 'PL-GDY', origin: '52.07391,17.0246', destination: '54.53321,18.54425', spec: 'loose', summary: 'Trasa drogowa Śrem–Gdynia', browserFetch: true, mapGroup: 'core' },
+  { leg: 'PL-GDN', origin: '52.07391,17.0246', destination: '54.40372,18.6813', spec: 'pl', summary: 'Trasa drogowa Śrem–Gdańsk', browserFetch: true, mapGroup: 'core', cronFetch: true },
+  { leg: 'SE-NYN', origin: '58.90453,17.95621', destination: '65.80539,21.75914', spec: 'se', summary: 'Trasa drogowa Nynäshamn–Boden', browserFetch: true, mapGroup: 'core', cronFetch: true },
+  { leg: 'PL-GDY', origin: '52.07391,17.0246', destination: '54.53321,18.54425', spec: 'loose', summary: 'Trasa drogowa Śrem–Gdynia', browserFetch: true, mapGroup: 'core', cronFetch: true },
   {
     leg: 'SE-KAA',
     origin: '56.1646,15.6308',
@@ -53,6 +60,7 @@ export const ROAD_LEGS: readonly RoadLegDef[] = [
     corridorCode: 'SE_E22',
     browserFetch: true,
     mapGroup: 'core',
+    cronFetch: true,
   },
   {
     leg: 'SE-KAA-INLAND',
@@ -63,6 +71,7 @@ export const ROAD_LEGS: readonly RoadLegDef[] = [
     corridorCode: 'SE_KAA_INLAND',
     browserFetch: true,
     mapGroup: 'core',
+    cronFetch: true,
   },
 ] as const;
 
@@ -75,11 +84,19 @@ export type RoadGeomRow = {
   retry_after: string | null;
 };
 
+export type RoadStoreMeta = { lengthM?: number; durationS?: number };
+
 export type RoadRefreshStore = {
   /** #667 E / DP-23: aktywne legi ze słownika; brak → ROAD_LEGS (testy). */
   listLegs?(): Promise<RoadLegDef[]>;
   listGeometry(): Promise<RoadGeomRow[]>;
-  storeRoad(leg: string, points: unknown, summary: string, nowIso?: string): Promise<boolean>;
+  storeRoad(
+    leg: string,
+    points: unknown,
+    summary: string,
+    nowIso?: string,
+    meta?: RoadStoreMeta,
+  ): Promise<boolean>;
   loadCorridor(code: string): Promise<CorridorBundle>;
   /** `null` = brak odczytu wydatku — nie wołaj HERE (F7 #673 r4 uwaga 3). */
   monthSpend(): Promise<number | null>;
@@ -111,7 +128,7 @@ function hasPoints(points: unknown): boolean {
 
 /**
  * #677 F7 r1 B1: pusty słownik → zapas ROAD_LEGS (nie {ok:true, stored:0}).
- * browserOnly = tylko browser_fetch; cron = core + BN7 dopiero po browser_fetch=true.
+ * browserOnly = tylko browser_fetch; cron = cron_fetch (BN7 #718 / DP-55).
  */
 export async function resolveLegs(
   store: RoadRefreshStore,
@@ -120,12 +137,13 @@ export async function resolveLegs(
   const raw = store.listLegs ? await store.listLegs() : [...ROAD_LEGS];
   const all = raw.length > 0 ? raw : [...ROAD_LEGS];
   if (browserOnly) return all.filter((l) => l.browserFetch !== false);
-  return all.filter((l) => l.mapGroup !== 'bn7' || l.browserFetch === true);
+  // F7 #738 B2: tylko jawne cronFetch===true (spójne z legDefFromRow / default false).
+  return all.filter((l) => l.cronFetch === true);
 }
 
-/** SOURCE_DOWN tylko dla legów core (BN7 bez punktów nie blokuje). */
+/** SOURCE_DOWN: core zawsze; BN7 dopiero gdy cron_fetch (po aktywacji — MEDIUM w jobie). */
 function requiredForSourceDown(legs: RoadLegDef[]): RoadLegDef[] {
-  return legs.filter((l) => l.mapGroup !== 'bn7');
+  return legs.filter((l) => l.mapGroup !== 'bn7' || l.cronFetch === true);
 }
 
 export async function refreshRoadLegs(
@@ -200,7 +218,8 @@ export async function refreshRoadLegs(
       continue;
     }
 
-    const viaPts = corridor?.via ?? [];
+    const dictVia = leg.viaPoints ?? [];
+    const viaPts = isKaa ? (corridor?.via ?? []) : dictVia;
     const corridorPts = corridor?.pts ?? [];
     const corridorLabel = corridor?.code ?? '?';
     attempted += 1;
@@ -209,12 +228,16 @@ export async function refreshRoadLegs(
     routeUrl.searchParams.set('transportMode', 'truck');
     routeUrl.searchParams.set('origin', leg.origin);
     routeUrl.searchParams.set('destination', leg.destination);
-    routeUrl.searchParams.set('return', 'polyline');
+    // BN7: summary.length / duration; exclude RUS/BLR (ISO alpha-3, dok. HERE v8).
+    routeUrl.searchParams.set('return', leg.spec === 'dict' ? 'polyline,summary' : 'polyline');
     routeUrl.searchParams.set('apiKey', opts.hereApiKey);
-    if (isKaa) {
+    if (leg.spec === 'dict' || isKaa) {
       for (const v of viaPts) {
         routeUrl.searchParams.append('via', `${v[0]},${v[1]}!passThrough=true`);
       }
+    }
+    if (leg.spec === 'dict') {
+      routeUrl.searchParams.set('exclude[countries]', 'RUS,BLR');
     }
     const res = await opts.fetch(routeUrl, { headers: { 'User-Agent': 'WatchTower/1' } });
     if (!res.ok) {
@@ -225,7 +248,14 @@ export async function refreshRoadLegs(
       continue;
     }
     await store.noteRouting();
-    let body: { routes?: Array<{ sections?: Array<{ polyline?: string }> }> };
+    let body: {
+      routes?: Array<{
+        sections?: Array<{
+          polyline?: string;
+          summary?: { length?: number; duration?: number };
+        }>;
+      }>;
+    };
     try {
       body = await res.json();
     } catch {
@@ -234,6 +264,8 @@ export async function refreshRoadLegs(
     }
     const sections = body?.routes?.[0]?.sections ?? [];
     const line: LatLng[] = [];
+    let lengthM = 0;
+    let durationS = 0;
     for (const section of sections) {
       if (typeof section?.polyline !== 'string') continue;
       try {
@@ -241,13 +273,27 @@ export async function refreshRoadLegs(
       } catch {
         /* zła polilinia */
       }
+      const len = Number(section.summary?.length);
+      const dur = Number(section.summary?.duration);
+      if (Number.isFinite(len)) lengthM += len;
+      if (Number.isFinite(dur)) durationS += dur;
     }
     const geomSpec =
       leg.spec === 'kaa' ? roadKaaSpecFromVia(viaPts)
         : leg.spec === 'pl' ? ROAD_PL
           : leg.spec === 'se' ? ROAD_SE
-            : 'loose';
-    const okGeom = geomSpec === 'loose' ? looseRoadOk(line) : roadGeometryOk(line, geomSpec);
+            : leg.spec === 'dict' ? 'dict'
+              : 'loose';
+    const okGeom =
+      geomSpec === 'dict'
+        ? roadSpecFromDict(line, {
+          via: dictVia,
+          minKm: leg.minKm ?? 0,
+          maxKm: leg.maxKm ?? Number.POSITIVE_INFINITY,
+        })
+        : geomSpec === 'loose'
+          ? looseRoadOk(line)
+          : roadGeometryOk(line, geomSpec);
     // #667 F7 r3 B4: SE_E22 / SE_KAA_INLAND = rzadki korytarz (controlPts + 15 km);
     // SE_KAA_TRACK (gdyby wrócił) = stara reguła śladu GPS.
     const sparse =
@@ -281,7 +327,11 @@ export async function refreshRoadLegs(
       warnings.push(`${leg.leg}: geometria odrzucona`);
       continue;
     }
-    const ok = await store.storeRoad(leg.leg, line, leg.summary);
+    const meta =
+      lengthM > 0 || durationS > 0
+        ? { lengthM: lengthM > 0 ? lengthM : undefined, durationS: durationS > 0 ? durationS : undefined }
+        : undefined;
+    const ok = await store.storeRoad(leg.leg, line, leg.summary, undefined, meta);
     if (!ok) {
       warnings.push(`${leg.leg}: zapis nieudany`);
       continue;

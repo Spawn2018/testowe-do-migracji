@@ -337,6 +337,24 @@ export function looseRoadOk(line: readonly LatLng[]): boolean {
   return line.length >= 200 && maxSegmentKm(line) <= 3 && lineLengthKm(line) >= 80;
 }
 
+/**
+ * BN7 (#718): spec `dict` — ≥200 pkt, krok ≤3 km, długość w [minKm,maxKm],
+ * każdy via ≤ 8 km od linii.
+ */
+export function roadSpecFromDict(
+  line: readonly LatLng[],
+  opts: { via: readonly LatLng[]; minKm: number; maxKm: number },
+): boolean {
+  if (line.length < 200) return false;
+  if (maxSegmentKm(line) > 3) return false;
+  const len = lineLengthKm(line);
+  if (len < opts.minKm || len > opts.maxKm) return false;
+  for (const v of opts.via) {
+    if (nearestKm(line, v[0], v[1]) > 8) return false;
+  }
+  return true;
+}
+
 export function roadGeometryOk(line: readonly LatLng[], spec: RoadSpec): boolean {
   if (line.length < spec.minPoints) return false;
   if (maxSegmentKm(line) > spec.maxSegKm) return false;

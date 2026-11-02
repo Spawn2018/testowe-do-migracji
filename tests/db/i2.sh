@@ -53,12 +53,13 @@ $PSQL -c "insert into vessels (id, name, operator) values ('55555555-0000-0000-0
 
 echo; echo "[I-2d] ETA v1 — uprawnienia i dostęp"
 chk "authenticated/anon: brak EXECUTE compute_load_eta i refresh_load_eta" "$(Q "select has_function_privilege('authenticated','compute_load_eta(uuid,timestamptz)','execute')::text||has_function_privilege('anon','refresh_load_eta(uuid)','execute')::text")" "falsefalse"
-chk "parametry odcinków: 12 (#603 + SE_ROAD_KAA_INLAND; #581 przeprawy; FERRY-STATUS), każdy ze źródłem" "$(Q "select count(*) filter (where length(source)>10) from eta_segment_params")" 12
+# BN7 #718 / 0381: +17 bałtyckie (PL_ROAD_EE, FI_ROAD, SE_ROAD_STO/KPS, PORT_CHECKIN_*, CROSSING_*); było 12
+chk "parametry odcinków: 29 (#603+#581+FERRY+#718 BN7), każdy ze źródłem" "$(Q "select count(*) filter (where length(source)>10) from eta_segment_params")" 29
 err "KSH nie zmienia parametrów odcinków" $KSH "update eta_segment_params set hours=1 where code='SE_ROAD'" "permission denied"
-val "KSH czyta parametry odcinków" $KSH "select count(*) from eta_segment_params" 12
+val "KSH czyta parametry odcinków" $KSH "select count(*) from eta_segment_params" 29
 
 echo; echo "[D-9] parametry odcinków (0054)"
-chk "wartości D-9 + I-15 + FERRY-STATUS + #581/#603: PL 7,5, Gdynia 8,2, Karlskrona 21,5 (+ inland)" "$(Q "select string_agg(code||'='||hours::float||'/'||spread_pct::float, ',' order by code) from eta_segment_params where code<>'GPS_FRESH_MIN'")" "CROSSING_DEFAULT=18/15,CROSSING_GDN_NYN=18/15,CROSSING_GDY_KAA=18/15,PL_ROAD=7.5/25,PL_ROAD_GDY=8.2/25,PORT_CHECKIN=3/0,SE_BREAKS=2/50,SE_DAILY_REST=11/0,SE_ROAD=17/20,SE_ROAD_KAA=21.5/20,SE_ROAD_KAA_INLAND=21.5/20"
+chk "wartości D-9 + I-15 + FERRY-STATUS + #581/#603 + BN7 #718" "$(Q "select string_agg(code||'='||hours::float||'/'||spread_pct::float, ',' order by code) from eta_segment_params where code<>'GPS_FRESH_MIN'")" "CROSSING_DEFAULT=18/15,CROSSING_GDN_NYN=18/15,CROSSING_GDY_KAA=18/15,CROSSING_HELA_TLL=2.5/10,CROSSING_HEL_TLL=2/10,CROSSING_KPS_PLD=9.75/10,CROSSING_MUU_VUO=2.75/10,CROSSING_PLD_KPS=10.5/10,CROSSING_STO_TLL=16.5/10,CROSSING_TLLA_HEL=2.5/10,CROSSING_TLL_HEL=2/10,CROSSING_TLL_STO=17.5/10,CROSSING_VUO_MUU=2.4/10,FI_ROAD=16/20,PL_ROAD=7.5/25,PL_ROAD_EE=22/20,PL_ROAD_GDY=8.2/25,PORT_CHECKIN=3/0,PORT_CHECKIN_MUU=2/0,PORT_CHECKIN_PLD=2/0,PORT_CHECKIN_TLL=2/0,SE_BREAKS=2/50,SE_DAILY_REST=11/0,SE_ROAD=17/20,SE_ROAD_KAA=21.5/20,SE_ROAD_KAA_INLAND=21.5/20,SE_ROAD_KPS=16/20,SE_ROAD_STO=17/20"
 chk "źródła: koordynator D-9 ×3, właściciel I-15 ×2" "$(Q "select count(*) filter (where source='szacunek koordynatora 27.09 — do potwierdzenia z SCX (II-3)')||'/'||count(*) filter (where source like 'właściciel 27.09 (I-15)%') from eta_segment_params")" "3/2"
 
 echo; echo "[I-2d] bez pozycji: ETA pusta, nie z planu"
@@ -1192,9 +1193,10 @@ $PSQL -c "delete from load_agreed_fees where load_id='$LF'; delete from load_cos
 echo; echo "[II-7] korytarz OSM + ETA v2"
 # B8 / L57: + SE_APPROACH_SG03 (krótki odcinek — total_km może być < 100)
 # 27B:C / 0331: + SE_KAA_INLAND (KSH widzi — geometria trasy publicznej, nie sekret)
-chk "corridor_polylines: PL_ROAD + SE_E4 + SE_E22 + SE_APPROACH_SG03 + SE_KAA_INLAND" "$(Q "select string_agg(code||'='||(case when code='SE_APPROACH_SG03' then (total_km>0) else (total_km>100) end)::text, ',' order by code) from corridor_polylines")" "PL_ROAD=true,SE_APPROACH_SG03=true,SE_E22=true,SE_E4=true,SE_KAA_INLAND=true"
+# BN7 #718 / 0381: + PL_EE_E67, FI_E75, SE_E4_STO, SE_E18_KPS (było 5 → 9)
+chk "corridor_polylines: core 5 + BN7 4" "$(Q "select string_agg(code||'='||(case when code='SE_APPROACH_SG03' then (total_km>0) else (total_km>100) end)::text, ',' order by code) from corridor_polylines")" "FI_E75=true,PL_EE_E67=true,PL_ROAD=true,SE_APPROACH_SG03=true,SE_E18_KPS=true,SE_E22=true,SE_E4=true,SE_E4_STO=true,SE_KAA_INLAND=true"
 chk "anon bez SELECT corridor_polylines / EXECUTE corridor_progress" "$(Q "select has_table_privilege('anon','corridor_polylines','select')::text||has_function_privilege('anon','corridor_progress(text,geometry)','execute')::text")" "falsefalse"
-val "KSH czyta korytarz (5 linii)" $KSH "select count(*) from corridor_polylines" 5
+val "KSH czyta korytarz (9 linii)" $KSH "select count(*) from corridor_polylines" 9
 chk "postęp środek SE: remaining_frac w (0,1), off < 30 km" "$(Q "select (remaining_frac between 0.05 and 0.95)::text||'/'||(off_m < 30000)::text from corridor_progress('SE_E4', st_setsrid(st_makepoint(19.5, 63.5),4326))")" "true/true"
 chk "zjazd z trasy: próg w Opcjach OFFROUTE_KM = 2" "$(Q "select value_num::int::text from ops_thresholds where key='OFFROUTE_KM'")/$(Q "select count(*) from app_parameters where key='OFF_CORRIDOR_M'")" "2/0"
 # spowolnienie SE 1.15 liczone z pozycji (AT_PORT_NYNASHAMN = cały odcinek SE), nie z planu

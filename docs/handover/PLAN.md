@@ -1263,7 +1263,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-167 | Cursor | `raise_integration_risk` przy otwartym ryzyku nie aktualizuje wag/etykiet — zmiana wag FI/EE po wdrożeniu nie trafia do otwartych | odbiór #732 / #716 | BN6 / raiseRisk | DONE #734 `3291d59c` / **0380** |
 | DP-168 | Cursor | wspólny fetch 5 MB (strumień)/10 s/65 s + szablon obs `<kraj>_<usługa>` + wspólny regex pogody (słowa per język); N3 limit masy z liczbą → MEDIUM w parserze | F7 #733 r2 | BN6 / roadBaltic | DONE #737 `4cee7bad` |
 | DP-169 | Cursor | road-ee: 8/8 Tark Tee timeout z Edge (`fetched_ok 0`); diagnoza lokalna PL + klasa błędu w ostrzeżeniu (jak DP-165); bez własnego proxy — decyzja do koordynatora gdy lokal OK / Edge nie | odbiór #733 / #716 | BN6 / road-ee | DONE #736 `78725265` |
-| DP-170 | Cursor | EE: `ee_probe_api` — 1× animalObstacle 45 s + gzip (równolegle z pulą); LV: `lv_shape_*` (https/http/bez_schematu/same_cyfry/spacje/pusty) — #735 po prod #736 | #735 / #739 | BN6 / EE+LV | W TOKU (#739 F7 r1 B1) |
+| DP-170 | Cursor | EE: `ee_probe_api` — 1× animalObstacle 45 s + gzip (równolegle z pulą); LV: `lv_shape_*` (https/http/bez_schematu/same_cyfry/spacje/pusty) — #735 po prod #736 | #735 / #739 | BN6 / EE+LV | W TOKU (#739 merge main po #738) |
 | DP-122 | Cursor | `viking_schedule_imports` (0360) brak w kopii 01.11 01:30 — koordynator #697: **nie wymaga zmian** (0360 po kopii 00:30; kontrola kopii 02.11) | #697 | backup | bez zmian (koord. 01.11) |
 | DP-117 | Cursor | `route-check/index.ts` `loads` `.limit(500)` bez sortu/filtra statusu — przy >500 transportach losowy dobór | F7 #693 r1 | ferry / route-check | w kolejce |
 | DP-118 | Cursor | `store.resolveStaleRisks` — `risk_signals` bez limitu (`max_rows`) → część nieaktualnych ryzyk niezamknięta | F7 #693 r1 | BN3 / ryzyka | w kolejce |
@@ -1309,7 +1309,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-47 | Cursor | `here_store_road` przyjmuje legi nieaktywne — akceptowalne | F7 #677 r1 N5 | #667 E | odnotowane |
 | DP-53 | Cursor | bramka na zbudowanej paczce demo: brak `vesselsServer` i klienta Supabase w `dist` (warunek `VITE_AUTH_MODE === 'supabase'` tylko w buildzie) | F7 #676 r2 | po #667 | w kolejce |
 | DP-54 | Cursor | test: leg core z `browserFetch:false` — w trybie przeglądarki brak fetch (mutacja M1b: usunięcie całej linii filtra `browserOnly`) | F7 #677 r2 | po #667 E | w kolejce |
-| DP-55 | Cursor | cron: BN7 z `browserFetch:true` bez punktów jest pobierany i liczony do `missingLegs` (mutacja M4b `return legs`) | F7 #677 r2 | po #667 E | w kolejce |
+| DP-55 | Cursor | cron: BN7 z `browserFetch:true` bez punktów jest pobierany i liczony do `missingLegs` (mutacja M4b `return legs`) | F7 #677 r2 | po #667 E | DONE #718 / 0381 (`cron_fetch`) |
 | DP-56 | Cursor | test z fałszywym `sb` (`{error}` → rejects) dla `store` listHereRoadLegs i Edge `listLegs` (dziś testy tekstowe) | F7 #677 r2 | po #667 E | w kolejce |
 | DP-57 | Cursor | Edge `here-roads`: wyjątek z `listLegs` → try/catch `{ok:false, reason}` + `corsHeaders()` zamiast 500 bez CORS | F7 #677 r2 | po #667 E | w kolejce |
 | DP-58 | Cursor | `.local.spec.ts`: asercje bez `if (count())` / `.catch` z zapasowym `data-view`; dodać mapę telefonu i TrackReplay | F7 #677 r3 | po #667 E | w kolejce |
@@ -1400,16 +1400,17 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 4. ~~**cz.4 EE**~~ — SCALONE (#733 `f363b7fc` / **0379**; F7 gotowe @ `8f112f03`): Tark Tee DATEX; job `road-ee`; vitest BN6 drogi **82**; status **583**. DP-168 w rejestrze (osobny PR przed BN7).
 5. ~~**DP-166+167**~~ — SCALONE (#734 `3291d59c` / **0380**; F7 gotowe @ `4621ed82`): FI `\d{1,5}`; raise update open tylko ROAD_* bez `load_id`.
 6. ~~**DP-165+169**~~ — SCALONE (#736 `78725265`; F7 gotowe @ `dbedbb07`): klasa błędu + sonda hosta + meta klucza + `lv_url_kind`; #735 krok 2 po pierwszym przebiegu prod.
-7. ~~**DP-168**~~ — SCALONE (#737 `4cee7bad`): wspólny `readBalticFeedBody` 5 MB / 10 s / 65 s; `balticFeedObsOk`; icy; N3 MEDIUM.
-8. **DP-170** — W TOKU (`pakiet/dp170-ee-lv-diag`, #739): EE `ee_probe_api` równolegle z pulą (F7 r1 B1) + `readBalticFeedBody`; LV `lv_shape_*`.
+7. ~~**DP-168**~~ — SCALONE (#737 `4cee7bad`; F7 gotowe @ `79ba8978`): wspólny `readBalticFeedBody` 5 MB strumień / 10 s / 65 s; `balticFeedObsOk`; `BALTIC_ICY_WORDS` + builder; N3 limit masy z liczbą → MEDIUM w parserze.
+8. **DP-170** — W TOKU (`pakiet/dp170-ee-lv-diag`, #739): EE `ee_probe_api` równolegle z pulą (F7 r1 B1) + `readBalticFeedBody`; LV `lv_shape_*`. Merge `main` po #738 (konflikt docs).
 
 ### #718 · BN7 — trasy HERE i linie na mapie — CZ.1 SCALONE (#738 `645520c0` / **0381**, 02.11 ~20:15)
 Źródło: #718 (Spawn2018, `dla-cursora`; 02.11 ~00:20). Spec w treści zgłoszenia (legi BN7, via, `cron_fetch`, OSM corridor, ETA segmenty, filtr tras; `cron_fetch=true` dopiero po froncie koordynatora). Ekrany BN9-c5 — koordynator.
-1. ~~**cz.1 baza+Edge**~~ — SCALONE (#738 `645520c0` / **0381**; F7 gotowe @ `078ceadc`). Dalej: BN9-c5 (koordynator) → `cron_fetch=true` → BN8.
+1. ~~**cz.1 baza+Edge**~~ — SCALONE (#738 `645520c0` / **0381**; F7 gotowe @ `078ceadc`; F7 r1 B2–B5: `cron_fetch` default false / `=== true`; ETA powroty; `PL_EE_E67` A2/S8/S61; DO NOTHING; max_km PL 1500). Edge: `roadSpecFromDict`, via+`exclude[countries]=RUS,BLR`, `resolveLegs`×`cron_fetch` (DP-55). Front: `loadRoadLegs`. **`cron_fetch=false`** do BN9-c5. Dalej: BN9-c5 (koordynator) → `cron_fetch=true` → BN8.
 
 ### #720 · BN8 — statusy / awizacja / ETA dla wszystkich tras — W KOLEJCE (po BN5; BN8a po BN5/BN6, BN8b po BN7)
 Źródło: #720 (Spawn2018, `dla-cursora`; 02.11 ~02:10). Spec w treści: BN8a (statusy, mismatch, overdue, `process_position`, `eta_record_segment_observations`, blokada fałszywego OFF_CORRIDOR, `loads.ferry_route`); BN8b (`compute_load_eta` + OFF_CORRIDOR z korytarzy BN7). Front `src/lib` Cursor; ekrany BN9-c6 — koordynator. DP-143/DP-144 przy BN8.
 **Decyzja 82-C** (właściciel 02.11 00:21, #720): czas zgłoszenia w porcie EE (TLL/MUU/PLD) = **2 h** jako założenie (`PORT_CHECKIN_TLL`/`_MUU`/`_PLD`, `source='założenie — decyzja 82-C…'`); front awizacji wyrównać do tego samego parametru (dziś 14 h) w BN8 `src/lib`.
+**F7 #738 N6/N7 → BN8 (nie BN7):** po 0381 ETA bałtyckie nadal niepełne w `compute_load_eta` (postęp PL po `PL_ROAD`, PORT_OUT z geofence Gdańska, korytarz SE `SE_E4`); PORT_CHECKIN prod 3 h vs 2 h EE — domknięcie w BN8b.
 
 ### #687 · DP-114 Tallink HEL–TLL 404 + niepełna pula Alert — SCALONE (`5fc7d4a0` / PR #689)
 Źródło: #687 (Spawn2018, `dla-cursora`). Po #683 prod: `TALLINK_HEL_TLL_URL` `/en/helsinki-tallinn` → HTTP 404; reguła 72 traci połowę puli.
@@ -2547,8 +2548,12 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 02.11.2026 15:05 | #733 SCALONE `f363b7fc`; start DP-166+167 (`pakiet/dp166-167-fi-road-raise` / **0380**): FI `\d{1,5}` + raise update open | pętla / DP-166+167 |
 | 02.11.2026 16:21 | #734 SCALONE `3291d59c` (F7: gotowe @ 4621ed82); start DP-165+169 (`pakiet/dp165-road-lv-net-error`): klasa błędu sieci LV/EE + diagnoza lokalna | pętla / DP-165+169 |
 | 02.11.2026 17:20 | #736 SCALONE `78725265` (F7: gotowe @ dbedbb07); start DP-168 (`pakiet/dp168-road-baltic-shared`): wspólny fetch/obs/icy + N3 MEDIUM | pętla / DP-168 |
+| 02.11.2026 18:05 | #737 SCALONE `4cee7bad`; start BN7 (#718) PR #738 / **0381** `cron_fetch=false` | pętla / BN7 |
+| 02.11.2026 18:45 | #738 db FAIL i2/bmapa → ETA 29 + korytarze 9 + asercje BN7; EXPECTED bmapa 192 | pętla / BN7 |
+| 02.11.2026 19:10 | #738 F7 r1 B2–B5 (+N9/N10/N11): cron default false; ETA powroty; PL_EE_E67 A2/S8/S61; DO NOTHING; DP-170; bmapa 198 | pętla / F7 #738 |
 | 02.11.2026 20:05 | #737 SCALONE; #738 BN7 CI ✔ @ 078ceadc (czekam F7); start DP-170 (`pakiet/dp170-ee-lv-diag`): ee_probe_api 45 s + lv_shape_* | pętla / DP-170 |
 | 02.11.2026 20:15 | #738 BN7 SCALONE `645520c0` / **0381** (F7 gotowe @ 078ceadc); #739 F7 r1 B1: ee_probe równolegle + readBalticFeedBody | pętla / F7 #739 |
+| 02.11.2026 20:40 | #739 merge `main` po #738 (konflikt PLAN/POSTEP) — odblokowanie CI/F7 | pętla / DP-170 |
 | 31.10.2026 — | Decyzja 73: TLLA-HEL ETA−150 min / HELA-TLL ETD+160 min (fixture Cargo; nocny 165 min OK). Decyzja 74: `sailings.source_ref` 0359; Digitraffic `digitraffic:portcall:<id>:<route>`; HTML/RECZNIE/DANE_STARTOWE wygrywają; #685-b RPC zastępuje digitraffic:% w ±3 h | F7 #688 r1–r4 |
 | 31.10.2026 — | F7 #683 nieblokujące (osobna poprawka): Scheduler grudzień + „on 2 January” → rok bieżący, ciche wygaśnięcie; Alert INFO bez ryzyka/historii — świadomie | F7 #683 r7 |
 | 31.10.2026 — | F7 #683 r8 nieblokujące (osobno): Alert poza Schedulerem obok Schedulera; sprzeczne bloki (resume→cofnięcie auto); rok przy długim oknie Schedulera; mutanty M10/M15–M17/M22 świadomie bez testów | F7 #683 r8 |
