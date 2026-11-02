@@ -1,4 +1,12 @@
 
+## 2026-11-02 08:05 — #730 DP-164 filtr dróg korytarza LT/LV
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. #728 wygląd (koordynator, bez F7).
+- Scalanie: brak F7 „gotowe” na #730 (CI @ `69c1d400` unit/visual/db ✔ przed DP-164). #728 bez F7.
+- **Krok:** DP-164 (komentarz #730 po odbiorze road-lt): filtr numerów — LT A5/A8/A10/E67 + A1 przy Kownie; LV A7/E67 + A1 do EE; poza listą maks. LOW bez slowdown; bez numeru — bez HIGH i bez slowdown; `corridor_conditions.reason` → `zamknięcia: N` / `pogoda: N` (nie „nawierzchnia N”); test zamknięcie nr 134. DP-160 DONE. vitest bn6-road-lt/lv **24**.
+- **Dalej:** push → CI → F7. Po F7: BN6 cz.4 EE. Po wdrożeniu ROAD_LT → 1.00, 5 HIGH bocznych → resolveStale.
+- Bez push na main.
+
 ## 2026-11-02 07:35 — #727 SCALONE; BN6 cz.3 LV + DP-160
 
 - Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. #728 wygląd (koordynator, bez F7).

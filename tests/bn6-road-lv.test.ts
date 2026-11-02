@@ -11,10 +11,12 @@ import {
   LV_NAP_KEY_HEADER,
   LV_SOURCE_REF,
   LV_UA,
+  applyBalticCorridorRoadFilter,
   balticSlowdownMult,
   dedupeLvSlippery,
   filterInLvBboxes,
   isDimensionLimitEvent,
+  lvRoadOnCorridor,
   parseLvDatexXml,
   parseLvFeedBody,
   parseLvWeightDimGeoJson,
@@ -241,16 +243,26 @@ describe('BN6 runRoadLv', () => {
     expect(st.risks.length).toBe(0);
   });
 
-  it('HIGH zamknięcie spowalnia; height nie', () => {
+  it('HIGH zamknięcie na A7 spowalnia; height nie; DP-164 off-road bez slowdown', () => {
+    expect(lvRoadOnCorridor('A7')).toBe('on');
+    expect(lvRoadOnCorridor('A12')).toBe('off');
     const closed: BalticRoadEvent = {
       id: 'C', title: 'zamkniecie', detail: 'x', severity: 'HIGH',
       lat: 56.95, lon: 24.10, kind: 'CLOSURES', start: null, end: null,
+      road: 'A7', corridorMatch: 'on',
     };
     const height: BalticRoadEvent = {
       id: 'H', title: 'wys', detail: 'x', severity: 'MEDIUM',
       lat: 56.95, lon: 24.10, kind: 'WEIGHT_DIM', start: null, end: null, heightLimitM: 4,
+      road: 'A7', corridorMatch: 'on',
     };
     expect(balticSlowdownMult([height]).mult).toBe(1);
-    expect(balticSlowdownMult([closed]).mult).toBeGreaterThan(1);
+    expect(balticSlowdownMult([closed]).reason).toBe('zamknięcia: 1');
+    const off = applyBalticCorridorRoadFilter('LV', [{
+      id: 'O', title: 'Closure · A12', detail: 'boczna', severity: 'HIGH',
+      lat: 56.95, lon: 24.10, kind: 'CLOSURES', start: null, end: null, road: 'A12',
+    }])[0];
+    expect(off.severity).toBe('LOW');
+    expect(balticSlowdownMult([off]).mult).toBe(1);
   });
 });

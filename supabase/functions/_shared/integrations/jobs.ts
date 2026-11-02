@@ -101,7 +101,8 @@ import {
   FI_ANNOUNCEMENTS_URL, FI_ATTRIBUTION, FI_ROADWORKS_URL, FI_WEIGHT_URL,
   LT_ATTRIBUTION, LT_RESTRICTIONS_URL, LT_UA, LT_WEATHER_URL,
   LV_ATTRIBUTION, LV_NAP_CODES, LV_NAP_KEY_HEADER, LV_SOURCE_REF, LV_UA,
-  balticRoadRisk, balticSlowdownMult, dedupeLvSlippery, fiCorridorBboxes, fiTrafficUrl,
+  applyBalticCorridorRoadFilter, balticRoadRisk, balticSlowdownMult, capBalticRiskSeverity,
+  dedupeLvSlippery, fiCorridorBboxes, fiTrafficUrl,
   filterInFiBboxes, filterInLvBboxes, dimensionLimitRisk, filterInLtBboxes,
   isDimensionLimitEvent, ltWeatherToSlowdownEvents, lvNapKeyEnv, lvNapUrlEnv,
   lvWeatherToSlowdownEvents, parseFiTrafficMessages, parseLtRestrictions, parseLtWeather,
@@ -3830,20 +3831,27 @@ export async function runRoadLt(deps: JobDeps): Promise<JobResult> {
   }
 
   await deps.store.resolveRisks('SOURCE_DOWN:ROAD_LT:');
-  const near = filterInLtBboxes(restrictionEvents);
+  /* DP-164: filtr numerów dróg korytarza (A5/A8/A10/E67 + A1 przy Kownie) do BN7. */
+  const near = applyBalticCorridorRoadFilter('LT', filterInLtBboxes(restrictionEvents));
+  const weatherOn = applyBalticCorridorRoadFilter('LT', weatherSlow);
   const complete = fetchedOk === expectedFetches;
   let risks = 0;
   const keep: string[] = [];
   for (const e of near) {
-    const risk = e.weightLimitT != null
+    const raw = e.weightLimitT != null
       ? weightLimitRisk('LT', e, null, LT_RESTRICTIONS_URL, LT_ATTRIBUTION)
       : isDimensionLimitEvent(e)
         ? dimensionLimitRisk('LT', e, LT_RESTRICTIONS_URL, LT_ATTRIBUTION)
         : balticRoadRisk('LT', e, LT_RESTRICTIONS_URL, LT_ATTRIBUTION);
+    const risk = capBalticRiskSeverity(raw, e.corridorMatch);
     /* F7 #727 N2: jedna uwaga o braku wypadków w ryzyku (nie w każdym detail zdarzenia). */
     if (risk.detail && typeof risk.detail === 'object') {
       (risk.detail as Record<string, unknown>).uwaga_wypadki =
         'zrodlo LT nie podaje wypadkow';
+      if (e.road) (risk.detail as Record<string, unknown>).droga = e.road;
+      if (e.corridorMatch) {
+        (risk.detail as Record<string, unknown>).korytarz_droga = e.corridorMatch;
+      }
     }
     keep.push(risk.dedup);
     if (await deps.store.raiseRisk(risk)) risks++;
@@ -3852,7 +3860,7 @@ export async function runRoadLt(deps: JobDeps): Promise<JobResult> {
     await deps.store.resolveStaleRisks('ROAD_LT:', keep);
   }
 
-  const slow = balticSlowdownMult([...near, ...weatherSlow]);
+  const slow = balticSlowdownMult([...near, ...weatherOn]);
   if (deps.store.saveCorridorCondition) {
     await deps.store.saveCorridorCondition({
       corridor: 'ROAD_LT',
@@ -3861,10 +3869,13 @@ export async function runRoadLt(deps: JobDeps): Promise<JobResult> {
       observedAt: now,
       detail: {
         events: near.length,
-        weather_adverse: weatherSlow.length,
+        events_corridor: near.filter((e) => e.corridorMatch === 'on').length,
+        events_off_road: near.filter((e) => e.corridorMatch === 'off').length,
+        weather_adverse: weatherOn.length,
         zrodlo: LT_ATTRIBUTION,
         complete,
         note: 'zrodlo LT nie podaje wypadkow',
+        dp164: 'filtr A5/A8/A10/E67+A1 Kaunas',
       },
     });
   }
@@ -4000,16 +4011,24 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
 
   await deps.store.resolveRisks('SOURCE_DOWN:ROAD_LV:');
   const deduped = dedupeLvSlippery(allEvents);
-  const near = filterInLvBboxes(deduped);
+  /* DP-164: filtr A7/E67 + A1 (dojazd EE) do BN7. */
+  const near = applyBalticCorridorRoadFilter('LV', filterInLvBboxes(deduped));
   const complete = fetchedOk === expectedFetches;
   let risks = 0;
   const keep: string[] = [];
   for (const e of near) {
-    const risk = e.weightLimitT != null
+    const raw = e.weightLimitT != null
       ? weightLimitRisk('LV', e, null, LV_SOURCE_REF, LV_ATTRIBUTION)
       : isDimensionLimitEvent(e)
         ? dimensionLimitRisk('LV', e, LV_SOURCE_REF, LV_ATTRIBUTION)
         : balticRoadRisk('LV', e, LV_SOURCE_REF, LV_ATTRIBUTION);
+    const risk = capBalticRiskSeverity(raw, e.corridorMatch);
+    if (risk.detail && typeof risk.detail === 'object') {
+      if (e.road) (risk.detail as Record<string, unknown>).droga = e.road;
+      if (e.corridorMatch) {
+        (risk.detail as Record<string, unknown>).korytarz_droga = e.corridorMatch;
+      }
+    }
     keep.push(risk.dedup);
     if (await deps.store.raiseRisk(risk)) risks++;
   }
@@ -4018,7 +4037,7 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
   }
 
   const weatherSlow = lvWeatherToSlowdownEvents(near);
-  const slow = balticSlowdownMult(near);
+  const slow = balticSlowdownMult([...near, ...weatherSlow]);
   if (deps.store.saveCorridorCondition) {
     await deps.store.saveCorridorCondition({
       corridor: 'ROAD_LV',
@@ -4027,10 +4046,13 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
       observedAt: now,
       detail: {
         events: near.length,
+        events_corridor: near.filter((e) => e.corridorMatch === 'on').length,
+        events_off_road: near.filter((e) => e.corridorMatch === 'off').length,
         weather_adverse: weatherSlow.length,
         zrodlo: LV_ATTRIBUTION,
         complete,
         formats,
+        dp164: 'filtr A7/E67+A1 EE',
       },
     });
   }

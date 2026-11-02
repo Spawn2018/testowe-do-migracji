@@ -1254,9 +1254,10 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-157 | Cursor | road-fi: (a) zwykłe Tietyö bez zamknięcia/objazdu/limitu → LOW; (b) do BN7 filtr numerów dróg korytarza (VT4/E75, VT29/E8, Kehä III 50, Vuosaaren 103 + porty); (c) jednorazowo resolve 146 ROAD_FI poza filtrem (przez job, nie ręcznie) | F7 #727 | BN6 / road-fi | w kolejce (z najbliższą zmianą FI) |
 | DP-158 | Cursor | ROAD_FI tytuły: polska etykieta typu (Tietyö→roboty drogowe, Liikennetiedote→komunikat, painorajoitus→limit masy) w params/title_key; surowy fiński w detail | F7 #727 | BN6 / road-fi | w kolejce (z DP-157) |
 | DP-159 | Cursor | `bn3-tallink-alert`: `finalizeTallinkAlertsForStatus` bez `NOW` → od 02.11 wall-clock psuje decyzję 72 (08:00 Tallinn) | pre-push #727 | BN3 / testy | SCALONE w #727 |
-| DP-160 | Cursor | `LT_ICY_RE` nie łapie `Apledėjusi`/`ledas`/`šlapdriba`/`sniegas` — dopisz rdzenie + test `kelio_danga` | F7 #727 | BN6 / LT weather | W TOKU (cz.3 LV / 0378) |
+| DP-160 | Cursor | `LT_ICY_RE` nie łapie `Apledėjusi`/`ledas`/`šlapdriba`/`sniegas` — dopisz rdzenie + test `kelio_danga` | F7 #727 | BN6 / LT weather | DONE #730 |
 | DP-161 | koordynator | front (BN9-c4) — własność koordynatora | F7 #727 | BN9-c4 | koordynator |
 | DP-162 | Cursor | `mappers.ts`: ROAD_LT/LV/EE/FI → `OPS`; `riskFromRow` gubi `detail.zrodlo/od/do/lat/lon`/limity — przenieś `road` do `riskFromRow` (obejście `withBalticRoad` w #728) | F7 #727 | BN6 / front | w kolejce (z DP-157/158) |
+| DP-164 | koordynator | do BN7 filtr numerów dróg korytarza: LT A5/A8/A10(E67)+A1 przy Kownie; LV A7(E67)+A1 do EE; poza listą maks. LOW bez slowdown; bez numeru — bbox bez HIGH/slowdown; reason `zamknięcia: N` (nie „nawierzchnia N”); test nr 134 | odbiór road-lt / #730 | BN6 / LT+LV | DONE #730 |
 | DP-122 | Cursor | `viking_schedule_imports` (0360) brak w kopii 01.11 01:30 — koordynator #697: **nie wymaga zmian** (0360 po kopii 00:30; kontrola kopii 02.11) | #697 | backup | bez zmian (koord. 01.11) |
 | DP-117 | Cursor | `route-check/index.ts` `loads` `.limit(500)` bez sortu/filtra statusu — przy >500 transportach losowy dobór | F7 #693 r1 | ferry / route-check | w kolejce |
 | DP-118 | Cursor | `store.resolveStaleRisks` — `risk_signals` bez limitu (`max_rows`) → część nieaktualnych ryzyk niezamknięta | F7 #693 r1 | BN3 / ryzyka | w kolejce |
@@ -1388,7 +1389,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 Źródło: #716 (Spawn2018). Spec w treści zgłoszenia (Digitraffic FI, eismoinfo LT, LVC LV, Tark Tee EE; `ROAD_LT/LV/EE/FI`; bufor 2 km; limity masy). Ekrany BN9-c4 — koordynator. **Wybór:** 4 osobne rodzaje (spójne z Ryzyka › Drogi per kraj).
 1. ~~**cz.1 FI + baza**~~ — SCALONE (#726 `0c0cb064` / **0376**): enum `ROAD_LT/LV/EE/FI`; `corridor_conditions`; audience WSZYSCY; job `road-fi` Digitraffic (bboxy korytarza do BN7, resolveStale przy komplecie, SOURCE_DOWN po 3× `fetched_ok=0`); vitest `bn6-road-fi`; F7 r1+r2. DP-155/156 w rejestrze.
 2. ~~**cz.2 LT**~~ — SCALONE (#727 `7ef5e230` / **0377**): eismoinfo restrictions + weather; job `road-lt`; F7 r1 B1–B3/N1–N3; DP-157/158/159. Po wdrożeniu odbiór SELECT road-lt (koordynator).
-3. **cz.3 LV** — W TOKU: LVC NAP 22× `LV_NAP_<KOD>_{KEY,URL}` (#589); DATEX XML/JSON + GeoJSON WEIGHT_DIM; dedup śliskości WM/TI/RM; job `road-lv`; cron **0378**; vitest `bn6-road-lv`; status **580**; DP-160 (LT_ICY_RE). Bez URL/kluczy w logach; nagłówek `Ocp-Apim-Subscription-Key`.
+3. **cz.3 LV** — W TOKU (#730 / **0378**): LVC NAP 22× `LV_NAP_<KOD>_{KEY,URL}` (#589); DATEX XML/JSON + GeoJSON WEIGHT_DIM; dedup śliskości WM/TI/RM; job `road-lv`; cron **0378**; vitest `bn6-road-lv`; status **580**; DP-160 (LT_ICY_RE); **DP-164** filtr numerów dróg LT/LV + reason `zamknięcia:`/`pogoda:`. Bez URL/kluczy w logach; nagłówek `Ocp-Apim-Subscription-Key`.
 4. **cz.4 EE** — Tark Tee DATEX (klucz `X-DATEX-API-KEY`).
 
 ### #718 · BN7 — trasy HERE i linie na mapie: specyfikacja — W KOLEJCE (po BN6)
@@ -2524,6 +2525,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 02.11.2026 06:25 | #727 db FAIL status 574→577 — cron FI+LT jedna asercja; EXPECTED 577 | pętla / BN6 |
 | 02.11.2026 06:45 | #727 F7 r1: B1/B2/B3/N1–N3 LT + DP-157/158; fixtures real eismoinfo; CI @ ecf8915d zielone przed poprawkami | pętla / F7 #727 |
 | 02.11.2026 07:30 | #727 SCALONE `7ef5e230` (F7: gotowe @ 35db337e); DP-160/161/162; start BN6 cz.3 LV `pakiet/bn6-cz3-road-lv` / **0378** | pętla / F7 #727 |
+| 02.11.2026 08:05 | #730 CI zielone @ 69c1d400; DP-164 (filtr dróg LT/LV + reason zamknięcia/pogoda) w tym samym PR; DP-160 DONE | pętla / BN6 cz.3 |
 | 31.10.2026 — | Decyzja 73: TLLA-HEL ETA−150 min / HELA-TLL ETD+160 min (fixture Cargo; nocny 165 min OK). Decyzja 74: `sailings.source_ref` 0359; Digitraffic `digitraffic:portcall:<id>:<route>`; HTML/RECZNIE/DANE_STARTOWE wygrywają; #685-b RPC zastępuje digitraffic:% w ±3 h | F7 #688 r1–r4 |
 | 31.10.2026 — | F7 #683 nieblokujące (osobna poprawka): Scheduler grudzień + „on 2 January” → rok bieżący, ciche wygaśnięcie; Alert INFO bez ryzyka/historii — świadomie | F7 #683 r7 |
 | 31.10.2026 — | F7 #683 r8 nieblokujące (osobno): Alert poza Schedulerem obok Schedulera; sprzeczne bloki (resume→cofnięcie auto); rok przy długim oknie Schedulera; mutanty M10/M15–M17/M22 świadomie bez testów | F7 #683 r8 |

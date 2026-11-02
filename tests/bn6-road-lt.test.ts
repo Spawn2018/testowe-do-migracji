@@ -11,13 +11,16 @@ import {
   LT_RESTRICTIONS_URL,
   LT_UA,
   LT_WEATHER_URL,
+  applyBalticCorridorRoadFilter,
   balticRoadRisk,
   balticSlowdownMult,
   dimensionLimitRisk,
   eventInLtBboxes,
+  extractBalticRoadRef,
   filterInLtBboxes,
   isDimensionLimitEvent,
   ltPerspejimaiText,
+  ltRoadOnCorridor,
   ltWeatherToSlowdownEvents,
   parseLtPolylineCentroid,
   parseLtRestrictions,
@@ -269,22 +272,73 @@ describe('BN6 road-lt — eismoinfo', () => {
     expect(parsedRest.some((e) => e.severity === 'LOW')).toBe(true);
   });
 
-  it('balticSlowdownMult: zamknięcie spowalnia; height i masa nie', () => {
+  it('balticSlowdownMult: zamknięcie na A5 spowalnia; height i masa nie; reason zamknięcia', () => {
     const closed: BalticRoadEvent = {
       id: 'C', title: 'zamkniecie', detail: 'x', severity: 'HIGH',
       lat: 54.56, lon: 23.35, kind: 'closed', start: null, end: null,
+      road: 'A5', corridorMatch: 'on',
     };
     const weight: BalticRoadEvent = {
       id: 'W', title: 'limit', detail: 'x', severity: 'HIGH',
       lat: 55.73, lon: 24.35, kind: 'weakBridge', start: null, end: null, weightLimitT: 40,
+      road: 'A5', corridorMatch: 'on',
     };
     const height: BalticRoadEvent = {
       id: 'H', title: 'wys', detail: 'x', severity: 'MEDIUM',
       lat: 54.92, lon: 23.92, kind: 'obstructionType', start: null, end: null, heightLimitM: 4.2,
+      road: 'A1', corridorMatch: 'on',
     };
     expect(balticSlowdownMult([weight]).mult).toBe(1);
     expect(balticSlowdownMult([height]).mult).toBe(1);
-    expect(balticSlowdownMult([closed]).mult).toBeGreaterThan(1);
+    const slow = balticSlowdownMult([closed]);
+    expect(slow.mult).toBeGreaterThan(1);
+    expect(slow.reason).toBe('zamknięcia: 1');
+  });
+
+  it('DP-164: droga 134 z objazdem → LOW, bez spowolnienia; A5 HIGH spowalnia', () => {
+    expect(extractBalticRoadRef('134 Marijampolė–Kalvarija 1.0-2.0km.')).toBe('134');
+    expect(ltRoadOnCorridor('134', {
+      lat: 54.56, lon: 23.35, title: 'Uzdaryta', detail: 'objazd',
+    })).toBe('off');
+    const closed134: BalticRoadEvent = {
+      id: 'bn6-lt-closed-134',
+      title: 'Uzdaryta · objazd',
+      detail: 'ul. 134 Marijampolė–Kalvarija 1.0-2.0km.',
+      severity: 'HIGH',
+      lat: 54.56,
+      lon: 23.35,
+      kind: 'obstructionType',
+      start: null,
+      end: null,
+      road: '134',
+    };
+    const closedA5: BalticRoadEvent = {
+      id: 'bn6-lt-closed-a5',
+      title: 'Uzdaryta A5',
+      detail: 'ul. A5 Marijampole',
+      severity: 'HIGH',
+      lat: 54.56,
+      lon: 23.35,
+      kind: 'obstructionType',
+      start: null,
+      end: null,
+      road: 'A5',
+    };
+    const [c134, cA5] = applyBalticCorridorRoadFilter('LT', [closed134, closedA5]);
+    expect(c134.corridorMatch).toBe('off');
+    expect(c134.severity).toBe('LOW');
+    expect(cA5.corridorMatch).toBe('on');
+    expect(cA5.severity).toBe('HIGH');
+    expect(balticSlowdownMult([c134]).mult).toBe(1);
+    expect(balticSlowdownMult([cA5]).reason).toMatch(/zamknięcia:\s*1/);
+    const unknown: BalticRoadEvent = {
+      id: 'U', title: 'zamkniecie', detail: 'bez numeru', severity: 'HIGH',
+      lat: 54.9, lon: 23.9, kind: 'closed', start: null, end: null,
+    };
+    const [u] = applyBalticCorridorRoadFilter('LT', [unknown]);
+    expect(u.corridorMatch).toBe('unknown');
+    expect(u.severity).toBe('MEDIUM');
+    expect(balticSlowdownMult([u]).mult).toBe(1);
   });
 });
 
@@ -347,9 +401,13 @@ describe('BN6 runRoadLt', () => {
     const weightRisk = stOk.risks.find((x) => x.dedup === 'ROAD_LT:bn6-lt-weight-panevezys');
     expect(weightRisk?.detail?.oryginal).toBe('LD,SVKD');
     expect(weightRisk?.detail?.uwaga_wypadki).toMatch(/nie podaje wypadkow/);
+    /* DP-164: A2 poza listą korytarza → maks. LOW (było MEDIUM z weightLimitRisk). */
+    expect(weightRisk?.severity).toBe('LOW');
+    expect(weightRisk?.detail?.korytarz_droga).toBe('off');
     const heightRisk = stOk.risks.find((x) => x.dedup === 'ROAD_LT:bn6-lt-height-only-kaunas');
     expect(heightRisk?.severity).toBe('MEDIUM');
     expect(heightRisk?.titleKey).toBe('rk_road_baltic_dim_check');
+    expect(heightRisk?.detail?.korytarz_droga).toBe('on');
 
     const stPart = new MemStore();
     stPart.risks.push({
@@ -366,7 +424,7 @@ describe('BN6 runRoadLt', () => {
     expect(stPart.risks.some((x) => x.dedup === 'ROAD_LT:OLD')).toBe(true);
   });
 
-  it('sourceUrl = restrictions; weather tylko w corridor slowdown', async () => {
+  it('sourceUrl = restrictions; weather tylko w corridor slowdown; reason pogoda', async () => {
     const st = new MemStore();
     await runRoadLt(deps(st, allOkPages()).d);
     const hit = st.risks.find((r) => r.dedup === 'ROAD_LT:bn6-lt-construction-kaunas');
@@ -374,6 +432,8 @@ describe('BN6 runRoadLt', () => {
     expect(hit?.detail?.zrodlo).toBe(LT_ATTRIBUTION);
     expect(st.risks.some((r) => String(r.dedup).startsWith('ROAD_LT:wx:'))).toBe(false);
     expect(Number(st.corridor?.slowdownMult)).toBeGreaterThan(1);
+    expect(st.corridor?.reason).toMatch(/pogoda:\s*\d/);
+    expect(st.corridor?.reason).not.toMatch(/nawierzchnia/);
     expect(LT_WEATHER_URL).toMatch(/weather-conditions/);
   });
 });

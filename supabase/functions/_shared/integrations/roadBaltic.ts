@@ -7,7 +7,7 @@
  * LT: źródło nie podaje wypadków — zapis w detail / corridor note.
  */
 import type { RiskInput, RiskSeverity } from './sync.ts';
-import { seRoadSlowdownMult, type LatLon } from './road.ts';
+import { type LatLon } from './road.ts';
 
 export type BalticRoadCountry = 'LT' | 'LV' | 'EE' | 'FI';
 export type BalticRoadKind = `ROAD_${BalticRoadCountry}`;
@@ -82,6 +82,8 @@ export function fiTrafficUrl(base: string, b: FiBbox): string {
   return `${base}?${q.toString()}`;
 }
 
+export type BalticCorridorRoadMatch = 'on' | 'off' | 'unknown';
+
 export interface BalticRoadEvent {
   id: string;
   title: string;
@@ -92,6 +94,14 @@ export interface BalticRoadEvent {
   kind: string;
   start: string | null;
   end: string | null;
+  /** Numer drogi z street/roadNumber/opisu (A5, E67, 134…). */
+  road?: string | null;
+  /**
+   * DP-164: dopasowanie do listy dróg korytarza (do BN7).
+   * `on` — A5/A8/A10/E67 (+ A1 przy Kownie LT; A7/A1 LV); `off` — znany numer poza listą;
+   * `unknown` — numer nie wynika z danych.
+   */
+  corridorMatch?: BalticCorridorRoadMatch;
   /** Limit masy [t] gdy weight restriction. */
   weightLimitT?: number | null;
   heightLimitM?: number | null;
@@ -296,9 +306,20 @@ export function weightLimitRisk(
   };
 }
 
+function balticIsWeatherSlowEvent(e: BalticRoadEvent): boolean {
+  const k = String(e.kind ?? '');
+  return k === 'weather'
+    || k.startsWith('SLIPPERY_')
+    || k.startsWith('EXC_WEATHER_')
+    || k.startsWith('WEATHER_SAFETY_')
+    || k.startsWith('POOR_ROAD_');
+}
+
 /**
- * Spowolnienie jak SE — tylko HIGH bez limitu masy/wysokości/szerokości
- * (F7 #726 kelirikko; F7 #727 B2: wiadukty/słabe mosty nie spowalniają).
+ * Spowolnienie jak SE — tylko HIGH na drogach korytarza (`corridorMatch=on`),
+ * bez limitu masy/wysokości/szerokości (F7 #726/#727 B2).
+ * DP-164: poza listą / bez numeru → bez spowolnienia; reason „zamknięcia: N” / „pogoda: N”
+ * (nie „nawierzchnia N” z SE RoadCondition).
  */
 export function balticSlowdownMult(
   events: BalticRoadEvent[],
@@ -310,23 +331,110 @@ export function balticSlowdownMult(
       && e.heightLimitM == null
       && e.widthLimitM == null
       && e.lat != null
-      && e.lon != null,
+      && e.lon != null
+      && (e.corridorMatch === 'on'
+        || (e.corridorMatch == null && balticIsWeatherSlowEvent(e))),
   );
-  return seRoadSlowdownMult({
-    conditions: adverse.map((e) => ({
-      id: e.id,
-      road: null,
-      text: e.title,
-      code: null,
-      location: '',
-      lat: e.lat as number,
-      lon: e.lon as number,
-      start: e.start,
-      adverse: true,
-    })),
-    weather: [],
-    pct,
+  if (!adverse.length) return { mult: 1, reason: null };
+  const weatherN = adverse.filter(balticIsWeatherSlowEvent).length;
+  const closeN = adverse.length - weatherN;
+  const bits: string[] = [];
+  if (closeN) bits.push(`zamknięcia: ${closeN}`);
+  if (weatherN) bits.push(`pogoda: ${weatherN}`);
+  return {
+    mult: Math.round((1 + pct / 100) * 100) / 100,
+    reason: bits.join(', ') || null,
+  };
+}
+
+/** DP-164 — wyciąg numeru drogi z street / roadNumber / opisu. */
+export function extractBalticRoadRef(text: string): string | null {
+  const t = String(text ?? '').trim();
+  if (!t) return null;
+  const a = t.match(/\bA\s*(\d{1,2})\b/i);
+  if (a) return `A${a[1]}`;
+  const e = t.match(/\bE\s*(\d{2,3})\b/i);
+  if (e) return `E${e[1]}`;
+  /* krašto / rajoninis: „134 Name…” na początku street */
+  const n = t.match(/^(\d{1,4})\b/);
+  if (n) return n[1];
+  return null;
+}
+
+/** LT: A5, A8, A10, E67 + A1 tylko przy Kownie (DP-164). */
+export function ltRoadOnCorridor(
+  road: string | null | undefined,
+  e: Pick<BalticRoadEvent, 'lat' | 'lon' | 'title' | 'detail'>,
+): BalticCorridorRoadMatch {
+  if (road == null || road === '') return 'unknown';
+  const r = road.toUpperCase().replace(/\s+/g, '');
+  if (r === 'A5' || r === 'A8' || r === 'A10' || r === 'E67') return 'on';
+  if (r === 'A1') {
+    const blob = `${e.title ?? ''} ${e.detail ?? ''}`.toLowerCase();
+    if (/kaun|kowno/.test(blob)) return 'on';
+    if (
+      e.lat != null && e.lon != null
+      && e.lat >= 54.7 && e.lat <= 55.15
+      && e.lon >= 23.5 && e.lon <= 24.3
+    ) {
+      return 'on';
+    }
+    return 'off';
+  }
+  return 'off';
+}
+
+/** LV: A7 (E67) + A1 dojazd do granicy EE (DP-164). */
+export function lvRoadOnCorridor(road: string | null | undefined): BalticCorridorRoadMatch {
+  if (road == null || road === '') return 'unknown';
+  const r = road.toUpperCase().replace(/\s+/g, '');
+  if (r === 'A7' || r === 'E67' || r === 'A1') return 'on';
+  return 'off';
+}
+
+function balticCapSeverity(
+  severity: RiskSeverity,
+  match: BalticCorridorRoadMatch,
+): RiskSeverity {
+  if (match === 'off') return 'LOW';
+  if (match === 'unknown' && severity === 'HIGH') return 'MEDIUM';
+  return severity;
+}
+
+/**
+ * DP-164: oznacz road + corridorMatch i obniż severity poza listą / bez numeru.
+ * Pogoda korytarza (`kind=weather`) → zawsze `on` (bbox już ogranicza).
+ */
+export function applyBalticCorridorRoadFilter(
+  country: 'LT' | 'LV',
+  events: BalticRoadEvent[],
+): BalticRoadEvent[] {
+  return events.map((e) => {
+    if (e.kind === 'weather') {
+      return { ...e, corridorMatch: 'on' as const, road: e.road ?? null };
+    }
+    const road = e.road
+      ?? extractBalticRoadRef([e.title, e.detail].filter(Boolean).join(' '));
+    const corridorMatch = country === 'LT'
+      ? ltRoadOnCorridor(road, e)
+      : lvRoadOnCorridor(road);
+    return {
+      ...e,
+      road,
+      corridorMatch,
+      severity: balticCapSeverity(e.severity, corridorMatch),
+    };
   });
+}
+
+/** DP-164: po weightLimitRisk / dimensionLimitRisk — ponowne obniżenie severity. */
+export function capBalticRiskSeverity(
+  risk: RiskInput,
+  match: BalticCorridorRoadMatch | undefined,
+): RiskInput {
+  if (match == null || match === 'on') return risk;
+  const next = balticCapSeverity(risk.severity, match);
+  return next === risk.severity ? risk : { ...risk, severity: next };
 }
 
 /**
@@ -525,12 +633,14 @@ export function parseLtRestrictions(json: unknown): BalticRoadEvent[] {
     const subtype = o.subtype == null ? null : String(o.subtype);
     const title = String(o.shortDescription ?? o.description ?? subtype ?? type).trim() || type;
     const desc = String(o.description ?? '').trim();
+    const street = loc.street ? String(loc.street) : '';
     const detailParts = [
       desc,
-      loc.street ? `ul. ${loc.street}` : '',
+      street ? `ul. ${street}` : '',
     ].filter(Boolean);
     /* F7 #727 N2: uwaga o wypadkach tylko w corridor / risk.uwaga_wypadki, nie w każdym detail. */
     const textForSev = `${title} ${desc}`;
+    const road = extractBalticRoadRef([street, title, desc].filter(Boolean).join(' '));
     out.push({
       id,
       title,
@@ -541,6 +651,7 @@ export function parseLtRestrictions(json: unknown): BalticRoadEvent[] {
       kind: subtype ?? type,
       start: typeof o.startTime === 'string' ? o.startTime : null,
       end: typeof o.endTime === 'string' ? o.endTime : null,
+      road,
       weightLimitT: meta.weightLimitT,
       heightLimitM: meta.heightLimitM,
       widthLimitM: meta.widthLimitM,
@@ -692,6 +803,7 @@ export function ltWeatherToSlowdownEvents(
       kind: 'weather',
       start: null,
       end: null,
+      corridorMatch: 'on',
     }));
 }
 
@@ -834,7 +946,10 @@ export function parseLvDatexXml(xml: string, code: LvNapCode): BalticRoadEvent[]
     const comment = [...rec.matchAll(/<(?:\w+:)?value\b[^>]*>([^<]*)</gi)]
       .map((m) => m[1].trim())
       .find((t) => t.length > 0) ?? type;
-    const road = tag("roadNumber") ?? null;
+    const roadRaw = tag("roadNumber");
+    const road = roadRaw
+      ? (extractBalticRoadRef(roadRaw) ?? roadRaw.trim())
+      : extractBalticRoadRef(comment);
     out.push({
       id: lvIsSlipperyCode(code)
         ? `slippery:${lat.toFixed(3)}:${lon.toFixed(3)}`
@@ -847,6 +962,7 @@ export function parseLvDatexXml(xml: string, code: LvNapCode): BalticRoadEvent[]
       kind: code,
       start: tag("overallStartTime") ?? null,
       end: tag("overallEndTime") ?? null,
+      road,
     });
   }
   return out;
@@ -915,6 +1031,10 @@ export function parseLvDatexJson(json: unknown, code: LvNapCode): BalticRoadEven
       rec.comment ?? rec.generalPublicComment ?? rec.description ?? type,
     ).trim();
     const severity = LV_DATEX_SEV[sevRaw] ?? lvDefaultSeverity(code);
+    const roadRaw = rec.roadNumber ?? rec.RoadNumber;
+    const road = roadRaw != null && String(roadRaw).trim()
+      ? (extractBalticRoadRef(String(roadRaw)) ?? String(roadRaw).trim())
+      : extractBalticRoadRef(comment);
     out.push({
       id: lvIsSlipperyCode(code)
         ? `slippery:${lat.toFixed(3)}:${lon.toFixed(3)}`
@@ -927,6 +1047,7 @@ export function parseLvDatexJson(json: unknown, code: LvNapCode): BalticRoadEven
       kind: code,
       start: typeof rec.overallStartTime === "string" ? rec.overallStartTime : null,
       end: typeof rec.overallEndTime === "string" ? rec.overallEndTime : null,
+      road,
     });
   }
   return out;
@@ -960,6 +1081,7 @@ export function parseLvWeightDimGeoJson(json: unknown, code: LvNapCode = "WEIGHT
     const street = props.street == null ? "" : String(props.street);
     const cls = props.restrictionClass == null ? "" : String(props.restrictionClass);
     const title = [cls, street].filter(Boolean).join(" · ") || "limit masy/wymiarów";
+    const road = extractBalticRoadRef(street) ?? extractBalticRoadRef(title);
     out.push({
       id,
       title,
@@ -970,6 +1092,7 @@ export function parseLvWeightDimGeoJson(json: unknown, code: LvNapCode = "WEIGHT
       kind: code,
       start: typeof props.startTime === "string" ? props.startTime : null,
       end: typeof props.endTime === "string" ? props.endTime : null,
+      road,
       weightLimitT: weight != null && Number.isFinite(weight) ? weight : null,
       heightLimitM: height != null && Number.isFinite(height) ? height : null,
       widthLimitM: width != null && Number.isFinite(width) ? width : null,
