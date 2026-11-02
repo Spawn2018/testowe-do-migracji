@@ -129,7 +129,7 @@ class MemStore implements SyncStore {
     return [...best.entries()].map(([vesselId, observedAt]) => ({ vesselId, observedAt }));
   }
   async seSlowdownPct() { return 15; }
-  async saveCorridorCondition(row: { corridor: 'SE_E4' | 'SE_E22'; slowdownMult: number; reason: string | null; detail?: unknown }) {
+  async saveCorridorCondition(row: { corridor: 'SE_E4' | 'SE_E22' | 'ROAD_LT' | 'ROAD_LV' | 'ROAD_EE' | 'ROAD_FI'; slowdownMult: number; reason: string | null; detail?: unknown }) {
     this.corridors.push({ corridor: row.corridor, slowdownMult: row.slowdownMult, detail: row.detail });
     if (row.corridor === 'SE_E4') this.corridor = { corridor: row.corridor, slowdownMult: row.slowdownMult, reason: row.reason, detail: row.detail };
   }
