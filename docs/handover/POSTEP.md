@@ -1,4 +1,12 @@
 
+## 2026-11-02 03:10 — #722 SCALONE; start DP-147+148
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #714/#716/#718/#720 w planie.
+- Scalanie: **#722 SCALONE** `52f370ef` (F7: gotowe @ `d877ffe1`; CI unit/db/visual ✔).
+- **Krok:** DP-147 (store bez `must`) + DP-148 (`runFerryWeather` catch → zapas + ostrzeżenie); PLAN §4 BN5 SCALONE; rejestr DP-147/148.
+- **Dalej:** push → CI → F7. Po F7: BN6 (#716).
+- Bez push na main.
+
 ## 2026-11-02 02:40 — BN5 #722 pkt 4 izolacja GULF_FI
 
 - Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #714/#716/#718/#720 w planie.

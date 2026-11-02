@@ -938,6 +938,24 @@ describe('ferry-weather — II-8 FMI+DMI+SMHI', () => {
     expect(mapped.risks.some((x) => x.dedup === 'FERRY_WEATHER:s-hel-sto')).toBe(true);
   });
 
+  it('DP-147/148: awaria ferryRouteFamilies → job OK, zapas w kodzie, ostrzeżenie', async () => {
+    const pages = wxPages();
+    const st = new MemStore();
+    st.thr = { waveM: 1.05, gustKn: 40 };
+    st.sailings = [{
+      id: 's-gdn-fb', vessel_id: WAW, route: 'GDN-NYN',
+      departure_at: '2026-10-02T12:00:00.000Z', arrival_at: '2026-10-02T20:00:00.000Z',
+      delayed_departure_at: null, delayed_arrival_at: null, status: 'ZAPLANOWANY', source: 'POLFERRIES',
+    }];
+    st.ferryRouteFamilies = async () => {
+      throw new Error('ferry_routes families: simulated down');
+    };
+    const r = await runFerryWeather(deps(st, pages, {}, WX_NOW).d);
+    expect(r.ok).toBe(true);
+    expect(r.warnings?.some((w) => /ferry_routes|mapy w kodzie/i.test(w))).toBe(true);
+    expect(st.risks.some((x) => x.dedup === 'FERRY_WEATHER:s-gdn-fb')).toBe(true);
+  });
+
   it('BN5 cz.3: zawieszenie FIHEL → FERRY_ICE HIGH na TLL-HEL; pusto = bez ryzyka', async () => {
     const susp = JSON.stringify({
       type: 'FeatureCollection',
