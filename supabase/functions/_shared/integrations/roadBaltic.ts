@@ -1,10 +1,10 @@
 /**
  * BN6 (#716) — drogi LT/LV/EE/FI.
  * cz.1: Finlandia Digitraffic road (bez klucza, CC BY 4.0 Fintraffic).
- * Bufor korytarza 2 km; bbox FI musi mieścić się w [20,59,32,71].
+ * Do BN7 (geometria FI_E75): filtr bboxami korytarza (F7 #726 B2); bbox w [20,59,32,71].
  */
 import type { RiskInput, RiskSeverity } from './sync.ts';
-import { distanceToCorridorKm, seRoadSlowdownMult, type LatLon } from './road.ts';
+import { seRoadSlowdownMult, type LatLon } from './road.ts';
 
 export type BalticRoadCountry = 'LT' | 'LV' | 'EE' | 'FI';
 export type BalticRoadKind = `ROAD_${BalticRoadCountry}`;
@@ -202,16 +202,27 @@ export function parseFiTrafficMessages(json: unknown): BalticRoadEvent[] {
   return out;
 }
 
-/** Zostaw zdarzenia w buforze km od linii korytarza (domyślnie 2 km — BN6). */
-export function filterNearCorridor(
+/** Czy punkt leży w którymkolwiek bboxie korytarza (lon=x, lat=y). */
+export function eventInFiBboxes(
+  e: Pick<BalticRoadEvent, 'lat' | 'lon'>,
+  boxes: FiBbox[] = fiCorridorBboxes(),
+): boolean {
+  if (e.lat == null || e.lon == null) return false;
+  const { lat, lon } = e;
+  return boxes.some(
+    (b) => lon >= b.xMin && lon <= b.xMax && lat >= b.yMin && lat <= b.yMax,
+  );
+}
+
+/**
+ * F7 #726 B2 / #716 §3.2: do geometrii trasy (BN7) filtruj bboxami korytarza,
+ * bez bufora 2 km od rzadkiej polilinii CORRIDOR_FI.
+ */
+export function filterInFiBboxes(
   events: BalticRoadEvent[],
-  line: LatLon[],
-  bufferKm = 2,
+  boxes: FiBbox[] = fiCorridorBboxes(),
 ): BalticRoadEvent[] {
-  return events.filter((e) => {
-    if (e.lat == null || e.lon == null) return false;
-    return distanceToCorridorKm(e.lat, e.lon, line) <= bufferKm;
-  });
+  return events.filter((e) => eventInFiBboxes(e, boxes));
 }
 
 export function balticRoadRisk(
@@ -279,13 +290,13 @@ export function weightLimitRisk(
   };
 }
 
-/** Spowolnienie jak SE — przy ≥1 adverse (tu: HIGH lub weight). */
+/** Spowolnienie jak SE — HIGH bez limitu masy (kelirikko nie spowalnia; F7 #726). */
 export function balticSlowdownMult(
   events: BalticRoadEvent[],
   pct = 15,
 ): { mult: number; reason: string | null } {
   const adverse = events.filter(
-    (e) => (e.severity === 'HIGH' || e.weightLimitT != null) && e.lat != null && e.lon != null,
+    (e) => e.severity === 'HIGH' && e.weightLimitT == null && e.lat != null && e.lon != null,
   );
   return seRoadSlowdownMult({
     conditions: adverse.map((e) => ({

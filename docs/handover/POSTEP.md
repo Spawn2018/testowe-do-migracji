@@ -1,18 +1,17 @@
 
-## 2026-11-02 04:20 — #725 SCALONE; BN6 cz.1 road-fi (Digitraffic)
+## 2026-11-02 04:55 — #726 F7 r1 poprawki BN6 cz.1; #723 SCALONE
 
-- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. #723 BN9-c3 (wygląd) bez F7.
-- Scalanie: **#725 SCALONE** `571aff01` (F7: gotowe @ `68f7efbb`). **DP-152** (horyzont FMI per korytarz) w rejestrze — z BN6 / osobno.
-- **Krok:** BN6 cz.1 na `pakiet/bn6-roads-lt-lv-ee-fi` — **0376** ROAD_LT/LV/EE/FI + corridor_conditions; job `road-fi` Digitraffic (bbox, bufor 2 km, limity masy); vitest bn6-road-fi.
-- **Dalej:** push → CI → F7. Potem LT/LV/EE + DP-152.
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie.
+- Scalanie: **#723 SCALONE** `c8181775` (F7: gotowe @ `acb282b6`, BN9-c3 wygląd). #726 F7 r1 **niegotowe** → poprawki w tym PR.
+- **Krok F7 #726:** B2 filtr bboxami (nie 2 km od rzadkiej linii); B3 `resolveStale` tylko przy komplecie 15/15; streak z `fetched_ok===0`; kelirikko poza mnożnikiem; `sourceUrl` per endpoint; PL-T eismoinfo/Tark/Tee; testy `runRoadFi` + status **574**; DP-155/156 w rejestrze. Znane: `loadTons=null`.
+- **Dalej:** push → CI → F7. Po F7: BN6 cz.2 LT.
 - Bez push na main.
 
 ## 2026-11-02 04:20 — #725 SCALONE; start BN6 cz.1 (FI + 0376)
 
-- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. #723 BN9-c3 bez F7.
-- Scalanie: **#725 SCALONE** `571aff01` (F7: gotowe @ `68f7efbb`; CI unit/db/visual ✔). DP-152 wpisane do rejestru (F7 #725 nieblokujące).
-- **Krok:** BN6 cz.1 — migracja **0376** (`ROAD_LT/LV/EE/FI`, corridor_conditions, cron `road-fi`); Digitraffic FI parser/job; vitest `bn6-road-fi`.
-- **Dalej:** push → CI → F7. Potem BN6 cz.2 LT → LV → EE.
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie.
+- Scalanie: **#725 SCALONE** `571aff01` (F7: gotowe @ `68f7efbb`). DP-152 w rejestrze.
+- **Krok:** BN6 cz.1 — **0376** + job `road-fi` Digitraffic; vitest `bn6-road-fi`.
 - Bez push na main.
 
 ## 2026-11-02 03:40 — #724 SCALONE; start DP-149+150+151
