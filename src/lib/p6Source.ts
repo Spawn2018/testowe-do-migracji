@@ -9,7 +9,8 @@ import type { CaseEvent, CasePerson, TodoDecision, TodoIssue } from './p6Todo';
 import type { FerryRowView, RoadRowView } from './p6Route';
 import type { FeeSuggestion } from './p5Fees';
 import type { MarineConditionRow } from './marineWeatherDb';
-import { DEMO_BALTIC_ROUTES, demoBalticRoadRisks, demoAssignments, demoDecisions, demoFerryRows, demoMarineRows, demoHistory, demoMe, demoStenaSailings, demoTimeBans, DEMO_PEOPLE } from './p6Demo';
+import type { BalticCorridorRow } from './bn9c4Roads';
+import { DEMO_BALTIC_ROUTES, demoBalticCorridors, demoBalticRoadRisks, demoAssignments, demoDecisions, demoFerryRows, demoMarineRows, demoHistory, demoMe, demoStenaSailings, demoTimeBans, DEMO_PEOPLE } from './p6Demo';
 
 /** E6: osoby firmy z telefonem (imię, nazwisko, rodzaj konta). null = nie podłączone — bez „Zadzwoń”. */
 export function casePeopleOf(org: OrgKind): CasePerson[] | null {
@@ -104,4 +105,9 @@ export function sampleBalticRoadRisksOf(nowIso: string): Risk[] {
 /** BN9-c4: trasa rejsu transportu w demo (dane demo nie mają transportu bałtyckiego); produkcja — z transportów i rejsów. */
 export function sampleBalticRoutesOf(): readonly string[] {
   return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? DEMO_BALTIC_ROUTES : [];
+}
+
+/** BN9-c4 (F7 r1): stan źródeł dróg LT/LV/EE/FI w demo (produkcja: `fetchBalticCorridors` z `corridor_conditions`). */
+export function sampleBalticCorridorsOf(nowIso: string): BalticCorridorRow[] | null {
+  return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? demoBalticCorridors(nowIso) : null;
 }

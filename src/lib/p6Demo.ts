@@ -7,6 +7,7 @@ import type { Load, OrgKind, Risk, Sailing } from '../types';
 import type { CaseEvent, CasePerson, TodoDecision } from './p6Todo';
 import type { FerryRowView } from './p6Route';
 import type { MarineConditionRow } from './marineWeatherDb';
+import type { BalticCorridorRow } from './bn9c4Roads';
 import { formatListDateTime } from './format';
 import { TZ_OPS, wallLocalToIso } from './time';
 
@@ -170,4 +171,12 @@ export function demoBalticRoadRisks(nowIso: string): Risk[] {
     mk('demo-road-lv-1', 'LV', 'MEDIUM', 'rk_road_baltic', { event: 'Roboty drogowe — A7 Bauska' }, 'Trasa LV: Roboty drogowe — A7 Bauska',
       'Ruch wahadłowy (przykład).', -24, 72, 'przykład (demo)'),
   ];
+}
+
+/** Stan źródeł demo: świeże odczyty (10 min temu) — Estonia „Brak utrudnień na korytarzu”; Finlandia spowolnienie +15%. */
+export function demoBalticCorridors(nowIso: string): BalticCorridorRow[] {
+  const at = iso(Date.parse(nowIso) - 10 * 60_000);
+  return (['ROAD_LT', 'ROAD_LV', 'ROAD_EE', 'ROAD_FI'] as const).map((corridor) => ({
+    corridor, observedAt: at, slowdownMult: corridor === 'ROAD_FI' ? 1.15 : 1, reason: corridor === 'ROAD_FI' ? 'wypadek E75 (przykład)' : null,
+  }));
 }

@@ -312,11 +312,13 @@ test.describe('BN9-c3 visual — Ryzyka KSH (pl 1440)', () => {
 
 /* BN9-c4 (#573 „Ekrany po BN6”) — Ryzyka › Drogi: „Drogi LT”, „Drogi LV”, „Drogi EE”, „Drogi FI” pod „Drogi PL” i „Drogi SE”.
    Demo: przykładowa trasa transportu Tallinn – Helsinki, zdarzenia wymyślone (G-09), limit masy wyróżniony, Estonia bez
-   zdarzeń („Brak utrudnień na korytarzu”); sekcje rozwinięte kliknięciem (domyślnie zwinięte z licznikiem). Migawka obszaru czterech sekcji, komputer 1440 i telefon 390 (zakładka „Na trasie”). */
+   zdarzeń („Brak utrudnień na korytarzu”, świeży odczyt źródła); sekcje rozwinięte kliknięciem (domyślnie zwinięte z licznikiem).
+   Migawka obszaru czterech sekcji, telefon 390 (zakładka „Na trasie”). Komputer 1440 pokrywa `ryzyka-ksh-pl-1440-light.png`
+   (F7 r1 B1: układ HHL 1440 — osobne DP-161). */
 test.describe('BN9-c4 visual — drogi LT/LV/EE/FI (HHL pl)', () => {
   test.describe.configure({ mode: 'serial' })
 
-  for (const width of [1440, 390]) {
+  for (const width of [390]) {
     const file = `drogi-baltyckie__hhl__pl__${width}__light.png`
     test(file, async ({ page }) => {
       await page.emulateMedia({ reducedMotion: 'reduce' })
@@ -349,11 +351,7 @@ test.describe('BN9-c4 visual — drogi LT/LV/EE/FI (HHL pl)', () => {
         const h = Math.max(...els.map((r) => r.bottom)) + window.scrollY - y
         return { x: Math.floor(x), y: Math.floor(y), width: Math.ceil(w), height: Math.ceil(h) }
       })
-      /* komputer: kolumna „Sytuacja na trasie” przewija się obok „Do zrobienia” — migawka samej sekcji „Drogi FI” (wypadek, limit masy,
-         atrybucja); telefon: obszar czterech sekcji */
-      const opts = { maxDiffPixels: 60, threshold: 0.28, animations: 'disabled' as const }
-      if (width < 769) await expect(page).toHaveScreenshot(file, { clip, fullPage: true, ...opts })
-      else await expect(page.locator('[data-panel="road-fi"]')).toHaveScreenshot(file, opts)
+      await expect(page).toHaveScreenshot(file, { clip, fullPage: true, maxDiffPixels: 60, threshold: 0.28, animations: 'disabled' })
     })
   }
 })

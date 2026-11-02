@@ -133,6 +133,28 @@ export function balticRoadRow(r: Risk): BalticRoadRow | null {
   };
 }
 
+/** Wiersz `corridor_conditions` źródła drogowego kraju (BN6: `ROAD_LT` … `ROAD_FI`). */
+export interface BalticCorridorRow {
+  corridor: 'ROAD_LT' | 'ROAD_LV' | 'ROAD_EE' | 'ROAD_FI';
+  observedAt: string | null;
+  slowdownMult: number;
+  reason: string | null;
+}
+
+/** Świeży odczyt źródła: `observed_at` nie starszy niż 60 min (decyzja A, F7 r1 #728). */
+export const SOURCE_FRESH_MIN = 60;
+/**
+ * Stan źródła kraju: FRESH — odczyt ≤ 60 min („Brak utrudnień na korytarzu”); STALE — starszy odczyt („Brak świeżych danych”);
+ * NONE — brak wiersza („Źródło jeszcze niepodłączone”); UNKNOWN — błąd odczytu (null).
+ */
+export type SourceState = 'FRESH' | 'STALE' | 'NONE' | 'UNKNOWN';
+export function sourceStateOf(row: BalticCorridorRow | undefined, rowsLoaded: boolean, nowIso: string): SourceState {
+  if (!rowsLoaded) return 'UNKNOWN';
+  if (!row || !row.observedAt) return 'NONE';
+  const age = Date.parse(nowIso) - Date.parse(row.observedAt);
+  return Number.isFinite(age) && age <= SOURCE_FRESH_MIN * 60_000 ? 'FRESH' : 'STALE';
+}
+
 export interface BalticRoadSection {
   country: BalticRoadCountry;
   rows: BalticRoadRow[];
@@ -140,24 +162,50 @@ export interface BalticRoadSection {
   sources: string[];
   /** czy aktywny transport jedzie przez ten kraj */
   onRoute: boolean;
+  source: SourceState;
+  /** ostatni odczyt źródła (`corridor_conditions.observed_at`) */
+  observedAt: string | null;
+  /** spowolnienie korytarza w procentach (slowdown_mult > 1), inaczej null */
+  slowdownPct: number | null;
 }
 
-/** Najpierw większy wpływ, potem ograniczenia (masa/wymiary), potem kolejność id. */
+const ts = (v: string | null) => (v ? Date.parse(v) : NaN);
+/* rosnąco, brak wartości na końcu */
+const byTime = (a: string | null, b: string | null) => {
+  const x = ts(a);
+  const y = ts(b);
+  if (Number.isFinite(x) && Number.isFinite(y)) return x - y;
+  return Number.isFinite(x) ? -1 : Number.isFinite(y) ? 1 : 0;
+};
+
+/** Najpierw większy wpływ; przy równym — trwające / najbliższe (`from` rosnąco, brak na końcu), potem `to`, na końcu id. */
 export function sortBalticRows(rows: readonly BalticRoadRow[]): BalticRoadRow[] {
-  return [...rows].sort((a, b) => IMPACT_RANK[b.impact] - IMPACT_RANK[a.impact] || Number(!!b.limit) - Number(!!a.limit) || a.id.localeCompare(b.id));
+  return [...rows].sort((a, b) => IMPACT_RANK[b.impact] - IMPACT_RANK[a.impact] || byTime(a.from, b.from) || byTime(a.to, b.to) || a.id.localeCompare(b.id));
 }
 
 /**
- * Sekcje „Drogi LT / LV / EE / FI”. Bez aktywnych transportów bałtyckich — pusta lista (wygląd jak dotąd).
- * Z transportem: kraj na trasie (wiersze albo „brak utrudnień na korytarzu”) i kraj z ryzykami poza trasą; reszta ukryta.
+ * Sekcje „Drogi LT / LV / EE / FI” (F7 r1 N4): tylko kraje na trasie aktywnego transportu (wszystkie wiersze, a bez wierszy —
+ * stan źródła); kraj spoza trasy — tylko ryzyka przypięte do transportu (`loadId`), które są widoczne zawsze.
+ * Bez transportów bałtyckich i bez ryzyk przy transporcie — pusta lista (wygląd jak dotąd).
  */
-export function balticRoadSections(risks: readonly Risk[], onRoute: ReadonlySet<BalticRoadCountry>): BalticRoadSection[] {
-  if (onRoute.size === 0) return [];
-  const rows = risks.filter((r) => !r.loadId).map(balticRoadRow).filter((x): x is BalticRoadRow => !!x);
+export function balticRoadSections(
+  risks: readonly Risk[],
+  onRoute: ReadonlySet<BalticRoadCountry>,
+  corridors: readonly BalticCorridorRow[] | null = null,
+  nowIso: string = new Date().toISOString(),
+): BalticRoadSection[] {
+  const all = risks.map((r) => ({ r, row: balticRoadRow(r) })).filter((x): x is { r: Risk; row: BalticRoadRow } => !!x.row);
   return BALTIC_ROAD_COUNTRIES
-    .map((country) => {
-      const list = sortBalticRows(rows.filter((r) => r.country === country));
-      return { country, rows: list, sources: [...new Set(list.map((r) => r.source).filter((s): s is string => !!s))], onRoute: onRoute.has(country) };
+    .map((country): BalticRoadSection => {
+      const on = onRoute.has(country);
+      const list = sortBalticRows(all.filter((x) => x.row.country === country && (on || !!x.r.loadId)).map((x) => x.row));
+      const c = corridors?.find((k) => k.corridor === `ROAD_${country}`);
+      const state = sourceStateOf(c, corridors != null, nowIso);
+      return {
+        country, rows: list, sources: [...new Set(list.map((r) => r.source).filter((s): s is string => !!s))], onRoute: on,
+        source: state, observedAt: c?.observedAt ?? null,
+        slowdownPct: c && c.slowdownMult > 1 ? Math.round((c.slowdownMult - 1) * 100) : null,
+      };
     })
     .filter((s) => s.onRoute || s.rows.length > 0);
 }

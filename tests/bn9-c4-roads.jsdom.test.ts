@@ -5,7 +5,7 @@
  * bez sekcji (jak dotąd), limit masy wyróżniony z dopiskiem, atrybucja z `detail.zrodlo`, regresja Drogi PL/SE, telefon 390 px.
  * Dane wymyślone (G-09).
  */
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { act, createElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
@@ -15,13 +15,17 @@ import {
   attributionView, balticCountriesOfLoads, balticCountriesOfRoute, balticCountryOf, balticRoadSections, roadInfoFromDetail, withBalticRoad,
 } from '../src/lib/bn9c4Roads';
 import { isRouteOnly, isTodoRisk, routeRisks } from '../src/lib/todoRules';
-import { sampleBalticRoadRisksOf } from '../src/lib/p6Source';
+import { sampleBalticCorridorsOf, sampleBalticRoadRisksOf, sampleBalticRoutesOf } from '../src/lib/p6Source';
 import { todoQueue } from '../src/lib/cockpitE9';
 import { textHits } from './e21Rules';
 import { BN9C4_EN, I18N_ALL } from '../src/i18n/messages';
 import type { Load, Risk, Sailing } from '../src/types';
+import type { BalticCorridorRow } from '../src/lib/bn9c4Roads';
 
 const NOW = '2026-11-02T10:00:00Z';
+/* świeże odczyty źródeł (10 min przed „teraz”) — decyzja A */
+const FRESH: BalticCorridorRow[] = (['ROAD_LT', 'ROAD_LV', 'ROAD_EE', 'ROAD_FI'] as const)
+  .map((corridor) => ({ corridor, observedAt: '2026-11-02T09:50:00Z', slowdownMult: 1, reason: null }));
 const FI_SRC = 'Source: Fintraffic / digitraffic.fi, license CC 4.0 BY';
 
 function risk(p: Partial<Risk> & Pick<Risk, 'id'>): Risk {
@@ -64,7 +68,7 @@ type PanelProps = Parameters<typeof RoutePanel>[0];
 function panel(p: Partial<PanelProps> = {}, width = 1440): HTMLElement {
   return mount(createElement(MemoryRouter, null, createElement(RoutePanel, {
     role: 'HHL', locale: 'pl', phone: false, nowIso: NOW, loads: [], risks: [], sailings: [], marine: [], corridor: null,
-    seSituations: [], seDemo: false, showDemoMarks: true, parts: ['ferry', 'roads'], withHead: false, ...p,
+    seSituations: [], seDemo: false, showDemoMarks: true, parts: ['ferry', 'roads'], withHead: false, balticCorridors: FRESH, ...p,
   })), width);
 }
 /** rozwiń sekcje krajów (domyślnie zwinięte) */
@@ -140,14 +144,14 @@ describe('BN9-c4 — Ryzyka › Drogi: sekcje krajów', () => {
     expand(el);
     expect(el.querySelectorAll('[data-panel="road-fi"] [data-baltic-road]').length).toBe(1);
   });
-  it('transport PLD-KPS: LT, LV, EE; FI tylko gdy ma ryzyka (poza trasą — bez „brak utrudnień”)', () => {
-    const only = panel({ loads: [load('L-kps', 's-kps')], sailings: SAILS });
+  it('transport PLD-KPS: LT, LV, EE; FI poza trasą — bez sekcji także z ryzykami (N4); ryzyko FI przy transporcie — widoczne', () => {
+    const only = panel({ loads: [load('L-kps', 's-kps')], sailings: SAILS, risks: [road('fi1', 'FI')] });
     expect(panels(only).filter((p) => /^road-(lt|lv|ee|fi)$/.test(p!))).toEqual(['road-lt', 'road-lv', 'road-ee']);
     act(() => root?.unmount());
     host?.remove();
-    const withFi = panel({ loads: [load('L-kps', 's-kps')], sailings: SAILS, risks: [road('fi1', 'FI')] });
-    expect(panels(withFi)).toContain('road-fi');
-    expect(withFi.querySelector('[data-empty="road-fi"]')).toBeNull();
+    const withLoad = expand(panel({ loads: [load('L-kps', 's-kps')], sailings: SAILS, risks: [road('fi1', 'FI'), road('fi2', 'FI', { loadId: 'L-x' })] }));
+    expect(panels(withLoad)).toContain('road-fi');
+    expect([...withLoad.querySelectorAll('[data-panel="road-fi"] [data-baltic-road]')].map((x) => x.getAttribute('data-baltic-road'))).toEqual(['fi2']);
   });
   it('bez transportów bałtyckich: sekcji bałtyckich nie ma — nawet z ryzykami (wygląd jak dotąd)', () => {
     const el = panel({ loads: [load('L-nyn', 's-nyn')], sailings: SAILS, risks: [road('fi1', 'FI'), road('lt1', 'LT')] });
@@ -195,8 +199,8 @@ describe('BN9-c4 — Ryzyka › Drogi: sekcje krajów', () => {
     expect(w2.querySelector('[data-limit-check]')!.textContent).toBe('Ładunek 52,5 t — sprawdź zezwolenie / trasę.');
     /* limit wysokości z detail (bez wartości masy) — etykieta „Limit wysokości 4,2 m” */
     expect(el.querySelector('[data-baltic-road="h1"] [data-limit-tag]')!.textContent).toBe('Limit wysokości 4,2 m');
-    /* przy tym samym wpływie limit przed zwykłym zdarzeniem */
-    expect([...el.querySelectorAll('[data-panel="road-fi"] [data-baltic-road]')].map((r) => r.getAttribute('data-baltic-road'))).toEqual(['w1', 'p1']);
+    /* przy tym samym wpływie i tym samym czasie — kolejność id */
+    expect([...el.querySelectorAll('[data-panel="road-fi"] [data-baltic-road]')].map((r) => r.getAttribute('data-baltic-road'))).toEqual(['p1', 'w1']);
     expect(el.querySelector('[data-baltic-road="p1"] [data-limit-tag]')).toBeNull();
     expect(readFileSync('src/components/risks/risks.css', 'utf8')).toMatch(/\.rk-limit-tag\{[^}]*color:var\(--amber-ink\)/);
   });
@@ -215,10 +219,100 @@ describe('BN9-c4 — Ryzyka › Drogi: sekcje krajów', () => {
     const src = readFileSync('src/components/risks/BalticRoads.tsx', 'utf8');
     expect(src).not.toMatch(/Fintraffic|digitraffic|Lietuva|eismoinfo|transportdata|Tark Tee|tarktee|dangerouslySetInnerHTML/);
   });
-  it('ryzyko drogowe bałtyckie przy transporcie nie trafia do sekcji (to sprawa przy transporcie)', () => {
-    const el = panel({ loads, sailings: SAILS, risks: [road('x', 'FI', { loadId: 'L-hel' })] });
-    expect(el.querySelector('[data-baltic-road="x"]')).toBeNull();
-    expect(el.querySelector('[data-empty="road-fi"]')).not.toBeNull();
+  it('ryzyko drogowe bałtyckie przy transporcie widoczne zawsze — także bez transportów bałtyckich (N4)', () => {
+    const el = expand(panel({ risks: [road('x', 'FI', { loadId: 'L-hel' })] }));
+    expect(panels(el).filter((p) => /^road-(lt|lv|ee|fi)$/.test(p!))).toEqual(['road-fi']);
+    expect(el.querySelector('[data-baltic-road="x"]')!.getAttribute('data-risk-id')).toBe('x');
+  });
+  it('sortowanie przy równym wpływie (N1): trwające / najbliższe (`from` rosnąco, brak na końcu), potem `to`, na końcu id', () => {
+    const t = (id: string, from: string | null, to: string | null) => road(id, 'FI', {}, { od: from, do: to });
+    const el = expand(panel({ loads, sailings: SAILS, risks: [
+      t('e', null, null), t('d', null, '2026-11-03T00:00:00Z'), t('c', '2026-11-04T00:00:00Z', null),
+      t('b', '2026-11-01T00:00:00Z', '2026-11-06T00:00:00Z'), t('a', '2026-11-01T00:00:00Z', '2026-11-05T00:00:00Z'),
+      road('z', 'FI', { severity: 'HIGH' }, { od: null, do: null }),
+    ] }));
+    expect([...el.querySelectorAll('[data-panel="road-fi"] [data-baltic-road]')].map((x) => x.getAttribute('data-baltic-road'))).toEqual(['z', 'a', 'b', 'c', 'd']);
+  });
+  it('stan źródła bez zdarzeń (decyzja A): świeży ≤ 60 min, starszy z czasem ostatniego odczytu, brak wiersza, błąd odczytu; spowolnienie w nagłówku', () => {
+    const rows: BalticCorridorRow[] = [
+      { corridor: 'ROAD_LT', observedAt: '2026-11-02T09:00:00Z', slowdownMult: 1, reason: null },
+      { corridor: 'ROAD_LV', observedAt: '2026-11-02T08:30:00Z', slowdownMult: 1, reason: null },
+      { corridor: 'ROAD_FI', observedAt: '2026-11-02T09:55:00Z', slowdownMult: 1.2, reason: 'śliskość' },
+    ];
+    const el = panel({ loads, sailings: SAILS, balticCorridors: rows });
+    const e = (c: string) => el.querySelector(`[data-empty="road-${c}"]`) as HTMLElement;
+    expect(e('lt').textContent).toBe('Brak utrudnień na korytarzu.');
+    expect(e('lv').textContent).toMatch(/^Brak świeżych danych ze źródła \(ostatni odczyt: 02\.11\.2026, \d{2}:30\)\.$/);
+    expect(e('ee').textContent).toBe('Źródło jeszcze niepodłączone.');
+    expect(el.querySelector('[data-panel="road-fi"] [data-baltic-slow]')!.textContent).toBe(' · spowolnienie +20%');
+    expect(el.querySelector('[data-panel="road-lt"] [data-baltic-slow]')).toBeNull();
+    act(() => root?.unmount());
+    host?.remove();
+    const err = panel({ loads, sailings: SAILS, balticCorridors: null });
+    expect(err.querySelector('[data-empty="road-lt"]')!.textContent).toBe('Brak odczytu stanu źródła.');
+    expect(err.querySelector('[data-empty="road-lt"]')!.textContent).not.toMatch(/Brak utrudnień/);
+  });
+  it('dopisek LT (decyzja B): „Źródło LT (Via Lietuva) nie podaje wypadków.” tylko w sekcji LT', () => {
+    const el = panel({ loads, sailings: SAILS });
+    expect(el.querySelector('[data-panel="road-lt"] [data-lt-note]')!.textContent).toBe('Źródło LT (Via Lietuva) nie podaje wypadków.');
+    expect(el.querySelectorAll('[data-lt-note]').length).toBe(1);
+  });
+  it('link do ryzyka (N3): `focusRiskId` rozwija sekcję kraju, „Pokaż wszystkie” albo blok niskiego wpływu', () => {
+    const many = Array.from({ length: 8 }, (_, i) => road(`m${i}`, 'FI'));
+    const low = road('low', 'LV', { severity: 'LOW' });
+    const el = panel({ loads, sailings: SAILS, risks: [...many, low], focusRiskId: 'm7' });
+    expect(el.querySelector('[data-panel="road-fi"]')!.getAttribute('data-open')).toBe('1');
+    expect(el.querySelector('[data-risk-id="m7"]')).not.toBeNull();
+    expect(el.querySelector('[data-panel="road-lv"]')!.getAttribute('data-open')).toBe('0');
+    act(() => root?.unmount());
+    host?.remove();
+    const el2 = panel({ loads, sailings: SAILS, risks: [...many, low], focusRiskId: 'low' });
+    expect(el2.querySelector('[data-panel="road-lv"]')!.getAttribute('data-open')).toBe('1');
+    expect((el2.querySelector('[data-panel="road-lv"] details[data-baltic-low]') as HTMLDetailsElement).open).toBe(true);
+    expect(readFileSync('src/views/RisksView.tsx', 'utf8')).toContain('...rr.roadBaltic');
+  });
+  it('„Zwiń” i „Pokaż mniej”; aria-controls tylko przy otwartej sekcji (N6, N8)', () => {
+    const many = Array.from({ length: 7 }, (_, i) => road(`m${i}`, 'FI'));
+    const el = panel({ loads, sailings: SAILS, risks: many });
+    const sec = el.querySelector('[data-panel="road-fi"]') as HTMLElement;
+    const t = sec.querySelector('[data-baltic-toggle]') as HTMLButtonElement;
+    expect(t.hasAttribute('aria-controls')).toBe(false);
+    act(() => { t.click(); });
+    expect(t.getAttribute('aria-controls')).toBe('rk-fi-list');
+    expect(sec.querySelector('#rk-fi-list')).not.toBeNull();
+    expect(t.textContent).toBe('Zwiń');
+    const all = sec.querySelector('[data-baltic-all]') as HTMLButtonElement;
+    act(() => { all.click(); });
+    expect(sec.querySelectorAll('[data-baltic-road]').length).toBe(7);
+    expect(all.textContent).toBe('Pokaż mniej');
+    act(() => { all.click(); });
+    expect(sec.querySelectorAll('[data-baltic-road]').length).toBe(5);
+    act(() => { t.click(); });
+    expect(sec.querySelectorAll('[data-baltic-road]').length).toBe(0);
+    expect(t.textContent).toBe('Pokaż utrudnienia');
+    expect(t.hasAttribute('aria-controls')).toBe(false);
+  });
+  it('sekcja z samymi zdarzeniami o niskim wpływie: licznik, po rozwinięciu tylko zwinięty blok niskiego wpływu (N8)', () => {
+    const el = expand(panel({ loads, sailings: SAILS, risks: [road('l1', 'EE', { severity: 'LOW' }), road('l2', 'EE', { severity: 'LOW' })] }));
+    const sec = el.querySelector('[data-panel="road-ee"]') as HTMLElement;
+    expect(sec.querySelector('[data-baltic-sum]')!.textContent).toBe('Estonia · 2 utrudnienia · 0 wysokich');
+    expect(sec.querySelectorAll('.rk-baltic-list > ul').length).toBe(0);
+    expect(sec.querySelector('[data-baltic-all]')).toBeNull();
+    const d = sec.querySelector('details[data-baltic-low]') as HTMLDetailsElement;
+    expect(d.open).toBe(false);
+    expect(d.querySelector('summary')!.textContent).toBe('2 informacje o niskim wpływie');
+  });
+  it('balticDemo przy VITE_AUTH_MODE=supabase nie dodaje nic (N8)', () => {
+    vi.stubEnv('VITE_AUTH_MODE', 'supabase');
+    try {
+      expect(sampleBalticRoadRisksOf(NOW)).toEqual([]);
+      expect(sampleBalticRoutesOf()).toEqual([]);
+      expect(sampleBalticCorridorsOf(NOW)).toBeNull();
+      const el = panel({ balticDemo: true });
+      expect(el.querySelector('[data-baltic]')).toBeNull();
+    } finally {
+      vi.unstubAllEnvs();
+    }
   });
   it('regresja: Drogi PL i Drogi SE bez zmian (te same teksty i ten sam HTML z transportem bałtyckim i bez)', () => {
     const a = panel({ risks: [risk({ id: 'pl', kind: 'ROAD_PL', title: 'A1: roboty' })] });
@@ -252,6 +346,8 @@ describe('BN9-c4 — Ryzyka › Drogi: sekcje krajów', () => {
     expect(el.querySelector('[data-limit-check]')).not.toBeNull();
     const css = readFileSync('src/components/risks/risks.css', 'utf8');
     expect(css).toContain('[data-baltic] .rk-road-t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}');
+    /* N2: telefon — tytuł do dwóch linii */
+    expect(css).toContain('@media (max-width: 480px){[data-baltic] .rk-road-t{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}}');
     expect(css).toContain('[data-baltic] .rk-road-n,.rk-road-attr{overflow-wrap:anywhere}');
     expect(readFileSync('src/components/risks/BalticRoads.tsx', 'utf8')).not.toMatch(/style=\{|width:\s*\d/);
   });

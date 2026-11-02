@@ -18,6 +18,7 @@ import { isDemoSourceMode } from '../lib/demoLabel';
 import { shows } from '../lib/prodFacade';
 import type { MarineConditionRow } from '../lib/marineWeatherDb';
 import type { CorridorConditionRow } from '../lib/corridorConditionsDb';
+import type { BalticCorridorRow } from '../lib/bn9c4Roads';
 import { TodoPanel } from '../components/risks/TodoPanel';
 import { RoutePanel } from '../components/risks/RoutePanel';
 import { KshProposals } from '../components/risks/KshProposals';
@@ -45,6 +46,8 @@ export function RisksView() {
   const [seMode, setSeMode] = useState<'live' | 'seed'>('seed');
   const [marine, setMarine] = useState<MarineConditionRow[]>([]);
   const [corridor, setCorridor] = useState<CorridorConditionRow | null>(null);
+  /* BN9-c4 (F7 r1, decyzja A): stan źródeł dróg LT/LV/EE/FI (`corridor_conditions`, produkcja) */
+  const [balticCorridors, setBalticCorridors] = useState<BalticCorridorRow[] | null>(null);
   const [tab, setTab] = useState<Tab>(() => (riskFilter === 'FERRY' || riskFilter === 'ROAD_SE' ? 'route' : 'todo'));
 
   const nowMin = Math.floor(getNow().getTime() / 60_000);
@@ -64,7 +67,7 @@ export function RisksView() {
   useEffect(() => {
     if (!riskFilter || riskFilter === 'ALL') return;
     const rr = routeRisks(risks);
-    const onRoute = [...rr.ferry, ...rr.weather, ...rr.roadPl, ...rr.bans].some((r) => r.id === riskFilter);
+    const onRoute = [...rr.ferry, ...rr.weather, ...rr.roadPl, ...rr.roadBaltic, ...rr.bans].some((r) => r.id === riskFilter);
     const onSys = rr.system.some((r) => r.id === riskFilter);
     if (onRoute || onSys) {
       setTab(onSys ? 'sys' : 'route');
@@ -78,6 +81,9 @@ export function RisksView() {
     if (PROD) {
       void import('../lib/corridorConditionsDb').then((m) => m.fetchCorridorCondition()).then((row) => {
         if (!cancelled) setCorridor(row);
+      });
+      void import('../lib/bn9c4CorridorDb').then((m) => m.fetchBalticCorridors()).then((rows) => {
+        if (!cancelled) setBalticCorridors(rows);
       });
     } else if (shows('roadSituationsSe')) {
       void fetchSituations().then((r) => {
@@ -108,7 +114,8 @@ export function RisksView() {
     <RoutePanel
       role={role} locale={locale} phone={phone} nowIso={nowIso} loads={loads} risks={risks} sailings={sailings}
       marine={marine} corridor={corridor} seSituations={seSituations} seDemo={seDemo} showDemoMarks={showDemoMarks}
-      parts={parts} withHead={withHead} balticDemo={!PROD}
+      parts={parts} withHead={withHead} balticDemo={!PROD} balticCorridors={balticCorridors}
+      focusRiskId={riskFilter && riskFilter !== 'ALL' ? riskFilter : null}
     />
   );
   const todo = (showHead: boolean) => role === 'KSH' ? null : (
