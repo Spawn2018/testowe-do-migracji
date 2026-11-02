@@ -340,7 +340,7 @@ test.describe('BN9-c4 visual — drogi LT/LV/EE/FI (HHL pl)', () => {
       await page.setViewportSize({ width, height: width < 769 ? 4200 : 2600 })
       await page.evaluate(() => window.scrollTo(0, 0))
       await page.waitForTimeout(300)
-      /* obszar od „Drogi LT” do „Drogi FI” (sekcje stoją jedna pod drugą) */
+      /* telefon: obszar od „Drogi LT” do „Drogi FI” (sekcje stoją jedna pod drugą) */
       const clip = await page.evaluate(() => {
         const els = [...document.querySelectorAll('[data-baltic]')].map((e) => e.getBoundingClientRect())
         const x = Math.min(...els.map((r) => r.left))
@@ -349,13 +349,11 @@ test.describe('BN9-c4 visual — drogi LT/LV/EE/FI (HHL pl)', () => {
         const h = Math.max(...els.map((r) => r.bottom)) + window.scrollY - y
         return { x: Math.floor(x), y: Math.floor(y), width: Math.ceil(w), height: Math.ceil(h) }
       })
-      await expect(page).toHaveScreenshot(file, {
-        clip,
-        fullPage: true,
-        maxDiffPixels: 60,
-        threshold: 0.28,
-        animations: 'disabled',
-      })
+      /* komputer: kolumna „Sytuacja na trasie” przewija się obok „Do zrobienia” — migawka samej sekcji „Drogi FI” (wypadek, limit masy,
+         atrybucja); telefon: obszar czterech sekcji */
+      const opts = { maxDiffPixels: 60, threshold: 0.28, animations: 'disabled' as const }
+      if (width < 769) await expect(page).toHaveScreenshot(file, { clip, fullPage: true, ...opts })
+      else await expect(page.locator('[data-panel="road-fi"]')).toHaveScreenshot(file, opts)
     })
   }
 })

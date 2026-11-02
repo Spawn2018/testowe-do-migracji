@@ -166,8 +166,8 @@ export function demoBalticRoadRisks(nowIso: string): Risk[] {
     mk('demo-road-fi-3', 'FI', 'MEDIUM', 'rk_road_baltic', { event: 'Roboty drogowe — E75 Vuosaari – Kerava' }, 'Trasa FI: Roboty drogowe — E75 Vuosaari – Kerava',
       'Zwężenie do jednego pasa, ograniczenie prędkości 50 km/h (przykład).', -72, 96, FI_SRC),
     mk('demo-road-lt-1', 'LT', 'MEDIUM', 'rk_road_baltic_weight_check', { event: 'Słaby most — A1 Kowno', limit: 40 }, 'Trasa LT: limit masy 40 t — sprawdź zezwolenie / trasę',
-      'Ograniczenie nośności mostu (przykład).', -240, null, 'Dane przykładowe (demo)', 40),
+      'Ograniczenie nośności mostu (przykład).', -240, null, 'przykład (demo)', 40),
     mk('demo-road-lv-1', 'LV', 'MEDIUM', 'rk_road_baltic', { event: 'Roboty drogowe — A7 Bauska' }, 'Trasa LV: Roboty drogowe — A7 Bauska',
-      'Ruch wahadłowy (przykład).', -24, 72, 'Dane przykładowe (demo)'),
+      'Ruch wahadłowy (przykład).', -24, 72, 'przykład (demo)'),
   ];
 }
