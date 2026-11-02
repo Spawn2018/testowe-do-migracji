@@ -15,6 +15,8 @@ const ROUTE_TYPES: ReadonlySet<Risk['type']> = new Set<Risk['type']>(['FERRY', '
 export const SYSTEM_KINDS: ReadonlySet<string> = new Set(['JOB_FAILURE', 'USAGE_LIMIT']);
 /* awaria źródła danych; rejsy „do weryfikacji” i AIS zostają przy promach (Sytuacja na trasie) */
 const SYSTEM_CODES: ReadonlySet<string> = new Set(['SOURCE_DOWN']);
+/* BN9-c4: drogi LT/LV/EE/FI (BN6) — sytuacja na trasie jak ROAD_PL; rozpoznanie po `kind` (w `mappers.ts` mają `type: 'OPS'`) */
+const BALTIC_ROAD_KINDS: ReadonlySet<string> = new Set(['ROAD_LT', 'ROAD_LV', 'ROAD_EE', 'ROAD_FI']);
 
 type R = Pick<Risk, 'title'> & Partial<Pick<Risk, 'type' | 'loadId' | 'kind' | 'code'>>;
 
@@ -28,7 +30,7 @@ export function isSystemRisk(r: R): boolean {
 }
 
 export function isRouteOnly(r: R): boolean {
-  return !r.loadId && ((!!r.type && ROUTE_TYPES.has(r.type)) || r.kind === 'ROAD_PL');
+  return !r.loadId && ((!!r.type && ROUTE_TYPES.has(r.type)) || r.kind === 'ROAD_PL' || (!!r.kind && BALTIC_ROAD_KINDS.has(r.kind)));
 }
 
 /** Sprawa do zrobienia (liczy się i jest na liście). */
@@ -91,9 +93,9 @@ export function todoCardKey(r: Pick<Risk, 'loadId' | 'title'>): string {
 }
 
 /** Sytuacja na trasie bez transportu w podziale na miejsca strony (E7 pkt 4, 6, 7). */
-export interface RouteRisks { ferry: Risk[]; weather: Risk[]; roadPl: Risk[]; bans: Risk[]; system: Risk[] }
+export interface RouteRisks { ferry: Risk[]; weather: Risk[]; roadPl: Risk[]; bans: Risk[]; system: Risk[]; roadBaltic: Risk[] }
 export function routeRisks(risks: readonly Risk[]): RouteRisks {
-  const out: RouteRisks = { ferry: [], weather: [], roadPl: [], bans: [], system: [] };
+  const out: RouteRisks = { ferry: [], weather: [], roadPl: [], bans: [], system: [], roadBaltic: [] };
   for (const r of risks) {
     if (isTechnicalRoadNotice(r.title)) continue;
     if (isTimeBan(r)) { if (!r.loadId) out.bans.push(r); continue; }
@@ -104,6 +106,8 @@ export function routeRisks(risks: readonly Risk[]): RouteRisks {
     if (r.type === 'FERRY') out.ferry.push(r);
     else if (r.type === 'FORCE_MAJEURE') out.weather.push(r);
     else if (r.kind === 'ROAD_PL') out.roadPl.push(r);
+    /* BN9-c4: drogi LT/LV/EE/FI — sekcje „Drogi LT … FI” (bn9c4Roads.ts) */
+    else if (r.kind && BALTIC_ROAD_KINDS.has(r.kind)) out.roadBaltic.push(r);
     /* ROAD_SE bez transportu = te same sytuacje Trafikverket co lista „Drogi SE” (corridor_conditions) */
   }
   return out;

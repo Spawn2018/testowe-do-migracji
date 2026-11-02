@@ -7,6 +7,7 @@ import type { Load, OrgKind, Risk, Sailing } from '../types';
 import type { CaseEvent, CasePerson, TodoDecision } from './p6Todo';
 import type { FerryRowView } from './p6Route';
 import type { MarineConditionRow } from './marineWeatherDb';
+import type { BalticCorridorRow } from './bn9c4Roads';
 import { formatListDateTime } from './format';
 import { TZ_OPS, wallLocalToIso } from './time';
 
@@ -137,4 +138,45 @@ export function demoStenaSailings(nowIso: string): Sailing[] {
       delayedDepartureAt: null, delayedArrivalAt: null, status: 'ZAPLANOWANY', source: 'STENA' };
   };
   return [mk('demo-st-1', 'Stena Ebba', day, '20:00'), mk('demo-st-2', 'Stena Spirit', next, '09:00'), mk('demo-st-3', 'Stena Ebba', next, '20:00')];
+}
+
+/**
+ * BN9-c4 — drogi LT/LV/EE/FI w demo (Ryzyka › Drogi). Zdarzenia wymyślone (G-09), źródła z dopiskiem „(przykład)”;
+ * kształt jak ryzyka BN6 (`roadBaltic.ts`: `kind` ROAD_*, klucze `rk_road_baltic*`, `detail.zrodlo`, od/do). Estonia bez
+ * zdarzeń — wiersz „Brak utrudnień na korytarzu”. Trasa transportu demo: Tallinn – Helsinki (LT, LV, EE i FI).
+ */
+export const DEMO_BALTIC_ROUTES: readonly string[] = ['TLL-HEL'];
+
+export function demoBalticRoadRisks(nowIso: string): Risk[] {
+  const now = Date.parse(nowIso);
+  const at = (h: number) => iso(now + h * H);
+  const FI_SRC = 'Source: Fintraffic / digitraffic.fi, license CC 4.0 BY (przykład)';
+  const mk = (
+    id: string, country: 'LT' | 'LV' | 'EE' | 'FI', severity: Risk['severity'], titleKey: string, params: Record<string, string | number>,
+    title: string, opis: string, from: number | null, to: number | null, source: string, weight: number | null = null,
+  ): Risk => ({
+    id, type: 'OPS', kind: `ROAD_${country}`, severity, title, titleKey, titleParams: { country, ...params },
+    detail: opis, owner: 'HHL', meta: '', nextAction: '', ageHours: 1,
+    road: { source, from: from == null ? null : at(from), to: to == null ? null : at(to), lat: null, lon: null, weightLimitT: weight, heightLimitM: null, widthLimitM: null },
+  });
+  return [
+    mk('demo-road-fi-1', 'FI', 'HIGH', 'rk_road_baltic', { event: 'Wypadek, zamknięty pas ruchu — E75 Kemi' }, 'Trasa FI: Wypadek, zamknięty pas ruchu — E75 Kemi',
+      'Objazd lokalny, utrudnienia do ok. 2 godzin (przykład).', -1, 2, FI_SRC),
+    mk('demo-road-fi-2', 'FI', 'MEDIUM', 'rk_road_baltic_weight_check', { event: 'Kelirikko — droga 4 Oulu', limit: 12 }, 'Trasa FI: limit masy 12 t — sprawdź zezwolenie / trasę',
+      'Czasowe ograniczenie masy w okresie roztopów (przykład).', -48, 240, FI_SRC, 12),
+    mk('demo-road-fi-3', 'FI', 'MEDIUM', 'rk_road_baltic', { event: 'Roboty drogowe — E75 Vuosaari – Kerava' }, 'Trasa FI: Roboty drogowe — E75 Vuosaari – Kerava',
+      'Zwężenie do jednego pasa, ograniczenie prędkości 50 km/h (przykład).', -72, 96, FI_SRC),
+    mk('demo-road-lt-1', 'LT', 'MEDIUM', 'rk_road_baltic_weight_check', { event: 'Słaby most — A1 Kowno', limit: 40 }, 'Trasa LT: limit masy 40 t — sprawdź zezwolenie / trasę',
+      'Ograniczenie nośności mostu (przykład).', -240, null, 'przykład (demo)', 40),
+    mk('demo-road-lv-1', 'LV', 'MEDIUM', 'rk_road_baltic', { event: 'Roboty drogowe — A7 Bauska' }, 'Trasa LV: Roboty drogowe — A7 Bauska',
+      'Ruch wahadłowy (przykład).', -24, 72, 'przykład (demo)'),
+  ];
+}
+
+/** Stan źródeł demo: świeże odczyty (10 min temu) — Estonia „Brak utrudnień na korytarzu”; Finlandia spowolnienie +15%. */
+export function demoBalticCorridors(nowIso: string): BalticCorridorRow[] {
+  const at = iso(Date.parse(nowIso) - 10 * 60_000);
+  return (['ROAD_LT', 'ROAD_LV', 'ROAD_EE', 'ROAD_FI'] as const).map((corridor) => ({
+    corridor, observedAt: at, slowdownMult: corridor === 'ROAD_FI' ? 1.15 : 1, reason: corridor === 'ROAD_FI' ? 'wypadek E75 (przykład)' : null,
+  }));
 }

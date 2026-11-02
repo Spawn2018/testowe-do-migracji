@@ -25,6 +25,7 @@ import { marginFromDb, setMarginFromServer, setPermitsFromServer, setPoliciesFro
 import { setPilotsFromServer, setSymbolSpecsFromServer, type SymbolSpecRow } from '../lib/p7Source';
 import { loadFerryDictIntoCatalog } from '../lib/ferryDictSource';
 import { transportLabel } from '../lib/transportName';
+import { withBalticRoad } from '../lib/bn9c4RoadDetail';
 import type { Load, LoadEvent, OrgKind } from '../types';
 
 export const PROJECT_CODE = 'STEGRA_BODEN';
@@ -363,7 +364,8 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
         return mapped;
       })(),
       geofences: geosRows,
-      risks: (must(risks, 'risk_signals') as RiskRow[]).map((r) => riskFromRow(r, at)),
+      /* BN9-c4: drogi LT/LV/EE/FI — źródło, od/do i limity z `detail` (to samo zapytanie) */
+      risks: (must(risks, 'risk_signals') as RiskRow[]).map((r) => withBalticRoad(riskFromRow(r, at), r)),
       documents: docRows.map(documentFromRow).filter((d) => d !== null),
       notifications: (must(notesQ, 'notifications') as NotificationRow[]).map((r) => notificationFromRow(r)),
       bills: (must(billsQ, 'invoices') as unknown as BillRow[]).map((r) => billFromRow(r, orgs, docRows)).filter((b) => b !== null),
