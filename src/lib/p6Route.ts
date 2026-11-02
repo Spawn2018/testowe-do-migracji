@@ -174,6 +174,8 @@ export function altProposal(rows: readonly FerryRowView[], sailings: readonly Sa
 /* ---------- drogi ---------- */
 
 export type RoadImpact = 'VERY_HIGH' | 'HIGH' | 'MEDIUM' | 'LOW';
+/** Drogi SE i (BN9-c4b, decyzja 89) Drogi LT/LV/EE/FI: tyle sytuacji widać od razu, reszta po „Pokaż wszystkie”. */
+export const FIRST_ROADS = 4;
 export interface RoadRowView {
   id: string;
   road: string;

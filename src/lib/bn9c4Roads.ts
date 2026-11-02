@@ -111,6 +111,10 @@ export interface BalticRoadRow {
   limitValue: number | null;
   /** masa ładunku z ryzyka (`params.load`, tylko gdy baza ją podała) */
   loadT: number | null;
+  /** BN9-c4b: tekst ze źródła w języku kraju (podgląd „Pokaż oryginał”, jak Drogi SE); brak — null */
+  original: string | null;
+  /** BN9-c4b: tłumaczenie opisu w toku — zamiast opisu „Tłumaczenie w toku” (jak Drogi SE) */
+  pending: boolean;
 }
 
 const IMPACT_RANK: Record<RoadImpact, number> = { VERY_HIGH: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
@@ -126,10 +130,11 @@ export function balticRoadRow(r: Risk): BalticRoadRow | null {
     : info?.heightLimitM != null ? 'HEIGHT' : info?.widthLimitM != null ? 'WIDTH' : null;
   return {
     id: r.id, country, impact: impactOf(r.severity), titleKey: r.titleKey ?? null, event: str(p.event), title: r.title,
-    note: str(r.detail), from: info?.from ?? null, to: info?.to ?? null, source: info?.source ?? null,
+    note: info?.pending ? null : str(r.detail), from: info?.from ?? null, to: info?.to ?? null, source: info?.source ?? null,
     limit,
     limitValue: limit === 'WEIGHT' ? weight : limit === 'HEIGHT' ? info?.heightLimitM ?? null : limit === 'WIDTH' ? info?.widthLimitM ?? null : null,
     loadT: r.titleKey === KEY_WEIGHT ? num(p.load) : null,
+    original: info?.original ?? null, pending: info?.pending === true,
   };
 }
 
@@ -178,9 +183,28 @@ const byTime = (a: string | null, b: string | null) => {
   return Number.isFinite(x) ? -1 : Number.isFinite(y) ? 1 : 0;
 };
 
-/** Najpierw większy wpływ; przy równym — trwające / najbliższe (`from` rosnąco, brak na końcu), potem `to`, na końcu id. */
-export function sortBalticRows(rows: readonly BalticRoadRow[]): BalticRoadRow[] {
-  return [...rows].sort((a, b) => IMPACT_RANK[b.impact] - IMPACT_RANK[a.impact] || byTime(a.from, b.from) || byTime(a.to, b.to) || a.id.localeCompare(b.id));
+/* BN9-c4b: 0 — trwa (początek ≤ teraz), 1 — zaplanowane, 2 — bez początku */
+const phaseOf = (r: BalticRoadRow, now: number) => {
+  const f = ts(r.from);
+  return !Number.isFinite(f) ? 2 : f <= now ? 0 : 1;
+};
+
+/**
+ * Najpierw większy wpływ. Przy równym wpływie (BN9-c4b, decyzja 89 — „najważniejsze i najświeższe”, gdy podano `nowIso`):
+ * najpierw trwające, od najświeższego początku; potem zaplanowane, od najbliższego; na końcu bez początku; dalej `to`, id.
+ * Bez `nowIso` — jak w BN9-c4: `from` rosnąco (brak na końcu), potem `to`, id.
+ */
+export function sortBalticRows(rows: readonly BalticRoadRow[], nowIso?: string): BalticRoadRow[] {
+  const now = nowIso ? Date.parse(nowIso) : NaN;
+  if (!Number.isFinite(now)) {
+    return [...rows].sort((a, b) => IMPACT_RANK[b.impact] - IMPACT_RANK[a.impact] || byTime(a.from, b.from) || byTime(a.to, b.to) || a.id.localeCompare(b.id));
+  }
+  return [...rows].sort((a, b) => {
+    const pa = phaseOf(a, now);
+    const pb = phaseOf(b, now);
+    return IMPACT_RANK[b.impact] - IMPACT_RANK[a.impact] || pa - pb
+      || (pa === 0 ? byTime(b.from, a.from) : byTime(a.from, b.from)) || byTime(a.to, b.to) || a.id.localeCompare(b.id);
+  });
 }
 
 /**
@@ -198,7 +222,7 @@ export function balticRoadSections(
   return BALTIC_ROAD_COUNTRIES
     .map((country): BalticRoadSection => {
       const on = onRoute.has(country);
-      const list = sortBalticRows(all.filter((x) => x.row.country === country && (on || !!x.r.loadId)).map((x) => x.row));
+      const list = sortBalticRows(all.filter((x) => x.row.country === country && (on || !!x.r.loadId)).map((x) => x.row), nowIso);
       const c = corridors?.find((k) => k.corridor === `ROAD_${country}`);
       const state = sourceStateOf(c, corridors != null, nowIso);
       return {

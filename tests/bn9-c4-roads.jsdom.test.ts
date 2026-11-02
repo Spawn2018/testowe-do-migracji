@@ -3,6 +3,8 @@
  * BN9-c4 (#573 „Ekrany po BN6”) — Ryzyka › Drogi: Litwa, Łotwa, Estonia, Finlandia. Sekcje krajów (ten sam wygląd wierszy
  * co Drogi SE), „Brak utrudnień na korytarzu” tylko dla krajów na trasie aktywnego transportu, bez transportów bałtyckich —
  * bez sekcji (jak dotąd), limit masy wyróżniony z dopiskiem, atrybucja z `detail.zrodlo`, regresja Drogi PL/SE, telefon 390 px.
+ * BN9-c4b (decyzja 89, 02.11 22:32): sekcja kraju działa jak Drogi SE — otwarta, pierwsze 4 (`FIRST_ROADS`), „Pokaż wszystkie”,
+ * wspólny wiersz `RoadRow` z oryginałem / „Tłumaczenie w toku”.
  * Dane wymyślone (G-09).
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -12,8 +14,9 @@ import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter } from 'react-router-dom';
 import { RoutePanel } from '../src/components/risks/RoutePanel';
 import {
-  attributionView, balticCountriesOfLoads, balticCountriesOfRoute, balticCountryOf, balticRoadSections, roadInfoFromDetail, withBalticRoad,
+  attributionView, balticCountriesOfLoads, balticCountriesOfRoute, balticCountryOf, balticRoadSections, roadInfoFromDetail, sortBalticRows, withBalticRoad,
 } from '../src/lib/bn9c4Roads';
+import { FIRST_ROADS } from '../src/lib/p6Route';
 import { isRouteOnly, isTodoRisk, routeRisks } from '../src/lib/todoRules';
 import { sampleBalticCorridorsOf, sampleBalticRoadRisksOf, sampleBalticRoutesOf } from '../src/lib/p6Source';
 import { todoQueue } from '../src/lib/cockpitE9';
@@ -71,9 +74,9 @@ function panel(p: Partial<PanelProps> = {}, width = 1440): HTMLElement {
     seSituations: [], seDemo: false, showDemoMarks: true, parts: ['ferry', 'roads'], withHead: false, balticCorridors: FRESH, ...p,
   })), width);
 }
-/** rozwiń sekcje krajów (domyślnie zwinięte) */
+/** BN9-c4b: sekcje krajów od razu otwarte (pierwsze 4) — „Pokaż wszystkie” w każdej sekcji, która go ma */
 function expand(el: HTMLElement): HTMLElement {
-  for (const b of [...el.querySelectorAll<HTMLButtonElement>('[data-baltic-toggle]')]) act(() => { b.click(); });
+  for (const b of [...el.querySelectorAll<HTMLButtonElement>('[data-baltic-all][aria-expanded="false"]')]) act(() => { b.click(); });
   return el;
 }
 const panels = (el: HTMLElement) => [...el.querySelectorAll('.rk-route-parts > [data-panel]')].map((s) => s.getAttribute('data-panel'));
@@ -110,6 +113,7 @@ describe('BN9-c4 — rodzaj i kraje trasy', () => {
   it('detail BN6 → źródło, od/do, limity (bez interpretacji); inne rodzaje bez pola `road`', () => {
     expect(roadInfoFromDetail({ zrodlo: FI_SRC, od: 'a', do: null, weight_limit_t: 12, lat: 65.1, lon: 25.4 })).toEqual({
       source: FI_SRC, from: 'a', to: null, lat: 65.1, lon: 25.4, weightLimitT: 12, heightLimitM: null, widthLimitM: null,
+      original: null, pending: false,
     });
     const other = withBalticRoad(risk({ id: 'p', kind: 'ROAD_PL' }), { kind: 'ROAD_PL', detail: { zrodlo: 'HERE' } });
     expect(other.road).toBeUndefined();
@@ -130,7 +134,7 @@ describe('BN9-c4 — rodzaj i kraje trasy', () => {
     expect(r.type).toBe('OPS');
     expect(r.road).toEqual({
       source: FI_SRC, from: '2026-11-01T08:00:00Z', to: '2026-11-05T16:00:00Z',
-      lat: 65.01, lon: 25.47, weightLimitT: null, heightLimitM: 4.2, widthLimitM: null,
+      lat: 65.01, lon: 25.47, weightLimitT: null, heightLimitM: 4.2, widthLimitM: null, original: null, pending: false,
     });
   });
 });
@@ -157,11 +161,10 @@ describe('BN9-c4 — Ryzyka › Drogi: sekcje krajów', () => {
     expect(el.querySelector('[data-panel="road-fi"] h3')!.textContent).toBe('Drogi FI');
     expect(el.querySelector('[data-panel="road-lt"] [data-empty="road-lt"]')!.textContent).toBe('Brak utrudnień na korytarzu.');
     expect(el.querySelector('[data-panel="road-ee"] [data-empty="road-ee"]')).not.toBeNull();
-    /* zwinięte domyślnie: sam licznik */
-    expect(el.querySelectorAll('[data-baltic-road]').length).toBe(0);
+    /* BN9-c4b: otwarte od razu (jak Drogi SE), licznik w nagłówku; jedna pozycja — bez „Pokaż wszystkie” */
     expect(el.querySelector('[data-panel="road-fi"] [data-baltic-sum]')!.textContent).toBe('Finlandia · 1 utrudnienie · 0 wysokich');
-    expand(el);
     expect(el.querySelectorAll('[data-panel="road-fi"] [data-baltic-road]').length).toBe(1);
+    expect(el.querySelector('[data-baltic-all]')).toBeNull();
   });
   it('transport PLD-KPS: LT, LV, EE; FI poza trasą — bez sekcji także z ryzykami (N4); ryzyko FI przy transporcie — widoczne', () => {
     const only = panel({ loads: [load('L-kps', 's-kps')], sailings: SAILS, risks: [road('fi1', 'FI')] });
@@ -243,14 +246,20 @@ describe('BN9-c4 — Ryzyka › Drogi: sekcje krajów', () => {
     expect(panels(el).filter((p) => /^road-(lt|lv|ee|fi)$/.test(p!))).toEqual(['road-fi']);
     expect(el.querySelector('[data-baltic-road="x"]')!.getAttribute('data-risk-id')).toBe('x');
   });
-  it('sortowanie przy równym wpływie (N1): trwające / najbliższe (`from` rosnąco, brak na końcu), potem `to`, na końcu id', () => {
+  it('sortowanie przy równym wpływie (BN9-c4b, decyzja 89): trwające od najświeższego początku, potem najbliższe, bez początku na końcu; dalej `to`, id', () => {
     const t = (id: string, from: string | null, to: string | null) => road(id, 'FI', {}, { od: from, do: to });
     const el = expand(panel({ loads, sailings: SAILS, risks: [
-      t('e', null, null), t('d', null, '2026-11-03T00:00:00Z'), t('c', '2026-11-04T00:00:00Z', null),
+      t('e', null, null), t('d', null, '2026-11-03T00:00:00Z'), t('c', '2026-11-04T00:00:00Z', null), t('c0', '2026-11-03T00:00:00Z', null),
       t('b', '2026-11-01T00:00:00Z', '2026-11-06T00:00:00Z'), t('a', '2026-11-01T00:00:00Z', '2026-11-05T00:00:00Z'),
+      t('n', '2026-11-02T09:00:00Z', null),
       road('z', 'FI', { severity: 'HIGH' }, { od: null, do: null }),
     ] }));
-    expect([...el.querySelectorAll('[data-panel="road-fi"] [data-baltic-road]')].map((x) => x.getAttribute('data-baltic-road'))).toEqual(['z', 'a', 'b', 'c', 'd']);
+    expect([...el.querySelectorAll('[data-panel="road-fi"] [data-baltic-road]')].map((x) => x.getAttribute('data-baltic-road')))
+      .toEqual(['z', 'n', 'a', 'b', 'c0', 'c', 'd', 'e']);
+    /* bez „teraz” — jak w BN9-c4 (`from` rosnąco) */
+    const [fi] = balticRoadSections([t('a', '2026-11-01T00:00:00Z', null), t('n', '2026-11-02T09:00:00Z', null)], new Set(['FI']), FRESH, NOW);
+    expect(fi.rows.map((r) => r.id)).toEqual(['n', 'a']);
+    expect(sortBalticRows(fi.rows).map((r) => r.id)).toEqual(['a', 'n']);
   });
   it('stan źródła bez zdarzeń (decyzja A): świeży ≤ 60 min, starszy z czasem ostatniego odczytu, brak wiersza, błąd odczytu; spowolnienie w nagłówku', () => {
     const rows: BalticCorridorRow[] = [
@@ -276,50 +285,107 @@ describe('BN9-c4 — Ryzyka › Drogi: sekcje krajów', () => {
     expect(el.querySelector('[data-panel="road-lt"] [data-lt-note]')!.textContent).toBe('Źródło LT (Via Lietuva) nie podaje wypadków.');
     expect(el.querySelectorAll('[data-lt-note]').length).toBe(1);
   });
-  it('link do ryzyka (N3): `focusRiskId` rozwija sekcję kraju, „Pokaż wszystkie” albo blok niskiego wpływu', () => {
+  it('link do ryzyka (N3, BN9-c4b): `focusRiskId` spoza pierwszych 4 włącza „Pokaż wszystkie” (także niski wpływ); w pierwszych — bez zmian', () => {
     const many = Array.from({ length: 8 }, (_, i) => road(`m${i}`, 'FI'));
     const low = road('low', 'LV', { severity: 'LOW' });
-    const el = panel({ loads, sailings: SAILS, risks: [...many, low], focusRiskId: 'm7' });
-    expect(el.querySelector('[data-panel="road-fi"]')!.getAttribute('data-open')).toBe('1');
+    const lv = road('lv1', 'LV');
+    const el = panel({ loads, sailings: SAILS, risks: [...many, low, lv], focusRiskId: 'm7' });
+    expect(el.querySelector('[data-panel="road-fi"]')!.getAttribute('data-all')).toBe('1');
     expect(el.querySelector('[data-risk-id="m7"]')).not.toBeNull();
-    expect(el.querySelector('[data-panel="road-lv"]')!.getAttribute('data-open')).toBe('0');
+    expect(el.querySelector('[data-panel="road-lv"]')!.getAttribute('data-all')).toBe('0');
+    expect(el.querySelector('[data-risk-id="low"]')).toBeNull();
     act(() => root?.unmount());
     host?.remove();
-    const el2 = panel({ loads, sailings: SAILS, risks: [...many, low], focusRiskId: 'low' });
-    expect(el2.querySelector('[data-panel="road-lv"]')!.getAttribute('data-open')).toBe('1');
-    expect((el2.querySelector('[data-panel="road-lv"] details[data-baltic-low]') as HTMLDetailsElement).open).toBe(true);
+    const el2 = panel({ loads, sailings: SAILS, risks: [...many, low, lv], focusRiskId: 'low' });
+    expect(el2.querySelector('[data-panel="road-lv"]')!.getAttribute('data-all')).toBe('1');
+    expect(el2.querySelector('[data-panel="road-lv"] [data-risk-id="low"]')).not.toBeNull();
+    expect(el2.querySelector('[data-panel="road-fi"]')!.getAttribute('data-all')).toBe('0');
+    act(() => root?.unmount());
+    host?.remove();
+    const el3 = panel({ loads, sailings: SAILS, risks: many, focusRiskId: 'm0' });
+    expect(el3.querySelector('[data-panel="road-fi"]')!.getAttribute('data-all')).toBe('0');
     expect(readFileSync('src/views/RisksView.tsx', 'utf8')).toContain('...rr.roadBaltic');
   });
-  it('„Zwiń” i „Pokaż mniej”; aria-controls tylko przy otwartej sekcji (N6, N8)', () => {
-    const many = Array.from({ length: 7 }, (_, i) => road(`m${i}`, 'FI'));
-    const el = panel({ loads, sailings: SAILS, risks: many });
+  it('BN9-c4b: sekcja kraju domyślnie otwarta jak Drogi SE — pierwsze 4 w kolejności, „Pokaż wszystkie N” / „Pokaż mniej”, niski wpływ dopiero w rozwinięciu', () => {
+    expect(FIRST_ROADS).toBe(4);
+    const risks = [
+      road('m1', 'FI', {}, { od: '2026-11-01T08:00:00Z' }), road('m2', 'FI', {}, { od: '2026-11-02T08:00:00Z' }),
+      road('h1', 'FI', { severity: 'HIGH' }), road('c1', 'FI', { severity: 'CRITICAL' }),
+      road('m3', 'FI', {}, { od: '2026-11-03T08:00:00Z' }), road('m4', 'FI', {}, { od: null }),
+      road('l1', 'FI', { severity: 'LOW' }), road('l2', 'FI', { severity: 'LOW' }),
+    ];
+    const el = panel({ loads, sailings: SAILS, risks });
     const sec = el.querySelector('[data-panel="road-fi"]') as HTMLElement;
-    const t = sec.querySelector('[data-baltic-toggle]') as HTMLButtonElement;
-    expect(t.hasAttribute('aria-controls')).toBe(false);
-    act(() => { t.click(); });
-    expect(t.getAttribute('aria-controls')).toBe('rk-fi-list');
-    expect(sec.querySelector('#rk-fi-list')).not.toBeNull();
-    expect(t.textContent).toBe('Zwiń');
+    expect(sec.querySelector('[data-baltic-toggle]')).toBeNull();
+    expect(sec.querySelector('[data-baltic-sum]')!.textContent).toBe('Finlandia · 8 utrudnień · 2 wysokie');
+    const ids = () => [...sec.querySelectorAll('[data-baltic-road]')].map((x) => x.getAttribute('data-baltic-road'));
+    expect(ids()).toEqual(['c1', 'h1', 'm2', 'm1']);
     const all = sec.querySelector('[data-baltic-all]') as HTMLButtonElement;
+    expect(all.textContent).toBe('Pokaż wszystkie 8');
+    expect(all.getAttribute('aria-expanded')).toBe('false');
+    expect(all.getAttribute('aria-controls')).toBe('rk-fi-list');
+    expect(sec.querySelector('#rk-fi-list')).not.toBeNull();
     act(() => { all.click(); });
-    expect(sec.querySelectorAll('[data-baltic-road]').length).toBe(7);
+    expect(ids()).toEqual(['c1', 'h1', 'm2', 'm1', 'm3', 'm4', 'l1', 'l2']);
     expect(all.textContent).toBe('Pokaż mniej');
+    expect(all.getAttribute('aria-expanded')).toBe('true');
     act(() => { all.click(); });
-    expect(sec.querySelectorAll('[data-baltic-road]').length).toBe(5);
-    act(() => { t.click(); });
-    expect(sec.querySelectorAll('[data-baltic-road]').length).toBe(0);
-    expect(t.textContent).toBe('Pokaż utrudnienia');
-    expect(t.hasAttribute('aria-controls')).toBe(false);
+    expect(ids()).toHaveLength(4);
+    /* ta sama stała i ten sam wiersz co Drogi SE */
+    const src = readFileSync('src/components/risks/BalticRoads.tsx', 'utf8');
+    expect(src).toMatch(/FIRST_ROADS/);
+    expect(src).not.toMatch(/FIRST_ROWS|data-baltic-toggle|data-baltic-low(?!only)/);
+    expect(src).toMatch(/<RoadRow/);
+    expect(readFileSync('src/components/risks/RoutePanel.tsx', 'utf8')).toMatch(/<RoadRow/);
   });
-  it('sekcja z samymi zdarzeniami o niskim wpływie: licznik, po rozwinięciu tylko zwinięty blok niskiego wpływu (N8)', () => {
-    const el = expand(panel({ loads, sailings: SAILS, risks: [road('l1', 'EE', { severity: 'LOW' }), road('l2', 'EE', { severity: 'LOW' })] }));
-    const sec = el.querySelector('[data-panel="road-ee"]') as HTMLElement;
-    expect(sec.querySelector('[data-baltic-sum]')!.textContent).toBe('Estonia · 2 utrudnienia · 0 wysokich');
-    expect(sec.querySelectorAll('.rk-baltic-list > ul').length).toBe(0);
-    expect(sec.querySelector('[data-baltic-all]')).toBeNull();
-    const d = sec.querySelector('details[data-baltic-low]') as HTMLDetailsElement;
-    expect(d.open).toBe(false);
-    expect(d.querySelector('summary')!.textContent).toBe('2 informacje o niskim wpływie');
+  it('BN9-c4b: do 4 pozycji bez niskiego wpływu — bez przycisku; same LOW — tylko ich liczba i „Pokaż wszystkie”', () => {
+    const el = panel({ loads, sailings: SAILS, risks: [
+      road('a', 'FI'), road('b', 'FI'), road('c', 'FI'), road('d', 'FI'), road('l1', 'EE', { severity: 'LOW' }), road('l2', 'EE', { severity: 'LOW' }),
+    ] });
+    const fi = el.querySelector('[data-panel="road-fi"]') as HTMLElement;
+    expect(fi.querySelectorAll('[data-baltic-road]').length).toBe(4);
+    expect(fi.querySelector('[data-baltic-all]')).toBeNull();
+    const ee = el.querySelector('[data-panel="road-ee"]') as HTMLElement;
+    expect(ee.querySelector('[data-baltic-sum]')!.textContent).toBe('Estonia · 2 utrudnienia · 0 wysokich');
+    expect(ee.querySelectorAll('[data-baltic-road]').length).toBe(0);
+    expect(ee.querySelector('[data-baltic-lowonly]')!.textContent).toBe('2 informacje o niskim wpływie');
+    const all = ee.querySelector('[data-baltic-all]') as HTMLButtonElement;
+    expect(all.hasAttribute('aria-controls')).toBe(false);
+    act(() => { all.click(); });
+    expect(ee.querySelectorAll('[data-baltic-road]').length).toBe(2);
+    expect(ee.querySelector('[data-baltic-lowonly]')).toBeNull();
+  });
+  it('BN9-c4b: oryginał i „Tłumaczenie w toku” jak w Drogach SE (`detail.oryginal`); bez oryginału i przy kodach LT — bez pustych pól', () => {
+    const tr = road('tr', 'FI', { detail: 'Roboty drogowe, zwężenie' }, { opis: 'Roboty drogowe, zwężenie', oryginal: 'Tietyö, kaista suljettu' });
+    const pend = road('pe', 'FI', { detail: 'Tietyö käynnissä' }, { opis: 'Tietyö käynnissä', oryginal: 'Tietyö käynnissä' });
+    const flag = road('fl', 'LV', { detail: 'Ceļa darbi' }, { opis: 'Ceļa darbi', oryginal: 'Ceļa darbi A7', pending: true });
+    const codes = road('co', 'LT', { detail: 'Ograniczenie' }, { opis: 'Ograniczenie', oryginal: 'LD,SVKD' });
+    const plain = road('pl', 'EE');
+    const el = panel({ loads, sailings: SAILS, risks: [tr, pend, flag, codes, plain] });
+    const row = (id: string) => el.querySelector(`[data-baltic-road="${id}"]`) as HTMLElement;
+    expect(row('tr').querySelector('.rk-road-s')!.textContent).toMatch(/ · przetłumaczone z fińskiego$/);
+    expect(row('tr').querySelector('[data-road-note="baltic"]')!.textContent).toBe('Roboty drogowe, zwężenie');
+    expect(row('tr').querySelector('details.rk-orig summary')!.textContent).toBe('Pokaż oryginał');
+    expect(row('tr').querySelector('[data-original="road"]')!.textContent).toBe('Tietyö, kaista suljettu');
+    for (const id of ['pe', 'fl']) {
+      expect(row(id).querySelector('[data-road-note="pending"]')!.textContent).toBe('Tłumaczenie w toku');
+      expect(row(id).querySelector('[data-road-note="baltic"]')).toBeNull();
+      expect(row(id).querySelector('.rk-road-s')!.textContent).not.toMatch(/przetłumaczone/);
+      expect(row(id).querySelector('[data-original="road"]')).not.toBeNull();
+    }
+    expect(row('fl').querySelector('.rk-road-s')!.textContent).not.toMatch(/łotewskiego/);
+    for (const id of ['co', 'pl']) {
+      expect(row(id).querySelector('details')).toBeNull();
+      expect(row(id).querySelector('[data-road-note="pending"]')).toBeNull();
+      expect(row(id).querySelector('.rk-road-s')!.textContent).not.toMatch(/przetłumaczone/);
+      expect(row(id).querySelector('[data-road-note="baltic"]')).not.toBeNull();
+    }
+    act(() => root?.unmount());
+    host?.remove();
+    /* telefon — jak Drogi SE: bez opisu i bez podglądu oryginału */
+    const ph = panel({ phone: true, loads, sailings: SAILS, risks: [tr, pend] }, 390);
+    expect(ph.querySelector('[data-baltic] details')).toBeNull();
+    expect(ph.querySelector('[data-baltic] [data-road-note]')).toBeNull();
   });
   it('balticDemo przy VITE_AUTH_MODE=supabase nie dodaje nic (N8)', () => {
     vi.stubEnv('VITE_AUTH_MODE', 'supabase');
@@ -370,7 +436,7 @@ describe('BN9-c4 — Ryzyka › Drogi: sekcje krajów', () => {
     expect(css).toContain('[data-baltic] .rk-road-n,.rk-road-attr{overflow-wrap:anywhere}');
     expect(readFileSync('src/components/risks/BalticRoads.tsx', 'utf8')).not.toMatch(/style=\{|width:\s*\d/);
   });
-  it('produkcja: 146 × ROAD_FI MEDIUM (fińskie tytuły) — zwinięte z licznikiem, 5 pozycji + „Pokaż wszystkie”, LOW zwinięte, wielokropek z pełnym tytułem', () => {
+  it('produkcja: 146 × ROAD_FI MEDIUM (fińskie tytuły) — od razu 4 pozycje z licznikiem, „Pokaż wszystkie 149” z LOW na końcu, wielokropek z pełnym tytułem', () => {
     const many = Array.from({ length: 146 }, (_, i) => road(`m${String(i).padStart(3, '0')}`, 'FI', {
       severity: 'MEDIUM', titleParams: { country: 'FI', event: `Tie 50, eli Kehä III, Vantaa. Tietyö <${i}> & "x"` },
     }));
@@ -378,25 +444,15 @@ describe('BN9-c4 — Ryzyka › Drogi: sekcje krajów', () => {
     const hi = road('hi', 'FI', { severity: 'HIGH' });
     const el = panel({ loads, sailings: SAILS, risks: [...many, ...lows, hi] });
     const sec = el.querySelector('[data-panel="road-fi"]') as HTMLElement;
-    expect(sec.getAttribute('data-open')).toBe('0');
+    expect(sec.getAttribute('data-all')).toBe('0');
     expect(sec.querySelector('[data-baltic-sum]')!.textContent).toBe('Finlandia · 149 utrudnień · 1 wysokie');
-    expect(sec.querySelectorAll('[data-baltic-road]').length).toBe(0);
-    const t = sec.querySelector('[data-baltic-toggle]') as HTMLButtonElement;
-    expect(t.getAttribute('aria-expanded')).toBe('false');
-    act(() => { t.click(); });
-    expect(t.getAttribute('aria-expanded')).toBe('true');
-    const visible = () => [...sec.querySelectorAll('.rk-baltic-list > ul [data-baltic-road]')].map((x) => x.getAttribute('data-baltic-road'));
-    expect(visible()).toHaveLength(5);
-    expect(visible()[0]).toBe('hi');
+    const visible = () => [...sec.querySelectorAll('#rk-fi-list [data-baltic-road]')].map((x) => x.getAttribute('data-baltic-road'));
+    expect(visible()).toEqual(['hi', 'm000', 'm001', 'm002']);
     const all = sec.querySelector('[data-baltic-all]') as HTMLButtonElement;
-    expect(all.textContent).toBe('Pokaż wszystkie 147');
+    expect(all.textContent).toBe('Pokaż wszystkie 149');
     act(() => { all.click(); });
-    expect(visible()).toHaveLength(147);
-    expect(visible()).not.toContain('low1');
-    const low = sec.querySelector('details[data-baltic-low]') as HTMLDetailsElement;
-    expect(low.open).toBe(false);
-    expect(low.querySelector('summary')!.textContent).toBe('2 informacje o niskim wpływie');
-    expect(low.querySelectorAll('[data-baltic-road]').length).toBe(2);
+    expect(visible()).toHaveLength(149);
+    expect(visible().slice(-2)).toEqual(['low1', 'low2']);
     /* pełny tytuł w podpowiedzi; znaki specjalne jako tekst (bez HTML) */
     const t0 = sec.querySelector('[data-baltic-road="m000"] .rk-road-t') as HTMLElement;
     expect(t0.getAttribute('title')).toBe('Tie 50, eli Kehä III, Vantaa. Tietyö <0> & "x"');
@@ -411,6 +467,7 @@ describe('BN9-c4 — Ryzyka › Drogi: sekcje krajów', () => {
   it('strażnik tekstów E21: demo (rozwinięte, także niski wpływ) bez trafień — atrybucja „CC BY 4.0”', () => {
     const el = expand(panel({ balticDemo: true }));
     for (const d of [...el.querySelectorAll('details')]) d.open = true;
+    expect(el.querySelectorAll('[data-baltic-road]').length).toBe(5);
     const text = [...el.querySelectorAll('[data-baltic]')].map((x) => (x as HTMLElement).textContent).join('\n');
     expect(textHits(text, '/ryzyka')).toEqual([]);
     expect(text).toContain('licencja CC BY 4.0');

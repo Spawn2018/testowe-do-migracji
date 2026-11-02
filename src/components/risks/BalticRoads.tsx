@@ -1,6 +1,6 @@
 /**
  * BN9-c4 (#573 „Ekrany po BN6”) — Ryzyka › Drogi: sekcje „Drogi LT”, „Drogi LV”, „Drogi EE”, „Drogi FI” obok „Drogi PL”
- * i „Drogi SE”, ten sam wygląd wierszy co Drogi SE (wpływ, tytuł, kiedy; opis pod spodem na komputerze).
+ * i „Drogi SE”, ten sam wiersz co Drogi SE (`RoadRow`, BN9-c4b: wpływ, tytuł, kiedy; opis / „Tłumaczenie w toku” i „Pokaż oryginał”).
  * Ograniczenia masy/wymiarów wyróżnione etykietą i dopiskiem „Sprawdź zezwolenie / trasę.” (bez danych ładunku spoza ryzyka).
  * Kraj na trasie aktywnego transportu bez zdarzeń — stan źródła (`corridor_conditions`): świeży odczyt ≤ 60 min → „Brak utrudnień
  * na korytarzu.”, starszy → „Brak świeżych danych ze źródła (ostatni odczyt: …)”, brak wiersza → „Źródło jeszcze niepodłączone.”;
@@ -8,11 +8,13 @@
  * Atrybucja pod sekcją z `detail.zrodlo` ryzyk (bez wpisanych na sztywno źródeł).
  */
 import { useEffect, useState, type ReactNode } from 'react';
+import { FIRST_ROADS } from '../../lib/p6Route';
 import type { Locale } from '../../types';
 import { attributionView, type BalticRoadRow, type BalticRoadSection } from '../../lib/bn9c4Roads';
 import { formatListDateTime, formatPlNumber } from '../../lib/format';
 import { rt, rtn, rtp } from '../../i18n/p6';
 import { DemoMark } from '../ui/DemoMark';
+import { RoadRow } from './RoadRow';
 
 const fmtNum = (v: number) => formatPlNumber(v, Number.isInteger(v) ? 0 : 1);
 
@@ -34,61 +36,56 @@ function rowWhen(locale: Locale, r: BalticRoadRow): string | null {
 }
 
 function Row({ r, locale, phone }: { r: BalticRoadRow; locale: Locale; phone: boolean }) {
-  const when = rowWhen(locale, r);
-  const note = r.note;
+  const tag = limitLabel(locale, r);
   return (
-    <li className={r.limit ? 'rk-road rk-road-limit' : 'rk-road'} data-baltic-road={r.id} data-risk-id={r.id} data-limit={r.limit ?? undefined}>
-      <span className="rk-box">{r.country}</span>
-      <span className="rk-road-tx">
-        {/* długi tytuł ze źródła — jedna linia z wielokropkiem, pełny tekst w podpowiedzi (React sam koduje znaki) */}
-        <span className="rk-road-t" title={[limitLabel(locale, r), r.event ?? r.title].filter(Boolean).join(' · ')}>
-          {r.limit ? <span className="rk-limit-tag" data-limit-tag>{limitLabel(locale, r)}</span> : null}
-          {r.event ?? r.title}
+    <RoadRow
+      locale={locale}
+      phone={phone}
+      className={r.limit ? 'rk-road rk-road-limit' : 'rk-road'}
+      attrs={{ 'data-baltic-road': r.id, 'data-risk-id': r.id, 'data-limit': r.limit ?? undefined }}
+      box={r.country}
+      /* długi tytuł ze źródła — jedna linia z wielokropkiem, pełny tekst w podpowiedzi (React sam koduje znaki) */
+      titleTip={[tag, r.event ?? r.title].filter(Boolean).join(' · ')}
+      title={<>{r.limit ? <span className="rk-limit-tag" data-limit-tag>{tag}</span> : null}{r.event ?? r.title}</>}
+      impact={r.impact}
+      when={rowWhen(locale, r)}
+      note={r.note}
+      noteKind="baltic"
+      original={r.original}
+      pending={r.pending}
+      translated={rt(locale, `bn9c4_translated_${r.country}`)}
+      extra={r.limit ? (
+        <span className="rk-road-n rk-limit-check" data-limit-check>
+          {r.loadT != null ? rtp(locale, 'bn9c4_check_load', { load: fmtNum(r.loadT) }) : rt(locale, 'bn9c4_check')}
         </span>
-        <span className="rk-road-s">
-          <span className={`rk-alert ${r.impact === 'VERY_HIGH' ? 'is-red' : r.impact === 'HIGH' ? 'is-amber' : 'is-plain'}`}>
-            {rt(locale, `p6_imp_${r.impact}`)}
-          </span>
-          {when ? ` · ${when}` : ''}
-        </span>
-        {r.limit ? (
-          <span className="rk-road-n rk-limit-check" data-limit-check>
-            {r.loadT != null ? rtp(locale, 'bn9c4_check_load', { load: fmtNum(r.loadT) }) : rt(locale, 'bn9c4_check')}
-          </span>
-        ) : null}
-        {note && !phone ? <span className="rk-road-n" data-road-note="baltic">{note}</span> : null}
-      </span>
-    </li>
+      ) : null}
+    />
   );
 }
 
-const FIRST_ROWS = 5;
 const isHigh = (r: BalticRoadRow) => r.impact === 'VERY_HIGH' || r.impact === 'HIGH';
 
 /**
- * Sekcja kraju (przegląd koordynatora 02.11, produkcja: 146 × ROAD_FI po pierwszym przebiegu road-fi): zwinięta domyślnie,
- * w nagłówku licznik „Finlandia · 146 utrudnień · 0 wysokich”; po rozwinięciu najpierw bardzo duży / duży / średni wpływ,
- * do 5 pozycji i „Pokaż wszystkie”; niski wpływ zawsze pod osobnym, zwiniętym „… o niskim wpływie”.
+ * Sekcja kraju — BN9-c4b (decyzja właściciela 02.11, 22:32 — decyzja 89): działa jak „Drogi SE”. Od razu otwarta, w nagłówku
+ * licznik „Finlandia · 146 utrudnień · 0 wysokich” i stan źródła; widać pierwsze {@link FIRST_ROADS} (ta sama stała co SE)
+ * o wpływie bardzo dużym / dużym / średnim — najpierw większy wpływ, potem trwające od najświeższego i najbliższe;
+ * reszta, w tym niski wpływ (zawsze na końcu), po „Pokaż wszystkie N” / „Pokaż mniej”.
  */
 function CountrySection({ s, locale, phone, demo, focusId }: { s: BalticRoadSection; locale: Locale; phone: boolean; demo: boolean; focusId: string | null }) {
-  const [open, setOpen] = useState(false);
   const [all, setAll] = useState(false);
-  const [lowOpen, setLowOpen] = useState(false);
   const lc = s.country.toLowerCase();
   const id = `rk-${lc}-h`;
-  const main = s.rows.filter((r) => r.impact !== 'LOW');
-  const low = s.rows.filter((r) => r.impact === 'LOW');
+  /* wiersze już posortowane (wpływ malejąco) — niski wpływ na końcu, poza pierwszymi pozycjami */
+  const first = s.rows.filter((r) => r.impact !== 'LOW').slice(0, FIRST_ROADS);
+  const low = s.rows.filter((r) => r.impact === 'LOW').length;
   const high = s.rows.filter(isHigh).length;
-  const shown = all ? main : main.slice(0, FIRST_ROWS);
-  /* link do ryzyka (riskFilter) — rozwiń sekcję kraju, a gdy trzeba także „Pokaż wszystkie” albo blok niskiego wpływu */
-  const focusMain = focusId ? main.findIndex((r) => r.id === focusId) : -1;
-  const focusLow = focusId ? low.some((r) => r.id === focusId) : false;
+  const shown = all ? s.rows : first;
+  const more = s.rows.length > first.length;
+  /* link do ryzyka (riskFilter) — pozycja spoza pierwszych → „Pokaż wszystkie” */
+  const focusHidden = !!focusId && s.rows.some((r) => r.id === focusId) && !first.some((r) => r.id === focusId);
   useEffect(() => {
-    if (focusMain < 0 && !focusLow) return;
-    setOpen(true);
-    if (focusMain >= FIRST_ROWS) setAll(true);
-    if (focusLow) setLowOpen(true);
-  }, [focusMain, focusLow]);
+    if (focusHidden) setAll(true);
+  }, [focusHidden]);
   const empty = s.source === 'FRESH' ? rt(locale, 'bn9c4_none')
     : s.source === 'STALE' ? rtp(locale, 'bn9c4_stale', { at: formatListDateTime(s.observedAt) })
       : s.source === 'NONE' ? rt(locale, 'bn9c4_nosrc') : rt(locale, 'bn9c4_noread');
@@ -97,7 +94,7 @@ function CountrySection({ s, locale, phone, demo, focusId }: { s: BalticRoadSect
       className="rk-sec-box"
       data-panel={`road-${lc}`}
       data-baltic={s.country}
-      data-open={open ? '1' : '0'}
+      data-all={all ? '1' : '0'}
       data-demo={demo ? 'baltic-roads' : undefined}
       aria-labelledby={id}
     >
@@ -112,33 +109,24 @@ function CountrySection({ s, locale, phone, demo, focusId }: { s: BalticRoadSect
         {demo ? <DemoMark /> : null}
       </div>
       {s.rows.length === 0 ? <p className="rk-muted" data-empty={`road-${lc}`} data-source-state={s.source}>{empty}</p> : (
-        <button
-          type="button"
-          className="linkbtn rk-more"
-          aria-expanded={open}
-          aria-controls={open ? `rk-${lc}-list` : undefined}
-          data-baltic-toggle
-          onClick={() => setOpen((v) => !v)}
-        >
-          {open ? rt(locale, 'bn9c4_hide') : rt(locale, 'bn9c4_show')}
-        </button>
-      )}
-      {open && s.rows.length ? (
-        <div id={`rk-${lc}-list`} className="rk-baltic-list">
-          {shown.length ? <ul className="rk-roads">{shown.map((r) => <Row key={r.id} r={r} locale={locale} phone={phone} />)}</ul> : null}
-          {main.length > FIRST_ROWS ? (
-            <button type="button" className="linkbtn rk-more" aria-expanded={all} data-baltic-all onClick={() => setAll((v) => !v)}>
-              {all ? rt(locale, 'p6_road_less') : rtp(locale, 'p6_road_all', { n: main.length })}
+        <>
+          {shown.length ? <ul id={`rk-${lc}-list`} className="rk-roads">{shown.map((r) => <Row key={r.id} r={r} locale={locale} phone={phone} />)}</ul> : null}
+          {/* same zdarzenia o niskim wpływie — od razu tylko ich liczba */}
+          {!first.length && !all ? <p className="rk-muted" data-baltic-lowonly>{rtn(locale, 'bn9c4_low', low)}</p> : null}
+          {more ? (
+            <button
+              type="button"
+              className="linkbtn rk-more"
+              aria-expanded={all}
+              aria-controls={shown.length ? `rk-${lc}-list` : undefined}
+              data-baltic-all
+              onClick={() => setAll((v) => !v)}
+            >
+              {all ? rt(locale, 'p6_road_less') : rtp(locale, 'p6_road_all', { n: s.rows.length })}
             </button>
           ) : null}
-          {low.length ? (
-            <details className="rk-orig rk-baltic-low" data-baltic-low open={lowOpen} onToggle={(e) => setLowOpen(e.currentTarget.open)}>
-              <summary>{rtn(locale, 'bn9c4_low', low.length)}</summary>
-              <ul className="rk-roads">{low.map((r) => <Row key={r.id} r={r} locale={locale} phone={phone} />)}</ul>
-            </details>
-          ) : null}
-        </div>
-      ) : null}
+        </>
+      )}
       {/* decyzja B (F7 r1): źródło litewskie nie podaje wypadków — stały dopisek */}
       {s.country === 'LT' ? <p className="rk-muted" data-lt-note>{rt(locale, 'bn9c4_lt_noacc')}</p> : null}
       {s.sources.length ? (

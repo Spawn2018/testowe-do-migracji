@@ -438,6 +438,10 @@ const pl: Dict = {
   bn9c4_when_from: 'od {from}',
   bn9c4_when_to: 'do {to}',
   bn9c4_attr: 'Dane: {src}',
+  bn9c4_translated_LT: 'przetłumaczone z litewskiego',
+  bn9c4_translated_LV: 'przetłumaczone z łotewskiego',
+  bn9c4_translated_EE: 'przetłumaczone z estońskiego',
+  bn9c4_translated_FI: 'przetłumaczone z fińskiego',
   p4b_trk_nolink: 'Śledzenie wyłączone — brak linku śledzenia',
   p4b_trk_nolink_sub: 'lokalizacja, ślad i ETA działają tylko z linkiem śledzenia · link dodaje przewoźnik albo Administrator HHL w awizacji',
   p4b_ago_now: 'przed chwilą',
@@ -960,6 +964,10 @@ export const BN9C4_EN: Readonly<Record<string, string>> = {
   bn9c4_when_from: 'from {from}',
   bn9c4_when_to: 'until {to}',
   bn9c4_attr: 'Data: {src}',
+  bn9c4_translated_LT: 'translated from Lithuanian',
+  bn9c4_translated_LV: 'translated from Latvian',
+  bn9c4_translated_EE: 'translated from Estonian',
+  bn9c4_translated_FI: 'translated from Finnish',
 };
 
 /** PL-T (ANEKS 3 §3) — pełne słowniki do testu pisowni. */

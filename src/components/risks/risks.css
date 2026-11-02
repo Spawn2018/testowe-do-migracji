@@ -125,7 +125,6 @@
 /* F7 r1 N2: telefon — tytuł do dwóch linii */
 @media (max-width: 480px){[data-baltic] .rk-road-t{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}}
 [data-baltic] .rk-road-n,.rk-road-attr{overflow-wrap:anywhere}
-.rk-baltic-low>summary{color:var(--ink-3)}
 .rk-alert{font-family:var(--font-cond);font-weight:700;font-size:14px;letter-spacing:.02em}
 .rk-alert.is-red{color:var(--red)}
 .rk-alert.is-amber{color:var(--amber-ink)}
