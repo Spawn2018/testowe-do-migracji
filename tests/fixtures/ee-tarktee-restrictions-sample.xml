@@ -41,8 +41,8 @@
         <groupOfLocations>
           <pointByCoordinates>
             <pointCoordinates>
-              <latitude>58.800000</latitude>
-              <longitude>24.700000</longitude>
+              <latitude>58.904000</latitude>
+              <longitude>24.425000</longitude>
             </pointCoordinates>
           </pointByCoordinates>
         </groupOfLocations>
@@ -63,8 +63,8 @@
         <groupOfLocations>
           <pointByCoordinates>
             <pointCoordinates>
-              <latitude>59.200000</latitude>
-              <longitude>24.700000</longitude>
+              <latitude>59.130000</latitude>
+              <longitude>24.430000</longitude>
             </pointCoordinates>
           </pointByCoordinates>
         </groupOfLocations>
@@ -72,6 +72,73 @@
         <roadNumber>T4</roadNumber>
         <generalPublicComment>
           <comment><values><value>Massipiirang 40 t</value></values></comment>
+        </generalPublicComment>
+      </situationRecord>
+      <!-- Limit wysokości — F7 #733 B9 -->
+      <situationRecord id="bn6-ee-height-t4" xsi:type="NetworkManagement">
+        <validity>
+          <validityTimeSpecification>
+            <overallStartTime>2026-11-02T00:00:00Z</overallStartTime>
+            <overallEndTime>2026-11-02T20:00:00Z</overallEndTime>
+          </validityTimeSpecification>
+        </validity>
+        <groupOfLocations>
+          <pointByCoordinates>
+            <pointCoordinates>
+              <latitude>58.385000</latitude>
+              <longitude>24.498000</longitude>
+            </pointCoordinates>
+          </pointByCoordinates>
+        </groupOfLocations>
+        <heightCharacteristic>
+          <vehicleHeight>4.2</vehicleHeight>
+        </heightCharacteristic>
+        <roadNumber>T4</roadNumber>
+        <generalPublicComment>
+          <comment><values><value>Kõrguspiirang 4,2 m</value></values></comment>
+        </generalPublicComment>
+      </situationRecord>
+      <!-- Zamknięcie z ümbersõit — F7 #733 B2: numer z opisu nie z T4 objazdu -->
+      <situationRecord id="bn6-ee-detour-local" xsi:type="RoadOrCarriagewayOrLaneManagement">
+        <validity>
+          <validityTimeSpecification>
+            <overallStartTime>2026-11-02T00:00:00Z</overallStartTime>
+            <overallEndTime>2027-01-01T00:00:00Z</overallEndTime>
+          </validityTimeSpecification>
+        </validity>
+        <groupOfLocations>
+          <pointByCoordinates>
+            <pointCoordinates>
+              <latitude>58.904000</latitude>
+              <longitude>24.425000</longitude>
+            </pointCoordinates>
+          </pointByCoordinates>
+        </groupOfLocations>
+        <roadOrCarriagewayOrLaneManagementType>roadClosed</roadOrCarriagewayOrLaneManagementType>
+        <roadNumber>15128</roadNumber>
+        <generalPublicComment>
+          <comment><values><value>Tee nr 15128 suletud. Ümbersõit mööda T4</value></values></comment>
+        </generalPublicComment>
+      </situationRecord>
+      <!-- Goły numer drogi 4 — F7 #733 B1 -->
+      <situationRecord id="bn6-ee-bare-4" xsi:type="MaintenanceWorks">
+        <validity>
+          <validityTimeSpecification>
+            <overallStartTime>2026-11-02T04:00:00Z</overallStartTime>
+            <overallEndTime>2026-11-03T20:00:00Z</overallEndTime>
+          </validityTimeSpecification>
+        </validity>
+        <groupOfLocations>
+          <pointByCoordinates>
+            <pointCoordinates>
+              <latitude>58.385000</latitude>
+              <longitude>24.498000</longitude>
+            </pointCoordinates>
+          </pointByCoordinates>
+        </groupOfLocations>
+        <roadNumber>4 Tallinn–Pärnu–Ikla</roadNumber>
+        <generalPublicComment>
+          <comment><values><value>Tööd 4 Tallinn–Pärnu–Ikla</value></values></comment>
         </generalPublicComment>
       </situationRecord>
       <!-- Daleko na wschodzie (Narva) — poza bboxem korytarza -->

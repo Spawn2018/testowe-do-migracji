@@ -1,4 +1,12 @@
 
+## 2026-11-02 13:15 — #733 F7 r1 B1–B9 EE
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie.
+- Scalanie: brak F7 „gotowe” (#733 F7 r1 „nie scalaj”, 9 blokerów). CI @ `4f97b1ad` unit/db/visual ✔ przed poprawkami.
+- **Krok F7 #733 r1:** B1 gołe 1/4/8/11→T*; B2 `ümbersõi` we wspólnym `BALTIC_DETOUR_*`; B3 CORRIDOR_EE po T4 (Märjamaa/Kernu) + bufor 3 km; B4 `hasDatexMarker` (message/null/[]/Error); B5 measurementSites+weather (jäide/libedus; nie märg); B6 fetch 10 s / 65 s / 5 MB; B7 atrybucja `Transpordiamet / Tark Tee (tarktee.ee)`; B8 `:swapped` w obs; B9 `vehicleHeight`. Vitest bn6-road-ee **20**; regresja LT/LV/FI **81**. DP-166+167 w rejestrze.
+- **Dalej:** push → CI → F7. Po F7: DP-166+167 → DP-165 → BN7 (#718).
+- Bez push na main.
+
 ## 2026-11-02 12:35 — BN6 cz.4 EE push (0379)
 
 - Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. DP-165 (road-lv sieć) wpisane do rejestru — po F7 EE.

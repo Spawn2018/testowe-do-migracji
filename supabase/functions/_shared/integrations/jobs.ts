@@ -4192,12 +4192,122 @@ async function roadLvFailStreak(deps: JobDeps): Promise<number> {
 
 /**
  * BN6 (#716) cz.4 — drogi EE (Tark Tee DATEX, klucz X-DATEX-API-KEY).
- * Sekrety: TARKTEE_DATEX_TOKEN albo TARKTEE_DATEX_PASSWORD (bez zmiany nazw).
- * Bez klucza: ok:true, configured:0 (jak LV N3). SOURCE_DOWN po 3× fetched_ok===0.
+ * Sekrety: TARKTEE_DATEX_TOKEN (pierwszy), potem TARKTEE_DATEX_PASSWORD (F7 #733 N5).
+ * F7 #733 B6: timeout 10 s, budżet 65 s, limit 5 MB (jak LV). SOURCE_DOWN po 3× fetched_ok===0.
  */
-const EE_FEED_TIMEOUT_MS = 12_000;
-const EE_FEED_BUDGET_MS = 70_000;
+const EE_FEED_TIMEOUT_MS = 10_000;
+const EE_FEED_BUDGET_MS = 65_000;
+const EE_FEED_MAX_BYTES = 5 * 1024 * 1024;
 const EE_FEED_CONCURRENCY = 4;
+
+type EeFeedPart = {
+  code: string;
+  ok: boolean;
+  warning: string | null;
+  per: string;
+  format: string;
+  events: BalticRoadEvent[];
+  sites?: Map<string, [number, number]>;
+};
+
+async function fetchEeFeedPart(
+  deps: JobDeps,
+  feed: (typeof EE_DATEX_FEEDS)[number],
+  apiKey: string,
+  started: number,
+  sites: Map<string, [number, number]>,
+  parseStats: {
+    parsed: number; skipped: number; swapped: number;
+    roadFromPole: number; roadFromOpis: number;
+  },
+): Promise<EeFeedPart> {
+  if (Date.now() - started > EE_FEED_BUDGET_MS) {
+    return {
+      code: feed.code, ok: false,
+      warning: `niepobrany ${feed.code} (budżet czasu)`,
+      per: 'budget', format: '', events: [],
+    };
+  }
+  const url = eeDatexFeedUrl(feed.path);
+  const headers: Record<string, string> = {
+    'User-Agent': EE_UA,
+    Accept: feed.format === 'json'
+      ? 'application/json, application/xml, text/xml, */*'
+      : 'application/xml, text/xml, application/json, */*',
+    [EE_DATEX_KEY_HEADER]: apiKey,
+  };
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), EE_FEED_TIMEOUT_MS);
+  try {
+    if (Date.now() - started > EE_FEED_BUDGET_MS) {
+      return {
+        code: feed.code, ok: false,
+        warning: `niepobrany ${feed.code} (budżet czasu)`,
+        per: 'budget', format: '', events: [],
+      };
+    }
+    const res = await deps.fetch(url, { headers, signal: ctrl.signal });
+    if (!res.ok) {
+      return {
+        code: feed.code, ok: false,
+        warning: `EE ${feed.code}: HTTP ${res.status}`,
+        per: `http_${res.status}`, format: '', events: [],
+      };
+    }
+    const clRaw = res.headers.get('content-length');
+    const cl = clRaw != null ? Number(clRaw) : NaN;
+    if (Number.isFinite(cl) && cl > EE_FEED_MAX_BYTES) {
+      return {
+        code: feed.code, ok: false,
+        warning: `nieczytelna odpowiedź ${feed.code}`,
+        per: 'too_large', format: 'unknown', events: [],
+      };
+    }
+    const buf = await res.arrayBuffer();
+    if (buf.byteLength > EE_FEED_MAX_BYTES) {
+      return {
+        code: feed.code, ok: false,
+        warning: `nieczytelna odpowiedź ${feed.code}`,
+        per: 'too_large', format: 'unknown', events: [],
+      };
+    }
+    const text = new TextDecoder('utf-8', { fatal: false }).decode(buf);
+    const localStats = {
+      parsed: 0, skipped: 0, swapped: 0, roadFromPole: 0, roadFromOpis: 0,
+    };
+    const parsed = parseEeFeedBody(text, feed.code, feed.format, localStats, sites);
+    parseStats.parsed += localStats.parsed;
+    parseStats.skipped += localStats.skipped;
+    parseStats.swapped += localStats.swapped;
+    parseStats.roadFromPole += localStats.roadFromPole ?? 0;
+    parseStats.roadFromOpis += localStats.roadFromOpis ?? 0;
+    const recognized = parsed.format === 'datex-xml' || parsed.format === 'datex-json';
+    if (!recognized) {
+      return {
+        code: feed.code, ok: false,
+        warning: `nieczytelna odpowiedź ${feed.code}`,
+        per: `bad:${parsed.format}`, format: parsed.format, events: [],
+      };
+    }
+    /* F7 #733 B8 — ok:<rekordy>:<pominięte>:<format>:<swapped> */
+    return {
+      code: feed.code, ok: true, warning: null,
+      per: `ok:${parsed.events.length}:${localStats.skipped}:${parsed.format}:${localStats.swapped}`,
+      format: parsed.format,
+      events: parsed.events,
+      sites: parsed.sites,
+    };
+  } catch (e) {
+    const msg = e instanceof Error ? e.message : String(e);
+    return {
+      code: feed.code, ok: false,
+      warning: `EE ${feed.code}: ${/abort/i.test(msg) ? 'timeout' : 'błąd sieci'}`,
+      per: 'error', format: '', events: [],
+    };
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 export async function runRoadEe(deps: JobDeps): Promise<JobResult> {
   const now = deps.now().toISOString();
@@ -4213,73 +4323,34 @@ export async function runRoadEe(deps: JobDeps): Promise<JobResult> {
         expected_fetches: '0',
         configured: '0',
         header: EE_DATEX_KEY_HEADER,
+        key_env_first: 'TARKTEE_DATEX_TOKEN',
       },
     };
   }
 
   const expectedFetches = EE_DATEX_FEEDS.length;
   const started = Date.now();
-  const parseStats = { parsed: 0, skipped: 0, swapped: 0 };
-  const parts = await mapPoolLimit(EE_DATEX_FEEDS, EE_FEED_CONCURRENCY, async (feed) => {
-    if (Date.now() - started > EE_FEED_BUDGET_MS) {
-      return {
-        code: feed.code,
-        ok: false as const,
-        warning: `niepobrany ${feed.code} (budżet czasu)`,
-        per: 'budget',
-        format: '' as string,
-        events: [] as BalticRoadEvent[],
-      };
+  const parseStats = {
+    parsed: 0, skipped: 0, swapped: 0, roadFromPole: 0, roadFromOpis: 0,
+  };
+  const sites = new Map<string, [number, number]>();
+  const parts: EeFeedPart[] = [];
+
+  /* F7 #733 B5 — najpierw measurementSites (współrzędne), potem reszta równolegle. */
+  const sitesFeed = EE_DATEX_FEEDS.find((f) => f.code === 'MEASUREMENT_SITES');
+  const otherFeeds = EE_DATEX_FEEDS.filter((f) => f.code !== 'MEASUREMENT_SITES');
+  if (sitesFeed) {
+    const sitePart = await fetchEeFeedPart(
+      deps, sitesFeed, apiKey, started, sites, parseStats,
+    );
+    parts.push(sitePart);
+    if (sitePart.sites) {
+      for (const [id, ll] of sitePart.sites) sites.set(id, ll);
     }
-    const url = eeDatexFeedUrl(feed.path);
-    const headers: Record<string, string> = {
-      'User-Agent': EE_UA,
-      Accept: feed.format === 'json'
-        ? 'application/json, application/xml, text/xml, */*'
-        : 'application/xml, text/xml, application/json, */*',
-      [EE_DATEX_KEY_HEADER]: apiKey,
-    };
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), EE_FEED_TIMEOUT_MS);
-    try {
-      const res = await deps.fetch(url, { headers, signal: ctrl.signal });
-      if (!res.ok) {
-        return {
-          code: feed.code, ok: false as const,
-          warning: `EE ${feed.code}: HTTP ${res.status}`,
-          per: `http_${res.status}`, format: '', events: [] as BalticRoadEvent[],
-        };
-      }
-      const text = await res.text();
-      const localStats = { parsed: 0, skipped: 0, swapped: 0 };
-      const parsed = parseEeFeedBody(text, feed.code, feed.format, localStats);
-      parseStats.parsed += localStats.parsed;
-      parseStats.skipped += localStats.skipped;
-      parseStats.swapped += localStats.swapped;
-      const recognized = parsed.format === 'datex-xml' || parsed.format === 'datex-json';
-      if (!recognized) {
-        return {
-          code: feed.code, ok: false as const,
-          warning: `nieczytelna odpowiedź ${feed.code}`,
-          per: `bad:${parsed.format}`, format: parsed.format, events: [] as BalticRoadEvent[],
-        };
-      }
-      return {
-        code: feed.code, ok: true as const, warning: null as string | null,
-        per: `ok:${parsed.events.length}:${localStats.skipped}:${parsed.format}`,
-        format: parsed.format, events: parsed.events,
-      };
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      return {
-        code: feed.code, ok: false as const,
-        warning: `EE ${feed.code}: ${/abort/i.test(msg) ? 'timeout' : 'błąd sieci'}`,
-        per: 'error', format: '', events: [] as BalticRoadEvent[],
-      };
-    } finally {
-      clearTimeout(timer);
-    }
-  });
+  }
+  const rest = await mapPoolLimit(otherFeeds, EE_FEED_CONCURRENCY, (feed) =>
+    fetchEeFeedPart(deps, feed, apiKey, started, sites, parseStats));
+  parts.push(...rest);
 
   let fetchedOk = 0;
   const allEvents: BalticRoadEvent[] = [];
@@ -4312,6 +4383,7 @@ export async function runRoadEe(deps: JobDeps): Promise<JobResult> {
           complete: '0',
           configured: '1',
           header: EE_DATEX_KEY_HEADER,
+          key_env_first: 'TARKTEE_DATEX_TOKEN',
         },
       };
     }
@@ -4325,6 +4397,7 @@ export async function runRoadEe(deps: JobDeps): Promise<JobResult> {
         complete: '0',
         configured: '1',
         header: EE_DATEX_KEY_HEADER,
+        key_env_first: 'TARKTEE_DATEX_TOKEN',
       },
     };
   }
@@ -4346,6 +4419,7 @@ export async function runRoadEe(deps: JobDeps): Promise<JobResult> {
     if (risk.detail && typeof risk.detail === 'object') {
       if (e.road) (risk.detail as Record<string, unknown>).droga = e.road;
       (risk.detail as Record<string, unknown>).korytarz_droga = e.corridorMatch;
+      (risk.detail as Record<string, unknown>).zrodlo = EE_ATTRIBUTION;
     }
     keep.push(risk.dedup);
     if (await deps.store.raiseRisk(risk)) risks++;
@@ -4387,7 +4461,11 @@ export async function runRoadEe(deps: JobDeps): Promise<JobResult> {
       events_near: String(near.length),
       configured: '1',
       header: EE_DATEX_KEY_HEADER,
+      key_env_first: 'TARKTEE_DATEX_TOKEN',
       records_skipped: String(parseStats.skipped),
+      ee_swapped: String(parseStats.swapped),
+      ee_road_from: `pole:${parseStats.roadFromPole},opis:${parseStats.roadFromOpis}`,
+      measurement_sites: String(sites.size),
       ...Object.fromEntries(Object.entries(perCode).map(([k, v]) => [`ee_${k.toLowerCase()}`, v])),
     },
   };

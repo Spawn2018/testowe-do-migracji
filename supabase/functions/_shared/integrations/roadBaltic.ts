@@ -123,12 +123,38 @@ export interface BalticRoadEvent {
 /** F7 #730 r2 — prefiks dedup, żeby stare HIGH dostały resolveStale (raise bez UPDATE wagi). */
 export const BALTIC_RISK_DEDUP_VER = 'v2';
 
-/** F7 #730 r2 B1 / r3 B1 — usuń opis objazdu; `\p{L}` (apvedceļš / apbraukšana; `\w` bez š). */
+/**
+ * F7 #733 — wspólny rdzeń słów objazdu LT/LV/EE/FI (apylanka, apvedceļš, ümbersõit…).
+ * Używaj z flagą `u` / `iu` przy `\p{L}`.
+ */
+export const BALTIC_DETOUR_WORD =
+  String.raw`apylank[\p{L}\p{M}]*|apbraukš[\p{L}\p{M}]*|apbrauk[\p{L}\p{M}]*|apvedceļ[\p{L}\p{M}]*|apvedcel[\p{L}\p{M}]*|ümbersõi[\p{L}\p{M}]*|umbersoi[\p{L}\p{M}]*|objazd[\p{L}\p{M}]*|detour[\p{L}\p{M}]*|rerout[\p{L}\p{M}]*`;
+
+/** Test obecności objazdu w tekście (B2 #733 — ümbersõit). */
+export const BALTIC_DETOUR_RE = new RegExp(`(?:${BALTIC_DETOUR_WORD})`, 'iu');
+
+/** F7 #730 r2 B1 / r3 B1 / #733 B2 — usuń opis objazdu; `\p{L}` (apvedceļš / ümbersõit). */
 export function stripBalticDetourText(text: string): string {
   return String(text ?? '').replace(
-    /(?:^|[\s,.;:])(?:apylank[\p{L}\p{M}]*|apbraukš[\p{L}\p{M}]*|apbrauk[\p{L}\p{M}]*|apvedceļ[\p{L}\p{M}]*|apvedcel[\p{L}\p{M}]*|objazd[\p{L}\p{M}]*|detour\w*|rerout\w*)(?=[^\p{L}]|$)[\s\S]*$/giu,
+    new RegExp(
+      String.raw`(?:^|[\s,.;:])(?:${BALTIC_DETOUR_WORD})(?=[^\p{L}]|$)[\s\S]*$`,
+      'giu',
+    ),
     ' ',
   );
+}
+
+/**
+ * F7 #730 r3 / #733 B4 — marker DATEX/GeoJSON jako element/klucz, nie dowolny podciąg.
+ * HTML z „payloadPublication” w tekście, `{"message"}`, `null`, `[]`, `<Error>` → false.
+ */
+export function hasDatexMarker(body: string, kind: 'xml' | 'json'): boolean {
+  if (kind === 'xml') {
+    if (/^<!DOCTYPE\s+html/i.test(body) || /^<html[\s>]/i.test(body)) return false;
+    return /<(?:\w+:)?(?:situationRecord|d2LogicalModel|payloadPublication)\b/i.test(body);
+  }
+  return /"(?:situationRecord|d2LogicalModel|payload|payloadPublication|features)"\s*:/i
+    .test(body);
 }
 
 function featureCentroid(geom: unknown): LatLon | null {
@@ -625,9 +651,7 @@ export function balticCapLongDetourClosure(
     || e.kind === 'BLOCKAGE';
   if (!closed) return e;
   const blob = `${e.title ?? ''} ${e.detail ?? ''}`;
-  const hasDetour = e.hasDetour === true
-    || /(?:apylank\w*|apbraukš\w*|apbrauk\w*|apvedceļ\w*|apvedcel\w*|objazd\w*|detour\w*|rerout\w*)/i
-      .test(blob);
+  const hasDetour = e.hasDetour === true || BALTIC_DETOUR_RE.test(blob);
   if (!hasDetour) return { ...e, roadClosed: true };
   /* Objazd bez znanego końca → MEDIUM. */
   if (e.end == null) {
@@ -686,9 +710,9 @@ function balticCapSeverity(
 
 /**
  * DP-164 + F7 #730 B7/r2: oznacz road + corridorMatch; poza listą / bez numeru
- * obniż severity; LV unknown w ≤ 3 km od CORRIDOR_LV → on; EE unknown ≤ 2 km
+ * obniż severity; LV unknown w ≤ 3 km od CORRIDOR_LV → on; EE unknown ≤ 3 km
  * lub ≤ 2 km od portu → on; długie zamknięcie z objazdem → MEDIUM.
- * Pogoda/śliskość: tylko ≤ 3 km (LT/LV) / ≤ 2 km (EE) od korytarza.
+ * Pogoda/śliskość: tylko ≤ 3 km od korytarza (LT/LV/EE — F7 #733 B3).
  */
 export function applyBalticCorridorRoadFilter(
   country: 'LT' | 'LV' | 'EE',
@@ -701,14 +725,14 @@ export function applyBalticCorridorRoadFilter(
       ? CORRIDOR_LV
       : CORRIDOR_LT;
   const densified = densifyCorridor(corridor);
-  const wxKm = country === 'EE' ? 2 : 3;
+  const nearKm = 3;
   return events.map((e) => {
     const capped = balticCapLongDetourClosure(e, nowMs);
     const weatherLike = capped.kind === 'weather' || balticIsWeatherSlowEvent(capped)
       || String(capped.kind ?? '').startsWith('EE_WEATHER');
     if (weatherLike) {
       const nearWx = capped.lat != null && capped.lon != null
-        && minDistToCorridorKm(capped.lat, capped.lon, corridor, densified) <= wxKm;
+        && minDistToCorridorKm(capped.lat, capped.lon, corridor, densified) <= nearKm;
       return {
         ...capped,
         corridorMatch: (nearWx ? 'on' : 'off') as BalticCorridorRoadMatch,
@@ -729,18 +753,18 @@ export function applyBalticCorridorRoadFilter(
       && corridorMatch === 'unknown'
       && capped.lat != null
       && capped.lon != null
-      && minDistToCorridorKm(capped.lat, capped.lon, CORRIDOR_LV, densified) <= 3
+      && minDistToCorridorKm(capped.lat, capped.lon, CORRIDOR_LV, densified) <= nearKm
     ) {
       corridorMatch = 'on';
     }
-    /* EE: bez numeru ≤ 2 km od Via Baltica / portów → on (#716 bufor 2 km). */
+    /* EE: bez numeru ≤ 3 km od Via Baltica / ≤ 2 km od portów → on (F7 #733 B3). */
     if (
       country === 'EE'
       && corridorMatch === 'unknown'
       && capped.lat != null
       && capped.lon != null
       && (
-        minDistToCorridorKm(capped.lat, capped.lon, CORRIDOR_EE, densified) <= 2
+        minDistToCorridorKm(capped.lat, capped.lon, CORRIDOR_EE, densified) <= nearKm
         || nearEePortTerminal(capped.lat, capped.lon)
       )
     ) {
@@ -982,8 +1006,7 @@ export function parseLtRestrictions(json: unknown): BalticRoadEvent[] {
     /* F7 #730 r2 B1: numer najpierw ze street; opis bez fragmentu objazdu. */
     const road = extractBalticRoadRefPreferStreet(street, title, desc);
     const closedByText = /eismas\s+draudžiamas|uždarytas|uzdarytas/i.test(textForSev);
-    const hasDetour = /(?:apylank\w*|apbrauk\w*|apvedceļ\w*|objazd\w*|detour\w*|rerout\w*)/i
-      .test(textForSev);
+    const hasDetour = BALTIC_DETOUR_RE.test(textForSev);
     const roadClosed = meta.roadClosed || closedByText;
     const metaClosed = { ...meta, roadClosed };
     out.push({
@@ -1408,9 +1431,7 @@ function lvRecordSignals(rec: string): {
   ) || constr.some((t) =>
     t.includes('narrow') || t.includes('onelane') || t.includes('one_lane')
   ) || /\boneLane\b/i.test(rec);
-  const hasDetour = /<(?:\w+:)?rerouting\b/i.test(rec)
-    || /(?:apbraukš\w*|apbrauk\w*|apvedceļ\w*|apvedcel\w*|objazd\w*|detour\w*|rerout\w*)/i
-      .test(rec);
+  const hasDetour = /<(?:\w+:)?rerouting\b/i.test(rec) || BALTIC_DETOUR_RE.test(rec);
   const hasDimLimit = /<(?:\w+:)?(?:heightCharacteristic|widthCharacteristic|weightCharacteristic|lengthCharacteristic|axleSpacing)/i
     .test(rec)
     || /<(?:\w+:)?(?:height|width|weight|length|axle)\w*Limit/i.test(rec);
@@ -1786,15 +1807,6 @@ export function parseLvWeightDimGeoJson(
   return out;
 }
 
-/** F7 #730 r3: marker DATEX/GeoJSON jako element/klucz, nie dowolny podciąg. */
-function lvFeedHasDatexMarker(body: string, kind: 'xml' | 'json'): boolean {
-  if (kind === 'xml') {
-    return /<(?:\w+:)?(?:situationRecord|d2LogicalModel|payloadPublication)\b/i.test(body);
-  }
-  return /"(?:situationRecord|d2LogicalModel|payload|payloadPublication|features)"\s*:/i
-    .test(body);
-}
-
 /**
  * F7 #730 B3/r2 B4: pierwszy znak `{`/`[` vs `<`; format OK tylko z markerami
  * DATEX/GeoJSON (`situationRecord` / `payload` / `d2LogicalModel` / `features`).
@@ -1809,10 +1821,7 @@ export function parseLvFeedBody(
   if (!t) return { events: [], format: 'empty' };
   const c0 = t[0]!;
   if (c0 === '<') {
-    if (/^<!DOCTYPE\s+html/i.test(t) || /^<html[\s>]/i.test(t)) {
-      return { events: [], format: 'unknown' };
-    }
-    if (!lvFeedHasDatexMarker(t, 'xml')) {
+    if (!hasDatexMarker(t, 'xml')) {
       return { events: [], format: 'unknown' };
     }
     return { events: parseLvDatexXml(t, code, stats), format: 'datex-xml' };
@@ -1823,7 +1832,7 @@ export function parseLvFeedBody(
       if (json && typeof json === 'object' && Array.isArray((json as { features?: unknown }).features)) {
         return { events: parseLvWeightDimGeoJson(json, code, stats), format: 'geojson' };
       }
-      if (!lvFeedHasDatexMarker(t, 'json')) {
+      if (!hasDatexMarker(t, 'json')) {
         if (stats) stats.skipped += 1;
         return { events: [], format: 'unknown' };
       }
@@ -1865,15 +1874,29 @@ export function lvWeatherToSlowdownEvents(events: BalticRoadEvent[]): BalticRoad
 
 /* ---------- Estonia — Tark Tee DATEX (#716 cz.4) ---------- */
 
-/** Via Baltica LV→EE: Ikla → Pärnu → Tallinn → Muuga / Paldiski. */
+/**
+ * F7 #733 B3 — Via Baltica T4 (Ikla→Pärnu→Märjamaa→Kernu→Laagri) + T11 + T1 ku Muuga.
+ * Punkty co ≤ ~15 km na prawdziwej T4 (nie 15 km na wschód). Paldiski: T8 + port (nie linia przez zatokę).
+ */
 export const CORRIDOR_EE: LatLon[] = [
   [57.87, 24.36], // Ikla / Ainaži (granica LV/EE)
-  [58.39, 24.50], // Pärnu
-  [58.80, 24.70], // Märjamaa / T4
-  [59.20, 24.70], // Tallinn południe (T4/T11)
+  [58.00, 24.42],
+  [58.15, 24.48],
+  [58.25, 24.50],
+  [58.385, 24.498], // Pärnu
+  [58.55, 24.47],
+  [58.70, 24.44],
+  [58.904, 24.425], // Märjamaa (T4)
+  [59.02, 24.42],
+  [59.13, 24.43], // Kernu
+  [59.25, 24.50],
+  [59.35, 24.56], // Laagri
+  [59.38, 24.62], // Tallinn SW / T4
+  [59.39, 24.70], // T11 Keila–Jüri (południe)
+  [59.40, 24.80], // T11 / Jüri
   [59.44, 24.75], // Tallinn Vanasadam
+  [59.47, 24.85], // T1 ku Muuga
   [59.50, 24.96], // Muuga
-  [59.35, 24.06], // Paldiski
 ];
 
 /** Terminale portowe — zdarzenie ≤ 2 km → corridorMatch=on niezależnie od numeru. */
@@ -1883,7 +1906,8 @@ export const EE_PORT_TERMINALS: LatLon[] = [
   [59.352, 24.058], // Paldiski
 ];
 
-export const EE_ATTRIBUTION = 'Transpordiamet / Tark Tee (DATEX II)';
+/** F7 #733 B7 — warunki Tark Tee: administrator + usługa. */
+export const EE_ATTRIBUTION = 'Transpordiamet / Tark Tee (tarktee.ee)';
 export const EE_UA = 'WatchTower/BN6 (log-mar.pl; road-ee; +48 kontakt HHL)';
 /** Nagłówek z dokumentacji Tark Tee — bez zmiany nazw sekretów (#716). */
 export const EE_DATEX_KEY_HEADER = 'X-DATEX-API-KEY';
@@ -1891,12 +1915,13 @@ export const EE_SOURCE_REF = 'https://tarktee.ee/';
 export const EE_DATEX_BASE = 'https://tarktee.ee/api/v1/datex';
 
 /**
- * Kanały DATEX 2.3 + SRTI 3.6 (#716).
+ * Kanały DATEX 2.3 + SRTI 3.6 (#716) + measurementSites (F7 #733 B5 — współrzędne stacji).
  * Śliskość/widoczność SRTI — w UI „niedostępne”; nie pobieramy temporarySlipperyRoad.
  */
 export const EE_DATEX_FEEDS = [
   { code: 'RESTRICTIONS', path: 'restrictions', format: 'xml' as const },
   { code: 'SAFETY', path: 'safetyData', format: 'xml' as const },
+  { code: 'MEASUREMENT_SITES', path: 'measurementSites', format: 'xml' as const },
   { code: 'WEATHER', path: 'weatherData', format: 'xml' as const },
   { code: 'SRTI_ROADWORKS', path: 'srti/shortTermRoadWorks', format: 'json' as const },
   { code: 'SRTI_ACCIDENT', path: 'srti/unprotectedAccident', format: 'json' as const },
@@ -1929,13 +1954,28 @@ export function nearEePortTerminal(
   return false;
 }
 
+/**
+ * F7 #733 B1 — gołe „4” / „4 Tallinn–Pärnu–Ikla” → T4 (oraz 1/8/11 → T1/T8/T11).
+ */
+export function normalizeEeRoadRef(road: string | null | undefined): string | null {
+  if (road == null || road === '') return null;
+  const extracted = extractBalticRoadRef(road) ?? String(road).trim();
+  const r = extracted.toUpperCase().replace(/\s+/g, '');
+  if (/^(?:T)?([148]|11)$/.test(r)) {
+    const n = r.replace(/^T/, '');
+    return `T${n}`;
+  }
+  if (r === 'E67' || /^T\d{1,2}$/.test(r) || /^E\d{2,3}$/.test(r)) return r;
+  return r;
+}
+
 /** EE: E67/T4 (Via Baltica) + T11 (obwodnica) + T1 przy Muuga; T8 przy Paldiski. */
 export function eeRoadOnCorridor(
   road: string | null | undefined,
   e: Pick<BalticRoadEvent, 'lat' | 'lon'>,
 ): BalticCorridorRoadMatch {
   if (road == null || road === '') return 'unknown';
-  const r = road.toUpperCase().replace(/\s+/g, '');
+  const r = normalizeEeRoadRef(road) ?? '';
   if (r === 'E67' || r === 'T4' || r === 'T11') return 'on';
   if (r === 'T1') {
     /* Muuga / Tallinn wschód */
@@ -2057,14 +2097,23 @@ function eeParseWeightLimitT(rec: string): number | null {
   return Number.isFinite(n) && n > 0 ? n : null;
 }
 
+/** F7 #733 B9 — `lvTag(heightCharacteristic)` zwraca '' dla kontenera; `??` nie przechodzi dalej. */
 function eeParseHeightLimitM(rec: string): number | null {
-  const raw = lvTag(rec, 'heightCharacteristic')
-    ?? rec.match(/<(?:\w+:)?heightCharacteristic\b[\s\S]*?<(?:\w+:)?vehicleHeight\b[^>]*>([^<]+)</i)?.[1]
-    ?? rec.match(/height[^>]{0,40}>([\d.]+)\s*m/i)?.[1];
-  if (raw == null || raw === '') return null;
+  const raw = lvTag(rec, 'vehicleHeight')
+    || rec.match(/<(?:\w+:)?heightCharacteristic\b[\s\S]*?<(?:\w+:)?vehicleHeight\b[^>]*>([^<]+)</i)?.[1]
+    || rec.match(/height[^>]{0,40}>([\d.]+)\s*m/i)?.[1]
+    || '';
+  if (!raw) return null;
   const n = Number(String(raw).replace(/[^\d.]/g, ''));
   return Number.isFinite(n) && n > 0 ? n : null;
 }
+
+/**
+ * F7 #733 B5 — est. lód/śnieg/szron (granice słowa, flaga u); nie „märg”.
+ * Tylko pola treści, nie surowy XML.
+ */
+export const EE_ICY_CONTENT_RE =
+  /(?:^|[^\p{L}])(?:jäide|libedus|lumi|lörts|härmatis|jäide)(?=[^\p{L}]|$)/iu;
 
 function eeParseWidthLimitM(rec: string): number | null {
   const raw = rec.match(/<(?:\w+:)?widthCharacteristic\b[\s\S]*?<(?:\w+:)?vehicleWidth\b[^>]*>([^<]+)</i)?.[1]
@@ -2076,7 +2125,8 @@ function eeParseWidthLimitM(rec: string): number | null {
 
 /**
  * Decyzja 85 jak LV: zwykłe roboty → LOW; HIGH tylko zamknięcie / blokada / wypadek z blokadą;
- * limit masy bez liczby → MEDIUM (caller: weightLimitRisk).
+ * limit masy z liczbą → HIGH (caller: weightLimitRisk → MEDIUM bez masy ładunku);
+ * F7 #733 B5: WEATHER HIGH tylko lód/śnieg/szron / widoczność < 200 m.
  */
 export function eeSeverityForRecord(
   code: EeDatexFeedCode | string,
@@ -2085,46 +2135,69 @@ export function eeSeverityForRecord(
     signals?: ReturnType<typeof lvRecordSignals>;
     weightLimitT?: number | null;
     contentText?: string;
+    visibilityM?: number | null;
   } = {},
 ): RiskSeverity {
   const sig = opts.signals ?? lvRecordSignals(recOrText);
+  const content = opts.contentText ?? '';
   if (opts.weightLimitT != null) return 'HIGH';
   if (sig.hasDimLimit && !sig.roadClosed && !sig.carriagewayBlocked) return 'MEDIUM';
-  if (code === 'SRTI_ACCIDENT' || /Accident/i.test(recOrText)) {
+  /* F7 #733 N1 — Accident tylko z pól treści / kodu, nie z surowego JSON.stringify(rec). */
+  const accidentHit = code === 'SRTI_ACCIDENT'
+    || /Accident/i.test(content)
+    || /UnprotectedAccident/i.test(content);
+  if (accidentHit) {
     return (sig.roadClosed || sig.carriagewayBlocked) ? 'HIGH' : 'MEDIUM';
   }
   if (code === 'SRTI_BLOCKAGE' || sig.roadClosed || sig.carriagewayBlocked) return 'HIGH';
   if (sig.laneClosures || sig.alternateTraffic || sig.narrowOrContraflow || sig.hasDetour) {
     return 'MEDIUM';
   }
-  if (code === 'WEATHER' || code === 'EE_WEATHER') return 'MEDIUM';
+  if (code === 'WEATHER' || code === 'EE_WEATHER' || code === 'MEASUREMENT_SITES') {
+    const vis = opts.visibilityM;
+    const lowVis = vis != null && Number.isFinite(vis) && vis > 0 && vis < 200;
+    const icy = EE_ICY_CONTENT_RE.test(content)
+      || LV_ICY_DATEX_TYPE_RE.test(content);
+    if (icy || lowVis) return 'HIGH';
+    return 'MEDIUM';
+  }
   if (code === 'SRTI_ANIMAL') return 'MEDIUM';
   if (sig.speedLimitOnly) return 'LOW';
-  /* Zwykłe roboty / restrictions bez zamknięcia */
+  /* Zwykłe roboty / restrictions bez zamknięcia — tylko pola treści (N1). */
   if (
     code === 'RESTRICTIONS'
     || code === 'SRTI_ROADWORKS'
     || code === 'SAFETY'
-    || /MaintenanceWorks|Roadworks|ConstructionWorks|ShortTermRoadWorks/i.test(recOrText)
+    || /MaintenanceWorks|Roadworks|ConstructionWorks|ShortTermRoadWorks/i.test(content || recOrText)
   ) {
     return 'LOW';
   }
   return 'LOW';
 }
 
-export type EeParseStats = { parsed: number; skipped: number; swapped: number };
+export type EeParseStats = {
+  parsed: number;
+  skipped: number;
+  swapped: number;
+  /** F7 #733 N8 — skąd numer drogi. */
+  roadFromPole?: number;
+  roadFromOpis?: number;
+};
 
-/** DATEX II 2.3 XML (restrictions / safety / weather). */
+/** DATEX II 2.3 XML (restrictions / safety). Weather → parseEeWeatherData. */
 export function parseEeDatexXml(
   xml: string,
   code: EeDatexFeedCode,
   stats?: EeParseStats,
 ): BalticRoadEvent[] {
   if (!xml || typeof xml !== 'string') return [];
+  if (code === 'WEATHER' || code === 'MEASUREMENT_SITES') return [];
   const out: BalticRoadEvent[] = [];
   const recs = xml.split(/<(?:\w+:)?situationRecord\b/i).slice(1);
   let skipped = 0;
   let swapped = 0;
+  let roadFromPole = 0;
+  let roadFromOpis = 0;
   for (const raw of recs) {
     const rec = raw.split(/<\/(?:\w+:)?situationRecord>/i)[0] ?? '';
     const attr = rec.slice(0, Math.max(0, rec.indexOf('>')));
@@ -2141,19 +2214,23 @@ export function parseEeDatexXml(
     const { lat, lon } = coords;
     swapped += coords.swapped;
     const comment = lvPublicComment(rec) || eeTypeLabel(String(type));
-    const signals = lvRecordSignals(rec);
+    const signals = lvRecordSignals(`${rec}\n${comment}`);
     const weightLimitT = eeParseWeightLimitT(rec);
     const heightLimitM = eeParseHeightLimitM(rec);
     const widthLimitM = eeParseWidthLimitM(rec);
-    const severity = eeSeverityForRecord(code, rec, {
+    const severity = eeSeverityForRecord(code, comment, {
       signals, weightLimitT, contentText: comment,
     });
     const roadRaw = lvTag(rec, 'roadNumber');
-    const road = roadRaw
-      ? (extractBalticRoadRef(roadRaw) ?? roadRaw.trim())
-      : extractBalticRoadRefPreferStreet(null, comment);
+    let road: string | null = null;
+    if (roadRaw) {
+      road = normalizeEeRoadRef(extractBalticRoadRef(roadRaw) ?? roadRaw.trim());
+      roadFromPole++;
+    } else {
+      road = normalizeEeRoadRef(extractBalticRoadRefPreferStreet(null, comment));
+      if (road) roadFromOpis++;
+    }
     const label = eeTypeLabel(String(type));
-    const kind = code === 'WEATHER' ? 'EE_WEATHER' : code;
     out.push({
       id,
       title: road ? `${label} · ${road}` : label,
@@ -2161,11 +2238,11 @@ export function parseEeDatexXml(
       severity,
       lat,
       lon,
-      kind,
+      kind: code,
       start: lvTag(rec, 'overallStartTime') ?? null,
       end: lvTag(rec, 'overallEndTime') ?? null,
       road,
-      hasDetour: signals.hasDetour,
+      hasDetour: signals.hasDetour || BALTIC_DETOUR_RE.test(comment),
       roadClosed: signals.roadClosed || signals.carriagewayBlocked,
       weightLimitT,
       heightLimitM,
@@ -2176,6 +2253,109 @@ export function parseEeDatexXml(
     stats.parsed += out.length;
     stats.skipped += skipped;
     stats.swapped += swapped;
+    stats.roadFromPole = (stats.roadFromPole ?? 0) + roadFromPole;
+    stats.roadFromOpis = (stats.roadFromOpis ?? 0) + roadFromOpis;
+  }
+  return out;
+}
+
+/** Mapa id stacji → współrzędne (measurementSites / MeasurementSiteTablePublication). */
+export function parseEeMeasurementSites(xml: string): Map<string, LatLon> {
+  const map = new Map<string, LatLon>();
+  if (!xml || typeof xml !== 'string') return map;
+  const chunks = xml.split(/<(?:\w+:)?measurementSiteRecord\b/i).slice(1);
+  for (const raw of chunks) {
+    const rec = raw.split(/<\/(?:\w+:)?measurementSiteRecord>/i)[0] ?? '';
+    const attr = rec.slice(0, Math.max(0, rec.indexOf('>')));
+    const id = (attr.match(/\bid="([^"]+)"/i)?.[1]
+      ?? lvTag(rec, 'measurementSiteIdentification')
+      ?? lvTag(rec, 'id')
+      ?? '').trim();
+    if (!id) continue;
+    const coords = eeCoordsFromRecord(rec);
+    if (!coords) continue;
+    map.set(id, [coords.lat, coords.lon]);
+  }
+  return map;
+}
+
+/**
+ * F7 #733 B5 — MeasuredDataPublication: połącz z measurementSites;
+ * niekorzystne: lód/śnieg/szron w treści, temp. nawierzchni ≤ 0 + wilgoć, widoczność < 200 m.
+ * „märg” (mokro) samo → nie.
+ */
+export function parseEeWeatherData(
+  xml: string,
+  sites: Map<string, LatLon>,
+  stats?: EeParseStats,
+): BalticRoadEvent[] {
+  if (!xml || typeof xml !== 'string') return [];
+  const out: BalticRoadEvent[] = [];
+  let skipped = 0;
+  const blocks = xml.split(/<(?:\w+:)?siteMeasurements\b/i).slice(1);
+  for (const raw of blocks) {
+    const block = raw.split(/<\/(?:\w+:)?siteMeasurements>/i)[0] ?? raw;
+    const ref = (block.match(
+      /<(?:\w+:)?measurementSiteReference\b[^>]*(?:id|idRef|reference)="([^"]+)"/i,
+    )?.[1]
+      ?? block.match(/<(?:\w+:)?measurementSiteReference\b[^>]*>([^<]+)</i)?.[1]
+      ?? '').trim();
+    const site = ref ? sites.get(ref) : undefined;
+    if (!site) { skipped++; continue; }
+    const [lat, lon] = site;
+    const textBlob = [
+      ...[...block.matchAll(/<(?:\w+:)?value\b[^>]*>([^<]*)</gi)].map((m) => m[1]),
+      ...[...block.matchAll(/<(?:\w+:)?weatherRelatedRoadConditionType\b[^>]*>([^<]*)</gi)].map((m) => m[1]),
+      ...[...block.matchAll(/<(?:\w+:)?roadSurfaceConditionType\b[^>]*>([^<]*)</gi)].map((m) => m[1]),
+    ].join(' ');
+    const visRaw = lvTag(block, 'minimumVisibilityDistance')
+      ?? lvTag(block, 'visibility')
+      ?? block.match(/visibility[^>]{0,40}>([\d.]+)/i)?.[1];
+    const visibilityM = visRaw != null && visRaw !== ''
+      ? Number(String(visRaw).replace(/[^\d.]/g, ''))
+      : null;
+    const tempRaw = lvTag(block, 'roadSurfaceTemperature')
+      ?? lvTag(block, 'temperature')
+      ?? block.match(/surfaceTemperature[^>]{0,40}>([-\d.]+)/i)?.[1];
+    const surfaceTempC = tempRaw != null && tempRaw !== ''
+      ? Number(String(tempRaw).replace(/[^\d.-]/g, ''))
+      : null;
+    const moist = /wet|moisture|niisk|märg|vihm|rain/i.test(textBlob)
+      || /<(?:\w+:)?(?:humidity|relativeHumidity|precipitation)\b/i.test(block);
+    const lowVis = visibilityM != null && Number.isFinite(visibilityM)
+      && visibilityM > 0 && visibilityM < 200;
+    const icyText = EE_ICY_CONTENT_RE.test(textBlob)
+      || LV_ICY_DATEX_TYPE_RE.test(textBlob);
+    const coldWet = surfaceTempC != null && Number.isFinite(surfaceTempC)
+      && surfaceTempC <= 0 && moist;
+    /* Samo „märg” bez lodu / zimna / niskiej widoczności → pomiń. */
+    if (!icyText && !lowVis && !coldWet) { skipped++; continue; }
+    const bits = [
+      icyText ? textBlob.trim().slice(0, 120) : '',
+      surfaceTempC != null ? `temp nawierzchni ${surfaceTempC} C` : '',
+      visibilityM != null ? `widocznosc ${visibilityM} m` : '',
+    ].filter(Boolean);
+    const detail = bits.join(' · ') || 'pogoda drogowa';
+    const severity = eeSeverityForRecord('EE_WEATHER', detail, {
+      contentText: detail, visibilityM,
+    });
+    out.push({
+      id: `ee-wx:${ref}`,
+      title: 'Pogoda drogowa',
+      detail,
+      severity,
+      lat,
+      lon,
+      kind: 'EE_WEATHER',
+      start: null,
+      end: null,
+      visibilityM: visibilityM != null && Number.isFinite(visibilityM) ? visibilityM : null,
+      corridorMatch: 'on',
+    });
+  }
+  if (stats) {
+    stats.parsed += out.length;
+    stats.skipped += skipped;
   }
   return out;
 }
@@ -2195,7 +2375,8 @@ export function parseEeSrtiJson(
     }
     if (typeof node !== 'object') return;
     const o = node as Record<string, unknown>;
-    const nested = o.situationRecord ?? o.SituationRecord ?? o.situations ?? o.payload;
+    const nested = o.situationRecord ?? o.SituationRecord
+      ?? o.situations ?? o.payload ?? o.payloadPublication;
     if (nested != null && nested !== o) {
       walk(nested);
       return;
@@ -2276,14 +2457,21 @@ export function parseEeSrtiJson(
       comment = JSON.stringify(gpc).match(/"value"\s*:\s*"([^"]*)"/)?.[1] ?? '';
     }
     comment = decodeXmlEntities(comment || eeTypeLabel(type));
-    const signals = lvRecordSignals(JSON.stringify(rec));
-    const severity = eeSeverityForRecord(code, JSON.stringify(rec), {
+    /* F7 #733 N1 — sygnały z pól treści, nie z całego JSON.stringify(rec). */
+    const contentForSig = [comment, type, String(rec.roadOrCarriagewayOrLaneManagementType ?? '')].join(' ');
+    const signals = lvRecordSignals(contentForSig);
+    const severity = eeSeverityForRecord(code, contentForSig, {
       signals, contentText: comment,
     });
     const roadRaw = rec.roadNumber ?? rec.RoadNumber;
-    const road = roadRaw != null && String(roadRaw).trim()
-      ? (extractBalticRoadRef(String(roadRaw)) ?? String(roadRaw).trim())
-      : extractBalticRoadRefPreferStreet(null, comment);
+    let road: string | null = null;
+    if (roadRaw != null && String(roadRaw).trim()) {
+      road = normalizeEeRoadRef(extractBalticRoadRef(String(roadRaw)) ?? String(roadRaw).trim());
+      if (stats) stats.roadFromPole = (stats.roadFromPole ?? 0) + 1;
+    } else {
+      road = normalizeEeRoadRef(extractBalticRoadRefPreferStreet(null, comment));
+      if (road && stats) stats.roadFromOpis = (stats.roadFromOpis ?? 0) + 1;
+    }
     const label = eeTypeLabel(type.replace(/^.*:/, ''));
     out.push({
       id,
@@ -2296,7 +2484,7 @@ export function parseEeSrtiJson(
       start: typeof rec.overallStartTime === 'string' ? rec.overallStartTime : null,
       end: typeof rec.overallEndTime === 'string' ? rec.overallEndTime : null,
       road,
-      hasDetour: signals.hasDetour,
+      hasDetour: signals.hasDetour || BALTIC_DETOUR_RE.test(comment),
       roadClosed: signals.roadClosed || signals.carriagewayBlocked
         || code === 'SRTI_BLOCKAGE',
     });
@@ -2309,25 +2497,62 @@ export function parseEeSrtiJson(
   return out;
 }
 
+/**
+ * F7 #733 B4 — jak LV: pierwszy znak; markery jako element/klucz (`hasDatexMarker`);
+ * `{"message"}` / `null` / `[]` / `<Error>` / HTML → unknown.
+ * WEATHER + sitesMap → parseEeWeatherData; MEASUREMENT_SITES → puste zdarzenia (mapa w jobie).
+ */
 export function parseEeFeedBody(
   text: string,
   code: EeDatexFeedCode,
   prefer: 'xml' | 'json',
   stats?: EeParseStats,
-): { events: BalticRoadEvent[]; format: string } {
+  sites?: Map<string, LatLon>,
+): { events: BalticRoadEvent[]; format: string; sites?: Map<string, LatLon> } {
   const t = String(text ?? '').trim();
   if (!t) return { events: [], format: 'empty' };
-  if (prefer === 'xml' || t.startsWith('<')) {
-    if (!/situationRecord|d2LogicalModel|payloadPublication/i.test(t)) {
+  const c0 = t[0]!;
+  if (prefer === 'xml' || c0 === '<') {
+    if (!hasDatexMarker(t, 'xml')) {
       if (stats) stats.skipped += 1;
       return { events: [], format: 'unknown' };
     }
+    if (code === 'MEASUREMENT_SITES') {
+      const parsedSites = parseEeMeasurementSites(t);
+      if (stats) stats.parsed += parsedSites.size;
+      return { events: [], format: 'datex-xml', sites: parsedSites };
+    }
+    if (code === 'WEATHER') {
+      return {
+        events: parseEeWeatherData(t, sites ?? new Map(), stats),
+        format: 'datex-xml',
+      };
+    }
     return { events: parseEeDatexXml(t, code, stats), format: 'datex-xml' };
   }
-  try {
-    const json = JSON.parse(t) as unknown;
-    return { events: parseEeSrtiJson(json, code, stats), format: 'datex-json' };
-  } catch {
-    return { events: [], format: 'unknown' };
+  if (c0 === '{' || c0 === '[') {
+    try {
+      const json = JSON.parse(t) as unknown;
+      if (json === null || (Array.isArray(json) && json.length === 0)) {
+        if (stats) stats.skipped += 1;
+        return { events: [], format: 'unknown' };
+      }
+      if (
+        json && typeof json === 'object' && !Array.isArray(json)
+        && typeof (json as { message?: unknown }).message === 'string'
+        && !hasDatexMarker(t, 'json')
+      ) {
+        if (stats) stats.skipped += 1;
+        return { events: [], format: 'unknown' };
+      }
+      if (!hasDatexMarker(t, 'json')) {
+        if (stats) stats.skipped += 1;
+        return { events: [], format: 'unknown' };
+      }
+      return { events: parseEeSrtiJson(json, code, stats), format: 'datex-json' };
+    } catch {
+      return { events: [], format: 'unknown' };
+    }
   }
+  return { events: [], format: 'unknown' };
 }

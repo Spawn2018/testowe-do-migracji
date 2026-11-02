@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<d2LogicalModel xmlns="http://datex2.eu/schema/2/2_0" modelBaseVersion="2"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <payloadPublication xsi:type="MeasuredDataPublication">
+    <siteMeasurements>
+      <measurementSiteReference id="ee-site-t4-marjamaa"/>
+      <measuredValue>
+        <basicData>
+          <weatherRelatedRoadConditionType>ice</weatherRelatedRoadConditionType>
+          <roadSurfaceTemperature>-2.0</roadSurfaceTemperature>
+          <value lang="et">Jäide, libedus teel</value>
+        </basicData>
+      </measuredValue>
+    </siteMeasurements>
+    <siteMeasurements>
+      <measurementSiteReference id="ee-site-t4-marjamaa"/>
+      <measuredValue>
+        <basicData>
+          <value lang="et">märg</value>
+          <roadSurfaceTemperature>4.0</roadSurfaceTemperature>
+        </basicData>
+      </measuredValue>
+    </siteMeasurements>
+    <siteMeasurements>
+      <measurementSiteReference id="ee-site-far"/>
+      <measuredValue>
+        <basicData>
+          <value lang="et">Jäide</value>
+        </basicData>
+      </measuredValue>
+    </siteMeasurements>
+  </payloadPublication>
+</d2LogicalModel>
