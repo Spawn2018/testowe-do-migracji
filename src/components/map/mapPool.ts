@@ -141,12 +141,19 @@ export function attributionOf(map: L.Map): HTMLElement | null {
 }
 export function corridorPadding(map: L.Map): { paddingTopLeft: L.PointTuple; paddingBottomRight: L.PointTuple } {
   let extra = 0;
+  let top = 0;
   try {
-    /* legenda Mapy i dopisek Przeglądu (wyglad/P9-f) leżą na dole mapy */
-    const over = map.getContainer().closest('.corridor-map-root')?.querySelectorAll<HTMLElement>('.mapkey, [data-map-bottom]') ?? [];
+    /* legenda Mapy i dopisek Przeglądu (wyglad/P9-f) leżą na dole mapy; BN9-c5: dopisek trasy bałtyckiej (`.bn7-note`)
+       i dopisek Przeglądu na telefonie leżą u góry — wtedy margines górny (wcześniej dopisek u góry liczony był jak dolny,
+       na wysokość całej mapy, i kadr spadał do najmniejszego przybliżenia) */
+    const over = map.getContainer().closest('.corridor-map-root')?.querySelectorAll<HTMLElement>('.mapkey, [data-map-bottom], .bn7-note') ?? [];
     for (const key of over) {
       if (!(key.offsetHeight > 0)) continue;
       const root = key.offsetParent as HTMLElement | null;
+      if (root && key.offsetTop + key.offsetHeight / 2 < root.clientHeight / 2) {
+        top = Math.max(top, Math.round(key.offsetTop + key.offsetHeight));
+        continue;
+      }
       const fromBottom = root ? root.clientHeight - key.offsetTop : key.offsetHeight;
       extra = Math.max(extra, Math.round(fromBottom));
     }
@@ -161,7 +168,7 @@ export function corridorPadding(map: L.Map): { paddingTopLeft: L.PointTuple; pad
   } catch {
     /* mapa bez kontenera */
   }
-  return { paddingTopLeft: [CORRIDOR_PADDING, CORRIDOR_PADDING], paddingBottomRight: [CORRIDOR_PADDING, CORRIDOR_PADDING + extra] };
+  return { paddingTopLeft: [CORRIDOR_PADDING, CORRIDOR_PADDING + top], paddingBottomRight: [CORRIDOR_PADDING, CORRIDOR_PADDING + extra] };
 }
 /** Widok całej trasy dla bieżącego rozmiaru mapy (bez ruszania mapy). */
 export function corridorView(map: L.Map): { center: L.LatLng; zoom: number } {
