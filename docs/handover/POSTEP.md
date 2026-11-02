@@ -1,4 +1,12 @@
 
+## 2026-11-02 14:15 — #733 F7 r3 pusta struktura JSON = OK
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie.
+- Scalanie: brak F7 „gotowe” (#733 F7 r3 — jedna korekta: nie traktować pustej poprawnej odpowiedzi jako unknown). CI @ `a70bc3ef` unit/db/visual ✔ przed poprawką.
+- **Krok F7 #733 r3:** `eeJsonHasValidStructure` — `{"features":[]}` i `payload` bez situation → `datex-json` / 0 zdarzeń; `{"message",payload:null}` / `null` / `[]` → unknown. Vitest BN6 drogi **82**.
+- **Dalej:** push → CI → F7. Po F7: DP-166+167 → DP-165 → BN7 (#718).
+- Bez push na main.
+
 ## 2026-11-02 13:55 — #733 F7 r2 B1–B3 EE
 
 - Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie.

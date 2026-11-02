@@ -1379,7 +1379,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 2. **Unikalne fixture w `status.sh`:** własny vessel + UUID z numerem DP; po insert — `count(*)`; komentarz zajętych `L xx` / vesseli; bez `alter` CHECK schematu.
 3. **Start etapu od specyfikacji koordynatora** (kod od razu; pytania w issue).
 4. **Praca równoległa koordynatora** (`wyglad/*`, spec) bez kolizji ścieżek.
-5. ~~`wyglad/BN9-c2`~~ SCALONE (#717); ~~DP-139~~ SCALONE (#719); ~~BN5 (#714)~~ SCALONE (#721+#722); ~~DP-147+148~~ SCALONE (#724); ~~DP-149+150+151~~ SCALONE (#725); ~~BN6 cz.1~~ SCALONE (#726); ~~BN6 cz.2 LT~~ SCALONE (#727); ~~BN9-c4~~ SCALONE (#728); ~~DP-161~~ SCALONE (#731 `c72a14d9`); ~~BN6 cz.3 LV (#716/#730)~~ SCALONE `f060fd9e`; ~~**DP-157+158+162**~~ SCALONE (#732); **BN6 cz.4 EE** W TOKU (#733 F7 r2); po F7: DP-166+167 → DP-165 → BN7 (#718) → BN8 (#720).
+5. ~~`wyglad/BN9-c2`~~ SCALONE (#717); ~~DP-139~~ SCALONE (#719); ~~BN5 (#714)~~ SCALONE (#721+#722); ~~DP-147+148~~ SCALONE (#724); ~~DP-149+150+151~~ SCALONE (#725); ~~BN6 cz.1~~ SCALONE (#726); ~~BN6 cz.2 LT~~ SCALONE (#727); ~~BN9-c4~~ SCALONE (#728); ~~DP-161~~ SCALONE (#731 `c72a14d9`); ~~BN6 cz.3 LV (#716/#730)~~ SCALONE `f060fd9e`; ~~**DP-157+158+162**~~ SCALONE (#732); **BN6 cz.4 EE** W TOKU (#733 F7 r3); po F7: DP-166+167 → DP-165 → BN7 (#718) → BN8 (#720).
 
 ### #714 · BN5 — pogoda bałtycka — SCALONE (#721 `a56d022f` / **0375** + #722 `52f370ef`)
 Źródło: #714 (Spawn2018). Spec w treści zgłoszenia (korytarze `BALTIC_GULF_FI` / `PLD_KPS` / `TLL_STO`, FMI/DMI/SMHI, lód Digitraffic, bez domyślnego GDN-NYN). Ekrany BN9-c3 — koordynator.
@@ -1395,7 +1395,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 2. ~~**cz.2 LT**~~ — SCALONE (#727 `7ef5e230` / **0377**): eismoinfo restrictions + weather; job `road-lt`; F7 r1 B1–B3/N1–N3; DP-157/158/159. Po wdrożeniu odbiór SELECT road-lt (koordynator).
 3. ~~**cz.3 LV**~~ — SCALONE (#730 `f060fd9e` / **0378**): LVC NAP 22× `LV_NAP_*`; DATEX/GeoJSON; DP-160/164; F7 r1–r3 (gotowe @ `420642b0`).
 3b. ~~**DP-157+158+162**~~ — SCALONE (#732 `74127a7b` / F7 @ `25e80c44`): Tietyö→LOW; filtr VT4/E75/VT29/E8/50/103 + Kehä I/porty; etykiety PL; `riskFromRow.road`.
-4. **cz.4 EE** — W TOKU (`pakiet/bn6-cz4-road-ee` / **0379** / PR #733): Tark Tee DATEX (`X-DATEX-API-KEY`; klucz: `TARKTEE_DATEX_TOKEN` pierwszy, potem `_PASSWORD`); job `road-ee` + Edge; F7 r1 B1–B9 + **r2 B1–B3** (nested weather temp/RH/vis; 0 stacji→incomplete; CORRIDOR_EE T11 Jüri/Väo + T8 Keila–Paldiski; `EE_WEATHER`→pogoda; id+czas; pusty payload); vitest BN6 drogi **82**; status **583**. DP-168 w rejestrze (osobny PR). Po F7: **DP-166+167**, potem DP-165, potem BN7 (#718).
+4. **cz.4 EE** — W TOKU (`pakiet/bn6-cz4-road-ee` / **0379** / PR #733): Tark Tee DATEX (`X-DATEX-API-KEY`; klucz: `TARKTEE_DATEX_TOKEN` pierwszy, potem `_PASSWORD`); job `road-ee` + Edge; F7 r1–r2 + **r3** (`eeJsonHasValidStructure`: `{"features":[]}` / payload bez situation → OK 0; `payload:null` → unknown); vitest BN6 drogi **82**; status **583**. DP-168 w rejestrze (osobny PR). Po F7: **DP-166+167**, potem DP-165, potem BN7 (#718).
 
 ### #718 · BN7 — trasy HERE i linie na mapie: specyfikacja — W KOLEJCE (po BN6)
 Źródło: #718 (Spawn2018, `dla-cursora`; 02.11 ~00:20). Spec w treści zgłoszenia (legi BN7, via, `cron_fetch`, OSM corridor, ETA segmenty, filtr tras; `cron_fetch=true` dopiero po froncie koordynatora). Ekrany BN9-c5 — koordynator.
@@ -2536,6 +2536,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 02.11.2026 11:25 | #730 SCALONE `f060fd9e` (F7: gotowe @ 420642b0); start DP-157+158+162 FI (`pakiet/dp157-158-162-road-fi`); potem BN6 cz.4 EE | pętla / F7 #730 |
 | 02.11.2026 13:15 | #733 F7 r1 B1–B9 EE (wspólny detour/hasDatexMarker/fetch; CORRIDOR_EE; weather+sites; atrybucja); DP-166+167 w rejestrze; po F7: DP-166+167 → DP-165 → BN7 | pętla / F7 #733 |
 | 02.11.2026 13:55 | #733 F7 r2 B1–B3 EE (nested weather; 0 stacji; T11/T8); DP-168 w rejestrze; CI @ 0dfecb04 zielone przed poprawkami | pętla / F7 #733 |
+| 02.11.2026 14:15 | #733 F7 r3: pusta poprawna struktura JSON = OK (features[]/payload bez situation); CI @ a70bc3ef zielone przed poprawką | pętla / F7 #733 |
 | 31.10.2026 — | Decyzja 73: TLLA-HEL ETA−150 min / HELA-TLL ETD+160 min (fixture Cargo; nocny 165 min OK). Decyzja 74: `sailings.source_ref` 0359; Digitraffic `digitraffic:portcall:<id>:<route>`; HTML/RECZNIE/DANE_STARTOWE wygrywają; #685-b RPC zastępuje digitraffic:% w ±3 h | F7 #688 r1–r4 |
 | 31.10.2026 — | F7 #683 nieblokujące (osobna poprawka): Scheduler grudzień + „on 2 January” → rok bieżący, ciche wygaśnięcie; Alert INFO bez ryzyka/historii — świadomie | F7 #683 r7 |
 | 31.10.2026 — | F7 #683 r8 nieblokujące (osobno): Alert poza Schedulerem obok Schedulera; sprzeczne bloki (resume→cofnięcie auto); rok przy długim oknie Schedulera; mutanty M10/M15–M17/M22 świadomie bez testów | F7 #683 r8 |

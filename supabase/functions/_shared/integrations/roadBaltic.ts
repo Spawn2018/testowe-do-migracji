@@ -2630,8 +2630,8 @@ export function parseEeFeedBody(
         if (stats) stats.skipped += 1;
         return { events: [], format: 'unknown' };
       }
-      /* F7 #733 r2 drobne: {"message",payload:null} / {"features":[]} → unknown. */
-      if (!eeJsonPayloadNonEmpty(json)) {
+      /* F7 #733 r3: poprawna struktura z 0 rekordów = OK; unknown tylko bez struktury. */
+      if (!eeJsonHasValidStructure(json)) {
         if (stats) stats.skipped += 1;
         return { events: [], format: 'unknown' };
       }
@@ -2643,18 +2643,20 @@ export function parseEeFeedBody(
   return { events: [], format: 'unknown' };
 }
 
-/** F7 #733 r2 — niepusty payload / situation / features (klucz w JSON ≠ treść). */
-function eeJsonPayloadNonEmpty(json: unknown): boolean {
+/**
+ * F7 #733 r3 — rozpoznana struktura DATEX/GeoJSON (także pusta).
+ * `{"features":[]}` / `payload` bez situation → OK; `payload:null` / `null` / `[]` → false.
+ */
+function eeJsonHasValidStructure(json: unknown): boolean {
   if (json == null) return false;
-  if (Array.isArray(json)) return json.length > 0;
+  if (Array.isArray(json)) return false;
   if (typeof json !== 'object') return false;
   const o = json as Record<string, unknown>;
-  if (Array.isArray(o.features)) return o.features.length > 0;
+  if (Array.isArray(o.features)) return true;
   if ('payload' in o) {
     const p = o.payload;
     if (p == null) return false;
-    if (Array.isArray(p)) return p.length > 0;
-    if (typeof p === 'object') return Object.keys(p as object).length > 0;
+    if (typeof p === 'object') return true;
     return false;
   }
   if (o.situationRecord != null || o.situations != null || o.payloadPublication != null) {

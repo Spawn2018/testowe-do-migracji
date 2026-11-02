@@ -203,13 +203,22 @@ describe('BN6 road-ee parsers', () => {
       'RESTRICTIONS',
       'xml',
     ).format).toBe('unknown');
-    /* F7 r2 drobne: pusty payload / features */
+    /* F7 r3: brak struktury → unknown; pusta poprawna → datex-json (0) */
     expect(parseEeFeedBody(
-      '{"message":"x","payload":null}',
+      '{"message":"Forbidden","payload":null}',
       'SRTI_ACCIDENT',
       'json',
     ).format).toBe('unknown');
-    expect(parseEeFeedBody('{"features":[]}', 'SRTI_ACCIDENT', 'json').format).toBe('unknown');
+    const emptyFeat = parseEeFeedBody('{"features":[]}', 'SRTI_ACCIDENT', 'json');
+    expect(emptyFeat.format).toBe('datex-json');
+    expect(emptyFeat.events).toHaveLength(0);
+    const emptyPub = parseEeFeedBody(
+      '{"payload":{"situationPublication":{}}}',
+      'SRTI_ACCIDENT',
+      'json',
+    );
+    expect(emptyPub.format).toBe('datex-json');
+    expect(emptyPub.events).toHaveLength(0);
   });
 
   it('F7 B5 / r2 B1: nested weather — jäide / zimno+RH / mgła → HIGH+slow; märg → nie', () => {
