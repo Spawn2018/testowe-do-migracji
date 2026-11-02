@@ -1,4 +1,28 @@
 
+## 2026-11-02 20:40 — #739 merge main po #738 (konflikt docs)
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. #735 — krok 2 po prod DP-170.
+- Scalanie: brak F7 „gotowe do scalenia” na #739 (F7 r1 B1 zrobione @ `c551a8e4`; CI unit ✔; visual/db na starym SHA PR; mergeable CONFLICTING po #738).
+- **Krok:** `git merge origin/main` → konflikt `PLAN.md`/`POSTEP.md` (stan DP-170 + SCALONE #738 zachowany; chronologia BN7 z main).
+- **Dalej:** push → CI → F7. Po F7 DP-170: krok 2 #735; BN9-c5 → cron_fetch=true → BN8.
+- Bez push na main.
+
+## 2026-11-02 20:30 — #738 SCALONE; DP-170 F7 r1 B1
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie.
+- Scalanie: **#738 SCALONE** `645520c0` / **0381** (F7: gotowe @ `078ceadc`, CI unit/db/visual ✔). Dalej BN9-c5 (koordynator) → cron_fetch=true → BN8.
+- **Krok DP-170 F7 r1 B1** (#739): `probeEeDatexApi` równolegle z pulą (`Promise.allSettled` po feedach); ciało przez `readBalticFeedBody` (5 MB); test fake timers < 75 s + feedDuringProbe. PLAN §4/#718 zaktualizowane.
+- **Dalej:** push → CI → F7. Po F7 DP-170: krok 2 #735 wg wyniku prod.
+- Bez push na main.
+
+## 2026-11-02 20:05 — DP-170 start (równolegle #738)
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. #735 — zakres DP-170.
+- Scalanie: **#737** już na main; **#738** BN7 CI unit/db/visual ✔ @ `078ceadc` — brak jeszcze „F7: gotowe do scalenia” (F7 r1 „nie scalaj” przed B2–B5).
+- **Krok DP-170** (`pakiet/dp170-ee-lv-diag`): EE `probeEeDatexApi` → `ee_probe_api=<kod>:<ms>:<bajty>` (animalObstacle, 45 s, gzip); LV `lvUrlShape` → `lv_shape_*` (https/http/bez_schematu/same_cyfry/spacje/pusty). Vitest bn6 ee+lv **55**.
+- **Dalej:** push → CI → F7. Po F7 #738: BN9-c5 → cron_fetch=true → BN8; po F7 DP-170: krok 2 #735 wg wyniku prod.
+- Bez push na main.
+
 ## 2026-11-02 19:10 — #738 F7 r1 B2–B5 (BN7)
 
 - Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. DP-170 wpisane (EE/LV, osobna gałąź).

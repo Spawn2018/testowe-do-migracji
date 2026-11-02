@@ -108,9 +108,10 @@ import {
   capBalticRiskSeverity, classifyBalticNetError, dedupeLvSlippery, eeDatexApiKeyMeta,
   eeDatexFeedUrl, fiCorridorBboxes, fiTrafficUrl, filterInEeBboxes, filterInFiBboxes,
   filterInLvBboxes, dimensionLimitRisk, filterInLtBboxes, isDimensionLimitEvent,
-  isFiWeightLimitLike, ltWeatherToSlowdownEvents, lvNapKeyEnv, lvNapUrlEnv,
+  isFiWeightLimitLike, ltWeatherToSlowdownEvents, lvNapKeyEnv, lvNapUrlEnv, lvUrlShape,
   lvWeatherToSlowdownEvents, parseEeFeedBody, parseFiTrafficMessages, parseLtRestrictions,
-  parseLtWeather, parseLvFeedBody, probeBalticHost, readBalticFeedBody, weightLimitRisk,
+  parseLtWeather, parseLvFeedBody, probeBalticHost, probeEeDatexApi, readBalticFeedBody,
+  weightLimitRisk,
   type BalticKeyMeta, type BalticRoadEvent, type LvNapCode,
 } from './roadBaltic.ts';
 import { buildTrafficIncidentsUrl, parseHereTrafficIncidents } from '../here/trafficIncidents.ts';
@@ -3941,7 +3942,7 @@ const LV_FEED_CONCURRENCY = 6;
 
 function lvDiagObservations(
   keyMeta: BalticKeyMeta,
-  opts: { urlKind?: string; probe?: string } = {},
+  opts: { urlKind?: string; probe?: string; urlShapes?: Record<string, string> } = {},
 ): Record<string, string> {
   const o: Record<string, string> = {
     key_header_sent: String(keyMeta.key_header_sent),
@@ -3950,7 +3951,22 @@ function lvDiagObservations(
   };
   if (opts.urlKind) o.lv_url_kind = opts.urlKind;
   if (opts.probe) o.probe_lv = opts.probe;
+  /* DP-170: lv_shape_<kod> = https|http|bez_schematu|same_cyfry|spacje|pusty (bez wartości URL). */
+  if (opts.urlShapes) {
+    for (const [code, shape] of Object.entries(opts.urlShapes)) {
+      o[`lv_shape_${code.toLowerCase()}`] = shape;
+    }
+  }
   return o;
+}
+
+/** DP-170 — kształt URL każdego zbioru LV (raw z env, bez wartości w obs). */
+function lvUrlShapesFromEnv(env: Record<string, string | undefined>): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const code of LV_NAP_CODES) {
+    out[code] = lvUrlShape(env[lvNapUrlEnv(code)]);
+  }
+  return out;
 }
 
 export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
@@ -3966,6 +3982,7 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
   }
   const expectedFetches = configured.length;
   const first = configured[0];
+  const urlShapes = lvUrlShapesFromEnv(deps.env as Record<string, string | undefined>);
   if (expectedFetches === 0) {
     /* F7 #730 N3: configured:0 — nie ok:false, nie streak SOURCE_DOWN. */
     return {
@@ -3977,7 +3994,7 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
         expected_fetches: '0',
         configured: '0',
         header: LV_NAP_KEY_HEADER,
-        ...lvDiagObservations(balticKeyMeta('')),
+        ...lvDiagObservations(balticKeyMeta(''), { urlShapes }),
       },
     };
   }
@@ -3991,6 +4008,7 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
   const diag = lvDiagObservations(first!.keyMeta, {
     urlKind: balticUrlKind(first!.url),
     probe: probeLv,
+    urlShapes,
   });
 
   const started = Date.now();
@@ -4337,14 +4355,16 @@ async function fetchEeFeedPart(
 
 function eeDiagObservations(
   keyMeta: BalticKeyMeta,
-  probe?: string,
+  opts: { probe?: string; probeApi?: string } = {},
 ): Record<string, string> {
   const o: Record<string, string> = {
     key_header_sent: String(keyMeta.key_header_sent),
     key_len: String(keyMeta.key_len),
     key_trimmed: String(keyMeta.key_trimmed),
   };
-  if (probe) o.probe_ee = probe;
+  if (opts.probe) o.probe_ee = opts.probe;
+  /* DP-170: ee_probe_api=<kod|klasa>:<ms>:<bajty> (45 s, gzip, animalObstacle). */
+  if (opts.probeApi) o.ee_probe_api = opts.probeApi;
   return o;
 }
 
@@ -4371,7 +4391,8 @@ export async function runRoadEe(deps: JobDeps): Promise<JobResult> {
 
   /* F7 #736 B1 — sonda tarktee.ee raz przed zbiorami (bez klucza). */
   const probeEe = await probeBalticHost(deps.fetch, 'tarktee.ee', EE_UA);
-  const diag = eeDiagObservations(keyMeta, probeEe);
+  /* F7 #739 B1 — próba API 45 s równolegle z pulą usług (nie przed), by ≤ ~65 s + kilka. */
+  const probeApiP = probeEeDatexApi(deps.fetch, apiKey, EE_UA);
 
   const expectedFetches = EE_DATEX_FEEDS.length;
   const started = Date.now();
@@ -4397,6 +4418,12 @@ export async function runRoadEe(deps: JobDeps): Promise<JobResult> {
   const rest = await mapPoolLimit(otherFeeds, EE_FEED_CONCURRENCY, (feed) =>
     fetchEeFeedPart(deps, feed, apiKey, started, sites, parseStats));
   parts.push(...rest);
+
+  const probeSettled = await Promise.allSettled([probeApiP]);
+  const probeApi = probeSettled[0]!.status === 'fulfilled'
+    ? probeSettled[0].value
+    : `error:0:0`;
+  const diag = eeDiagObservations(keyMeta, { probe: probeEe, probeApi });
 
   let fetchedOk = 0;
   const allEvents: BalticRoadEvent[] = [];

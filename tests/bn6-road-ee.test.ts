@@ -4,7 +4,7 @@
  */
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
   BALTIC_DETOUR_RE,
   BALTIC_FEED_MAX_BYTES,
@@ -25,10 +25,12 @@ import {
   balticSlowdownMult,
   classifyBalticNetError,
   dimensionLimitRisk,
+  EE_PROBE_API_PATH,
   eeDatexApiKey,
   eeDatexApiKeyMeta,
   eeDatexFeedUrl,
   eeRoadOnCorridor,
+  probeEeDatexApi,
   eeSeverityForRecord,
   extractBalticRoadRef,
   filterInEeBboxes,
@@ -357,6 +359,12 @@ describe('BN6 runRoadEe', () => {
     expect(res.observations?.source).toBe('tarktee_datex');
     expect(res.observations?.key_env_first).toBe('TARKTEE_DATEX_TOKEN');
     expect(res.observations?.probe_ee).toMatch(/^200:\d+$/);
+    /* DP-170: sonda API 45 s — animalObstacle + gzip; osobno od 10 s feedów. */
+    expect(res.observations?.ee_probe_api).toMatch(/^200:\d+:\d+$/);
+    const apiProbeCalls = headerCalls.filter((c) =>
+      c.url.includes(EE_PROBE_API_PATH) && c.headers[EE_DATEX_KEY_HEADER] === 'test-ee-key'
+      && c.headers['Accept-Encoding'] === 'gzip');
+    expect(apiProbeCalls.length).toBeGreaterThanOrEqual(1);
     expect(res.observations?.key_header_sent).toBe('1');
     expect(res.observations?.key_len).toBe(String('test-ee-key'.length));
     expect(res.observations?.key_trimmed).toBe('0');
@@ -449,10 +457,90 @@ describe('BN6 runRoadEe', () => {
     const res = await runRoadEe(d);
     expect(res.warnings?.some((w) => /timeout tarktee\.ee/i.test(w))).toBe(true);
     expect(res.observations?.probe_ee).toMatch(/^timeout:\d+$/);
+    expect(res.observations?.ee_probe_api).toMatch(/^timeout:\d+:0$/);
     expect(res.observations?.key_header_sent).toBe('1');
     expect(res.observations?.key_len).toBe(String('sekret-ee-xyz'.length));
     expect(JSON.stringify(res)).not.toContain('sekret-ee-xyz');
     expect(JSON.stringify(res)).not.toMatch(/\/api\/v1\/datex\//);
+  });
+
+  it('DP-170: probeEeDatexApi → kod:ms:bajty; Accept-Encoding gzip; klucz w nagłówku', async () => {
+    const body = JSON.stringify({ situation: [] });
+    const f = (async (_input: RequestInfo | URL, init?: RequestInit) => {
+      const hdrs = (init?.headers ?? {}) as Record<string, string>;
+      expect(hdrs['Accept-Encoding']).toBe('gzip');
+      expect(hdrs[EE_DATEX_KEY_HEADER]).toBe('k');
+      return new Response(body, {
+        status: 200,
+        headers: { 'Content-Type': 'application/json', 'Content-Length': String(body.length) },
+      });
+    }) as typeof fetch;
+    const out = await probeEeDatexApi(f, 'k', EE_UA);
+    expect(out).toMatch(/^200:\d+:\d+$/);
+    const bytes = Number(out.split(':')[2]);
+    expect(bytes).toBe(body.length);
+  });
+
+  /* F7 #739 B1 — próba 45 s równolegle z pulą; przy wiszącym API całość < 75 s. */
+  it('F7 #739 B1: wiszące ee_probe_api równolegle z feedami — przebieg < 75 s', async () => {
+    vi.useFakeTimers();
+    try {
+      const store = new MemStore();
+      const pages: Record<string, string | number> = {
+        'https://tarktee.ee/': '<html>ok</html>',
+      };
+      for (const feed of EE_DATEX_FEEDS) {
+        const url = eeDatexFeedUrl(feed.path);
+        if (feed.code === 'RESTRICTIONS') pages[url] = restXml;
+        else if (feed.code === 'MEASUREMENT_SITES') pages[url] = sitesXml;
+        else if (feed.code === 'WEATHER') pages[url] = weatherXml;
+        else if (feed.code === 'SRTI_ACCIDENT' || feed.code === 'SRTI_BLOCKAGE') {
+          pages[url] = JSON.stringify(srtiJson);
+        } else {
+          pages[url] = '<?xml version="1.0"?><d2LogicalModel><payloadPublication></payloadPublication></d2LogicalModel>';
+        }
+      }
+      let probeSettled = false;
+      let feedDuringProbe = false;
+      const f = (async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url.includes(EE_PROBE_API_PATH)) {
+          await new Promise<never>((_, reject) => {
+            const abort = () => {
+              probeSettled = true;
+              reject(new DOMException('The operation was aborted.', 'AbortError'));
+            };
+            if (init?.signal?.aborted) abort();
+            else init?.signal?.addEventListener('abort', abort, { once: true });
+          });
+        }
+        if (!probeSettled && url.includes('/api/v1/datex/') && !url.includes(EE_PROBE_API_PATH)) {
+          feedDuringProbe = true;
+        }
+        const body = pages[url];
+        if (body === undefined) return new Response('missing', { status: 404 });
+        if (typeof body === 'number') return new Response('err', { status: body });
+        return new Response(body, {
+          status: 200,
+          headers: { 'Content-Type': url.includes('srti') ? 'application/json' : 'application/xml' },
+        });
+      }) as typeof fetch;
+      const started = Date.now();
+      const runP = runRoadEe({
+        store,
+        fetch: f,
+        env: { TARKTEE_DATEX_TOKEN: 'test-ee-key' },
+        now: () => new Date(Date.now()),
+      });
+      await vi.advanceTimersByTimeAsync(74_000);
+      const res = await runP;
+      expect(Date.now() - started).toBeLessThan(75_000);
+      expect(feedDuringProbe).toBe(true);
+      expect(res.observations?.ee_probe_api).toMatch(/^timeout:\d+:0$/);
+      expect(Number(res.observations?.fetched_ok)).toBeGreaterThan(0);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('F7 #736 B2: EE klucz z \\n → trim, key_trimmed=1, wartość poza obs', async () => {
