@@ -15,9 +15,11 @@ import {
   EE_UA,
   applyBalticCorridorRoadFilter,
   balticCapLongDetourClosure,
+  balticKeyMeta,
   balticSlowdownMult,
   dimensionLimitRisk,
   eeDatexApiKey,
+  eeDatexApiKeyMeta,
   eeDatexFeedUrl,
   eeRoadOnCorridor,
   eeSeverityForRecord,
@@ -300,6 +302,12 @@ describe('BN6 road-ee parsers', () => {
     expect(eeDatexApiKey({ TARKTEE_DATEX_PASSWORD: 'pwd' })).toBe('pwd');
     expect(eeDatexApiKey({ TARKTEE_DATEX_USER: 'u' })).toBe('');
     expect(eeDatexFeedUrl('restrictions')).toContain('/datex/restrictions');
+    expect(eeDatexApiKeyMeta({ TARKTEE_DATEX_TOKEN: 'tok\n' })).toEqual({
+      key: 'tok', key_len: 3, key_trimmed: 1, key_header_sent: 1,
+    });
+    expect(balticKeyMeta('  ')).toEqual({
+      key: '', key_len: 0, key_trimmed: 1, key_header_sent: 0,
+    });
   });
 });
 
@@ -315,7 +323,9 @@ describe('BN6 runRoadEe', () => {
 
   it('LIVE: nagłówek X-DATEX-API-KEY; :swapped w obs; raise tylko on', async () => {
     const store = new MemStore();
-    const pages: Record<string, string | number> = {};
+    const pages: Record<string, string | number> = {
+      'https://tarktee.ee/': '<html>ok</html>',
+    };
     for (const f of EE_DATEX_FEEDS) {
       const url = eeDatexFeedUrl(f.path);
       if (f.code === 'RESTRICTIONS') pages[url] = restXml;
@@ -329,11 +339,18 @@ describe('BN6 runRoadEe', () => {
     }
     const { d, headerCalls } = deps(store, pages);
     const res = await runRoadEe(d);
+    const probeCalls = headerCalls.filter((c) => c.url === 'https://tarktee.ee/');
+    expect(probeCalls.length).toBe(1);
+    expect(probeCalls[0]!.headers[EE_DATEX_KEY_HEADER]).toBeUndefined();
     expect(headerCalls.some((c) => c.headers[EE_DATEX_KEY_HEADER] === 'test-ee-key')).toBe(true);
     expect(headerCalls.every((c) => (c.headers['User-Agent'] ?? '').includes('road-ee'))).toBe(true);
     expect(EE_UA).toContain('road-ee');
     expect(res.observations?.source).toBe('tarktee_datex');
     expect(res.observations?.key_env_first).toBe('TARKTEE_DATEX_TOKEN');
+    expect(res.observations?.probe_ee).toMatch(/^200:\d+$/);
+    expect(res.observations?.key_header_sent).toBe('1');
+    expect(res.observations?.key_len).toBe(String('test-ee-key'.length));
+    expect(res.observations?.key_trimmed).toBe('0');
     expect(Number(res.observations?.fetched_ok)).toBeGreaterThan(0);
     /* F7 B8 — per-usługa z :swapped */
     const restObs = String(res.observations?.ee_restrictions ?? '');
@@ -407,5 +424,49 @@ describe('BN6 runRoadEe', () => {
     expect(x.events.length).toBeGreaterThan(0);
     const j = parseEeFeedBody(JSON.stringify(srtiJson), 'SRTI_ACCIDENT', 'json');
     expect(j.format).toBe('datex-json');
+  });
+
+  it('DP-169: timeout w warning z hostem tarktee.ee, bez ścieżki i klucza', async () => {
+    const store = new MemStore();
+    const f = (async () => {
+      throw new DOMException('The operation was aborted.', 'AbortError');
+    }) as typeof fetch;
+    const d: JobDeps = {
+      store,
+      fetch: f,
+      env: { TARKTEE_DATEX_TOKEN: 'sekret-ee-xyz' },
+      now: () => new Date('2026-11-02T12:00:00Z'),
+    };
+    const res = await runRoadEe(d);
+    expect(res.warnings?.some((w) => /timeout tarktee\.ee/i.test(w))).toBe(true);
+    expect(res.observations?.probe_ee).toMatch(/^timeout:\d+$/);
+    expect(res.observations?.key_header_sent).toBe('1');
+    expect(res.observations?.key_len).toBe(String('sekret-ee-xyz'.length));
+    expect(JSON.stringify(res)).not.toContain('sekret-ee-xyz');
+    expect(JSON.stringify(res)).not.toMatch(/\/api\/v1\/datex\//);
+  });
+
+  it('F7 #736 B2: EE klucz z \\n → trim, key_trimmed=1, wartość poza obs', async () => {
+    const store = new MemStore();
+    const pages: Record<string, string | number> = { 'https://tarktee.ee/': '<html>ok</html>' };
+    for (const f of EE_DATEX_FEEDS) {
+      pages[eeDatexFeedUrl(f.path)] = f.format === 'json'
+        ? JSON.stringify(srtiJson)
+        : '<?xml version="1.0"?><d2LogicalModel><payloadPublication></payloadPublication></d2LogicalModel>';
+    }
+    pages[eeDatexFeedUrl('restrictions')] = restXml;
+    pages[eeDatexFeedUrl('measurementSites')] = sitesXml;
+    const headerVals: string[] = [];
+    const base = deps(store, pages, { TARKTEE_DATEX_TOKEN: 'ee-key-trim\n' });
+    const f = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const hdrs = (init?.headers ?? {}) as Record<string, string>;
+      if (hdrs[EE_DATEX_KEY_HEADER]) headerVals.push(hdrs[EE_DATEX_KEY_HEADER]);
+      return base.d.fetch(input, init);
+    }) as typeof fetch;
+    const res = await runRoadEe({ ...base.d, fetch: f });
+    expect(res.observations?.key_trimmed).toBe('1');
+    expect(res.observations?.key_len).toBe(String('ee-key-trim'.length));
+    expect(headerVals.every((v) => v === 'ee-key-trim' && !v.includes('\n'))).toBe(true);
+    expect(JSON.stringify(res.observations ?? {})).not.toContain('ee-key-trim');
   });
 });

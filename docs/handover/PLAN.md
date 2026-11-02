@@ -1258,10 +1258,11 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-161 | koordynator | front (BN9-c4) — kolumna Sytuacja na trasie HHL 1440 | F7 #731 | BN9-c4 | DONE #731 `c72a14d9` |
 | DP-162 | Cursor | `mappers.ts`: ROAD_LT/LV/EE/FI → `OPS`; `riskFromRow` gubi `detail.zrodlo/od/do/lat/lon`/limity — przenieś `road` do `riskFromRow` (obejście `withBalticRoad` w #728) | F7 #727 | BN6 / front | DONE #732 |
 | DP-164 | koordynator | do BN7 filtr numerów dróg korytarza: LT A5/A8/A10(E67)+A1 przy Kownie; LV A7(E67)+A1 do EE; poza listą maks. LOW bez slowdown; bez numeru — bbox bez HIGH/slowdown; reason `zamknięcia: N` (nie „nawierzchnia N”); test nr 134 | odbiór road-lt / #730 | BN6 / LT+LV | DONE #730 |
-| DP-165 | Cursor | road-lv: 18× „błąd sieci”, fetched_ok 0 (nie HTTP 401/403) — klasa błędu w ostrzeżeniu (DNS/TLS/timeout/reset/host bez ścieżki z kluczem); sprawdź `LV_NAP_*_URL` (pull metadata→field_source_url); geoblokada regionu Edge → pytanie do koordynatora | odbiór #730 / #716 | BN6 / road-lv | w kolejce (po DP-166+167) |
-| DP-166 | Cursor | `extractFiRoadRef` tylko `\d{1,3}` — „Tie 19511”/8155 → unknown → on (≤3 km); zmień na `\d{1,5}` (+ ten sam limit w `extractBalticRoadRef` jeśli dotyczy); test Tie 19511 → off | odbiór #732 / #716 | BN6 / road-fi | W TOKU (#734) |
-| DP-167 | Cursor | `raise_integration_risk` przy otwartym ryzyku nie aktualizuje wag/etykiet — zmiana wag FI/EE po wdrożeniu nie trafia do otwartych | odbiór #732 / #716 | BN6 / raiseRisk | W TOKU (#734 / **0380**) |
+| DP-165 | Cursor | road-lv: 18× „błąd sieci”, fetched_ok 0 (nie HTTP 401/403) — klasa błędu w ostrzeżeniu (DNS/TLS/timeout/reset/host bez ścieżki z kluczem); sprawdź `LV_NAP_*_URL` (pull metadata→field_source_url); geoblokada regionu Edge → pytanie do koordynatora | odbiór #730 / #716 | BN6 / road-lv | W TOKU (z DP-169) |
+| DP-166 | Cursor | `extractFiRoadRef` tylko `\d{1,3}` — „Tie 19511”/8155 → unknown → on (≤3 km); zmień na `\d{1,5}` (+ ten sam limit w `extractBalticRoadRef` jeśli dotyczy); test Tie 19511 → off | odbiór #732 / #716 | BN6 / road-fi | DONE #734 `3291d59c` / **0380** |
+| DP-167 | Cursor | `raise_integration_risk` przy otwartym ryzyku nie aktualizuje wag/etykiet — zmiana wag FI/EE po wdrożeniu nie trafia do otwartych | odbiór #732 / #716 | BN6 / raiseRisk | DONE #734 `3291d59c` / **0380** |
 | DP-168 | Cursor | wspólny fetch 5 MB (strumień)/10 s/65 s + szablon obs `<kraj>_<usługa>` + wspólny regex pogody (słowa per język); N3 limit masy z liczbą → MEDIUM w parserze | F7 #733 r2 | BN6 / roadBaltic | w kolejce (osobny PR przed BN7; nie blokuje #733) |
+| DP-169 | Cursor | road-ee: 8/8 Tark Tee timeout z Edge (`fetched_ok 0`); diagnoza lokalna PL + klasa błędu w ostrzeżeniu (jak DP-165); bez własnego proxy — decyzja do koordynatora gdy lokal OK / Edge nie | odbiór #733 / #716 | BN6 / road-ee | W TOKU (z DP-165) |
 | DP-122 | Cursor | `viking_schedule_imports` (0360) brak w kopii 01.11 01:30 — koordynator #697: **nie wymaga zmian** (0360 po kopii 00:30; kontrola kopii 02.11) | #697 | backup | bez zmian (koord. 01.11) |
 | DP-117 | Cursor | `route-check/index.ts` `loads` `.limit(500)` bez sortu/filtra statusu — przy >500 transportach losowy dobór | F7 #693 r1 | ferry / route-check | w kolejce |
 | DP-118 | Cursor | `store.resolveStaleRisks` — `risk_signals` bez limitu (`max_rows`) → część nieaktualnych ryzyk niezamknięta | F7 #693 r1 | BN3 / ryzyka | w kolejce |
@@ -1379,7 +1380,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 2. **Unikalne fixture w `status.sh`:** własny vessel + UUID z numerem DP; po insert — `count(*)`; komentarz zajętych `L xx` / vesseli; bez `alter` CHECK schematu.
 3. **Start etapu od specyfikacji koordynatora** (kod od razu; pytania w issue).
 4. **Praca równoległa koordynatora** (`wyglad/*`, spec) bez kolizji ścieżek.
-5. ~~`wyglad/BN9-c2`~~ SCALONE (#717); ~~DP-139~~ SCALONE (#719); ~~BN5 (#714)~~ SCALONE (#721+#722); ~~DP-147+148~~ SCALONE (#724); ~~DP-149+150+151~~ SCALONE (#725); ~~BN6 cz.1~~ SCALONE (#726); ~~BN6 cz.2 LT~~ SCALONE (#727); ~~BN9-c4~~ SCALONE (#728); ~~DP-161~~ SCALONE (#731 `c72a14d9`); ~~BN6 cz.3 LV (#716/#730)~~ SCALONE `f060fd9e`; ~~**DP-157+158+162**~~ SCALONE (#732); ~~**BN6 cz.4 EE**~~ SCALONE (#733 `f363b7fc`); **DP-166+167** W TOKU → DP-165 → DP-168 → BN7 (#718) → BN8 (#720).
+5. ~~`wyglad/BN9-c2`~~ SCALONE (#717); ~~DP-139~~ SCALONE (#719); ~~BN5 (#714)~~ SCALONE (#721+#722); ~~DP-147+148~~ SCALONE (#724); ~~DP-149+150+151~~ SCALONE (#725); ~~BN6 cz.1~~ SCALONE (#726); ~~BN6 cz.2 LT~~ SCALONE (#727); ~~BN9-c4~~ SCALONE (#728); ~~DP-161~~ SCALONE (#731 `c72a14d9`); ~~BN6 cz.3 LV (#716/#730)~~ SCALONE `f060fd9e`; ~~**DP-157+158+162**~~ SCALONE (#732); ~~**BN6 cz.4 EE**~~ SCALONE (#733 `f363b7fc`); ~~**DP-166+167**~~ SCALONE (#734 `3291d59c` / **0380**); **DP-165+169** W TOKU → DP-168 → BN7 (#718) → BN8 (#720).
 
 ### #714 · BN5 — pogoda bałtycka — SCALONE (#721 `a56d022f` / **0375** + #722 `52f370ef`)
 Źródło: #714 (Spawn2018). Spec w treści zgłoszenia (korytarze `BALTIC_GULF_FI` / `PLD_KPS` / `TLL_STO`, FMI/DMI/SMHI, lód Digitraffic, bez domyślnego GDN-NYN). Ekrany BN9-c3 — koordynator.
@@ -1396,7 +1397,8 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 3. ~~**cz.3 LV**~~ — SCALONE (#730 `f060fd9e` / **0378**): LVC NAP 22× `LV_NAP_*`; DATEX/GeoJSON; DP-160/164; F7 r1–r3 (gotowe @ `420642b0`).
 3b. ~~**DP-157+158+162**~~ — SCALONE (#732 `74127a7b` / F7 @ `25e80c44`): Tietyö→LOW; filtr VT4/E75/VT29/E8/50/103 + Kehä I/porty; etykiety PL; `riskFromRow.road`.
 4. ~~**cz.4 EE**~~ — SCALONE (#733 `f363b7fc` / **0379**; F7 gotowe @ `8f112f03`): Tark Tee DATEX; job `road-ee`; vitest BN6 drogi **82**; status **583**. DP-168 w rejestrze (osobny PR przed BN7).
-5. **DP-166+167** — W TOKU (`pakiet/dp166-167-fi-road-raise` / **0380**): FI `\d{1,5}` (Tie 19511→off); `raise_integration_risk` aktualizuje otwarte wagi/etykiety. Potem DP-165 → DP-168 → BN7 (#718).
+5. ~~**DP-166+167**~~ — SCALONE (#734 `3291d59c` / **0380**; F7 gotowe @ `4621ed82`): FI `\d{1,5}`; raise update open tylko ROAD_* bez `load_id`.
+6. **DP-165+169** — W TOKU (`pakiet/dp165-road-lv-net-error`): klasa błędu sieci w ostrzeżeniach LV/EE; diagnoza lokalna PL (EE API osiągalne → 403 z fake key; Edge timeout). Decyzja geoblokady → koordynator. Potem DP-168 → BN7 (#718).
 
 ### #718 · BN7 — trasy HERE i linie na mapie: specyfikacja — W KOLEJCE (po BN6)
 Źródło: #718 (Spawn2018, `dla-cursora`; 02.11 ~00:20). Spec w treści zgłoszenia (legi BN7, via, `cron_fetch`, OSM corridor, ETA segmenty, filtr tras; `cron_fetch=true` dopiero po froncie koordynatora). Ekrany BN9-c5 — koordynator.
@@ -2539,6 +2541,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 02.11.2026 13:55 | #733 F7 r2 B1–B3 EE (nested weather; 0 stacji; T11/T8); DP-168 w rejestrze; CI @ 0dfecb04 zielone przed poprawkami | pętla / F7 #733 |
 | 02.11.2026 14:15 | #733 F7 r3: pusta poprawna struktura JSON = OK (features[]/payload bez situation); CI @ a70bc3ef zielone przed poprawką | pętla / F7 #733 |
 | 02.11.2026 15:05 | #733 SCALONE `f363b7fc`; start DP-166+167 (`pakiet/dp166-167-fi-road-raise` / **0380**): FI `\d{1,5}` + raise update open | pętla / DP-166+167 |
+| 02.11.2026 16:21 | #734 SCALONE `3291d59c` (F7: gotowe @ 4621ed82); start DP-165+169 (`pakiet/dp165-road-lv-net-error`): klasa błędu sieci LV/EE + diagnoza lokalna | pętla / DP-165+169 |
 | 31.10.2026 — | Decyzja 73: TLLA-HEL ETA−150 min / HELA-TLL ETD+160 min (fixture Cargo; nocny 165 min OK). Decyzja 74: `sailings.source_ref` 0359; Digitraffic `digitraffic:portcall:<id>:<route>`; HTML/RECZNIE/DANE_STARTOWE wygrywają; #685-b RPC zastępuje digitraffic:% w ±3 h | F7 #688 r1–r4 |
 | 31.10.2026 — | F7 #683 nieblokujące (osobna poprawka): Scheduler grudzień + „on 2 January” → rok bieżący, ciche wygaśnięcie; Alert INFO bez ryzyka/historii — świadomie | F7 #683 r7 |
 | 31.10.2026 — | F7 #683 r8 nieblokujące (osobno): Alert poza Schedulerem obok Schedulera; sprzeczne bloki (resume→cofnięcie auto); rok przy długim oknie Schedulera; mutanty M10/M15–M17/M22 świadomie bez testów | F7 #683 r8 |

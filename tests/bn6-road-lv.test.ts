@@ -13,7 +13,12 @@ import {
   LV_UA,
   applyBalticCorridorRoadFilter,
   balticCapLongDetourClosure,
+  balticKeyMeta,
+  balticNetWarning,
   balticSlowdownMult,
+  balticUrlKind,
+  balticWarnHost,
+  classifyBalticNetError,
   dedupeLvSlippery,
   extractBalticRoadRef,
   extractBalticRoadRefPreferStreet,
@@ -279,13 +284,23 @@ describe('BN6 runRoadLv F7 #730', () => {
       'nap.example/lv/weight-dim': JSON.stringify(weightJson),
     }, MOCK_ENV);
     const r = await runRoadLv(d);
-    expect(headerCalls.length).toBe(4);
-    for (const c of headerCalls) {
+    /* F7 #736 B1: sonda hosta bez klucza + 4 zbiory z nagłówkiem. */
+    const probeCalls = headerCalls.filter((c) => /https:\/\/nap\.example\/?$/i.test(c.url));
+    const feedCalls = headerCalls.filter((c) => c.headers[LV_NAP_KEY_HEADER]);
+    expect(probeCalls.length).toBe(1);
+    expect(probeCalls[0]!.headers[LV_NAP_KEY_HEADER]).toBeUndefined();
+    expect(feedCalls.length).toBe(4);
+    for (const c of feedCalls) {
       expect(c.headers['User-Agent']).toBe(LV_UA);
       expect(c.headers[LV_NAP_KEY_HEADER]).toBeTruthy();
     }
     expect(r.observations?.header).toBe(LV_NAP_KEY_HEADER);
     expect(r.observations?.complete).toBe('1');
+    expect(r.observations?.probe_lv).toMatch(/^(?:\d+|timeout|DNS|TLS|reset|connect timeout|read timeout|sieć):\d+$/);
+    expect(r.observations?.lv_url_kind).toBe('nap.example/lv');
+    expect(r.observations?.key_header_sent).toBe('1');
+    expect(r.observations?.key_len).toBe(String('k-rw-secret-value'.length));
+    expect(r.observations?.key_trimmed).toBe('0');
     expect(r.warnings?.some((w) => /nap\.example|https?:\/\//i.test(w))).toBe(false);
     expect(r.warnings?.some((w) => w.includes('k-rw-secret-value'))).toBe(false);
     expect(JSON.stringify(r.observations ?? {})).not.toContain('k-rw-secret-value');
@@ -532,9 +547,78 @@ describe('BN6 runRoadLv F7 #730', () => {
     /* podmień timeout na krótki przez Abort — jobs używa 10s; tu fetch od razu abort */
     const r = await runRoadLv(d);
     expect(calls).toBeGreaterThan(0);
-    expect(r.warnings?.some((w) => /timeout|błąd sieci|niepobrany/i.test(w))).toBe(true);
+    expect(r.warnings?.some((w) => /timeout nap\.example/i.test(w))).toBe(true);
+    expect(r.warnings?.every((w) => !/\/lv\/roadworks/i.test(w))).toBe(true);
     expect(JSON.stringify(r)).not.toContain('sekret-klucz-xyz');
     expect(st.risks.every((x) => !JSON.stringify(x.detail ?? {}).includes('sekret-klucz-xyz')))
       .toBe(true);
+  });
+
+  it('DP-165: klasa DNS/TLS/reset + host bez ścieżki w warning', async () => {
+    const cases: { err: Error; re: RegExp }[] = [
+      { err: Object.assign(new Error('getaddrinfo ENOTFOUND bad.host'), { name: 'TypeError' }), re: /DNS bad\.host/ },
+      { err: new Error('unable to verify the first certificate'), re: /TLS bad\.host/ },
+      { err: Object.assign(new Error('read ECONNRESET'), { name: 'Error' }), re: /reset bad\.host/ },
+    ];
+    for (const { err, re } of cases) {
+      const st = new MemStore();
+      const r = await runRoadLv({
+        store: st,
+        fetch: (async () => { throw err; }) as typeof fetch,
+        env: {
+          LV_NAP_ROADWORKS_KEY: 'sekret-abc',
+          LV_NAP_ROADWORKS_URL: 'https://bad.host/lv/api/pull/secret-path?k=sekret-abc',
+        },
+        now: () => NOW,
+      });
+      expect(r.warnings?.some((w) => re.test(w))).toBe(true);
+      expect(r.observations?.lv_url_kind).toBe('bad.host/lv');
+      expect(JSON.stringify(r)).not.toContain('sekret-abc');
+      expect(JSON.stringify(r)).not.toContain('secret-path');
+    }
+  });
+
+  it('F7 #736 B2: klucz z \\n → trim, key_trimmed=1, wartość poza obs/warnings', async () => {
+    const st = new MemStore();
+    const rawKey = 'sekret-trim-xyz\n';
+    const headerVals: string[] = [];
+    const f = (async (_input: RequestInfo | URL, init?: RequestInit) => {
+      const hdrs = (init?.headers ?? {}) as Record<string, string>;
+      if (hdrs[LV_NAP_KEY_HEADER]) headerVals.push(hdrs[LV_NAP_KEY_HEADER]);
+      return new Response(rwXml, { status: 200 });
+    }) as typeof fetch;
+    const r = await runRoadLv({
+      store: st,
+      fetch: f,
+      env: {
+        LV_NAP_ROADWORKS_KEY: rawKey,
+        LV_NAP_ROADWORKS_URL: 'https://nap.example/lv/api/pull/field_source',
+      },
+      now: () => NOW,
+    });
+    expect(r.observations?.key_trimmed).toBe('1');
+    expect(r.observations?.key_header_sent).toBe('1');
+    expect(r.observations?.key_len).toBe(String('sekret-trim-xyz'.length));
+    expect(r.observations?.lv_url_kind).toBe('nap.example/lv');
+    expect(headerVals.every((v) => v === 'sekret-trim-xyz' && !v.includes('\n'))).toBe(true);
+    expect(JSON.stringify(r.observations ?? {})).not.toContain('sekret-trim-xyz');
+    expect(JSON.stringify(r.warnings ?? [])).not.toContain('sekret-trim-xyz');
+  });
+});
+
+describe('DP-165/169 classifyBalticNetError', () => {
+  it('mapuje typowe komunikaty i host bez ścieżki', () => {
+    expect(classifyBalticNetError(new DOMException('aborted', 'AbortError'))).toBe('timeout');
+    expect(classifyBalticNetError(new Error('getaddrinfo ENOTFOUND x'))).toBe('DNS');
+    expect(classifyBalticNetError(new Error('self signed certificate'))).toBe('TLS');
+    expect(classifyBalticNetError(new Error('read ECONNRESET'))).toBe('reset');
+    expect(classifyBalticNetError(new Error('connect ETIMEDOUT'))).toBe('timeout');
+    expect(balticWarnHost('https://a.example/path?key=sek')).toBe('a.example');
+    expect(balticUrlKind('https://nap.example/lv/api/pull/metadata/44751?x=1')).toBe('nap.example/lv');
+    expect(balticKeyMeta('abc\n')).toEqual({
+      key: 'abc', key_len: 3, key_trimmed: 1, key_header_sent: 1,
+    });
+    expect(balticNetWarning('LV X', 'https://a.example/secret', new Error('ECONNRESET')))
+      .toBe('LV X: reset a.example');
   });
 });

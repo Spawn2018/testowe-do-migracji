@@ -1238,6 +1238,118 @@ export function lvNapUrlEnv(code: LvNapCode): string {
 }
 
 /**
+ * DP-165 / DP-169 — klasa błędu sieci w ostrzeżeniu (bez wartości klucza, bez ścieżki URL).
+ * Abort z naszego limitu czasu = „timeout”; DNS / TLS / reset / connect|read timeout osobno.
+ */
+export type BalticNetErrorClass =
+  | 'timeout'
+  | 'DNS'
+  | 'TLS'
+  | 'reset'
+  | 'connect timeout'
+  | 'read timeout'
+  | 'sieć';
+
+export function balticWarnHost(url: string): string {
+  try {
+    const h = new URL(url).host;
+    return h || 'host';
+  } catch {
+    return 'host';
+  }
+}
+
+export function classifyBalticNetError(err: unknown): BalticNetErrorClass {
+  const name = err instanceof Error ? err.name : '';
+  const msg = err instanceof Error ? err.message : String(err);
+  if (name === 'AbortError' || /aborted|abort(?:ed)?\b/i.test(msg)) return 'timeout';
+  if (/ENOTFOUND|EAI_AGAIN|getaddrinfo|name not resolved|nie można rozpoznać nazwy|nxdomain/i.test(msg)) {
+    return 'DNS';
+  }
+  if (/CERT_|ERR_TLS|SSL|TLS|certificate|UNABLE_TO_VERIFY|handshake/i.test(msg)) return 'TLS';
+  if (/ECONNRESET|connection reset|reset by peer|forcibly closed/i.test(msg)) return 'reset';
+  if (/ECONNREFUSED|EHOSTUNREACH|ENETUNREACH|connect(?:ion)? timed out|connect timeout/i.test(msg)) {
+    return 'connect timeout';
+  }
+  if (/read timed out|body.?timeout|header.?timeout|und_err_headers_timeout|und_err_body_timeout/i.test(msg)) {
+    return 'read timeout';
+  }
+  if (/ETIMEDOUT|timed?\s*out|timeout/i.test(msg)) return 'timeout';
+  return 'sieć';
+}
+
+/** Ostrzeżenie: `LV ROADWORKS: TLS host.example` — host bez ścieżki (ścieżka może mieć klucz). */
+export function balticNetWarning(prefix: string, url: string, err: unknown): string {
+  const klass = classifyBalticNetError(err);
+  const host = balticWarnHost(url);
+  if (klass === 'timeout') return `${prefix}: timeout ${host}`;
+  if (klass === 'sieć') return `${prefix}: błąd sieci (${host})`;
+  return `${prefix}: ${klass} ${host}`;
+}
+
+/**
+ * F7 #736 B2 — meta klucza bez wartości: długość, trim, czy nagłówek pójdzie.
+ * Klucz do użycia = `.trim()`; `key_trimmed=1` gdy przed trim były spacje / nowa linia.
+ */
+export type BalticKeyMeta = {
+  key: string;
+  key_len: number;
+  key_trimmed: 0 | 1;
+  key_header_sent: 0 | 1;
+};
+
+export function balticKeyMeta(raw: string | undefined | null): BalticKeyMeta {
+  const rawStr = raw ?? '';
+  const key = rawStr.trim();
+  return {
+    key,
+    key_len: key.length,
+    key_trimmed: rawStr !== key ? 1 : 0,
+    key_header_sent: key.length > 0 ? 1 : 0,
+  };
+}
+
+/** F7 #736 B3 — `host/pierwszy-segment` (bez parametrów, bez klucza). */
+export function balticUrlKind(url: string): string {
+  try {
+    const u = new URL(url);
+    const seg = u.pathname.split('/').filter(Boolean)[0] ?? '';
+    return seg ? `${u.host}/${seg}` : u.host || 'host';
+  } catch {
+    return 'host';
+  }
+}
+
+/** F7 #736 B1 — sonda `GET https://<host>/` bez klucza, timeout 5 s → `<kod|klasa>:<ms>`. */
+export const BALTIC_PROBE_TIMEOUT_MS = 5_000;
+
+export async function probeBalticHost(
+  fetchFn: typeof fetch,
+  host: string,
+  ua: string,
+): Promise<string> {
+  const safeHost = host.replace(/\/+$/, '') || 'host';
+  const url = `https://${safeHost}/`;
+  const t0 = Date.now();
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), BALTIC_PROBE_TIMEOUT_MS);
+  try {
+    const res = await fetchFn(url, {
+      method: 'GET',
+      headers: { 'User-Agent': ua, Accept: '*/*' },
+      signal: ctrl.signal,
+    });
+    const ms = Math.max(0, Date.now() - t0);
+    return `${res.status}:${ms}`;
+  } catch (e) {
+    const ms = Math.max(0, Date.now() - t0);
+    return `${classifyBalticNetError(e)}:${ms}`;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
  * Bboxy ±0,25° wokół odcinków CORRIDOR_LV (F7 #730 B7 — zwężenie vs ~85 km).
  */
 export function lvCorridorBboxes(): FiBbox[] {
@@ -1952,10 +2064,14 @@ export function eeDatexFeedUrl(path: string): string {
 
 /**
  * Klucz API: TARKTEE_DATEX_TOKEN, potem PASSWORD (gdy klucz leży w parze USER/PASSWORD).
- * Nazw sekretów nie zmieniamy (#716).
+ * Nazw sekretów nie zmieniamy (#716). F7 #736 B2 — trim + meta długości.
  */
+export function eeDatexApiKeyMeta(env: Record<string, string | undefined>): BalticKeyMeta {
+  return balticKeyMeta(env.TARKTEE_DATEX_TOKEN ?? env.TARKTEE_DATEX_PASSWORD ?? '');
+}
+
 export function eeDatexApiKey(env: Record<string, string | undefined>): string {
-  return (env.TARKTEE_DATEX_TOKEN ?? env.TARKTEE_DATEX_PASSWORD ?? '').trim();
+  return eeDatexApiKeyMeta(env).key;
 }
 
 export function nearEePortTerminal(

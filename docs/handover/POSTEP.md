@@ -1,4 +1,12 @@
 
+## 2026-11-02 16:25 — #734 SCALONE; start DP-165+169
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. DP-169 z odbioru #733 wpisane.
+- Scalanie: **#734 SCALONE** `3291d59c` (F7: gotowe @ `4621ed82`, CI unit/db/visual ✔). deploy-main po merge.
+- **Krok DP-165+169:** `classifyBalticNetError` / `balticNetWarning` — DNS/TLS/reset/timeout + host bez ścieżki w warnings LV i EE; vitest. Diagnoza lokalna PL: `tarktee.ee` DNS OK; `/api/v1/datex/restrictions` bez klucza timeout, z fake key **HTTP 403** (~377 ms) → API osiągalne spoza Edge; LV bez lokalnych `LV_NAP_*` (nie da się sprawdzić `field_source_url`); katalog transportdata.gov.lv 200. Pytanie do koordynatora (geoblokada Edge / sekrety lokalne). Bez proxy.
+- **Dalej:** CI → F7. Po F7: DP-168 → BN7 (#718).
+- Bez push na main.
+
 ## 2026-11-02 15:25 — #734 F7 r1 (a)+(B2) raise tylko ROAD_* / bez zbędnego UPDATE
 
 - Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie (nie przerywa).
