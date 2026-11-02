@@ -325,3 +325,9 @@ Z workflowu `visual` (`update=true`, gałąź `wyglad/BN9-c5`, przebieg 41512448
 - `mapa-baltyk-hhl-pl-1440-light.png` (nowa, 682×866): Mapa — rdzeń Polska–Szwecja (drogi i oba tory) oraz korytarz aktywnego transportu SG-17 (PL-TLL, FI-HEL, tor TLL-HEL), kadr z Bałtykiem; dopisek u góry z prawej obok „+ / −” (z lewej warstwy).
 - `mapa-hhl-pl-1920-light.png`, `mapa-hhl-pl-1920-dark-default.png` (odświeżone, 1920×1080): bez czterech torów bałtyckich (BN7 §4 pkt 1 — tory bałtyckie już nie „zawsze”; w demo żaden aktywny transport nie jedzie trasą bałtycką). Drogi, tory PL–SE, znaczniki i tabela bez zmian.
 Wzorca `shots-baseline` nie zmieniano.
+
+## BN9-c5 F7 r1 #740 (02.11.2026) — karta Gdańsk – Nynäshamn i Mapa bałtycka na telefonie
+Z workflowu `visual` (`update=true`, gałąź `wyglad/BN9-c5`, przebieg 41523063920, commit `e835f31`, artefakt `visual-artifacts`). Pozostałe migawki w artefakcie są identyczne co do bajtu (także karta TLL-HEL 1440/390, Mapa bałtycka 1440, Mapa i Kokpit 1920).
+- `karta-gdn-nyn-hhl-pl-1440-light.png` (nowa, 529×341): Przegląd SG-11 (statek Polferries → GDN-NYN, przed oknem śledzenia) — tylko drogi PL-GDN i SE-NYN i tor Gdańsk – Nynäshamn; bez drogi Karlskrona – Sztokholm, toru Gdynia – Karlskrona i dopisku bałtyckiego.
+- `mapa-baltyk-hhl-pl-390-light.png` (nowa, 364×541): Mapa na telefonie z aktywnym SG-17 na TLL-HEL — rdzeń PL–SE i korytarz Tallinn – Helsinki; dopisek „Trasa orientacyjna…” na pełną szerokość pod przyciskiem „Warstwy”, obok „+ / −”, kadr pod dopiskiem.
+Wzorca `shots-baseline` nie zmieniano.
