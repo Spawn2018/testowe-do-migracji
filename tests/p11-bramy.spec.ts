@@ -329,6 +329,36 @@ test.describe('P11 pkt 3 — E20 szerokości komputera', () => {
     }
     expect(bad, bad.join('\n')).toEqual([])
   })
+
+  /* DP-161: Ryzyka u HHL i SCX — „Do zrobienia” i „Sytuacja na trasie” obok siebie przy 1280–1920: kolumna trasy ≥ 360 px,
+     „Do zrobienia” szersza od niej (nie ściśnięta do kilku pikseli), kolumny rozłączne, obie w oknie. Nakładanie i przewijanie
+     sprawdza też ogólny test E20 wyżej; ten pilnuje proporcji kolumn, których tamten nie widzi. */
+  test('Ryzyka: kolumna „Sytuacja na trasie” ≥ 360 px przy 1280–1920 — HHL, SCX', async ({ page }) => {
+    test.setTimeout(120_000)
+    const bad: string[] = []
+    for (const role of ['HHL', 'SCX'] as const) {
+      const at = await boot(page, { role })
+      await go(page, at('/ryzyka'))
+      for (const [w, h] of WIDTHS) {
+        await page.setViewportSize({ width: w, height: h })
+        await settle(page)
+        const m = await page.evaluate(() => {
+          const r = (s: string) => {
+            const b = document.querySelector(s)?.getBoundingClientRect()
+            return b ? { left: Math.round(b.left), right: Math.round(b.right), width: Math.round(b.width) } : null
+          }
+          return { todo: r('.rk-grid > .rk-todo'), route: r('.rk-grid > .rk-route'), vw: document.documentElement.clientWidth }
+        })
+        const at_ = `${role} @${w}`
+        if (!m.todo || !m.route) { bad.push(`${at_}: brak kolumn .rk-todo / .rk-route`); continue }
+        if (m.route.width < 360) bad.push(`${at_}: „Sytuacja na trasie” ${m.route.width} px < 360 px`)
+        if (m.todo.width <= m.route.width) bad.push(`${at_}: „Do zrobienia” ${m.todo.width} px nie szersza od trasy ${m.route.width} px`)
+        if (m.todo.right > m.route.left) bad.push(`${at_}: kolumny nachodzą (${m.todo.right} > ${m.route.left})`)
+        if (m.route.right > m.vw) bad.push(`${at_}: trasa poza oknem (${m.route.right} > ${m.vw})`)
+      }
+    }
+    expect(bad, bad.join('\n')).toEqual([])
+  })
 })
 
 /* ---------- E21 — strażnik tekstów ---------- */

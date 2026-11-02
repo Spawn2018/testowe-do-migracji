@@ -1,7 +1,11 @@
 /* wyglad/P6 — Ryzyka (E7, E6; img/e7-desk, img/e7-phone, img/e6-desk). Ładowane razem z leniwym widokiem Ryzyk. */
 .rk-page{display:flex;flex-direction:column;gap:12px;margin:12px;min-width:0}
 .rk-title{margin:4px 2px 0;font-family:var(--font-cond);font-weight:700;font-size:34px;line-height:1.1;color:var(--ink)}
-.rk-grid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(320px,1fr);gap:12px;align-items:start}
+.rk-grid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(360px,1fr);gap:12px;align-items:start}
+/* DP-161: „Sytuacja na trasie” nie węższa niż 360 px; gdy obszar strony (nie okno) jest za wąski na dwie czytelne kolumny
+   (np. 186 px po ukryciu menu w migawce BN9-c3), siatka przechodzi w jedną kolumnę zamiast ściskać „Do zrobienia” do zera */
+.rk-page:not(.is-phone){container-type:inline-size}
+@container (max-width: 860px){.rk-grid{grid-template-columns:minmax(0,1fr)}}
 .rk-ksh .rk-route-parts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
 .rk-ksh .rk-sec-box:first-child{grid-row:span 2;border-right:1px solid var(--rule-2)}
 /* BN9-c3: „Pogoda na przeprawach” u KSH na komputerze — pełna szerokość pod promami i drogami, nie przesuwa „Drogi SE” */

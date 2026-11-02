@@ -310,3 +310,10 @@ Z workflowu `visual` (`update=true`, przebieg 41399919530, commit `8796680`, art
 - Usunięta `drogi-baltyckie-hhl-pl-1440-light.png` (F7 r1 B1): utrwalała rozbity układ HHL 1440 (kolumna ~318 px, nachodzący tekst „Do zrobienia”) — to osobne DP-161 (BN9-c5). Komputer pokrywa `ryzyka-ksh-pl-1440-light.png`.
 - `drogi-baltyckie-hhl-pl-390-light.png`: dopisek „Źródło LT (Via Lietuva) nie podaje wypadków.”, w nagłówku FI „spowolnienie +15%” (demo `corridor_conditions`), kolejność FI wg czasu przy równym wpływie, EE „Brak utrudnień na korytarzu.” (świeży odczyt demo); tytuły bez ucięć (telefon — do 2 linii).
 - `ryzyka-ksh-pl-1440-light.png` (1230×1635): te same zmiany w siatce 2 × 2 (dopisek LT, spowolnienie FI); promy, Drogi PL/SE i pogoda bez zmian.
+
+## DP-161 (02.11.2026) — Ryzyka HHL 1440: odświeżona pogoda na przeprawach, przywrócona drogi-baltyckie 1440
+Z workflowu `visual` (`update=true`, gałąź `wyglad/DP-161`, przebieg 41409362417, commit `32733f6`, artefakt `visual-artifacts`). Pozostałe 22 migawki w artefakcie są identyczne co do bajtu (także `ryzyka-ksh-pl-1440-light.png`, telefon 390 i Kokpit).
+Przyczyna rozbitego układu z BN9-c3/BN9-c4: test ukrywał `nav.tower-nav` także na komputerze, gdzie to menu boczne — `main` wpadał wtedy do kolumny menu (186 px), siatka `.rk-grid` dawała „Do zrobienia” 0 px i trasie 320 px, a wzorzec utrwalał ten stan. W aplikacji przy 1440 kolumna trasy ma 478 px. Teraz pasek ukrywany tylko na telefonie, a przed migawką komputera test sprawdza dwie kolumny obok siebie (trasa ≥ 360 px, „Do zrobienia” szersza, bez nakładania i przewijania w bok).
+- `pogoda-przeprawy-hhl-pl-1440-light.png` (318×910 → 476×662): cała sekcja w prawej kolumnie, pięć przepraw, atrybucja, NAVTEX i „Mapa lodowa FMI” bez ucięć i bez nachodzącego tekstu.
+- `drogi-baltyckie-hhl-pl-1440-light.png` (nowa, 476×978): obszar „Drogi LT” – „Drogi FI” w prawej kolumnie, sekcje rozwinięte; limity masy LT i FI z dopiskiem „Sprawdź zezwolenie / trasę.”, EE „Brak utrudnień na korytarzu.”, atrybucja Fintraffic.
+Wzorca `shots-baseline` nie zmieniano.
