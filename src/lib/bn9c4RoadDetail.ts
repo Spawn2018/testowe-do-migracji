@@ -1,6 +1,6 @@
 /**
  * BN9-c4 — pola `risk_signals.detail` ryzyka drogowego LT/LV/EE/FI (BN6, `roadBaltic.ts`) dla Ryzyka › Drogi.
- * Osobny mały moduł (tylko typy): wołany z `supabaseProvider.ts` po `riskFromRow` — to samo zapytanie, bez zmian w `mappers.ts`.
+ * DP-162: `road` wypełnia `riskFromRow` w `mappers.ts`; `withBalticRoad` zostaje dla testów / kompatybilności.
  */
 import type { Risk, RoadRiskInfo } from '../types';
 

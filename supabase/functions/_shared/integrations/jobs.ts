@@ -101,8 +101,8 @@ import {
   FI_ANNOUNCEMENTS_URL, FI_ATTRIBUTION, FI_ROADWORKS_URL, FI_WEIGHT_URL,
   LT_ATTRIBUTION, LT_RESTRICTIONS_URL, LT_UA, LT_WEATHER_URL,
   LV_ATTRIBUTION, LV_NAP_CODES, LV_NAP_KEY_HEADER, LV_SOURCE_REF, LV_UA,
-  applyBalticCorridorRoadFilter, balticRoadRisk, balticSlowdownMult, capBalticRiskSeverity,
-  dedupeLvSlippery, fiCorridorBboxes, fiTrafficUrl,
+  applyBalticCorridorRoadFilter, applyFiCorridorRoadFilter, balticRoadRisk, balticSlowdownMult,
+  capBalticRiskSeverity, dedupeLvSlippery, fiCorridorBboxes, fiTrafficUrl,
   filterInFiBboxes, filterInLvBboxes, dimensionLimitRisk, filterInLtBboxes,
   isDimensionLimitEvent, ltWeatherToSlowdownEvents, lvNapKeyEnv, lvNapUrlEnv,
   lvWeatherToSlowdownEvents, parseFiTrafficMessages, parseLtRestrictions, parseLtWeather,
@@ -3705,16 +3705,30 @@ export async function runRoadFi(deps: JobDeps): Promise<JobResult> {
   }
 
   await deps.store.resolveRisks('SOURCE_DOWN:ROAD_FI:');
-  const near = filterInFiBboxes([...byId.values()].map((x) => x.event));
+  /* DP-157: bbox → filtr numerów VT4/E75/…; poza listą bez raise → resolveStale zamyka 146 ulicznych. */
+  const near = applyFiCorridorRoadFilter(
+    filterInFiBboxes([...byId.values()].map((x) => x.event)),
+  );
   const complete = fetchedOk === expectedFetches;
   let risks = 0;
   const keep: string[] = [];
   for (const e of near) {
+    /* DP-157(c): off nie w keep — jednorazowe zamknięcie starych ROAD_FI poza korytarzem. */
+    if (e.corridorMatch === 'off') continue;
     const src = byId.get(e.id)?.sourceUrl ?? FI_ROADWORKS_URL;
     /* Znane ograniczenie: loadTons=null — HIGH masy gdy combo_weight_t (rzadkie na prod). */
-    const risk = e.weightLimitT != null
+    const raw = e.weightLimitT != null
       ? weightLimitRisk('FI', e, null, src, FI_ATTRIBUTION)
       : balticRoadRisk('FI', e, src, FI_ATTRIBUTION);
+    const risk = capBalticRiskSeverity(raw, e.corridorMatch);
+    if (e.corridorMatch) {
+      (risk.detail as Record<string, unknown>).korytarz_droga = e.corridorMatch;
+    }
+    /* DP-158: params.event = etykieta PL; surowy fiński w detail.opis. */
+    if (risk.params && typeof risk.params === 'object') {
+      (risk.params as Record<string, unknown>).event = e.title;
+      (risk.params as Record<string, unknown>).type_pl = e.title;
+    }
     keep.push(risk.dedup);
     if (await deps.store.raiseRisk(risk)) risks++;
   }
@@ -3723,7 +3737,7 @@ export async function runRoadFi(deps: JobDeps): Promise<JobResult> {
     await deps.store.resolveStaleRisks('ROAD_FI:', keep);
   }
 
-  const slow = balticSlowdownMult(near);
+  const slow = balticSlowdownMult(near.filter((e) => e.corridorMatch !== 'off'));
   if (deps.store.saveCorridorCondition) {
     await deps.store.saveCorridorCondition({
       corridor: 'ROAD_FI',

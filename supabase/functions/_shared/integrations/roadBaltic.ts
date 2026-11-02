@@ -195,14 +195,109 @@ function weightFromAnn(props: Record<string, unknown>): number | null {
   return null;
 }
 
-function situationSeverity(type: string, weightT: number | null): RiskSeverity {
-  const t = type.toLowerCase();
-  if (weightT != null) return 'HIGH';
-  if (t.includes('accident') || t.includes('wypad')) return 'HIGH';
-  if (t.includes('closed') || t.includes('zamkn')) return 'HIGH';
-  if (t.includes('road work') || t.includes('robot')) return 'MEDIUM';
-  if (t.includes('weight')) return 'HIGH';
-  return 'MEDIUM';
+/**
+ * DP-158 — polska etykieta typu FI (params/title); surowy fiński zostaje w detail.
+ * Digitraffic: ROAD_WORK / Tietyö, TRAFFIC_ANNOUNCEMENT / Liikennetiedote,
+ * WEIGHT_RESTRICTION / painorajoitus.
+ */
+export function fiTypeLabelPl(situationType: string, titleFi: string): string {
+  const t = `${situationType} ${titleFi}`.toLowerCase();
+  if (/weight|painoraj|kelirikko|massa/.test(t)) return 'limit masy';
+  if (/accident|onnettom|wypad/.test(t)) return 'wypadek';
+  if (/closed|suljet|tien sulku|tie suljet|zamkn/.test(t)) return 'zamknięcie';
+  if (/road\s*work|road_work|tiety[oö]|työmaa|robot/.test(t)) return 'roboty drogowe';
+  if (/announcement|liikennetiedote|tiedote|komunikat/.test(t)) return 'komunikat';
+  if (/exempt|poikkeuskuljet/.test(t)) return 'transport specjalny';
+  return 'zdarzenie drogowe';
+}
+
+/** DP-157(a) — zwykłe Tietyö bez zamknięcia/objazdu/limitu → LOW (jak decyzja 85 / LT N1). */
+export function fiSeverity(
+  situationType: string,
+  titleFi: string,
+  weightT: number | null,
+): { severity: RiskSeverity; roadClosed: boolean; hasDetour: boolean } {
+  const blob = `${situationType} ${titleFi}`.toLowerCase();
+  const roadClosed = /closed|suljet|tien sulku|tie suljet|carriageway.?blocked|ajorata\s*suljet/.test(blob);
+  const hasDetour = /kiertotie|kierretään|detour|rerout|objazd/.test(blob);
+  if (weightT != null || /weight|painoraj|kelirikko/.test(blob)) {
+    return { severity: 'HIGH', roadClosed, hasDetour };
+  }
+  if (/accident|onnettom/.test(blob)) {
+    return { severity: 'HIGH', roadClosed, hasDetour };
+  }
+  if (roadClosed) return { severity: 'HIGH', roadClosed: true, hasDetour };
+  if (hasDetour) return { severity: 'MEDIUM', roadClosed, hasDetour: true };
+  if (/road\s*work|road_work|tiety[oö]|työmaa/.test(blob)) {
+    return { severity: 'LOW', roadClosed, hasDetour };
+  }
+  if (/announcement|liikennetiedote|tiedote/.test(blob)) {
+    return { severity: 'LOW', roadClosed, hasDetour };
+  }
+  return { severity: 'MEDIUM', roadClosed, hasDetour };
+}
+
+/**
+ * DP-157(b) — numer drogi FI z tytułu Digitraffic („Tie 4”, „Vt 29”, „E75”, „Kehä III”).
+ */
+export function extractFiRoadRef(text: string): string | null {
+  const t = String(text ?? '').trim();
+  if (!t) return null;
+  if (/kehä\s*iii|keha\s*iii|kehä\s*3|keha\s*3|\bkehäiii\b/i.test(t)) return '50';
+  const e = t.match(/\bE\s*(\d{1,3})\b/i);
+  if (e) return `E${e[1]}`;
+  const vt = t.match(/\b(?:vt|tie)\s*(\d{1,3})\b/i);
+  if (vt) return String(Number(vt[1]));
+  /* Samodzielny numer w tytule (np. „Mannerheimintie 110”) → znany off poza listą korytarza. */
+  const n = t.match(/\b(\d{1,3})\b/);
+  if (n) return String(Number(n[1]));
+  return extractBalticRoadRef(t);
+}
+
+/**
+ * DP-157(b): VT4/E75, VT29/E8, Kehä III (50), Vuosaaren (103) + E-numery korytarza.
+ * Poza listą → off (job nie raise — resolveStale zamyka stare MEDIUM z ulic Helsinek).
+ */
+export function fiRoadOnCorridor(road: string | null | undefined): BalticCorridorRoadMatch {
+  if (road == null || road === '') return 'unknown';
+  const r = road.toUpperCase().replace(/\s+/g, '');
+  if (
+    r === '4' || r === 'VT4' || r === 'E75'
+    || r === '29' || r === 'VT29' || r === 'E8'
+    || r === '50' || r === '103'
+    || r === '8' || r === '75'
+  ) {
+    return 'on';
+  }
+  return 'off';
+}
+
+/** DP-157: road + corridorMatch + cap severity; unknown ≤ 3 km od CORRIDOR_FI → on. */
+export function applyFiCorridorRoadFilter(
+  events: BalticRoadEvent[],
+  nowMs: number = Date.now(),
+): BalticRoadEvent[] {
+  const densified = densifyCorridor(CORRIDOR_FI);
+  return events.map((e) => {
+    const capped = balticCapLongDetourClosure(e, nowMs);
+    const road = capped.road
+      ?? extractFiRoadRef(`${capped.title ?? ''} ${capped.detail ?? ''}`);
+    let corridorMatch = fiRoadOnCorridor(road);
+    if (
+      corridorMatch === 'unknown'
+      && capped.lat != null
+      && capped.lon != null
+      && minDistToCorridorKm(capped.lat, capped.lon, CORRIDOR_FI, densified) <= 3
+    ) {
+      corridorMatch = 'on';
+    }
+    return {
+      ...capped,
+      road,
+      corridorMatch,
+      severity: balticCapSeverity(capped.severity, corridorMatch),
+    };
+  });
 }
 
 /** Parsuje FeatureCollection Digitraffic traffic-message (roadworks / announcements / weight). */
@@ -220,18 +315,26 @@ export function parseFiTrafficMessages(json: unknown): BalticRoadEvent[] {
     const pt = featureCentroid(f.geometry);
     const times = annTimes(props);
     const sitType = String(props.situationType ?? 'unknown');
+    const titleFi = annTitle(props);
     const weightT = weightFromAnn(props);
+    const sig = fiSeverity(sitType, titleFi, weightT);
+    const labelPl = fiTypeLabelPl(sitType, titleFi);
+    const road = extractFiRoadRef(titleFi);
     out.push({
       id,
-      title: annTitle(props),
-      detail: sitType,
-      severity: situationSeverity(sitType, weightT),
+      /* DP-158: polska etykieta w title/params; fiński w detail. */
+      title: labelPl,
+      detail: titleFi,
+      severity: sig.severity,
       lat: pt?.[0] ?? null,
       lon: pt?.[1] ?? null,
       kind: sitType,
       start: times.start,
       end: times.end,
       weightLimitT: weightT,
+      road,
+      roadClosed: sig.roadClosed,
+      hasDetour: sig.hasDetour,
     });
   }
   return out;

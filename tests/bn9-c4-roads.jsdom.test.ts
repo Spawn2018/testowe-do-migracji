@@ -114,6 +114,25 @@ describe('BN9-c4 — rodzaj i kraje trasy', () => {
     const other = withBalticRoad(risk({ id: 'p', kind: 'ROAD_PL' }), { kind: 'ROAD_PL', detail: { zrodlo: 'HERE' } });
     expect(other.road).toBeUndefined();
   });
+
+  it('DP-162: riskFromRow wypełnia road dla ROAD_FI (bez withBalticRoad)', async () => {
+    const { riskFromRow } = await import('../src/data/mappers');
+    const r = riskFromRow({
+      id: 'rf', load_id: null, kind: 'ROAD_FI', severity: 'LOW', title: 'Trasa FI: roboty drogowe',
+      title_key: 'rk_road_baltic',
+      detail: {
+        zrodlo: FI_SRC, od: '2026-11-01T08:00:00Z', do: '2026-11-05T16:00:00Z',
+        lat: 65.01, lon: 25.47, weight_limit_t: null, height_limit_m: 4.2, width_limit_m: null,
+        opis: 'Tie 4, Oulu. Tietyö.',
+      },
+      detected_at: '2026-11-02T10:00:00Z',
+    }, '2026-11-02T12:00:00Z');
+    expect(r.type).toBe('OPS');
+    expect(r.road).toEqual({
+      source: FI_SRC, from: '2026-11-01T08:00:00Z', to: '2026-11-05T16:00:00Z',
+      lat: 65.01, lon: 25.47, weightLimitT: null, heightLimitM: 4.2, widthLimitM: null,
+    });
+  });
 });
 
 describe('BN9-c4 — Do zrobienia i Sytuacja na trasie', () => {

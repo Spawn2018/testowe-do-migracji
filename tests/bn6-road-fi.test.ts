@@ -10,12 +10,17 @@ import {
   FI_BBOX_LIMIT,
   FI_ROADWORKS_URL,
   FI_WEIGHT_URL,
+  applyFiCorridorRoadFilter,
   balticRoadRisk,
   balticSlowdownMult,
   eventInFiBboxes,
+  extractFiRoadRef,
   fiBboxInLimit,
   fiCorridorBboxes,
+  fiRoadOnCorridor,
+  fiSeverity,
   fiTrafficUrl,
+  fiTypeLabelPl,
   filterInFiBboxes,
   parseFiTrafficMessages,
   weightLimitRisk,
@@ -142,6 +147,42 @@ describe('BN6 road-fi — Digitraffic', () => {
     expect(ev[0]!.id).toMatch(/^GUID/);
     expect(ev[0]!.title.length).toBeGreaterThan(3);
     expect(ev[0]!.lat).not.toBeNull();
+  });
+
+  it('DP-157(a): zwykłe Tietyö → LOW; zamknięcie → HIGH', () => {
+    expect(fiSeverity('road work', 'Tie 4, Oulu. Tietyö.', null).severity).toBe('LOW');
+    expect(fiSeverity('ROAD_WORK', 'Tietyö Kehä III', null).severity).toBe('LOW');
+    expect(fiSeverity('road work', 'Tie 4 suljettu', null).severity).toBe('HIGH');
+    expect(fiSeverity('accident', 'Onnettomuus VT4', null).severity).toBe('HIGH');
+  });
+
+  it('DP-157(b): filtr VT4/E75/50/103; ulica Helsinek → off', () => {
+    expect(extractFiRoadRef('Tie 4, Oulu. Tietyö.')).toBe('4');
+    expect(extractFiRoadRef('Kehä III, Vantaa')).toBe('50');
+    expect(fiRoadOnCorridor('4')).toBe('on');
+    expect(fiRoadOnCorridor('E75')).toBe('on');
+    expect(fiRoadOnCorridor('50')).toBe('on');
+    expect(fiRoadOnCorridor('103')).toBe('on');
+    expect(fiRoadOnCorridor('110')).toBe('off');
+    const street: BalticRoadEvent = {
+      id: 'HEL', title: 'roboty drogowe', detail: 'Mannerheimintie. Tietyö.',
+      severity: 'LOW', lat: 60.17, lon: 24.94, kind: 'road work', start: null, end: null,
+      road: '110',
+    };
+    const vt4 = parseFiTrafficMessages(rw)[0]!;
+    const filtered = applyFiCorridorRoadFilter([street, vt4]);
+    expect(filtered.find((e) => e.id === 'HEL')!.corridorMatch).toBe('off');
+    expect(filtered.find((e) => e.id === vt4.id)!.corridorMatch).toBe('on');
+  });
+
+  it('DP-158: etykieta PL w title; fiński w detail', () => {
+    expect(fiTypeLabelPl('road work', 'Tie 4. Tietyö.')).toBe('roboty drogowe');
+    expect(fiTypeLabelPl('TRAFFIC_ANNOUNCEMENT', 'Liikennetiedote')).toBe('komunikat');
+    expect(fiTypeLabelPl('weight restriction', 'painorajoitus 12 t')).toBe('limit masy');
+    const ev = parseFiTrafficMessages(rw)[0]!;
+    expect(ev.title).toBe('roboty drogowe');
+    expect(ev.detail).toMatch(/Tietyö/i);
+    expect(ev.severity).toBe('LOW');
   });
 
   it('filtr bbox: 1,5 km w bboxie → jest; 5 km poza → brak (F7 #726 B2)', () => {
@@ -314,5 +355,32 @@ describe('BN6 runRoadFi — F7 #726', () => {
     const hit = st.risks.find((r) => r.dedup === 'ROAD_FI:v2:GUID-ANN-BN6');
     expect(hit?.sourceUrl).toBe(FI_ANNOUNCEMENTS_URL);
     expect(hit?.detail?.zrodlo).toBe(FI_ATTRIBUTION);
+    expect(hit?.params?.type_pl ?? hit?.params?.event).toBe('wypadek');
+  });
+
+  it('DP-157(c): poza korytarzem nie w keep → resolveStale zamyka stare ROAD_FI', async () => {
+    const st = new MemStore();
+    st.risks.push({
+      kind: 'ROAD_FI', severity: 'MEDIUM', title: 'stare uliczne',
+      dedup: 'ROAD_FI:v2:GUID-STREET-HEL',
+      detail: {}, titleKey: 'rk_road_baltic', params: {},
+    });
+    const streetBody = JSON.stringify({
+      type: 'FeatureCollection',
+      features: [{
+        type: 'Feature',
+        geometry: { type: 'Point', coordinates: [24.94, 60.17] },
+        properties: {
+          situationId: 'GUID-STREET-HEL',
+          situationType: 'road work',
+          announcements: [{ language: 'fi', title: 'Mannerheimintie 110. Tietyö.' }],
+        },
+      }],
+    });
+    const r = await runRoadFi(deps(st, allOkPages(streetBody)).d);
+    expect(r.observations?.complete).toBe('1');
+    expect(st.staleCalls.length).toBe(1);
+    expect(st.staleCalls[0]!.keep.every((k) => !k.includes('GUID-STREET-HEL'))).toBe(true);
+    expect(st.risks.some((x) => x.dedup.includes('GUID-STREET-HEL'))).toBe(false);
   });
 });
