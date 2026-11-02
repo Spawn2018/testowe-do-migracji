@@ -291,6 +291,7 @@ export function fiSeverity(
  * DP-157(b) — numer drogi FI z tytułu Digitraffic („Tie 4”, „Vt 29”, „E75”, „Kehä III”).
  * F7 #732: najpierw Tie|Vt|Kt|Seututie / Kehä; goła liczba tylko na początku tytułu
  * (nie „2 km” / godzina w środku).
+ * DP-166: `\d{1,5}` — lokalne „Tie 19511”/8155 → off (nie unknown→on ≤3 km).
  */
 export function extractFiRoadRef(text: string): string | null {
   const t = String(text ?? '').trim();
@@ -300,9 +301,9 @@ export function extractFiRoadRef(text: string): string | null {
   if (/kehä\s*i\b|keha\s*i\b|kehä\s*1\b|keha\s*1\b|\bkehäi\b/i.test(t)) return '101';
   const e = t.match(/\bE\s*(\d{1,3})\b/i);
   if (e) return `E${e[1]}`;
-  const named = t.match(/\b(?:vt|kt|tie|seututie)\s*(\d{1,3})\b/i);
+  const named = t.match(/\b(?:vt|kt|tie|seututie)\s*(\d{1,5})\b/i);
   if (named) return String(Number(named[1]));
-  const atStart = t.match(/^(\d{1,3})\b/);
+  const atStart = t.match(/^(\d{1,5})\b/);
   if (atStart) return String(Number(atStart[1]));
   return null;
 }
@@ -570,10 +571,10 @@ export function extractBalticRoadRef(text: string): string | null {
   const tee = t.match(/\bT\s*(\d{1,2})\b/i);
   if (tee) return `T${tee[1]}`;
   /* LV drogi regionalne P/V — znany numer → corridorMatch=off (F7 #730 B7). */
-  const pv = t.match(/\b([PV])\s*(\d{1,4})\b/i);
+  const pv = t.match(/\b([PV])\s*(\d{1,5})\b/i);
   if (pv) return `${pv[1].toUpperCase()}${pv[2]}`;
-  /* krašto / rajoninis: „134 Name…” na początku street */
-  const n = t.match(/^(\d{1,4})\b/);
+  /* krašto / rajoninis: „134 Name…” na początku street; DP-166: do 5 cyfr jak FI. */
+  const n = t.match(/^(\d{1,5})\b/);
   if (n) return n[1];
   return null;
 }
