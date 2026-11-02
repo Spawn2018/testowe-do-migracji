@@ -1,4 +1,12 @@
 
+## 2026-11-02 05:25 — #726 CI db FAIL → fix BN6 fixture title_key
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie.
+- Scalanie: brak F7 „gotowe” na #726 (czekam po poprawce).
+- **Krok F7 #726 r2:** CI db FAIL — `risks` 44/46: insert BN6 w `status.sh` bez `title_key` → `rk_generic`+`rk_key_guard` w `tower_test_status`. Fix: `title_key=rk_road_baltic` + `params` + delete po id/dedup/`detail.t`.
+- **Dalej:** push → CI → F7. Po F7: BN6 cz.2 LT.
+- Bez push na main.
+
 ## 2026-11-02 04:55 — #726 F7 r1 poprawki BN6 cz.1; #723 SCALONE
 
 - Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie.
