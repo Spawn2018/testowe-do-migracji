@@ -317,3 +317,11 @@ Przyczyna rozbitego układu z BN9-c3/BN9-c4: test ukrywał `nav.tower-nav` takż
 - `pogoda-przeprawy-hhl-pl-1440-light.png` (318×910 → 476×662): cała sekcja w prawej kolumnie, pięć przepraw, atrybucja, NAVTEX i „Mapa lodowa FMI” bez ucięć i bez nachodzącego tekstu.
 - `drogi-baltyckie-hhl-pl-1440-light.png` (nowa, 476×978): obszar „Drogi LT” – „Drogi FI” w prawej kolumnie, sekcje rozwinięte; limity masy LT i FI z dopiskiem „Sprawdź zezwolenie / trasę.”, EE „Brak utrudnień na korytarzu.”, atrybucja Fintraffic.
 Wzorca `shots-baseline` nie zmieniano.
+
+## BN9-c5 (02.11.2026) — linie tras BN7: karta transportu Tallinn – Helsinki, Mapa z transportem bałtyckim
+Z workflowu `visual` (`update=true`, gałąź `wyglad/BN9-c5`, przebieg 41512448969, commit `58f8992`, artefakt `visual-artifacts`). Pozostałe migawki w artefakcie są identyczne co do bajtu (Kokpit 1920, Ryzyka, telefon 390). Demo: trasa przykładowa z adresu (`demoRoute=SG-11:TLL-HEL,SG-17:TLL-HEL`, tylko demo) i przykładowe linie dróg BN7 (`src/data/roadLinesDemo.ts`, „przykład”).
+- `karta-tll-hel-hhl-pl-1440-light.png` (nowa, 529×341): Przegląd SG-11 przed oknem śledzenia — cała trasa w kadrze: tylko legi PL-TLL (Śrem – Warszawa – Kowno – Ryga – Tallinn) i FI-HEL (Helsinki – Oulu – Tornio – Boden), tor Tallinn – Helsinki; bez linii PL–SE i torów GDN-NYN / GDY-KAA. W dopisku Przeglądu trzecia linia „Trasa orientacyjna (HERE, bez wymiarów ładunku) — nie zastępuje trasy z zezwolenia.”; kadr nad dopiskiem.
+- `karta-tll-hel-hhl-pl-390-light.png` (nowa, 360×301): to samo na telefonie, dopisek u góry w jednym ciągu, trasa pod nim (kadr liczy margines górny — wcześniej dopisek u góry dawał szarą mapę w najmniejszym przybliżeniu).
+- `mapa-baltyk-hhl-pl-1440-light.png` (nowa, 682×866): Mapa — rdzeń Polska–Szwecja (drogi i oba tory) oraz korytarz aktywnego transportu SG-17 (PL-TLL, FI-HEL, tor TLL-HEL), kadr z Bałtykiem; dopisek u góry z prawej obok „+ / −” (z lewej warstwy).
+- `mapa-hhl-pl-1920-light.png`, `mapa-hhl-pl-1920-dark-default.png` (odświeżone, 1920×1080): bez czterech torów bałtyckich (BN7 §4 pkt 1 — tory bałtyckie już nie „zawsze”; w demo żaden aktywny transport nie jedzie trasą bałtycką). Drogi, tory PL–SE, znaczniki i tabela bez zmian.
+Wzorca `shots-baseline` nie zmieniano.
