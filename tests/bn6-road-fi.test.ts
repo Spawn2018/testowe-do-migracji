@@ -198,6 +198,17 @@ describe('BN6 road-fi — Digitraffic', () => {
     expect(extractFiRoadRef('Tie 8, Vaasa')).toBe('8');
     expect(fiRoadOnCorridor(extractFiRoadRef('Tie 8, Vaasa'))).toBe('off');
     expect(fiRoadOnCorridor(extractFiRoadRef('Tie 75'))).toBe('off');
+    /* DP-166: lokalne 5-cyfrowe — nie unknown (≤3 km → on). */
+    expect(extractFiRoadRef('Tie 19511, Espoo. Tietyö.')).toBe('19511');
+    expect(fiRoadOnCorridor(extractFiRoadRef('Tie 19511, Espoo. Tietyö.'))).toBe('off');
+    expect(extractFiRoadRef('Tie 8155')).toBe('8155');
+    expect(fiRoadOnCorridor('8155')).toBe('off');
+    const localNear: BalticRoadEvent = {
+      id: 'LOC19511', title: 'roboty drogowe', detail: 'Tie 19511, Espoo. Tietyö.',
+      severity: 'LOW', lat: 60.45, lon: 25.0, kind: 'road work', start: null, end: null,
+    };
+    expect(applyFiCorridorRoadFilter([localNear]).find((e) => e.id === 'LOC19511')!.corridorMatch)
+      .toBe('off');
     /* Poza 2 km od portów (F7 B4) — inaczej road 110 i tak byłby „on”. */
     const street: BalticRoadEvent = {
       id: 'HEL', title: 'roboty drogowe', detail: 'Mannerheimintie. Tietyö.',

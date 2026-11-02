@@ -1,4 +1,12 @@
 
+## 2026-11-02 15:05 — DP-166+167 push (0380)
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie (nie przerywa).
+- Scalanie: brak otwartych PR z F7 „gotowe do scalenia”.
+- **Krok DP-166+167:** FI `extractFiRoadRef`/`extractBalticRoadRef` `\d{1,5}` (Tie 19511→off); **0380** `raise_integration_risk` odświeża severity/title/detail przy otwartym dedup (bez RISK_OPEN). Vitest bn6-road-fi **20**; money EXPECTED **194** (+3).
+- **Dalej:** CI → F7. Po F7: DP-165 → DP-168 → BN7 (#718).
+- Bez push na main.
+
 ## 2026-11-02 14:15 — #733 F7 r3 pusta struktura JSON = OK
 
 - Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie.
