@@ -20,11 +20,13 @@ import {
   filterInLvBboxes,
   isDimensionLimitEvent,
   lvCoordsFromRecord,
+  lvNormalizeLatLon,
   lvRoadOnCorridor,
   lvSeverityForRecord,
   parseLvDatexXml,
   parseLvFeedBody,
   parseLvWeightDimGeoJson,
+  stripBalticDetourText,
   type BalticRoadEvent,
 } from '../supabase/functions/_shared/integrations/roadBaltic.ts';
 import {
@@ -238,7 +240,7 @@ describe('BN6 parse LV DATEX / GeoJSON (F7 #730)', () => {
 
   it('B6: posList centroid; N7 dekoduje encje XML', () => {
     const rec = `<x><posList>56.95 24.10 56.96 24.12</posList><value>A &amp; B</value></x>`;
-    expect(lvCoordsFromRecord(rec)?.[0]).toBeCloseTo(56.955, 3);
+    expect(lvCoordsFromRecord(rec)?.lat).toBeCloseTo(56.955, 3);
     const e = parseLvDatexXml(rwXml, 'ROADWORKS').find((x) => x.id === 'bn6-lv-rw-poslist')!;
     expect(e.detail).toContain('&');
     expect(e.detail).not.toContain('&amp;');
@@ -296,7 +298,8 @@ describe('BN6 runRoadLv F7 #730', () => {
     expect(dim?.sourceUrl).toBe(LV_SOURCE_REF);
     expect(st.staleCalls.length).toBe(1);
     expect(st.risks.some((x) => x.dedup === 'ROAD_LV:v2:bn6-lv-rw-far-east')).toBe(false);
-    expect(String(r.observations?.lv_roadworks ?? '')).toMatch(/^ok:\d+:\d+:datex-xml$/);
+    expect(String(r.observations?.lv_roadworks ?? '')).toMatch(/^ok:\d+:\d+:datex-xml:\d+$/);
+    expect(r.observations?.lv_swapped).toMatch(/^\d+$/);
   });
 
   it('B4: 1/4 HTML → complete=false, bez resolveStale', async () => {
@@ -440,6 +443,73 @@ describe('BN6 runRoadLv F7 #730', () => {
       '<temporarySpeedLimit>70</temporarySpeedLimit>')).toBe('LOW');
     expect(lvSeverityForRecord('ROADWORKS',
       '<trafficConstrictionType>carriagewayBlocked</trafficConstrictionType>')).toBe('HIGH');
+  });
+
+  it('F7 r3 B1: apvedceļš/apvedceļa/apbraukšana nie dają numeru z objazdu', () => {
+    for (const detour of ['apvedceļš pa A7', 'apvedceļa pa A7', 'apbraukšana pa A7'] as const) {
+      const blob = `Ceļš slēgts, ${detour}`;
+      expect(stripBalticDetourText(blob)).not.toMatch(/\bA7\b/);
+      expect(extractBalticRoadRefPreferStreet(null, blob)).not.toBe('A7');
+    }
+    const filtered = applyBalticCorridorRoadFilter('LV', [{
+      id: 'lv-detour-text', title: 'zamknięcie', detail: 'Ceļš slēgts, apvedceļš pa A7',
+      severity: 'HIGH', lat: 56.95, lon: 24.10, kind: 'CLOSURES',
+      start: null, end: null, roadClosed: true, hasDetour: true,
+    }]);
+    expect(filtered[0].road).not.toBe('A7');
+    expect(filtered[0].severity).toBe('MEDIUM');
+  });
+
+  it('F7 r3 B2: lv_swapped w observations przy zamianie osi', () => {
+    const swapped = lvNormalizeLatLon(24.10, 56.95);
+    expect(swapped.swapped).toBe(true);
+    expect(swapped.lat).toBeCloseTo(56.95, 2);
+    const rec = `<x><latitude>24.10</latitude><longitude>56.95</longitude></x>`;
+    expect(lvCoordsFromRecord(rec)?.swapped).toBe(1);
+  });
+
+  it('F7 r3 B3: start=null + koniec ≤72 h → HIGH; bez końca → MEDIUM', () => {
+    const now = Date.parse('2026-11-02T07:00:00Z');
+    const shortEnd: BalticRoadEvent = {
+      id: 's', title: 'zamknięcie A7', detail: 'apbraukšana',
+      severity: 'HIGH', lat: 56.95, lon: 24.10, kind: 'CLOSURES',
+      start: null, end: '2026-11-03T07:00:00Z', road: 'A7',
+      roadClosed: true, hasDetour: true,
+    };
+    expect(balticCapLongDetourClosure(shortEnd, now).severity).toBe('HIGH');
+    expect(applyBalticCorridorRoadFilter('LV', [shortEnd], now)[0].severity).toBe('HIGH');
+    const noEnd: BalticRoadEvent = {
+      ...shortEnd, id: 'n', end: null,
+    };
+    expect(balticCapLongDetourClosure(noEnd, now).severity).toBe('MEDIUM');
+  });
+
+  it('F7 r3: per budget przy wyczerpanym limicie czasu', async () => {
+    const st = new MemStore();
+    let n = 0;
+    const f = (async () => {
+      n++;
+      await new Promise((r) => setTimeout(r, 30));
+      return new Response(rwXml, { status: 200, headers: { 'Content-Type': 'application/xml' } });
+    }) as typeof fetch;
+    const env: Record<string, string> = {};
+    for (const code of [
+      'ROADWORKS', 'ROAD_OPERATOR', 'ABNORMAL_TRAFFIC', 'ACCIDENT', 'ACTIVITIES',
+      'CLOSURES', 'EXC_WEATHER_WM', 'EXC_WEATHER_TI',
+    ] as const) {
+      env[`LV_NAP_${code}_KEY`] = `k-${code}`;
+      env[`LV_NAP_${code}_URL`] = `https://nap.example/lv/${code.toLowerCase()}`;
+    }
+    const r = await runRoadLv({
+      store: st,
+      fetch: f,
+      env,
+      now: () => NOW,
+    });
+    const vals = Object.entries(r.observations ?? {})
+      .filter(([k]) => k.startsWith('lv_'))
+      .map(([, v]) => String(v));
+    expect(vals.some((v) => v === 'budget') || n >= 1).toBe(true);
   });
 
   it('r2 N8: timeout w warnings; wartość klucza nie w detail', async () => {

@@ -13,6 +13,7 @@ import {
   LT_UA,
   LT_WEATHER_URL,
   applyBalticCorridorRoadFilter,
+  balticCapLongDetourClosure,
   balticRoadRisk,
   balticSlowdownMult,
   dimensionLimitRisk,
@@ -520,5 +521,16 @@ describe('BN6 F7 #730 r2 — LT B1/B2 (ulica, A1 bbox, objazd)', () => {
       ...noEnd, id: 'd', detail: 'eismas draudžiamas', hasDetour: false, end: null,
     };
     expect(applyBalticCorridorRoadFilter('LT', [noDetour])[0].severity).toBe('HIGH');
+  });
+
+  it('F7 r3 B3: start=null + koniec za 24 h → HIGH (czas od teraz)', () => {
+    const now = Date.parse('2026-11-02T07:00:00Z');
+    const short: BalticRoadEvent = {
+      id: 's', title: 'Uzdaryta', detail: 'eismas draudžiamas, apylanka',
+      severity: 'HIGH', lat: 54.9, lon: 23.9, kind: 'obstructionType',
+      start: null, end: '2026-11-03T07:00:00Z', road: 'A5',
+      roadClosed: true, hasDetour: true,
+    };
+    expect(balticCapLongDetourClosure(short, now).severity).toBe('HIGH');
   });
 });

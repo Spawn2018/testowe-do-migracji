@@ -3945,7 +3945,7 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
   }
 
   const started = Date.now();
-  const parseStats = { parsed: 0, skipped: 0 };
+  const parseStats = { parsed: 0, skipped: 0, swapped: 0 };
   const parts = await mapPoolLimit(configured, LV_FEED_CONCURRENCY, async ({ code, url, key }) => {
     if (Date.now() - started > LV_FEED_BUDGET_MS) {
       return {
@@ -3956,6 +3956,7 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
         format: '' as string,
         events: [] as BalticRoadEvent[],
         skipped: 0,
+        swapped: 0,
       };
     }
     const headers: Record<string, string> = {
@@ -3972,7 +3973,7 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
           code, ok: false as const,
           warning: `LV ${code}: HTTP ${res.status}`,
           per: `http_${res.status}`, format: '', events: [] as BalticRoadEvent[],
-          skipped: 0,
+          skipped: 0, swapped: 0,
         };
       }
       /* F7 #730 r2: Content-Length przed pobraniem ciała, gdy jest. */
@@ -3983,23 +3984,24 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
           code, ok: false as const,
           warning: `nieczytelna odpowiedź ${code}`,
           per: 'too_large', format: 'unknown', events: [] as BalticRoadEvent[],
-          skipped: 0,
+          skipped: 0, swapped: 0,
         };
       }
-      const localStats = { parsed: 0, skipped: 0 };
+      const localStats = { parsed: 0, skipped: 0, swapped: 0 };
       const buf = await res.arrayBuffer();
       if (buf.byteLength > LV_FEED_MAX_BYTES) {
         return {
           code, ok: false as const,
           warning: `nieczytelna odpowiedź ${code}`,
           per: 'too_large', format: 'unknown', events: [] as BalticRoadEvent[],
-          skipped: 0,
+          skipped: 0, swapped: 0,
         };
       }
       const text = new TextDecoder('utf-8', { fatal: false }).decode(buf);
       const parsed = parseLvFeedBody(text, code, localStats);
       parseStats.parsed += localStats.parsed;
       parseStats.skipped += localStats.skipped;
+      parseStats.swapped += localStats.swapped;
       const recognized = parsed.format === 'datex-xml'
         || parsed.format === 'datex-json'
         || parsed.format === 'geojson';
@@ -4008,15 +4010,15 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
           code, ok: false as const,
           warning: `nieczytelna odpowiedź ${code}`,
           per: `bad:${parsed.format}`, format: parsed.format, events: [] as BalticRoadEvent[],
-          skipped: localStats.skipped,
+          skipped: localStats.skipped, swapped: localStats.swapped,
         };
       }
-      /* F7 #730 r2 B7: lv_<kod>=ok:<rekordy>:<pominięte>:<format> */
+      /* F7 #730 r2 B7 / r3 B2: lv_<kod>=ok:<rekordy>:<pominięte>:<format>:<swapped> */
       return {
         code, ok: true as const, warning: null as string | null,
-        per: `ok:${parsed.events.length}:${localStats.skipped}:${parsed.format}`,
+        per: `ok:${parsed.events.length}:${localStats.skipped}:${parsed.format}:${localStats.swapped}`,
         format: parsed.format, events: parsed.events,
-        skipped: localStats.skipped,
+        skipped: localStats.skipped, swapped: localStats.swapped,
       };
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -4024,7 +4026,7 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
         code, ok: false as const,
         warning: `LV ${code}: ${/abort/i.test(msg) ? 'timeout' : 'błąd sieci'}`,
         per: 'error', format: '', events: [] as BalticRoadEvent[],
-        skipped: 0,
+        skipped: 0, swapped: 0,
       };
     } finally {
       clearTimeout(timer);
@@ -4151,6 +4153,8 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
       configured: String(expectedFetches),
       header: LV_NAP_KEY_HEADER,
       records_skipped: String(parseStats.skipped),
+      /* F7 #730 r3 B2 — liczba zamian lat/lon. */
+      lv_swapped: String(parseStats.swapped),
       ...Object.fromEntries(Object.entries(perCode).map(([k, v]) => [`lv_${k.toLowerCase()}`, v])),
     },
   };

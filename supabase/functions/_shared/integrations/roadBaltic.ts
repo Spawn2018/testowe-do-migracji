@@ -122,10 +122,10 @@ export interface BalticRoadEvent {
 /** F7 #730 r2 — prefiks dedup, żeby stare HIGH dostały resolveStale (raise bez UPDATE wagi). */
 export const BALTIC_RISK_DEDUP_VER = 'v2';
 
-/** F7 #730 r2 B1 — usuń fragment opisu objazdu (nie bierz stamtąd numeru drogi). */
+/** F7 #730 r2 B1 / r3 B1 — usuń opis objazdu; `\p{L}` (apvedceļš / apbraukšana; `\w` bez š). */
 export function stripBalticDetourText(text: string): string {
   return String(text ?? '').replace(
-    /(?:^|[\s,.;:])(?:apylank\w*|apbraukš\w*|apbrauk\w*|apvedceļ\w*|apvedcel\w*|objazd\w*|detour\w*|rerout\w*)\b[\s\S]*$/i,
+    /(?:^|[\s,.;:])(?:apylank[\p{L}\p{M}]*|apbraukš[\p{L}\p{M}]*|apbrauk[\p{L}\p{M}]*|apvedceļ[\p{L}\p{M}]*|apvedcel[\p{L}\p{M}]*|objazd[\p{L}\p{M}]*|detour\w*|rerout\w*)(?=[^\p{L}]|$)[\s\S]*$/giu,
     ' ',
   );
 }
@@ -454,11 +454,14 @@ export function minDistToCorridorKm(
 }
 
 /**
- * F7 #730 r2 B2 / decyzja 85: HIGH tylko zamknięcie drogi korytarza bez objazdu
- * albo ze znanym końcem ≤ 72 h; objazd + brak końca / > 72 h → MEDIUM.
- * Wspólne LT+LV — flaga `roadClosed` (nie regex po „clos” w kind).
+ * F7 #730 r2 B2 / r3 B3 / decyzja 85: HIGH zamknięcie z objazdem tylko gdy
+ * czas trwania (koniec − start; bez startu → od `nowMs`) ≤ 72 h.
+ * Bez końca albo > 72 h → MEDIUM. Wspólne LT+LV — flaga `roadClosed`.
  */
-export function balticCapLongDetourClosure(e: BalticRoadEvent): BalticRoadEvent {
+export function balticCapLongDetourClosure(
+  e: BalticRoadEvent,
+  nowMs: number = Date.now(),
+): BalticRoadEvent {
   if (e.severity !== 'HIGH') return e;
   if (e.weightLimitT != null) return e;
   const closed = e.roadClosed === true
@@ -470,16 +473,16 @@ export function balticCapLongDetourClosure(e: BalticRoadEvent): BalticRoadEvent 
     || /(?:apylank\w*|apbraukš\w*|apbrauk\w*|apvedceļ\w*|apvedcel\w*|objazd\w*|detour\w*|rerout\w*)/i
       .test(blob);
   if (!hasDetour) return { ...e, roadClosed: true };
-  /* Objazd: bez końca albo > 72 h → MEDIUM (bez spowolnienia). */
-  if (e.end == null || e.start == null) {
+  /* Objazd bez znanego końca → MEDIUM. */
+  if (e.end == null) {
     return { ...e, severity: 'MEDIUM', hasDetour: true, roadClosed: true };
   }
-  const a = Date.parse(e.start);
-  const b = Date.parse(e.end);
-  if (!Number.isFinite(a) || !Number.isFinite(b) || b <= a) {
+  const startMs = e.start != null ? Date.parse(e.start) : nowMs;
+  const endMs = Date.parse(e.end);
+  if (!Number.isFinite(startMs) || !Number.isFinite(endMs) || endMs <= startMs) {
     return { ...e, severity: 'MEDIUM', hasDetour: true, roadClosed: true };
   }
-  const hours = (b - a) / 3_600_000;
+  const hours = (endMs - startMs) / 3_600_000;
   if (hours > 72) return { ...e, severity: 'MEDIUM', hasDetour: true, roadClosed: true };
   return { ...e, hasDetour: true, roadClosed: true };
 }
@@ -533,11 +536,12 @@ function balticCapSeverity(
 export function applyBalticCorridorRoadFilter(
   country: 'LT' | 'LV',
   events: BalticRoadEvent[],
+  nowMs: number = Date.now(),
 ): BalticRoadEvent[] {
   const densified = densifyCorridor(country === 'LV' ? CORRIDOR_LV : CORRIDOR_LT);
   const corridor = country === 'LV' ? CORRIDOR_LV : CORRIDOR_LT;
   return events.map((e) => {
-    const capped = balticCapLongDetourClosure(e);
+    const capped = balticCapLongDetourClosure(e, nowMs);
     const weatherLike = capped.kind === 'weather' || balticIsWeatherSlowEvent(capped);
     if (weatherLike) {
       const nearWx = capped.lat != null && capped.lon != null
@@ -1150,11 +1154,16 @@ export function lvNormalizeLatLon(a: number, b: number): {
   return { lat: a, lon: b, swapped: false };
 }
 
-/** Centroid z latitude/longitude albo GML posList (DATEX v3 locationReference). */
-export function lvCoordsFromRecord(rec: string): LatLon | null {
+/** Centroid z latitude/longitude albo GML posList; `swapped` = liczba zamian osi. */
+export function lvCoordsFromRecord(rec: string): {
+  lat: number; lon: number; swapped: number;
+} | null {
   const lat = Number(lvTag(rec, 'latitude'));
   const lon = Number(lvTag(rec, 'longitude'));
-  if (Number.isFinite(lat) && Number.isFinite(lon)) return [lat, lon];
+  if (Number.isFinite(lat) && Number.isFinite(lon)) {
+    const norm = lvNormalizeLatLon(lat, lon);
+    return { lat: norm.lat, lon: norm.lon, swapped: norm.swapped ? 1 : 0 };
+  }
   const posRaw = rec.match(/<(?:\w+:)?posList\b[^>]*>([^<]*)<\/(?:\w+:)?posList>/i)?.[1]
     ?? rec.match(/<(?:\w+:)?pos\b[^>]*>([^<]*)<\/(?:\w+:)?pos>/i)?.[1];
   if (!posRaw) return null;
@@ -1164,13 +1173,15 @@ export function lvCoordsFromRecord(rec: string): LatLon | null {
   let sumLat = 0;
   let sumLon = 0;
   let n = 0;
+  let swapped = 0;
   for (let i = 0; i + 1 < nums.length; i += 2) {
     const norm = lvNormalizeLatLon(nums[i]!, nums[i + 1]!);
+    if (norm.swapped) swapped++;
     sumLat += norm.lat;
     sumLon += norm.lon;
     n++;
   }
-  return n ? [sumLat / n, sumLon / n] : null;
+  return n ? { lat: sumLat / n, lon: sumLon / n, swapped } : null;
 }
 
 function lvParseVisibilityM(rec: string): number | null {
@@ -1306,7 +1317,7 @@ function lvSlipperyId(lat: number, lon: number): string {
   return `slippery:${lat.toFixed(2)}:${lon.toFixed(2)}`;
 }
 
-export type LvParseStats = { parsed: number; skipped: number };
+export type LvParseStats = { parsed: number; skipped: number; swapped: number };
 
 /** DATEX II v2/v3 XML — situationRecord; posList / locationReference (F7 #730 B6). */
 export function parseLvDatexXml(
@@ -1318,6 +1329,7 @@ export function parseLvDatexXml(
   const out: BalticRoadEvent[] = [];
   const recs = xml.split(/<(?:\w+:)?situationRecord\b/i).slice(1);
   let skipped = 0;
+  let swapped = 0;
   for (const raw of recs) {
     const rec = raw.split(/<\/(?:\w+:)?situationRecord>/i)[0] ?? '';
     const attr = rec.slice(0, Math.max(0, rec.indexOf('>')));
@@ -1331,7 +1343,8 @@ export function parseLvDatexXml(
       ?? code;
     const coords = lvCoordsFromRecord(rec);
     if (!coords) { skipped++; continue; }
-    const [lat, lon] = coords;
+    const { lat, lon } = coords;
+    swapped += coords.swapped;
     const comment = lvPublicComment(rec) || lvTypeLabel(String(type));
     const signals = lvRecordSignals(rec);
     const visibilityM = lvParseVisibilityM(rec);
@@ -1367,6 +1380,7 @@ export function parseLvDatexXml(
   if (stats) {
     stats.parsed += out.length;
     stats.skipped += skipped;
+    stats.swapped += swapped;
   }
   return out;
 }
@@ -1411,6 +1425,7 @@ export function parseLvDatexJson(
 
   const out: BalticRoadEvent[] = [];
   let skipped = 0;
+  let swapped = 0;
   for (const raw of bag) {
     if (!raw || typeof raw !== 'object') continue;
     const o = raw as Record<string, unknown>;
@@ -1419,6 +1434,7 @@ export function parseLvDatexJson(
     if (!id) { skipped++; continue; }
     let lat: number | null = null;
     let lon: number | null = null;
+    let pairSwapped = 0;
     const latDirect = Number(rec.latitude ?? rec.Latitude);
     const lonDirect = Number(rec.longitude ?? rec.Longitude);
     if (Number.isFinite(latDirect) && Number.isFinite(lonDirect)) {
@@ -1450,6 +1466,7 @@ export function parseLvDatexJson(
               let n = 0;
               for (let i = 0; i + 1 < nums.length; i += 2) {
                 const norm = lvNormalizeLatLon(nums[i]!, nums[i + 1]!);
+                if (norm.swapped) pairSwapped++;
                 sLat += norm.lat;
                 sLon += norm.lon;
                 n++;
@@ -1463,12 +1480,14 @@ export function parseLvDatexJson(
         }
       }
     }
-    if (lat != null && lon != null) {
+    if (lat != null && lon != null && pairSwapped === 0) {
       const norm = lvNormalizeLatLon(lat, lon);
       lat = norm.lat;
       lon = norm.lon;
+      if (norm.swapped) pairSwapped = 1;
     }
     if (lat == null || lon == null) { skipped++; continue; }
+    swapped += pairSwapped;
     const type = String(rec.type ?? rec['@type'] ?? rec.situationRecordType ?? code);
     const gpc = rec.generalPublicComment ?? rec.GeneralPublicComment;
     let comment = '';
@@ -1518,6 +1537,7 @@ export function parseLvDatexJson(
   if (stats) {
     stats.parsed += out.length;
     stats.skipped += skipped;
+    stats.swapped += swapped;
   }
   return out;
 }
@@ -1588,6 +1608,15 @@ export function parseLvWeightDimGeoJson(
   return out;
 }
 
+/** F7 #730 r3: marker DATEX/GeoJSON jako element/klucz, nie dowolny podciąg. */
+function lvFeedHasDatexMarker(body: string, kind: 'xml' | 'json'): boolean {
+  if (kind === 'xml') {
+    return /<(?:\w+:)?(?:situationRecord|d2LogicalModel|payloadPublication)\b/i.test(body);
+  }
+  return /"(?:situationRecord|d2LogicalModel|payload|payloadPublication|features)"\s*:/i
+    .test(body);
+}
+
 /**
  * F7 #730 B3/r2 B4: pierwszy znak `{`/`[` vs `<`; format OK tylko z markerami
  * DATEX/GeoJSON (`situationRecord` / `payload` / `d2LogicalModel` / `features`).
@@ -1605,7 +1634,7 @@ export function parseLvFeedBody(
     if (/^<!DOCTYPE\s+html/i.test(t) || /^<html[\s>]/i.test(t)) {
       return { events: [], format: 'unknown' };
     }
-    if (!/situationRecord|d2LogicalModel|payloadPublication/i.test(t)) {
+    if (!lvFeedHasDatexMarker(t, 'xml')) {
       return { events: [], format: 'unknown' };
     }
     return { events: parseLvDatexXml(t, code, stats), format: 'datex-xml' };
@@ -1616,9 +1645,7 @@ export function parseLvFeedBody(
       if (json && typeof json === 'object' && Array.isArray((json as { features?: unknown }).features)) {
         return { events: parseLvWeightDimGeoJson(json, code, stats), format: 'geojson' };
       }
-      const marker = /situationRecord|d2LogicalModel|"payload"|payloadPublication/i
-        .test(t);
-      if (!marker) {
+      if (!lvFeedHasDatexMarker(t, 'json')) {
         if (stats) stats.skipped += 1;
         return { events: [], format: 'unknown' };
       }

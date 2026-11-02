@@ -1,4 +1,12 @@
 
+## 2026-11-02 10:16 — #730 F7 r3 + #731 SCALONE
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie.
+- Scalanie: **#731 DP-161 SCALONE** `c72a14d9` (F7: gotowe @ `7507f3db`, CI unit/visual ✔). #730 — F7 r3 „nie scalaj” @ `3daa48b4` (CI r2 unit/db/visual ✔).
+- **Krok F7 #730 r3:** B1 `stripBalticDetourText` z `\p{L}` (apvedceļš/apvedceļa/apbraukšana); B2 `lv_swapped` + per-zbiór w `lv_<kod>`; B3 czas trwania ≤72 h (start=null → od teraz → HIGH); markery DATEX jako element/klucz. Vitest bn6-road-lt/lv **41**.
+- **Dalej:** push → CI → F7. Po F7: BN6 cz.4 EE.
+- Bez push na main.
+
 ## 2026-11-02 09:25 — #730 F7 r2 poprawki
 
 - Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie.
