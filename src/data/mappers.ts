@@ -479,7 +479,9 @@ export function geofenceToRpc(
 // ---- ryzyka / dokumenty -----------------------------------------------------
 export interface RiskRow { id: string; load_id: string | null; kind: string; severity: string; title: string; title_key?: string | null; detail: Record<string, unknown> | null; detected_at: string; dedup_key?: string | null }
 const RISK_TYPE: Record<string, RiskType> = {
-  FERRY: 'FERRY', WEATHER: 'FORCE_MAJEURE', ROAD_SE: 'ROAD_SE', ROAD_PL: 'OPS', PERMIT: 'DOC', INSURANCE: 'DOC',
+  FERRY: 'FERRY', WEATHER: 'FORCE_MAJEURE', ROAD_SE: 'ROAD_SE', ROAD_PL: 'OPS',
+  ROAD_LT: 'OPS', ROAD_LV: 'OPS', ROAD_EE: 'OPS', ROAD_FI: 'OPS',
+  PERMIT: 'DOC', INSURANCE: 'DOC',
   DOC_MISSING: 'DOC', SILENT_VEHICLE: 'OPS', ETA_BREACH: 'OPS', RESOURCE_MISSING: 'OPS', SEQUENCE: 'OPS', INVOICE_MISMATCH: 'OPS',
   AUTO_STATUS: 'OPS', LOADING_UNCONFIRMED: 'OPS', USAGE_LIMIT: 'OPS', JOB_FAILURE: 'OPS', DATES_UNCONFIRMED: 'OPS', LATE_DATE_CHANGE: 'OPS',
   INVOICE_OVERDUE: 'OPS', EMTRACK_ORPHAN: 'OPS',

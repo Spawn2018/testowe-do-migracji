@@ -1,4 +1,27 @@
 
+## 2026-11-02 05:25 — #726 CI db FAIL → fix BN6 fixture title_key
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie.
+- Scalanie: brak F7 „gotowe” na #726 (czekam po poprawce).
+- **Krok F7 #726 r2:** CI db FAIL — `risks` 44/46: insert BN6 w `status.sh` bez `title_key` → `rk_generic`+`rk_key_guard` w `tower_test_status`. Fix: `title_key=rk_road_baltic` + `params` + delete po id/dedup/`detail.t`.
+- **Dalej:** push → CI → F7. Po F7: BN6 cz.2 LT.
+- Bez push na main.
+
+## 2026-11-02 04:55 — #726 F7 r1 poprawki BN6 cz.1; #723 SCALONE
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie.
+- Scalanie: **#723 SCALONE** `c8181775` (F7: gotowe @ `acb282b6`, BN9-c3 wygląd). #726 F7 r1 **niegotowe** → poprawki w tym PR.
+- **Krok F7 #726:** B2 filtr bboxami (nie 2 km od rzadkiej linii); B3 `resolveStale` tylko przy komplecie 15/15; streak z `fetched_ok===0`; kelirikko poza mnożnikiem; `sourceUrl` per endpoint; PL-T eismoinfo/Tark/Tee; testy `runRoadFi` + status **574**; DP-155/156 w rejestrze. Znane: `loadTons=null`.
+- **Dalej:** push → CI → F7. Po F7: BN6 cz.2 LT.
+- Bez push na main.
+
+## 2026-11-02 04:20 — #725 SCALONE; start BN6 cz.1 (FI + 0376)
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie.
+- Scalanie: **#725 SCALONE** `571aff01` (F7: gotowe @ `68f7efbb`). DP-152 w rejestrze.
+- **Krok:** BN6 cz.1 — **0376** + job `road-fi` Digitraffic; vitest `bn6-road-fi`.
+- Bez push na main.
+
 ## 2026-11-02 03:40 — #724 SCALONE; start DP-149+150+151
 
 - Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #714/#716/#718/#720 w planie. #723 BN9-c3 bez F7.

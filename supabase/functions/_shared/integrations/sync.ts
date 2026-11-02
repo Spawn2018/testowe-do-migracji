@@ -43,7 +43,18 @@ export interface SailingInsert {
   delayed_departure_at: string | null; delayed_arrival_at: string | null; status: DbSailingStatus; source: AutoSailingSource;
   source_ref?: string | null;
 }
-export type RiskKind = 'FERRY' | 'ROAD_SE' | 'ROAD_PL' | 'WEATHER' | 'JOB_FAILURE' | 'SILENT_VEHICLE' | 'RESOURCE_MISSING';
+export type RiskKind =
+  | 'FERRY'
+  | 'ROAD_SE'
+  | 'ROAD_PL'
+  | 'ROAD_LT'
+  | 'ROAD_LV'
+  | 'ROAD_EE'
+  | 'ROAD_FI'
+  | 'WEATHER'
+  | 'JOB_FAILURE'
+  | 'SILENT_VEHICLE'
+  | 'RESOURCE_MISSING';
 export type RiskSeverity = 'INFO' | 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL';
 export interface RiskInput {
   kind: RiskKind; severity: RiskSeverity; title: string; detail: Record<string, unknown>;
@@ -152,6 +163,7 @@ export type SourceId =
   | 'DIGITRAFFIC' | 'DIGITRAFFIC_AIS' | 'DIGITRAFFIC_PORTCALL' | 'DIGITRAFFIC_VIKING' | 'DIGITRAFFIC_WINTER'
   | 'PORT_TALLINN' | 'PORTS_STOCKHOLM' | 'UMG_GDY' | 'ERR_RSS'
   | 'STENA_IRM' | 'TRAFIKVERKET' | 'KPD_GDDKIA' | 'TOMTOM'
+  | 'ROAD_FI' | 'ROAD_LT' | 'ROAD_LV' | 'ROAD_EE'
   | 'FMI' | 'DMI' | 'SMHI' | 'MARINE_WEATHER'
   | 'HERE_TRAFFIC_PL' | 'HERE_ROADS' | 'EMTRACK_WEB' | 'RIO' | 'KSH_SHAREPOINT';
 const SOURCE_LABEL: Record<SourceId, string> = {
@@ -171,6 +183,10 @@ const SOURCE_LABEL: Record<SourceId, string> = {
   ERR_RSS: 'potwierdzenie odwołań (ERR News RSS)',
   STENA_IRM: 'pozycje promów Stena (IRM)', TRAFIKVERKET: 'utrudnienia drogowe SE (Trafikverket)',
   KPD_GDDKIA: 'utrudnienia drogowe PL (KPD GDDKiA)', TOMTOM: 'prędkość ruchu (TomTom — wycofane)',
+  ROAD_FI: 'utrudnienia drogowe FI (Digitraffic)',
+  ROAD_LT: 'utrudnienia drogowe LT (eismoinfo)',
+  ROAD_LV: 'utrudnienia drogowe LV (LVC)',
+  ROAD_EE: 'utrudnienia drogowe EE (Tark Tee)',
   FMI: 'pogoda morska (FMI)', DMI: 'pogoda morska (DMI)', SMHI: 'pogoda morska (SMHI)',
   MARINE_WEATHER: 'pogoda morska (FMI+DMI+SMHI)',
   HERE_TRAFFIC_PL: 'utrudnienia drogowe PL (HERE)',
@@ -188,6 +204,7 @@ const SOURCE_KIND: Record<SourceId, RiskKind> = {
   DIGITRAFFIC_VIKING: 'FERRY', DIGITRAFFIC_WINTER: 'FERRY',
   PORT_TALLINN: 'FERRY', PORTS_STOCKHOLM: 'FERRY', UMG_GDY: 'FERRY', ERR_RSS: 'FERRY',
   STENA_IRM: 'FERRY', TRAFIKVERKET: 'ROAD_SE', KPD_GDDKIA: 'ROAD_PL', TOMTOM: 'ROAD_SE',
+  ROAD_FI: 'ROAD_FI', ROAD_LT: 'ROAD_LT', ROAD_LV: 'ROAD_LV', ROAD_EE: 'ROAD_EE',
   FMI: 'FERRY', DMI: 'FERRY', SMHI: 'FERRY', MARINE_WEATHER: 'FERRY',
   HERE_TRAFFIC_PL: 'ROAD_PL', HERE_ROADS: 'JOB_FAILURE',
   EMTRACK_WEB: 'JOB_FAILURE', RIO: 'JOB_FAILURE',

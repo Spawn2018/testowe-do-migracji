@@ -1,0 +1,46 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [25.47, 65.012]
+      },
+      "properties": {
+        "situationId": "GUID-RW-NEAR-BN6",
+        "situationType": "road work",
+        "announcements": [
+          {
+            "language": "fi",
+            "title": "Tie 4, Oulu. Tietyö.",
+            "timeAndDuration": {
+              "startTime": "2026-10-27T22:00:00.000Z",
+              "endTime": "2026-11-09T21:59:59.999Z"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [20.5, 60.2]
+      },
+      "properties": {
+        "situationId": "GUID-RW-FAR-BN6",
+        "situationType": "road work",
+        "announcements": [
+          {
+            "language": "fi",
+            "title": "Far from corridor",
+            "timeAndDuration": {
+              "startTime": "2026-10-27T22:00:00.000Z"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

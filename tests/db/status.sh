@@ -2961,5 +2961,28 @@ if [ -n "$OFF138" ]; then
       where id = any(string_to_array('$OFF138', ',')::uuid[])" >/dev/null
 fi
 
+# BN6 (#716) / 0376 — audience ROAD_FI, CHECK corridor, cron (UUID …0376; #713).
+# title_key + delete: bez rk_generic/rk_key_guard (risks.sh liczy klucze w tower_test_status).
+chk "BN6: risk_audience_for ROAD_FI = WSZYSCY" \
+  "select public.risk_audience_for('ROAD_FI', '{}'::jsonb)::text" WSZYSCY
+chk "BN6: corridor_conditions ROAD_FI" \
+  "select count(*) from corridor_conditions where corridor='ROAD_FI'" 1
+q "insert into risk_signals (id, project_id, kind, severity, title, title_key, detail, dedup_key)
+   values ('55555555-0000-0000-0000-000000000376','$P','ROAD_FI','MEDIUM','BN6 FI test','rk_road_baltic',
+           '{\"t\":\"bn6fi0376\",\"params\":{\"country\":\"FI\",\"event\":\"BN6 FI test\"}}'::jsonb,
+           'ROAD_FI:bn6-test-0376')" >/dev/null
+chk "BN6: CHECK kind ROAD_FI + audience WSZYSCY" \
+  "select audience::text from risk_signals where id='55555555-0000-0000-0000-000000000376'" WSZYSCY
+q "delete from risk_signals
+    where id='55555555-0000-0000-0000-000000000376'
+       or dedup_key='ROAD_FI:bn6-test-0376'
+       or detail->>'t'='bn6fi0376'" >/dev/null
+if [ "$(q "select to_regclass('cron.job') is not null")" = "t" ]; then
+  chk "BN6: cron tower-road-fi" \
+    "select count(*) from cron.job where jobname='tower-road-fi'" 1
+else
+  chk "BN6: brak cron.job (stub) — OK" "select 1" 1
+fi
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

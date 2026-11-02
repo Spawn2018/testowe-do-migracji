@@ -620,7 +620,9 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
       return Number.isFinite(n) && n >= 0 && n <= 24 * 60 ? n : 15;
     },
     async saveCorridorCondition(row: {
-      corridor: 'SE_E4' | 'SE_E22'; slowdownMult: number; reason: string | null; detail: unknown; observedAt: string;
+      corridor: 'SE_E4' | 'SE_E22' | 'ROAD_LT' | 'ROAD_LV' | 'ROAD_EE' | 'ROAD_FI';
+      slowdownMult: number; reason: string | null; detail: unknown; observedAt: string;
+      source?: string;
     }) {
       must(await sb.from('corridor_conditions').upsert({
         corridor: row.corridor,
@@ -628,7 +630,8 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
         reason: row.reason,
         detail: row.detail,
         observed_at: row.observedAt,
-        source: 'TRAFIKVERKET',
+        source: row.source
+          ?? (row.corridor.startsWith('ROAD_') ? 'BN6' : 'TRAFIKVERKET'),
       }, { onConflict: 'corridor' }), 'corridor_conditions upsert');
     },
     async opsThresholds() {
