@@ -12,7 +12,9 @@ describe('#667 pomarańczowe drogi (krok A)', () => {
   it('mapPool w PROD ładuje drogi przez applyBasemap (nie tylko demo)', () => {
     expect(pool).toMatch(/VITE_AUTH_MODE !== 'supabase'/);
     expect(pool).toMatch(/loadRoadLines/);
-    expect(pool).toMatch(/paintOrangeRoads/);
+    /* BN9-c5: legi z kodem (`loadRoadLegs`) w zakresie widoku — `paintRoadLegs` (ten sam styl, zawsze czyści warstwę) */
+    expect(pool).toMatch(/loadRoadLegs/);
+    expect(pool).toMatch(/paintRoadLegs/);
     expect(pool).toMatch(/orangeRoads/);
     expect(pool).not.toMatch(/here_road_geometry/);
   });
@@ -24,7 +26,7 @@ describe('#667 pomarańczowe drogi (krok A)', () => {
   });
 
   it('CorridorMap, GeofenceEditorMap i ZonesMap używają paintOrangeRoads; demo ZonesMap bez applyBasemap', () => {
-    expect(corridor).toMatch(/paintOrangeRoads/);
+    expect(corridor).toMatch(/drawCorridorLines/);
     expect(geofence).toMatch(/paintOrangeRoads/);
     expect(geofence).toMatch(/loadRoadLines/);
     expect(zones).toMatch(/paintOrangeRoads/);

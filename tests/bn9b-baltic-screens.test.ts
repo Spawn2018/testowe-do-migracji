@@ -56,13 +56,14 @@ describe('BN9-b — ekrany Korytarza bałtyckiego', () => {
     expect(routeStageLabel('SE_ROAD', 'pl', 'GDN-NYN')).toBe('Droga SE');
   });
 
-  it('mapa: tory nowych przepraw zawsze w warstwie promu, Terminal A na torze Tallinn–Helsinki', () => {
+  it('mapa: tory nowych przepraw w warstwie promu (BN9-c5: tylko dla tras z zakresu), Terminal A na torze Tallinn–Helsinki', () => {
     expect(waterTrackOf('TLLA-HEL')).toBe('TLL-HEL');
     expect(extraWaterTracksFor(['TLLA-HEL']).map((x) => x.id)).toEqual(['TLL-HEL']);
     const pool = readFileSync('src/components/map/mapPool.ts', 'utf8');
     /* DP-7: tory z jednego źródła (`ferryLaneLines`) */
-    expect(pool).toMatch(/drawFerryLanes\(ferryLeg\)/);
-    expect(readFileSync('src/lib/map/ferryLanes.ts', 'utf8')).toMatch(/Object\.values\(WATER_TRACKS_EXTRA\)/);
+    expect(pool).toMatch(/drawFerryLanes\(ferryLeg, /);
+    /* BN9-c5 (#718 BN7 §4): tory bałtyckie z `extraWaterTracksFor` dla torów zakresu (nie „zawsze”) */
+    expect(readFileSync('src/lib/map/ferryLanes.ts', 'utf8')).toMatch(/extraWaterTracksFor\(extra\)/);
     /* linie drogowe (pomarańczowe) — poza BN9-b */
     expect(pool).not.toMatch(/here_road_geometry/);
   });

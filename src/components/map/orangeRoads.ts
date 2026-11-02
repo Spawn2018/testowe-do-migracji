@@ -12,3 +12,14 @@ export function paintOrangeRoads(layer: L.LayerGroup, lines: readonly LatLng[][]
     L.polyline(line.map(([lat, lng]) => L.latLng(lat, lng)), ORANGE_ROAD_STYLE).addTo(layer);
   }
 }
+
+/**
+ * BN9-c5 (#718 BN7 §4): legi w zakresie mapy — warstwa czyszczona zawsze (wspólna mapa z puli przechodzi między kartą
+ * transportu a Mapą/Kokpitem; legi poprzedniego zakresu nie mogą zostać). Ten sam styl `#E5A544`.
+ */
+export function paintRoadLegs(layer: L.LayerGroup, lines: readonly (readonly LatLng[])[]): void {
+  layer.clearLayers();
+  for (const line of lines) {
+    L.polyline(line.map(([lat, lng]) => L.latLng(lat, lng)), ORANGE_ROAD_STYLE).addTo(layer);
+  }
+}

@@ -48,9 +48,13 @@ export function GeofenceEditorMap({
     groupRef.current = group;
     tilesRef.current = tiles;
     if (import.meta.env.VITE_AUTH_MODE === 'supabase') {
-      void Promise.all([import('./applyBasemap'), import('./orangeRoads')]).then(([{ loadRoadLines }, { paintOrangeRoads }]) =>
-        loadRoadLines().then((lines) => { paintOrangeRoads(roads, lines); }),
-      ).catch(() => undefined);
+      /* BN9-c5 (#718 BN7 §4 pkt 3): mapa strefy nie dotyczy transportu — sam rdzeń, bez legów BN7 (po `cron_fetch`) */
+      void Promise.all([import('./applyBasemap'), import('./orangeRoads'), import('../../lib/map/routeLegs')])
+        .then(async ([{ loadRoadLines, loadRoadLegs }, { paintOrangeRoads }, { coreLegsOnly }]) => {
+          await loadRoadLines();
+          const { legs } = await loadRoadLegs();
+          paintOrangeRoads(roads, coreLegsOnly(legs).map((l) => [...l.line]));
+        }).catch(() => undefined);
     } else {
       void Promise.all([import('../../data/roadLinesDemo'), import('./orangeRoads')]).then(([{ DEMO_ROAD_LINES }, { paintOrangeRoads }]) => {
         paintOrangeRoads(roads, DEMO_ROAD_LINES.map((l) => [...l]));

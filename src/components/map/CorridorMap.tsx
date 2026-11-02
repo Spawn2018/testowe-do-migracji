@@ -19,13 +19,15 @@ import { isServerId } from '../../data/registry';
 import { transportLabel } from '../../lib/transportName';
 import { SUPABASE_AUTH_ENABLED } from '../../auth/config';
 import { h6Requests } from '../../lib/map/draw';
-import { ferryLaneOptions } from '../../lib/map/ferryLanes';
+import { corridorScope, routeOfLoad, sessionDemoRoutes } from '../../lib/map/routeLegs';
+import { filterLoadsForRole } from '../../lib/permissions';
+import { trackingPhase } from '../../lib/stageTiles';
 import { routeOfVessel, vesselKeyOf } from '../../lib/vesselGroups';
 import { vesselsLoader } from '../../lib/vesselsLoad';
 import { useVesselGroups } from '../../lib/useVesselGroups';
 import {
-  acquireMap, attributionOf, drawFerryLanes, ensureBasemap, fitCorridor, releaseMap, retryBasemap, subscribeBasemapHealth,
-  type BasemapHealth, type LayerBag, type MapSlot, type PoolEntry,
+  acquireMap, attributionOf, drawCorridorLines, ensureBasemap, fitCorridor, releaseMap, retryBasemap, subscribeBasemapHealth,
+  type BasemapHealth, type LayerBag, type LinesSpec, type MapSlot, type PoolEntry,
 } from './mapPool';
 import { BasemapFailCard } from './BasemapFailCard';
 import { hm, mapRow, markerTone, type MapRow, type MarkerTone } from '../../lib/p9cMap';
@@ -154,6 +156,11 @@ function groupTip(v: GroupView, locale: Parameters<typeof t>[0]): string {
   ].filter(Boolean).join('<br>');
 }
 
+/** BN9-c5: demo — trasy przykładowe z adresu (`demoRoute=…`); produkcja — nigdy (pusto). */
+function demoRoutes(): ReadonlyMap<string, string> {
+  return sessionDemoRoutes(import.meta.env.VITE_AUTH_MODE !== 'supabase' && !PROD_BUILD);
+}
+
 /** Podpisy na stronie Mapa: przy ≤ 15 autach zawsze, przy większej liczbie od przybliżenia 7 (bez zasłaniania trasy). */
 const LABELS_MAX = 15;
 /** E1 (Przegląd): przybliżenie na pojeździe i odstęp podążania. */
@@ -214,6 +221,32 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
     }
     return best;
   })();
+  /*
+   * BN9-c5 (#718 BN7 §4): linie tras w zakresie widoku. Karta transportu (Przegląd) — trasa transportu panelu (legi jego
+   * rodziny i tor wodny; trasa nieznana — rdzeń). Mapa i Kokpit — rdzeń Polska–Szwecja i trasy aktywnych transportów
+   * (okno śledzenia, transporty firmy). Powroty bez linii (Q-18).
+   */
+  const linesSpec: LinesSpec = (() => {
+    const over = demoRoutes();
+    const card = slot === 'drawer';
+    if (card) {
+      const r = panelLoad ? routeOfLoad(panelLoad, sailings, vessels, over) : null;
+      return { routes: r ? [r] : [], baseline: false };
+    }
+    const nowIso = getNowIso();
+    const routes = new Set<string>();
+    for (const l of filterLoadsForRole(allLoads, role)) {
+      if (trackingPhase(l, nowIso) !== 'on') continue;
+      const r = routeOfLoad(l, sailings, vessels, over);
+      if (r) routes.add(r);
+    }
+    return { routes: [...routes].sort(), baseline: true };
+  })();
+  const linesKey = `${linesSpec.baseline ? 'b' : 'r'}:${linesSpec.routes.join(',')}`;
+  const linesSpecRef = useRef(linesSpec);
+  linesSpecRef.current = linesSpec;
+  /* dopisek przy linii bałtyckiej (BN7 §7 pkt 1) */
+  const balticLine = corridorScope(linesSpec.routes, [], linesSpec.baseline).baltic;
   const onMarkerRef = useRef(onMarker);
   onMarkerRef.current = onMarker;
   /* wyglad/P9-e: otwarta lista grupy (klucz) i widoki grup z ostatniego rysowania */
@@ -338,7 +371,7 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
     /* AUD-01e: jedna mapa na sesję — wpinana do kontenera widoku, przy zamknięciu odkładana (nie niszczona). */
-    const pooled = acquireMap(containerRef.current, slot);
+    const pooled = acquireMap(containerRef.current, slot, linesSpecRef.current);
     const { map } = pooled;
     entryRef.current = pooled;
     layersRef.current = pooled.layers;
@@ -446,32 +479,21 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
     }
   }, [mapReady, loads, panelLoad, focusMode, selectedLoadId, role, detourTick]);
 
+  /* BN9-c5 (#718 BN7 §4): legi drogowe i tory wodne zakresu widoku (`drawCorridorLines`, wspólne z pulą map).
+     PROD (AUD-01): wczytanie legów i przepraw z HERE dopiero po podkładzie; wcześniej — tory i legi już wczytane. */
   useEffect(() => {
-    if (!mapReady || !basemapReady || import.meta.env.VITE_AUTH_MODE !== 'supabase') return;
-    let cancelled = false;
-    void Promise.all([import('./applyBasemap'), import('./orangeRoads')]).then(async ([{ loadRoadLines }, { paintOrangeRoads }]) => {
-      const lines = await loadRoadLines();
-      const layers = layersRef.current;
-      if (cancelled || !layers) return;
-      paintOrangeRoads(layers.route, lines);
-    });
-    /* E45 pkt 1 (L56): przeprawy według HERE, gdy serwer je poda; inaczej zostają stałe tory wodne z `mapPool` */
-    void import('./applyBasemap').then(({ loadFerryLines }) => loadFerryLines()).then(({ lines: ferries, summary }) => {
-      const layers = layersRef.current;
-      /* L56: na TEST widać, czy przeprawa jest z HERE, czy został stały tor — i dlaczego */
-      if (!cancelled && summary && entryRef.current) entryRef.current.el.dataset.ferries = summary;
-      if (cancelled || !layers || ferries.length === 0) return;
-      layers.ferryLeg.clearLayers();
-      /* DP-76: styl torów z motywu (`ferryLaneOptions`); zmianę motywu na żywo przerysowuje `ensureBasemap` */
-      const laneOpts = ferryLaneOptions(useTowerStore.getState().theme);
-      for (const f of ferries) L.polyline(f.line.map(([lat, lng]) => L.latLng(lat, lng)), laneOpts).addTo(layers.ferryLeg);
-      /* DP-7: przeprawa bez odcinka z HERE i tory Korytarza bałtyckiego — to samo rysowanie co przy tworzeniu mapy */
-      drawFerryLanes(layers.ferryLeg, new Set(ferries.map((f) => f.leg)));
-    });
-    return () => { cancelled = true; };
-  }, [mapReady, basemapReady]);
+    const pooled = entryRef.current;
+    if (!mapReady || !pooled) return;
+    const load = import.meta.env.VITE_AUTH_MODE !== 'supabase' || basemapReady;
+    void drawCorridorLines(pooled, linesSpecRef.current, load);
+    /* kadr z torami zakresu (pkt 4 i 7): Kokpit i Mapa zawsze; Przegląd — tylko gdy pokazuje całą trasę (bez pozycji) */
+    if (slot !== 'drawer' || followedIdRef.current === '-') {
+      programmaticRef.current = true;
+      try { fitCorridor(mapReady); } finally { programmaticRef.current = false; }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mapReady, basemapReady, linesKey]);
 
-  /* BN9-b: tory nowych przepraw rysuje teraz zawsze warstwa promu (`mapPool` → ferryLeg) — bez osobnej warstwy */
 
   useEffect(() => {
     const map = mapRef.current;
@@ -813,6 +835,9 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
       siteZone: (() => { const g = geofences.find((x) => x.type === 'SITE' && x.active); return g ? geofenceDisplayName(g.name, locale) : null; })(),
     })
     : null;
+  /* BN9-c5: dopisek trasy bałtyckiej — gdy jest linia bałtycka i warstwa „Trasa” włączona */
+  const showRouteNote = balticLine && !!mapLayers.route;
+  const noteInDrawer = showRouteNote && !!drawerNote;
   /* P11 (e1, e32): dopisek stoi nad podpisem podkładu (prawa autorskie), nie na nim — wysokość podpisu z elementu Leaflet */
   const hasNote = !!drawerNote;
   const [attrH, setAttrH] = useState(0);
@@ -835,7 +860,7 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
       try { fitCorridor(mapReady); } finally { programmaticRef.current = false; }
     });
     return () => cancelAnimationFrame(raf);
-  }, [attrH, noteLines, mapReady, slot]);
+  }, [attrH, noteLines, noteInDrawer, mapReady, slot]);
 
   return (
     <div
@@ -880,6 +905,14 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
           {drawerNote.lines.map((ln, i) => (
             <span key={i} className={`po-mapnote-l${drawerNote.alert === i ? ' is-alert' : ''}`}>{ln}</span>
           ))}
+          {/* BN9-c5 (BN7 §7 pkt 1): w Przeglądzie dopisek trasy bałtyckiej w tym samym polu (jedno pole na dole mapy) */}
+          {noteInDrawer ? <span className="po-mapnote-l bn7-note-l" data-route-note="baltic">{t(locale, 'bn9c5_route_note')}</span> : null}
+        </div>
+      ) : null}
+      {showRouteNote && !noteInDrawer ? (
+        /* BN9-c5 (BN7 §7 pkt 1): linia bałtycka z HERE jest orientacyjna — nie zastępuje trasy z zezwolenia */
+        <div className="note bn7-note" data-route-note="baltic" role="note">
+          {t(locale, 'bn9c5_route_note')}
         </div>
       ) : null}
       {/* wyglad/P4-b (E27): pusta lista = nikt w oknie śledzenia (Mapa: „W trasie: 0”, panel poza oknem) — to nie „brak danych” */}

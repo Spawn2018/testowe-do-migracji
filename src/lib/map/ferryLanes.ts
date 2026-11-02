@@ -1,10 +1,12 @@
 /**
  * DP-7 (F7 #670): stałe tory wodne do warstwy promu — jedno źródło dla `mapPool` (tworzenie mapy) i `CorridorMap`
  * (po przerysowaniu przepraw z HERE). Czysta funkcja (bez Leaflet), testowana bez przeglądarki.
- * BN9-b: tory Korytarza bałtyckiego ze słownika przepraw (Estonia ⇄ Finlandia / Szwecja) — zawsze, ten sam styl.
+ * BN9-b: tory Korytarza bałtyckiego ze słownika przepraw (Estonia ⇄ Finlandia / Szwecja), ten sam styl.
+ * BN9-c5 (#718 BN7 §4): tory bałtyckie już nie „zawsze” — tylko dla tras z zakresu mapy (`extraWaterTracksFor`).
  */
+import type { WaterTrackId } from '../ferryCatalog';
 import { WATER_GDN_NYN, WATER_GDY_KAA } from './draw';
-import { WATER_TRACKS_EXTRA } from './ferryLines';
+import { extraWaterTracksFor, WATER_TRACKS_EXTRA } from './ferryLines';
 
 export type LaneLine = readonly (readonly [number, number])[];
 
@@ -54,18 +56,29 @@ export function restyleFerryLanes(
 /** Odcinki HERE, które zastępują stały tor (GDN–NYN, GDY–KAA). */
 export const HERE_FERRY_LEGS = ['FERRY-GDN-NYN', 'FERRY-GDY-KAA'] as const;
 
+/** Tory rdzenia (GDN-NYN, GDY-KAA) — domyślny zakres: Mapa i Kokpit bez transportów bałtyckich, mapy stref. */
+export const CORE_LANE_TRACKS: ReadonlySet<WaterTrackId> = new Set<WaterTrackId>(['GDN-NYN', 'GDY-KAA']);
+
 /**
  * Linie torów `[lat, lng]`; `skipLegs` — przeprawy, które HERE już narysowało (FERRY-GDN-NYN, FERRY-GDY-KAA).
- * Tory bałtyckie zawsze.
+ * `tracks` — tory w zakresie mapy (BN9-c5): rdzeń domyślnie; tory bałtyckie tylko, gdy są w zakresie.
  */
-export function ferryLaneLines(skipLegs: ReadonlySet<string> = new Set()): LaneLine[] {
-  const legacy = { 'FERRY-GDN-NYN': WATER_GDN_NYN, 'FERRY-GDY-KAA': WATER_GDY_KAA } as const;
+export function ferryLaneLines(
+  skipLegs: ReadonlySet<string> = new Set(),
+  tracks: ReadonlySet<WaterTrackId> = CORE_LANE_TRACKS,
+): LaneLine[] {
+  const legacy = [
+    ['FERRY-GDN-NYN', 'GDN-NYN', WATER_GDN_NYN],
+    ['FERRY-GDY-KAA', 'GDY-KAA', WATER_GDY_KAA],
+  ] as const;
   const out: LaneLine[] = [];
-  for (const [leg, lane] of Object.entries(legacy)) {
-    if (skipLegs.has(leg)) continue;
+  for (const [leg, track, lane] of legacy) {
+    if (skipLegs.has(leg) || !tracks.has(track)) continue;
     /* WATER_GDN_NYN / WATER_GDY_KAA są w kolejności [lng, lat] */
     out.push(lane.map(([lng, lat]) => [lat, lng] as const));
   }
-  for (const line of Object.values(WATER_TRACKS_EXTRA)) out.push(line.map(([lat, lng]) => [lat, lng] as const));
+  /* kolejność stała (jak `WATER_TRACKS_EXTRA`), niezależna od kolejności tras w zakresie */
+  const extra = (Object.keys(WATER_TRACKS_EXTRA) as WaterTrackId[]).filter((id) => tracks.has(id));
+  for (const { line } of extraWaterTracksFor(extra)) out.push(line.map(([lat, lng]) => [lat, lng] as const));
   return out;
 }
