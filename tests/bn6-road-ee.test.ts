@@ -25,10 +25,12 @@ import {
   balticSlowdownMult,
   classifyBalticNetError,
   dimensionLimitRisk,
+  EE_PROBE_API_PATH,
   eeDatexApiKey,
   eeDatexApiKeyMeta,
   eeDatexFeedUrl,
   eeRoadOnCorridor,
+  probeEeDatexApi,
   eeSeverityForRecord,
   extractBalticRoadRef,
   filterInEeBboxes,
@@ -357,6 +359,12 @@ describe('BN6 runRoadEe', () => {
     expect(res.observations?.source).toBe('tarktee_datex');
     expect(res.observations?.key_env_first).toBe('TARKTEE_DATEX_TOKEN');
     expect(res.observations?.probe_ee).toMatch(/^200:\d+$/);
+    /* DP-170: sonda API 45 s — animalObstacle + gzip; osobno od 10 s feedów. */
+    expect(res.observations?.ee_probe_api).toMatch(/^200:\d+:\d+$/);
+    const apiProbeCalls = headerCalls.filter((c) =>
+      c.url.includes(EE_PROBE_API_PATH) && c.headers[EE_DATEX_KEY_HEADER] === 'test-ee-key'
+      && c.headers['Accept-Encoding'] === 'gzip');
+    expect(apiProbeCalls.length).toBeGreaterThanOrEqual(1);
     expect(res.observations?.key_header_sent).toBe('1');
     expect(res.observations?.key_len).toBe(String('test-ee-key'.length));
     expect(res.observations?.key_trimmed).toBe('0');
@@ -449,10 +457,28 @@ describe('BN6 runRoadEe', () => {
     const res = await runRoadEe(d);
     expect(res.warnings?.some((w) => /timeout tarktee\.ee/i.test(w))).toBe(true);
     expect(res.observations?.probe_ee).toMatch(/^timeout:\d+$/);
+    expect(res.observations?.ee_probe_api).toMatch(/^timeout:\d+:0$/);
     expect(res.observations?.key_header_sent).toBe('1');
     expect(res.observations?.key_len).toBe(String('sekret-ee-xyz'.length));
     expect(JSON.stringify(res)).not.toContain('sekret-ee-xyz');
     expect(JSON.stringify(res)).not.toMatch(/\/api\/v1\/datex\//);
+  });
+
+  it('DP-170: probeEeDatexApi → kod:ms:bajty; Accept-Encoding gzip; klucz w nagłówku', async () => {
+    const body = JSON.stringify({ situation: [] });
+    const f = (async (_input: RequestInfo | URL, init?: RequestInit) => {
+      const hdrs = (init?.headers ?? {}) as Record<string, string>;
+      expect(hdrs['Accept-Encoding']).toBe('gzip');
+      expect(hdrs[EE_DATEX_KEY_HEADER]).toBe('k');
+      return new Response(body, {
+        status: 200,
+        headers: { 'Content-Type': 'application/json', 'Content-Length': String(body.length) },
+      });
+    }) as typeof fetch;
+    const out = await probeEeDatexApi(f, 'k', EE_UA);
+    expect(out).toMatch(/^200:\d+:\d+$/);
+    const bytes = Number(out.split(':')[2]);
+    expect(bytes).toBe(body.length);
   });
 
   it('F7 #736 B2: EE klucz z \\n → trim, key_trimmed=1, wartość poza obs', async () => {

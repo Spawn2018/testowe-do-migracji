@@ -28,6 +28,7 @@ import {
   lvNormalizeLatLon,
   lvRoadOnCorridor,
   lvSeverityForRecord,
+  lvUrlShape,
   parseLvDatexXml,
   parseLvFeedBody,
   parseLvWeightDimGeoJson,
@@ -603,6 +604,39 @@ describe('BN6 runRoadLv F7 #730', () => {
     expect(headerVals.every((v) => v === 'sekret-trim-xyz' && !v.includes('\n'))).toBe(true);
     expect(JSON.stringify(r.observations ?? {})).not.toContain('sekret-trim-xyz');
     expect(JSON.stringify(r.warnings ?? [])).not.toContain('sekret-trim-xyz');
+  });
+
+  it('DP-170: lv_shape_* bez wartości URL (https/same_cyfry/spacje/pusty/bez_schematu)', async () => {
+    expect(lvUrlShape('')).toBe('pusty');
+    expect(lvUrlShape('44751')).toBe('same_cyfry');
+    expect(lvUrlShape(' 44751 ')).toBe('spacje');
+    expect(lvUrlShape('https://nap.example/lv/x')).toBe('https');
+    expect(lvUrlShape('http://nap.example/lv/x')).toBe('http');
+    expect(lvUrlShape('nap.example/lv/x')).toBe('bez_schematu');
+    const st = new MemStore();
+    const r = await runRoadLv({
+      store: st,
+      fetch: (async () => new Response('<a/>', { status: 200 })) as typeof fetch,
+      env: {
+        LV_NAP_ROADWORKS_KEY: 'k',
+        LV_NAP_ROADWORKS_URL: 'https://nap.example/lv/roadworks',
+        LV_NAP_WEIGHT_DIM_KEY: 'k2',
+        LV_NAP_WEIGHT_DIM_URL: '44751',
+        LV_NAP_SLIPPERY_WM_KEY: 'k3',
+        LV_NAP_SLIPPERY_WM_URL: 'host-bez-schematu',
+      },
+      now: () => NOW,
+    });
+    expect(r.observations?.lv_shape_roadworks).toBe('https');
+    expect(r.observations?.lv_shape_weight_dim).toBe('same_cyfry');
+    expect(r.observations?.lv_shape_slippery_wm).toBe('bez_schematu');
+    expect(r.observations?.lv_shape_slippery_ti).toBe('pusty');
+    const shapes = Object.entries(r.observations ?? {})
+      .filter(([k]) => k.startsWith('lv_shape_'))
+      .map(([, v]) => String(v));
+    expect(shapes.every((v) => /^(https|http|bez_schematu|same_cyfry|spacje|pusty)$/.test(v))).toBe(true);
+    expect(shapes.join('')).not.toContain('44751');
+    expect(shapes.join('')).not.toContain('host-bez');
   });
 });
 

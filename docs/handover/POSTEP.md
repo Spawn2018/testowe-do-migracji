@@ -1,4 +1,12 @@
 
+## 2026-11-02 20:05 — DP-170 start (równolegle #738)
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. #735 — zakres DP-170.
+- Scalanie: **#737** już na main; **#738** BN7 CI unit/db/visual ✔ @ `078ceadc` — brak jeszcze „F7: gotowe do scalenia” (F7 r1 „nie scalaj” przed B2–B5).
+- **Krok DP-170** (`pakiet/dp170-ee-lv-diag`): EE `probeEeDatexApi` → `ee_probe_api=<kod>:<ms>:<bajty>` (animalObstacle, 45 s, gzip); LV `lvUrlShape` → `lv_shape_*` (https/http/bez_schematu/same_cyfry/spacje/pusty). Vitest bn6 ee+lv **55**.
+- **Dalej:** push → CI → F7. Po F7 #738: BN9-c5 → cron_fetch=true → BN8; po F7 DP-170: krok 2 #735 wg wyniku prod.
+- Bez push na main.
+
 ## 2026-11-02 17:20 — #736 SCALONE; start DP-168
 
 - Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. #735 otwarte (krok 2 po prod).
