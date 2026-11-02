@@ -1946,6 +1946,8 @@ img,video{max-width:100%;height:auto}
 .note.bn7-note{position:absolute;top:12px;right:56px;z-index:500;max-width:340px;background:var(--surface);color:var(--ink-2);border:1px solid var(--rule);padding:5px 8px;font-size:12px;line-height:1.35}
 @media (max-width:768px){
   .note.bn7-note{top:6px;left:6px;right:60px;max-width:none;padding:3px 6px;font-size:11.5px}
+  /* F7 #740: Mapa na telefonie ma u góry z lewej przycisk „Warstwy” (44 px) — dopisek pod nim */
+  [data-page="map"] .note.bn7-note{top:60px}
 }
 .map-cards{margin:8px 10px}
 .map-card{width:100%}
