@@ -7,16 +7,23 @@ import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   BALTIC_DETOUR_RE,
+  BALTIC_FEED_MAX_BYTES,
+  BALTIC_ICY_WORDS,
   CORRIDOR_EE,
   EE_ATTRIBUTION,
   EE_DATEX_FEEDS,
   EE_DATEX_KEY_HEADER,
+  EE_ICY_CONTENT_RE,
   EE_SOURCE_REF,
   EE_UA,
+  LV_ICY_CONTENT_RE,
   applyBalticCorridorRoadFilter,
   balticCapLongDetourClosure,
+  balticFeedObsKey,
+  balticFeedObsOk,
   balticKeyMeta,
   balticSlowdownMult,
+  classifyBalticNetError,
   dimensionLimitRisk,
   eeDatexApiKey,
   eeDatexApiKeyMeta,
@@ -34,6 +41,7 @@ import {
   parseEeMeasurementSites,
   parseEeSrtiJson,
   parseEeWeatherData,
+  readBalticFeedBody,
   stripBalticDetourText,
   weightLimitRisk,
 } from '../supabase/functions/_shared/integrations/roadBaltic.ts';
@@ -152,7 +160,8 @@ describe('BN6 road-ee parsers', () => {
     expect(closed.roadClosed).toBe(true);
     const w = ev.find((e) => e.id === 'bn6-ee-weight-t4')!;
     expect(w.weightLimitT).toBe(40);
-    expect(w.severity).toBe('HIGH');
+    /* DP-168 N3: limit masy z liczbą → MEDIUM w parserze. */
+    expect(w.severity).toBe('MEDIUM');
   });
 
   it('F7 B9: wysokość z heightCharacteristic/vehicleHeight → dimensionLimitRisk', () => {
@@ -468,5 +477,69 @@ describe('BN6 runRoadEe', () => {
     expect(res.observations?.key_len).toBe(String('ee-key-trim'.length));
     expect(headerVals.every((v) => v === 'ee-key-trim' && !v.includes('\n'))).toBe(true);
     expect(JSON.stringify(res.observations ?? {})).not.toContain('ee-key-trim');
+  });
+});
+
+describe('DP-168 roadBaltic shared', () => {
+  it('balticFeedObsOk / key — szablon <kraj>_<usługa>=ok:…', () => {
+    expect(balticFeedObsOk(3, 1, 'datex-xml', 0)).toBe('ok:3:1:datex-xml:0');
+    expect(balticFeedObsKey('EE', 'SRTI_ACCIDENT')).toBe('ee_srti_accident');
+    expect(balticFeedObsKey('lv', 'ROADWORKS')).toBe('lv_roadworks');
+  });
+
+  it('wspólny regex pogody: jedna lista słów; jäide raz; märg nie', () => {
+    expect(BALTIC_ICY_WORDS.ee.filter((w) => w.includes('jäide'))).toHaveLength(1);
+    expect(EE_ICY_CONTENT_RE.test('Jäide, libedus teel')).toBe(true);
+    expect(EE_ICY_CONTENT_RE.test('märg tee')).toBe(false);
+    expect(LV_ICY_CONTENT_RE.test('slidens ceļš, ledus')).toBe(true);
+    expect(LV_ICY_CONTENT_RE.test('policeForces')).toBe(false);
+  });
+
+  /* F7 #737 B1 — \\w* nie łapało ē/ā; [\\p{L}\\p{M}]* tak. */
+  it('F7 #737 B1: apledējis / apledējusi → lód; Šlapia / märg / police → nie', () => {
+    expect(LV_ICY_CONTENT_RE.test('Ceļš apledējis')).toBe(true);
+    expect(LV_ICY_CONTENT_RE.test('apledējusi brauktuve')).toBe(true);
+    expect(LV_ICY_CONTENT_RE.test('slidenā ceļa')).toBe(true);
+    expect(LV_ICY_CONTENT_RE.test('Šlapia')).toBe(false);
+    expect(EE_ICY_CONTENT_RE.test('märg')).toBe(false);
+    expect(LV_ICY_CONTENT_RE.test('police')).toBe(false);
+  });
+
+  it('readBalticFeedBody: Content-Length > 5 MB → too_large; strumień OK', async () => {
+    const bigCl = new Response('x', {
+      status: 200,
+      headers: { 'Content-Length': String(BALTIC_FEED_MAX_BYTES + 1) },
+    });
+    expect(await readBalticFeedBody(bigCl)).toEqual({ ok: false, reason: 'too_large' });
+
+    const ok = new Response('<?xml ok?>', { status: 200 });
+    expect(await readBalticFeedBody(ok)).toEqual({ ok: true, text: '<?xml ok?>' });
+
+    const over = new Response(new Uint8Array(BALTIC_FEED_MAX_BYTES + 8), { status: 200 });
+    expect(await readBalticFeedBody(over)).toEqual({ ok: false, reason: 'too_large' });
+  });
+
+  /* F7 #737 B2 — AbortError w trakcie czytania → classifyBalticNetError = timeout. */
+  it('F7 #737 B2: abort w trakcie czytania → timeout (nie „sieć”)', async () => {
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode('<partial'));
+        controller.error(new DOMException('The operation was aborted.', 'AbortError'));
+      },
+    });
+    const res = new Response(stream, { status: 200 });
+    let caught: unknown;
+    try {
+      await readBalticFeedBody(res);
+    } catch (e) {
+      caught = e;
+    }
+    expect(caught).toBeInstanceOf(DOMException);
+    expect((caught as DOMException).name).toBe('AbortError');
+    expect(classifyBalticNetError(caught)).toBe('timeout');
+  });
+
+  it('N3: eeSeverityForRecord z weightLimitT → MEDIUM', () => {
+    expect(eeSeverityForRecord('RESTRICTIONS', 'weight', { weightLimitT: 40 })).toBe('MEDIUM');
   });
 });

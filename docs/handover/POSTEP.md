@@ -1,4 +1,12 @@
 
+## 2026-11-02 17:20 — #736 SCALONE; start DP-168
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. #735 otwarte (krok 2 po prod).
+- Scalanie: **#736 SCALONE** `78725265` (F7: gotowe @ `dbedbb07`, CI unit/db/visual ✔). deploy-main po merge.
+- **Krok DP-168:** `readBalticFeedBody` (5 MB strumień) + `BALTIC_FEED_*` / `balticFeedObsOk` / `BALTIC_ICY_WORDS`+builder (`LV_ICY`/`EE_ICY`); N3 limit masy z liczbą → MEDIUM (FI/LT/LV/EE). Vitest BN6 drogi **91**.
+- **Dalej:** push → CI → F7. Po F7: BN7 (#718).
+- Bez push na main.
+
 ## 2026-11-02 16:25 — #734 SCALONE; start DP-165+169
 
 - Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. DP-169 z odbioru #733 wpisane.
