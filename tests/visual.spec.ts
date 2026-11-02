@@ -281,3 +281,31 @@ test.describe('BN9-c3 visual — pogoda na przeprawach (HHL pl)', () => {
     })
   }
 })
+
+/* BN9-c3 (przegląd #723 pkt 3) — Ryzyka u KSH na komputerze: „Pogoda na przeprawach” na pełną szerokość pod promami
+   i drogami; „Drogi PL” i „Drogi SE” zostają w prawej kolumnie obok promów. Demo, migawka strony Ryzyk (1440). */
+test.describe('BN9-c3 visual — Ryzyka KSH (pl 1440)', () => {
+  test.describe.configure({ mode: 'serial' })
+
+  const file = 'ryzyka__ksh__pl__1440__light.png'
+  test(file, async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    await gotoFrozen(page, 1440)
+    await setRole(page, 'KSH')
+    await setTheme(page, 'light', 'light')
+    await navTo(page, 'risk')
+    const pg = page.locator('[data-page="risks"]')
+    await expect(pg.locator('[data-panel="marine"] [data-marine-row]')).toHaveCount(5)
+    await expect(pg.locator('[data-panel="road-se"]')).toBeVisible()
+    await page.setViewportSize({ width: 1440, height: 2200 })
+    await page.evaluate(async () => {
+      if (document.fonts?.ready) await document.fonts.ready
+    })
+    await page.waitForTimeout(300)
+    await expect(pg).toHaveScreenshot(file, {
+      maxDiffPixels: 60,
+      threshold: 0.28,
+      animations: 'disabled',
+    })
+  })
+})

@@ -9,6 +9,7 @@
 import type { Load, Sailing } from '../types';
 import type { MarineConditionRow, MarineCorridorCode, MarineRiskLevel } from './marineWeatherDb';
 import { waterTrackOf, type WaterTrackId } from './ferryCatalog';
+import { stageTileOf, type StageTile } from './stageTiles';
 
 /** Stała kolejność przepraw (Ryzyka › Pogoda, Kokpit): najpierw PL–SE, potem bałtyckie. */
 export const MARINE_CORRIDOR_ORDER: readonly MarineCorridorCode[] = [
@@ -85,7 +86,8 @@ export function crossingView(corridor: MarineCorridorCode, m: MarineConditionRow
     gustThrKn: m?.gustThrKn ?? 40,
     observedAt: none ? null : m!.observedAt,
     sources: none ? '' : m!.sources,
-    attribution: m?.attribution || MARINE_ATTRIBUTION_DEFAULT,
+    /* bez wiersza z bazy (błąd odczytu) — bez atrybucji: nie podpisujemy danych, których nie ma */
+    attribution: m ? m.attribution || MARINE_ATTRIBUTION_DEFAULT : '',
     noReading: none,
   };
 }
@@ -107,22 +109,51 @@ export function latestReadingAt(list: readonly MarineCrossingView[]): string | n
   return list.map((v) => v.observedAt).filter((x): x is string => !!x).sort().pop() ?? null;
 }
 
-/** Atrybucja sekcji: wartości z bazy bez powtórzeń; bez wierszy — domyślna. */
+/** Atrybucja sekcji: wartości z bazy bez powtórzeń (pusty wpis → domyślna); bez wierszy (błąd odczytu) — pusta. */
 export function marineAttribution(marine: readonly MarineConditionRow[]): string {
-  const list = [...new Set(marine.map((m) => m.attribution).filter(Boolean))];
-  return list.length ? list.join(' · ') : MARINE_ATTRIBUTION_DEFAULT;
+  if (!marine.length) return '';
+  return [...new Set(marine.map((m) => m.attribution || MARINE_ATTRIBUTION_DEFAULT))].join(' · ');
 }
 
-/** Przeprawy, którymi jadą transporty (z rejsu transportu): korytarz → liczba transportów. */
+/**
+ * Kafelek „Najbliższy prom” (B3 / H3.4, jak dotąd): pogoda Gdańsk – Nynäshamn z listy wszystkich korytarzy.
+ * Wiersz startowy i wiersz bez fali — brak morza; wiersze bałtyckie nigdy nie trafiają do kafelka.
+ */
+export function nearestFerrySeaRow(marine: readonly MarineConditionRow[]): MarineConditionRow | null {
+  const row = marine.find((r) => r.corridor === 'BALTIC_GDN_NYN');
+  return row && !isNoReading(row) && row.maxWaveM != null ? row : null;
+}
+
+/** Etapy przed promem i na promie — transport ma przeprawę jeszcze przed sobą albo jest na niej. */
+const BEFORE_OR_ON_FERRY: ReadonlySet<StageTile> = new Set(['PREP', 'LOADING', 'ROAD_PL', 'PORT_PL', 'FERRY']);
+
+export type SeaLoad = Pick<Load, 'sailingId' | 'status' | 'stage'>;
+export type SeaSailing = Pick<Sailing, 'id' | 'route' | 'arrivalAt' | 'delayedArrivalAt' | 'status'>;
+
+/**
+ * Rejs transportu jeszcze się nie zakończył: nie „Dopłynął” i efektywne przypłynięcie (opóźnione, gdy jest) po „teraz”
+ * (front nie ma `arrived_at` — „Dopłynął” to ten sam fakt), albo transport jest w etapie przed promem lub na promie.
+ * Naczepa po zjeździe z promu (port SE, drogi SE, plac) z zakończonym rejsem — przeprawę ma za sobą.
+ */
+export function crossingAhead(l: SeaLoad, s: SeaSailing, nowMs: number): boolean {
+  const arr = Date.parse(s.delayedArrivalAt || s.arrivalAt);
+  const voyageOpen = s.status !== 'DOPLYNAL' && Number.isFinite(arr) && arr > nowMs;
+  const tile = stageTileOf(l);
+  return voyageOpen || (tile != null && BEFORE_OR_ON_FERRY.has(tile));
+}
+
+/** Przeprawy, którymi jadą transporty (z rejsu transportu, przeprawa jeszcze przed nimi): korytarz → liczba transportów. */
 export function corridorsOfLoads(
-  loads: readonly Pick<Load, 'sailingId'>[],
-  sailings: readonly Pick<Sailing, 'id' | 'route'>[],
+  loads: readonly SeaLoad[],
+  sailings: readonly SeaSailing[],
+  nowMs: number,
 ): Map<MarineCorridorCode, number> {
-  const routeById = new Map(sailings.map((s) => [s.id, s.route]));
+  const byId = new Map(sailings.map((s) => [s.id, s]));
   const out = new Map<MarineCorridorCode, number>();
   for (const l of loads) {
-    if (!l.sailingId) continue;
-    const c = corridorOfRoute(routeById.get(l.sailingId));
+    const s = l.sailingId ? byId.get(l.sailingId) : undefined;
+    if (!s || !crossingAhead(l, s, nowMs)) continue;
+    const c = corridorOfRoute(s.route);
     if (c) out.set(c, (out.get(c) ?? 0) + 1);
   }
   return out;
@@ -139,11 +170,12 @@ export interface CockpitCrossing extends MarineCrossingView {
  * „Najbliższy prom” z pogodą Gdańsk – Nynäshamn).
  */
 export function cockpitCrossings(
-  activeLoads: readonly Pick<Load, 'sailingId'>[],
-  sailings: readonly Pick<Sailing, 'id' | 'route'>[],
+  activeLoads: readonly SeaLoad[],
+  sailings: readonly SeaSailing[],
   marine: readonly MarineConditionRow[],
+  nowMs: number,
 ): CockpitCrossing[] {
-  const used = corridorsOfLoads(activeLoads, sailings);
+  const used = corridorsOfLoads(activeLoads, sailings, nowMs);
   if (![...used.keys()].some((c) => !PL_SE_CORRIDORS.has(c))) return [];
   const views = MARINE_CORRIDOR_ORDER.filter((c) => used.has(c)).map((c) => crossingView(c, marine.find((m) => m.corridor === c)));
   return sortCrossings(views).map((v) => ({ ...v, loads: used.get(v.corridor) ?? 0 }));

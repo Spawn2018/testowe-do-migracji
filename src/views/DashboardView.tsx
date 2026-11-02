@@ -30,7 +30,7 @@ import { accountRole } from '../lib/accountRole';
 import { latestNbp } from '../lib/p5Finance';
 import { useLatestNbp } from '../lib/nbpLive';
 import type { MarineConditionRow } from '../lib/marineWeatherDb';
-import { cockpitCrossings } from '../lib/bn9c3Marine';
+import { cockpitCrossings, nearestFerrySeaRow } from '../lib/bn9c3Marine';
 import { MarineCards } from '../components/dash/MarineCards';
 
 /* wyglad/J4 (E9; E11/E12 „ocena przewoźnika → Kokpit”): produkcja — odczyt `carrier_scorecard` (chunk leniwy) */
@@ -70,7 +70,7 @@ export function DashboardView() {
         .then((rows) => {
           if (cancelled) return;
           setMarineRows(rows);
-          const row = rows.find((r) => r.corridor === 'BALTIC_GDN_NYN');
+          const row = nearestFerrySeaRow(rows);
           if (!row || row.maxWaveM == null) return;
           setMarineSea({
             waveM: row.maxWaveM,
@@ -172,7 +172,10 @@ export function DashboardView() {
     return m;
   }, [events]);
   /* BN9-c3: przeprawy aktywnych transportów (te same co na mapie Kokpitu); bez bałtyckich — pusta lista, Kokpit jak dotąd */
-  const seaCrossings = useMemo(() => cockpitCrossings(mapLoads, sailings, marineRows), [mapLoads, sailings, marineRows]);
+  const seaCrossings = useMemo(
+    () => cockpitCrossings(mapLoads, sailings, marineRows, mapNowMin * 60_000),
+    [mapLoads, sailings, marineRows, mapNowMin],
+  );
   const tiles = buildCockpit({
     role, locale, nowIso: getNow().toISOString(), loads, documents, bills,
     todo, ferry, margin: marginInfo, siteSince,

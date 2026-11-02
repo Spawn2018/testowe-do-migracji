@@ -1496,7 +1496,6 @@ img,video{max-width:100%;height:auto}
 .ck-ft{padding:10px 14px;font-size:13px;color:var(--ink-2)}
 .ck-ft b{color:var(--ink);font-weight:600}
 /* BN9-c3: pogoda na przeprawach transportów — karty w stylu kafelków; długie nazwy portów łamią się (390 px bez przewijania) */
-.ck-sea{border-top:1px solid var(--rule-2)}
 .ck-sea-h{margin:0;padding:10px 14px 4px;font-size:14px;font-weight:600;color:var(--ink-2)}
 .ck-sea-card .k{overflow-wrap:anywhere}
 .ck-sea-card .v{white-space:normal}
@@ -1519,7 +1518,6 @@ img,video{max-width:100%;height:auto}
   .ck-tile .d{margin-top:3px}
   /* telefon (img/e9-after): pod kafelkami bez stopki i bez znacznika kursu — kwoty marży na telefonie nie ma */
   .ck-ft,.ck-tile .ck-tags{display:none}
-  .ck-sea{border-top:0}
   .ck-sea-h{padding:12px 14px 0}
   .ck-sea-attr{padding:8px 14px 0}
   .ck-urgent li:nth-child(n+4){display:none}

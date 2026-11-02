@@ -4,6 +4,8 @@
 .rk-grid{display:grid;grid-template-columns:minmax(0,1.55fr) minmax(320px,1fr);gap:12px;align-items:start}
 .rk-ksh .rk-route-parts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
 .rk-ksh .rk-sec-box:first-child{grid-row:span 2;border-right:1px solid var(--rule-2)}
+/* BN9-c3: „Pogoda na przeprawach” u KSH na komputerze — pełna szerokość pod promami i drogami, nie przesuwa „Drogi SE” */
+.rk-ksh .rk-route-parts>[data-panel="marine"]{grid-column:1 / -1;order:1}
 .rk-ksh-note{margin:0 2px}
 .rk-panel{margin:0;min-width:0}
 .rk-muted{margin:0;color:var(--ink-3);font-size:14px;line-height:1.45}
@@ -144,6 +146,7 @@
   .rk-title{font-size:28px}
   .rk-ksh .rk-route-parts{display:flex}
   .rk-ksh .rk-sec-box:first-child{border-right:0}
+  .rk-ksh .rk-route-parts>[data-panel="marine"]{order:0}
   .rk-filters{padding:10px 12px}
   .rk-chip{min-height:44px;font-size:16px}
   .rk-cards{padding:8px}

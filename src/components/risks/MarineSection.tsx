@@ -15,10 +15,13 @@ import { DemoMark } from '../ui/DemoMark';
 const riskKey = (r: NonNullable<MarineCrossingView['risk']>) => `bn9c3_risk_${r === 'podwyższone' ? 'podwyzszone' : r}`;
 const toneOf = (r: MarineCrossingView['risk']) => (r === 'wysokie' ? 'is-red' : r === 'podwyższone' ? 'is-amber' : 'is-go');
 const num = (v: number | null, d: number) => (v == null ? '—' : formatPlNumber(v, d));
+/* wartość null → samo „—”, bez jednostki */
+const unit = (locale: Locale, key: 'bn9c3_m' | 'bn9c3_kn', v: number | null, d: number) => (v == null ? '—' : tp(locale, key, { n: formatPlNumber(v, d) }));
 
 export function MarineSection({ locale, marine, demo }: { locale: Locale; marine: readonly MarineConditionRow[]; demo: boolean }) {
   const rows = marineCrossings(marine);
   const at = latestReadingAt(rows);
+  const attribution = marineAttribution(marine);
   const thr = rows.find((r) => !r.noReading) ?? rows[0];
   return (
     <section className="rk-sec-box" data-panel="marine" data-demo={demo ? 'marine' : undefined} aria-labelledby="rk-marine-h">
@@ -39,7 +42,7 @@ export function MarineSection({ locale, marine, demo }: { locale: Locale; marine
                   : (
                     <>
                       <span className={`rk-alert ${toneOf(v.risk)}`}>{t(locale, riskKey(v.risk))}</span>
-                      {' · '}{tp(locale, 'bn9c3_vals', { wave: num(v.waveM, 1), gust: num(v.gustKn, 0) })}
+                      {' · '}{tp(locale, 'bn9c3_vals', { wave: unit(locale, 'bn9c3_m', v.waveM, 1), gust: unit(locale, 'bn9c3_kn', v.gustKn, 0) })}
                     </>
                   )}
               </span>
@@ -53,9 +56,12 @@ export function MarineSection({ locale, marine, demo }: { locale: Locale; marine
           </li>
         ))}
       </ul>
-      <p className="rk-muted" data-attribution="marine">
-        {marineAttribution(marine)}{at ? ` · ${tp(locale, 'bn9c3_at', { at: formatListDateTime(at) })}` : ''}
-      </p>
+      {/* błąd odczytu (pusta lista) — tylko „Brak odczytu” w wierszach, bez podpisu danych, których nie ma */}
+      {attribution ? (
+        <p className="rk-muted" data-attribution="marine">
+          {attribution}{at ? ` · ${tp(locale, 'bn9c3_at', { at: formatListDateTime(at) })}` : ''}
+        </p>
+      ) : null}
       <p className="rk-muted" data-sea-disclaimer>{t(locale, 'bn9c3_disclaimer')}</p>
       <p className="rk-muted rk-ice">
         <a href={FMI_ICE_CHART_URL} target="_blank" rel="noopener noreferrer" data-ice-chart>{t(locale, 'bn9c3_ice')}</a>

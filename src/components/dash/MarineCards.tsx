@@ -6,7 +6,6 @@
  */
 import type { Locale } from '../../types';
 import type { CockpitCrossing } from '../../lib/bn9c3Marine';
-import { MARINE_ATTRIBUTION_DEFAULT } from '../../lib/bn9c3Marine';
 import { formatListDateTime, formatPlNumber } from '../../lib/format';
 import { formatSeaRiskLabel } from '../../lib/voyageSea';
 import { t, tp } from '../../i18n/messages';
@@ -20,14 +19,15 @@ function loadsText(locale: Locale, n: number): string {
 
 export function MarineCards({ locale, crossings, onGo }: { locale: Locale; crossings: readonly CockpitCrossing[]; onGo: () => void }) {
   if (!crossings.length) return null;
-  const attribution = [...new Set(crossings.map((c) => c.attribution).filter(Boolean))].join(' · ') || MARINE_ATTRIBUTION_DEFAULT;
+  /* atrybucja tylko z wierszy bazy; bez wierszy (błąd odczytu) — sam dopisek */
+  const attribution = [...new Set(crossings.map((c) => c.attribution).filter(Boolean))].join(' · ');
   return (
     <div className="ck-sea" data-ck-sea>
       <h3 className="ck-sea-h">{t(locale, 'bn9c3_ck_h')}</h3>
       <div className="kpis ck-grid ck-sea-grid">
         {crossings.map((c) => {
           const risk = c.risk ? formatSeaRiskLabel(c.risk, locale) : '';
-          const gust = c.gustKn == null ? '—' : formatPlNumber(c.gustKn, 0);
+          const gust = c.gustKn == null ? '—' : tp(locale, 'bn9c3_kn', { n: formatPlNumber(c.gustKn, 0) });
           const loads = loadsText(locale, c.loads);
           const tone = c.risk === 'wysokie' ? ' alert' : c.risk === 'podwyższone' ? ' warn' : '';
           return (
@@ -48,7 +48,7 @@ export function MarineCards({ locale, crossings, onGo }: { locale: Locale; cross
               </span>
               <span className={`v${c.noReading ? '' : tone}`}>
                 {c.noReading || c.waveM == null ? '—' : tp(locale, 'bn9c3_ck_wave', { wave: formatPlNumber(c.waveM, 1) })}
-                {!c.noReading ? <small className="ck-of">{t(locale, 'bn9c3_ck_of')}</small> : null}
+                {!c.noReading && c.waveM != null ? <small className="ck-of">{t(locale, 'bn9c3_ck_of')}</small> : null}
               </span>
               <span className="d">
                 <span className="ck-desk">
@@ -64,7 +64,7 @@ export function MarineCards({ locale, crossings, onGo }: { locale: Locale; cross
           );
         })}
       </div>
-      <p className="ck-sea-attr" data-attribution="marine-cockpit">{attribution} · {t(locale, 'bn9c3_disclaimer')}</p>
+      <p className="ck-sea-attr" data-attribution="marine-cockpit">{attribution ? `${attribution} · ` : ''}{t(locale, 'bn9c3_disclaimer')}</p>
     </div>
   );
 }

@@ -11,13 +11,14 @@ import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter } from 'react-router-dom';
 import type { MarineConditionRow, MarineCorridorCode } from '../src/lib/marineWeatherDb';
 import {
-  FMI_ICE_CHART_URL, MARINE_CORRIDOR_ORDER, cockpitCrossings, corridorOfRoute, isNoReading, marineCrossings,
+  FMI_ICE_CHART_URL, MARINE_CORRIDOR_ORDER, cockpitCrossings, corridorOfRoute, crossingAhead, isNoReading, marineCrossings, nearestFerrySeaRow,
 } from '../src/lib/bn9c3Marine';
 import { MarineSection } from '../src/components/risks/MarineSection';
 import { RoutePanel } from '../src/components/risks/RoutePanel';
 import { MarineCards } from '../src/components/dash/MarineCards';
 import { Cockpit } from '../src/components/dash/Cockpit';
-import { ferryRowsFromDb } from '../src/lib/p6Route';
+import { altProposal, ferryAlert, ferryRowsFromDb } from '../src/lib/p6Route';
+import { rt } from '../src/i18n/p6';
 import { sampleMarineOf } from '../src/lib/p6Source';
 import { BN9C3_EN, I18N_ALL } from '../src/i18n/messages';
 import type { Load, Sailing } from '../src/types';
@@ -46,7 +47,8 @@ function sailing(id: string, route: Sailing['route'], p: Partial<Sailing> = {}):
     delayedDepartureAt: null, delayedArrivalAt: null, status: 'ZAPLANOWANY', source: 'TALLINK', ...p,
   } as Sailing;
 }
-const onSailing = (sailingId: string) => ({ sailingId }) as Pick<Load, 'sailingId'>;
+const onSailing = (sailingId: string, p: Partial<Load> = {}) => ({ sailingId, status: 'PLANNED', stage: 'PLAN', ...p }) as Pick<Load, 'sailingId' | 'status' | 'stage'>;
+const NOW_MS = Date.parse(NOW);
 
 let root: Root | null = null;
 let host: HTMLDivElement | null = null;
@@ -128,10 +130,19 @@ describe('BN9-c3 — Ryzyka › Pogoda na przeprawach', () => {
     /* czas odczytu sekcji tylko z przepraw z odczytem — wiersz startowy (23:30) nie udaje pomiaru */
     expect(el.querySelector('[data-attribution="marine"]')?.textContent).toMatch(/^Dane: FMI \/ DMI \/ SMHI \(CC BY 4\.0\) · odczyt 02\.11\.2026, 10:00$/);
   });
-  it('bez danych (błąd odczytu): pięć wierszy „Brak odczytu” i domyślna atrybucja', () => {
+  it('bez danych (błąd odczytu): pięć wierszy „Brak odczytu”, bez atrybucji FMI/DMI/SMHI (nie podpisujemy danych, których nie ma)', () => {
     const el = mount(createElement(MarineSection, { locale: 'pl', marine: [], demo: false }));
     expect(el.querySelectorAll('[data-noread]').length).toBe(5);
-    expect(el.querySelector('[data-attribution="marine"]')?.textContent).toBe('Dane: FMI / DMI / SMHI (CC BY 4.0)');
+    expect(el.querySelector('[data-attribution]')).toBeNull();
+    expect(el.textContent).not.toContain('FMI / DMI / SMHI');
+    /* dopisek NAVTEX i link mapy lodowej zostają */
+    expect(el.querySelector('[data-sea-disclaimer]')).not.toBeNull();
+  });
+  it('fala albo porywy null przy odczycie: „—” bez jednostki', () => {
+    const el = mount(createElement(MarineSection, { locale: 'pl', marine: [m('BALTIC_GULF_FI', { maxWaveM: null, maxGustKn: 18 })], demo: false }));
+    const li = el.querySelector('[data-marine-row="BALTIC_GULF_FI"]')!;
+    expect(li.textContent).toContain('fala maks. — · porywy maks. 18 kn');
+    expect(li.textContent).not.toContain('— m');
   });
   it('atrybucja, dopisek NAVTEX i link „Mapa lodowa FMI” (nowa karta, rel noopener noreferrer, bez osadzania)', () => {
     const el = mount(createElement(MarineSection, { locale: 'pl', marine: [m('BALTIC_GDN_NYN')], demo: false }));
@@ -190,7 +201,7 @@ describe('BN9-c3 — Kokpit: pogoda na przeprawach aktywnych transportów', () =
   const marine = MARINE_CORRIDOR_ORDER.map((c) => (c === 'BALTIC_TLL_STO' ? m(c, { risk: 'wysokie', maxWaveM: 4.2, maxGustKn: 45 }) : m(c)));
 
   it('tylko przeprawy, którymi jadą aktywne transporty (rodzina trasy z rejsu), z liczbą transportów; ryzyko wyżej', () => {
-    const list = cockpitCrossings([onSailing('s-tll'), onSailing('s-tll'), onSailing('s-sto'), onSailing('s-gdn'), onSailing('brak')], sails, marine);
+    const list = cockpitCrossings([onSailing('s-tll'), onSailing('s-tll'), onSailing('s-sto'), onSailing('s-gdn'), onSailing('brak')], sails, marine, NOW_MS);
     expect(list.map((c) => [c.corridor, c.loads])).toEqual([['BALTIC_TLL_STO', 1], ['BALTIC_GDN_NYN', 1], ['BALTIC_GULF_FI', 2]]);
     const el = mount(createElement(MarineCards, { locale: 'pl', crossings: list, onGo: () => {} }));
     const cards = [...el.querySelectorAll('[data-ck-sea-row]')];
@@ -205,15 +216,15 @@ describe('BN9-c3 — Kokpit: pogoda na przeprawach aktywnych transportów', () =
     expect(el.querySelector('[data-attribution="marine-cockpit"]')?.textContent).toContain('Dane: FMI / DMI / SMHI (CC BY 4.0) · Informacja pomocnicza');
   });
   it('przeprawa bez odczytu (wiersz startowy): „—” i „brak odczytu”', () => {
-    const list = cockpitCrossings([onSailing('s-pld')], sails, [start('BALTIC_PLD_KPS')]);
+    const list = cockpitCrossings([onSailing('s-pld')], sails, [start('BALTIC_PLD_KPS')], NOW_MS);
     expect(list).toHaveLength(1);
     const el = mount(createElement(MarineCards, { locale: 'pl', crossings: list, onGo: () => {} }));
     expect(el.querySelector('.v')?.textContent).toBe('—');
     expect(el.querySelector('.d .ck-desk')?.textContent).toBe('brak odczytu · 1 transport');
   });
   it('regresja: bez transportów bałtyckich (tylko Gdańsk – Nynäshamn / Gdynia – Karlskrona albo bez rejsu) — brak kart, Kokpit jak dotąd', () => {
-    expect(cockpitCrossings([onSailing('s-gdn'), onSailing('s-gdy'), { sailingId: null }], sails, marine)).toEqual([]);
-    expect(cockpitCrossings([], sails, marine)).toEqual([]);
+    expect(cockpitCrossings([onSailing('s-gdn'), onSailing('s-gdy'), onSailing('', { sailingId: null })], sails, marine, NOW_MS)).toEqual([]);
+    expect(cockpitCrossings([], sails, marine, NOW_MS)).toEqual([]);
     const el = mount(createElement(Cockpit, {
       locale: 'pl', role: 'SCX', org: 'Scandinavian Express', kind: 'Dyspozytor', date: '02.11.2026',
       tiles: [{ id: 'ferry', label: 'Najbliższy prom', labelShort: 'Najbliższy prom', go: 'risk', value: '—', of: null, desc: 'x', descShort: 'x', tone: 'default' }],
@@ -225,7 +236,7 @@ describe('BN9-c3 — Kokpit: pogoda na przeprawach aktywnych transportów', () =
   });
   it('Kokpit z transportem bałtyckim: karty pod kafelkami w tej samej ramce, klik prowadzi do Ryzyk', () => {
     let went = 0;
-    const list = cockpitCrossings([onSailing('s-sto')], sails, marine);
+    const list = cockpitCrossings([onSailing('s-sto')], sails, marine, NOW_MS);
     const el = mount(createElement(Cockpit, {
       locale: 'pl', role: 'HHL', org: 'H&H Logistics', kind: 'Administrator', date: '02.11.2026', tiles: [], onGo: () => {},
       extra: createElement(MarineCards, { locale: 'pl', crossings: list, onGo: () => { went += 1; } }),
@@ -234,11 +245,11 @@ describe('BN9-c3 — Kokpit: pogoda na przeprawach aktywnych transportów', () =
     act(() => card.click());
     expect(went).toBe(1);
     const src = readFileSync('src/views/DashboardView.tsx', 'utf8');
-    expect(src).toContain('cockpitCrossings(mapLoads, sailings, marineRows)');
+    expect(src).toContain('cockpitCrossings(mapLoads, sailings, marineRows, mapNowMin * 60_000)');
     expect(src).toMatch(/extra=\{seaCrossings\.length \?/);
   });
   it('telefon 390 px: krótka nazwa i krótki opis w kartach; nazwy i wartości łamią się (bez poziomego przewijania)', () => {
-    const list = cockpitCrossings([onSailing('s-tll'), onSailing('s-sto')], sails, marine);
+    const list = cockpitCrossings([onSailing('s-tll'), onSailing('s-sto')], sails, marine, NOW_MS);
     const el = mount(createElement(MarineCards, { locale: 'pl', crossings: list, onGo: () => {} }), 390);
     const fi = el.querySelector('[data-ck-sea-row="BALTIC_GULF_FI"]')!;
     expect(fi.querySelector('.k .ck-phone')?.textContent).toBe('Zatoka Fińska');
@@ -249,11 +260,122 @@ describe('BN9-c3 — Kokpit: pogoda na przeprawach aktywnych transportów', () =
   });
 });
 
+describe('BN9-c3 — Kokpit: tylko transporty z przeprawą przed sobą', () => {
+  const ended = sailing('s-hel-old', 'TLL-HEL', { departureAt: '2026-11-02T05:00:00Z', arrivalAt: '2026-11-02T08:00:00Z', status: 'DOPLYNAL' });
+  const open = sailing('s-hel', 'TLL-HEL');
+  const late = sailing('s-hel-late', 'TLL-HEL', { departureAt: '2026-11-02T06:00:00Z', arrivalAt: '2026-11-02T09:00:00Z', delayedArrivalAt: '2026-11-02T11:00:00Z' });
+  const sails = [ended, open, late];
+  const marine = [m('BALTIC_GULF_FI')];
+
+  it('naczepa po zjeździe z promu TLL-HEL (rejs dopłynął, drogi SE) nie jest liczona — brak kart', () => {
+    const offFerry = onSailing('s-hel-old', { status: 'IN_TRANSIT_SE', stage: 'SE' as Load['stage'] });
+    expect(crossingAhead(offFerry, ended, NOW_MS)).toBe(false);
+    expect(cockpitCrossings([offFerry], sails, marine, NOW_MS)).toEqual([]);
+    /* rejs bez „Dopłynął”, ale planowe przypłynięcie minęło — też za sobą */
+    const pastNoFlag = sailing('s-hel-past', 'TLL-HEL', { arrivalAt: '2026-11-02T08:00:00Z' });
+    expect(cockpitCrossings([onSailing('s-hel-past', { status: 'IN_TRANSIT_SE', stage: 'SE' as Load['stage'] })], [pastNoFlag], marine, NOW_MS)).toEqual([]);
+  });
+  it('liczone: rejs trwa (przypłynięcie po „teraz”, także opóźnione), albo transport przed promem lub na promie', () => {
+    const list = cockpitCrossings([
+      onSailing('s-hel', { status: 'IN_TRANSIT_PL', stage: 'PL' as Load['stage'] }),
+      onSailing('s-hel-late', { status: 'IN_TRANSIT_SE', stage: 'SE' as Load['stage'] }),
+      onSailing('s-hel-old', { status: 'ON_FERRY', stage: 'FERRY' as Load['stage'] }),
+      onSailing('s-hel-old', { status: 'IN_TRANSIT_SE', stage: 'SE' as Load['stage'] }),
+    ], sails, marine, NOW_MS);
+    expect(list.map((c) => [c.corridor, c.loads])).toEqual([['BALTIC_GULF_FI', 3]]);
+  });
+  it('bez wierszy pogody (błąd odczytu): karta „brak odczytu”, sam dopisek NAVTEX bez atrybucji FMI/DMI/SMHI', () => {
+    const list = cockpitCrossings([onSailing('s-hel')], sails, [], NOW_MS);
+    const el = mount(createElement(MarineCards, { locale: 'pl', crossings: list, onGo: () => {} }));
+    expect(el.querySelector('.d .ck-desk')?.textContent).toBe('brak odczytu · 1 transport');
+    expect(el.querySelector('[data-attribution="marine-cockpit"]')?.textContent)
+      .toBe('Informacja pomocnicza — nie zastępuje decyzji armatora i kapitana ani komunikatów NAVTEX.');
+  });
+  it('karta bez ramki u góry (bez podwójnej linii pod kafelkami)', () => {
+    expect(readFileSync('src/index.css', 'utf8')).not.toMatch(/\.ck-sea\{border-top/);
+  });
+});
+
+describe('BN9-c3 — kafelek „Najbliższy prom”: Gdańsk – Nynäshamn z listy wielu korytarzy', () => {
+  it('bierze BALTIC_GDN_NYN, pomija wiersz startowy i wiersz bez fali; wiersza bałtyckiego nigdy', () => {
+    const gdn = m('BALTIC_GDN_NYN', { maxWaveM: 1.0, risk: 'niskie' });
+    const sto = m('BALTIC_TLL_STO', { maxWaveM: 4.2, risk: 'wysokie' });
+    expect(nearestFerrySeaRow([sto, m('BALTIC_GULF_FI'), gdn])).toBe(gdn);
+    expect(nearestFerrySeaRow([sto, start('BALTIC_GDN_NYN')])).toBeNull();
+    expect(nearestFerrySeaRow([sto, m('BALTIC_GDN_NYN', { maxWaveM: null })])).toBeNull();
+    expect(nearestFerrySeaRow([sto, m('BALTIC_GULF_FI')])).toBeNull();
+    expect(nearestFerrySeaRow([])).toBeNull();
+    expect(readFileSync('src/views/DashboardView.tsx', 'utf8')).toContain('const row = nearestFerrySeaRow(rows);');
+  });
+});
+
+describe('BN9-c3 — sztorm na przeprawach bałtyckich: „Możliwe odwołanie” i druga przeprawa (decyzja koordynatora, zasada BN3)', () => {
+  const nowMs = Date.parse(NOW);
+  const tl = sailing('tl', 'TLL-STO', { operator: 'Tallink Silja', source: 'TALLINK', vessel: 'Baltic Queen' });
+  const df = sailing('df', 'PLD-KPS', { operator: 'DFDS', source: 'DFDS', vessel: 'Finbo Cargo', departureAt: '2026-11-02T18:00:00Z', arrivalAt: '2026-11-03T04:00:00Z' });
+
+  it('sztorm na Tallinn – Sztokholm: wiersz Tallink TLL-STO „Możliwe odwołanie”; druga przeprawa DFDS (Paldiski – Kapellskär) bez sztormu', () => {
+    const rows = ferryRowsFromDb([tl, df], [m('BALTIC_TLL_STO', { risk: 'wysokie', maxWaveM: 4.3 }), m('BALTIC_PLD_KPS')], [], nowMs);
+    const row = rows.find((r) => r.id === 'tl')!;
+    expect(ferryAlert(row)).toBe('STORM');
+    expect(rt('pl', 'p6_ferry_STORM')).toBe('Możliwe odwołanie');
+    expect(ferryAlert(rows.find((r) => r.id === 'df')!)).toBe('OK');
+    const alt = altProposal(rows, [tl, df], nowMs);
+    expect(alt).toMatchObject({ kind: 'ALT', from: 'TALLINK', to: 'DFDS', reason: 'STORM', dest: 'SE' });
+    expect(alt && 'sailings' in alt ? alt.sailings.map((s) => s.id) : []).toEqual(['df']);
+  });
+  it('sztorm także na Paldiski – Kapellskär: bez propozycji (oba kierunki do Szwecji zagrożone)', () => {
+    const rows = ferryRowsFromDb([tl, df], [m('BALTIC_TLL_STO', { risk: 'wysokie' }), m('BALTIC_PLD_KPS', { risk: 'wysokie' })], [], nowMs);
+    expect(altProposal(rows, [tl, df], nowMs)).toEqual({ kind: 'BOTH', dest: 'SE' });
+  });
+  it('sztorm na Zatoce Fińskiej: wszyscy armatorzy do Finlandii „Możliwe odwołanie” → BOTH, jak dziś', () => {
+    const sails = [
+      sailing('fi-tl', 'TLL-HEL', { operator: 'Tallink Silja', source: 'TALLINK' }),
+      sailing('fi-vk', 'TLLA-HEL', { operator: 'Viking Line', source: 'VIKING', departureAt: '2026-11-02T16:30:00Z' }),
+      sailing('fi-ek', 'MUU-VUO', { operator: 'Eckerö Line', source: 'ECKERO', departureAt: '2026-11-02T17:00:00Z' }),
+    ];
+    const rows = ferryRowsFromDb(sails, [m('BALTIC_GULF_FI', { risk: 'wysokie', maxWaveM: 4.0 })], [], nowMs);
+    expect(rows.map((r) => [r.line, ferryAlert(r)]).sort()).toEqual([['ECKERO', 'STORM'], ['TALLINK', 'STORM'], ['VIKING', 'STORM']]);
+    expect(altProposal(rows, sails, nowMs)).toEqual({ kind: 'BOTH', dest: 'FI' });
+  });
+  it('regresja: Polferries i Stena bez zmian — pogoda bałtycka nie zmienia ich wierszy ani propozycji', () => {
+    const pf = sailing('pf', 'GDN-NYN', { operator: 'Polferries', source: 'POLFERRIES', vessel: 'Nova Star' });
+    const st = sailing('st', 'GDY-KAA', { operator: 'Stena Line', source: 'STENA', vessel: 'Stena Ebba', departureAt: '2026-11-02T18:00:00Z' });
+    const legacy = [m('BALTIC_GDN_NYN', { risk: 'wysokie', maxWaveM: 4.0 }), m('BALTIC_GDY_KAA')];
+    const base = ferryRowsFromDb([pf, st], legacy, [], nowMs);
+    const withBaltic = ferryRowsFromDb([pf, st], [...legacy, m('BALTIC_TLL_STO', { risk: 'wysokie' }), m('BALTIC_GULF_FI', { risk: 'wysokie' })], [], nowMs);
+    expect(withBaltic).toEqual(base);
+    expect(base.map((r) => [r.line, ferryAlert(r)])).toEqual([['POLFERRIES', 'STORM'], ['STENA', 'OK']]);
+    const alt = altProposal(base, [pf, st], nowMs);
+    expect(alt).toMatchObject({ kind: 'ALT', from: 'POLFERRIES', to: 'STENA', reason: 'STORM' });
+    expect(alt && 'dest' in alt ? alt.dest : undefined).toBeUndefined();
+    /* przy sztormie u Polferries i bałtyckim — propozycja PL–SE ma pierwszeństwo, jak dotąd */
+    const mixed = ferryRowsFromDb([pf, st, tl], [...legacy, m('BALTIC_TLL_STO', { risk: 'wysokie' })], [], nowMs);
+    expect(altProposal(mixed, [pf, st, tl], nowMs)).toMatchObject({ kind: 'ALT', from: 'POLFERRIES', to: 'STENA' });
+  });
+});
+
+describe('BN9-c3 — Ryzyka KSH na komputerze: sekcja pogody nie przesuwa „Drogi SE”', () => {
+  it('KSH: sekcja w części promów, w siatce na pełną szerokość na końcu; na telefonie w kolejności dokumentu', () => {
+    const el = mount(createElement(MemoryRouter, null, createElement(RoutePanel, {
+      role: 'KSH', locale: 'pl', phone: false, nowIso: NOW, loads: [], risks: [], sailings: [], marine: [], corridor: null,
+      seSituations: [], seDemo: false, showDemoMarks: true, parts: ['ferry', 'roads'], withHead: false,
+    })));
+    const panels = [...el.querySelectorAll('.rk-route-parts > [data-panel]')].map((s) => s.getAttribute('data-panel'));
+    expect(panels).toEqual(['ferry', 'marine', 'road-pl', 'road-se']);
+    const css = readFileSync('src/components/risks/risks.css', 'utf8');
+    expect(css).toContain('.rk-ksh .rk-route-parts>[data-panel="marine"]{grid-column:1 / -1;order:1}');
+    expect(css).toMatch(/@media \(max-width: 768px\)\{[\s\S]*\.rk-ksh \.rk-route-parts>\[data-panel="marine"\]\{order:0\}/);
+  });
+});
+
 describe('BN9-c3 — teksty', () => {
   it('klucze PL w słowniku; EN (BN9C3_EN) z tymi samymi kluczami, bez polskich liter, niepodpięte (8A)', () => {
     const pl = Object.keys(I18N_ALL.pl).filter((k) => k.startsWith('bn9c3_')).sort();
     expect(Object.keys(BN9C3_EN).sort()).toEqual(pl);
     for (const v of Object.values(BN9C3_EN)) expect(/[ąćęłńóśźż]/i.test(v), v).toBe(false);
     expect(Object.keys(I18N_ALL.en).some((k) => k.startsWith('bn9c3_'))).toBe(false);
+    /* nieużywany po przeniesieniu atrybucji */
+    expect(readFileSync('src/i18n/p6.ts', 'utf8')).not.toContain('p6_sea_attr');
   });
 });
