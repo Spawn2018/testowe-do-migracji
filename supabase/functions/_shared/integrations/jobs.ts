@@ -3909,9 +3909,15 @@ async function roadLtFailStreak(deps: JobDeps): Promise<number> {
 
 /**
  * BN6 (#716) cz.3 / #589 — drogi LV (22 zbiory LV_NAP_*_KEY/URL).
- * Bez URL/kluczy w warnings i observations; SOURCE_DOWN po 3× fetched_ok===0
- * gdy są skonfigurowane zbiory; resolveStale tylko przy komplecie.
+ * F7 #730: równolegle limit 6, timeout 10 s, budżet ~65 s, limit 5 MB;
+ * fetchedOk dopiero po rozpoznanym formacie; resolveStale tylko przy komplecie;
+ * SOURCE_DOWN po 3× fetched_ok===0 gdy configured>0 (N3: bez sekretów nie liczy streak).
  */
+const LV_FEED_TIMEOUT_MS = 10_000;
+const LV_FEED_BUDGET_MS = 65_000;
+const LV_FEED_MAX_BYTES = 5 * 1024 * 1024;
+const LV_FEED_CONCURRENCY = 6;
+
 export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
   const now = deps.now().toISOString();
   const warnings: string[] = [];
@@ -3924,8 +3930,9 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
   }
   const expectedFetches = configured.length;
   if (expectedFetches === 0) {
+    /* F7 #730 N3: configured:0 — nie ok:false, nie streak SOURCE_DOWN. */
     return {
-      job: 'road-lv', mode: 'LIVE', ok: false, risks: 0,
+      job: 'road-lv', mode: 'LIVE', ok: true, risks: 0,
       warnings: [...warnings, 'LV: brak skonfigurowanych par LV_NAP_*_KEY/URL'],
       observations: {
         source: 'lvc_nap',
@@ -3937,41 +3944,83 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
     };
   }
 
-  let fetchedOk = 0;
-  const allEvents: BalticRoadEvent[] = [];
-  const perCode: Record<string, string> = {};
-  const formats: Record<string, string> = {};
-
-  for (const { code, url, key } of configured) {
+  const started = Date.now();
+  const parseStats = { parsed: 0, skipped: 0 };
+  const parts = await mapPoolLimit(configured, LV_FEED_CONCURRENCY, async ({ code, url, key }) => {
+    if (Date.now() - started > LV_FEED_BUDGET_MS) {
+      return {
+        code,
+        ok: false as const,
+        warning: `niepobrany ${code} (budżet czasu)`,
+        per: 'budget',
+        format: '' as string,
+        events: [] as BalticRoadEvent[],
+      };
+    }
     const headers: Record<string, string> = {
       'User-Agent': LV_UA,
       Accept: 'application/json, application/xml, text/xml, */*',
       [LV_NAP_KEY_HEADER]: key,
     };
     const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), READ_TEXT_TIMEOUT_MS);
+    const timer = setTimeout(() => ctrl.abort(), LV_FEED_TIMEOUT_MS);
     try {
       const res = await deps.fetch(url, { headers, signal: ctrl.signal });
       if (!res.ok) {
-        warnings.push(`LV ${code}: HTTP ${res.status}`);
-        perCode[code] = `http_${res.status}`;
-        continue;
+        return {
+          code, ok: false as const,
+          warning: `LV ${code}: HTTP ${res.status}`,
+          per: `http_${res.status}`, format: '', events: [] as BalticRoadEvent[],
+        };
       }
-      const text = await res.text();
-      fetchedOk++;
-      const parsed = parseLvFeedBody(text, code);
-      formats[code] = parsed.format;
-      perCode[code] = `ok:${parsed.events.length}:${parsed.format}`;
-      if (parsed.format === 'unknown' || parsed.format === 'empty') {
-        warnings.push(`LV ${code}: pusty lub nieznany format`);
+      const buf = await res.arrayBuffer();
+      if (buf.byteLength > LV_FEED_MAX_BYTES) {
+        return {
+          code, ok: false as const,
+          warning: `nieczytelna odpowiedź ${code}`,
+          per: 'too_large', format: 'unknown', events: [] as BalticRoadEvent[],
+        };
       }
-      for (const e of parsed.events) allEvents.push(e);
+      const text = new TextDecoder('utf-8', { fatal: false }).decode(buf);
+      const parsed = parseLvFeedBody(text, code, parseStats);
+      const recognized = parsed.format === 'datex-xml'
+        || parsed.format === 'datex-json'
+        || parsed.format === 'geojson';
+      if (!recognized) {
+        return {
+          code, ok: false as const,
+          warning: `nieczytelna odpowiedź ${code}`,
+          per: `bad:${parsed.format}`, format: parsed.format, events: [] as BalticRoadEvent[],
+        };
+      }
+      return {
+        code, ok: true as const, warning: null as string | null,
+        per: `ok:${parsed.events.length}:${parsed.format}`,
+        format: parsed.format, events: parsed.events,
+      };
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      warnings.push(`LV ${code}: ${/abort/i.test(msg) ? 'timeout' : 'błąd sieci'}`);
-      perCode[code] = 'error';
+      return {
+        code, ok: false as const,
+        warning: `LV ${code}: ${/abort/i.test(msg) ? 'timeout' : 'błąd sieci'}`,
+        per: 'error', format: '', events: [] as BalticRoadEvent[],
+      };
     } finally {
       clearTimeout(timer);
+    }
+  });
+
+  let fetchedOk = 0;
+  const allEvents: BalticRoadEvent[] = [];
+  const perCode: Record<string, string> = {};
+  const formats: Record<string, string> = {};
+  for (const p of parts) {
+    perCode[p.code] = p.per;
+    if (p.format) formats[p.code] = p.format;
+    if (p.warning) warnings.push(p.warning);
+    if (p.ok) {
+      fetchedOk++;
+      for (const e of p.events) allEvents.push(e);
     }
   }
 
@@ -3993,6 +4042,7 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
           expected_fetches: String(expectedFetches),
           configured: String(expectedFetches),
           header: LV_NAP_KEY_HEADER,
+          records_skipped: String(parseStats.skipped),
         },
       };
     }
@@ -4005,13 +4055,13 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
         expected_fetches: String(expectedFetches),
         configured: String(expectedFetches),
         header: LV_NAP_KEY_HEADER,
+        records_skipped: String(parseStats.skipped),
       },
     };
   }
 
   await deps.store.resolveRisks('SOURCE_DOWN:ROAD_LV:');
   const deduped = dedupeLvSlippery(allEvents);
-  /* DP-164: filtr A7/E67 + A1 (dojazd EE) do BN7. */
   const near = applyBalticCorridorRoadFilter('LV', filterInLvBboxes(deduped));
   const complete = fetchedOk === expectedFetches;
   let risks = 0;
@@ -4052,14 +4102,20 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
         zrodlo: LV_ATTRIBUTION,
         complete,
         formats,
-        dp164: 'filtr A7/E67+A1 EE',
+        records_skipped: parseStats.skipped,
+        dp164: 'filtr A7/E67+A1/A4/A5 + ≤3 km',
       },
     });
   }
 
+  /* N8: ostrzeżenia/observations bez wartości kluczy. */
+  const safeWarnings = warnings.filter((w) =>
+    !configured.some((c) => c.key && w.includes(c.key))
+  );
+
   return {
-    job: 'road-lv', mode: 'LIVE', ok: complete && warnings.length === 0,
-    risks, warnings,
+    job: 'road-lv', mode: 'LIVE', ok: complete && safeWarnings.length === 0,
+    risks, warnings: safeWarnings,
     observations: {
       source: 'lvc_nap',
       fetched_ok: String(fetchedOk),
@@ -4069,7 +4125,7 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
       events_near: String(near.length),
       configured: String(expectedFetches),
       header: LV_NAP_KEY_HEADER,
-      /* per-code: status bez URL/kluczy */
+      records_skipped: String(parseStats.skipped),
       ...Object.fromEntries(Object.entries(perCode).map(([k, v]) => [`lv_${k.toLowerCase()}`, v])),
     },
   };
@@ -4080,6 +4136,9 @@ async function roadLvFailStreak(deps: JobDeps): Promise<number> {
   if (!deps.store.recentJobResults) return streak;
   const rows = await deps.store.recentJobResults('road-lv', 5);
   for (const row of rows) {
+    const configured = Number(row.observations?.configured ?? NaN);
+    /* F7 #730 N3: przebiegi bez sekretów (configured:0) przerywają streak. */
+    if (Number.isFinite(configured) && configured === 0) break;
     const fo = Number(row.observations?.fetched_ok ?? NaN);
     if (fo === 0) streak++;
     else break;

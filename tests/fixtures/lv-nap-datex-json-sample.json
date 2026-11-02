@@ -1,0 +1,17 @@
+{
+  "situation": [
+    {
+      "situationRecord": {
+        "id": "bn6-lv-json-rw",
+        "type": "MaintenanceWorks",
+        "latitude": 56.95,
+        "longitude": 24.10,
+        "severity": "high",
+        "roadNumber": "A7",
+        "overallStartTime": "2026-11-02T04:00:00Z",
+        "overallEndTime": "2026-11-02T20:00:00Z",
+        "comment": "Ceļa remontdarbi A7 JSON"
+      }
+    }
+  ]
+}

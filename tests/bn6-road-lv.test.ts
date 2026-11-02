@@ -1,6 +1,6 @@
 /**
  * BN6 (#716) cz.3 — LVC NAP LV: DATEX/GeoJSON, dedup śliskości, runRoadLv.
- * DP-160 (LT_ICY_RE) — testy w bn6-road-lt + tutaj smoke.
+ * F7 #730 r1 B1–B7 / N1–N8 + DP-160/164.
  */
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -12,11 +12,15 @@ import {
   LV_SOURCE_REF,
   LV_UA,
   applyBalticCorridorRoadFilter,
+  balticCapLongDetourClosure,
   balticSlowdownMult,
   dedupeLvSlippery,
+  extractBalticRoadRef,
   filterInLvBboxes,
   isDimensionLimitEvent,
+  lvCoordsFromRecord,
   lvRoadOnCorridor,
+  lvSeverityForRecord,
   parseLvDatexXml,
   parseLvFeedBody,
   parseLvWeightDimGeoJson,
@@ -33,6 +37,9 @@ import type { RiskInput } from '../supabase/functions/_shared/integrations/sync.
 const rwXml = readFileSync(resolve('tests/fixtures/lv-nap-roadworks-sample.xml'), 'utf8');
 const slipWm = readFileSync(resolve('tests/fixtures/lv-nap-slippery-wm-sample.xml'), 'utf8');
 const slipTi = readFileSync(resolve('tests/fixtures/lv-nap-slippery-ti-sample.xml'), 'utf8');
+const datexJson = JSON.parse(
+  readFileSync(resolve('tests/fixtures/lv-nap-datex-json-sample.json'), 'utf8'),
+);
 const weightJson = JSON.parse(
   readFileSync(resolve('tests/fixtures/lv-nap-weight-dim-sample.json'), 'utf8'),
 );
@@ -122,7 +129,7 @@ function deps(
 }
 
 const MOCK_ENV: Record<string, string> = {
-  LV_NAP_ROADWORKS_KEY: 'k-rw',
+  LV_NAP_ROADWORKS_KEY: 'k-rw-secret-value',
   LV_NAP_ROADWORKS_URL: 'https://nap.example/lv/roadworks',
   LV_NAP_SLIPPERY_WM_KEY: 'k-sw',
   LV_NAP_SLIPPERY_WM_URL: 'https://nap.example/lv/slippery-wm',
@@ -132,38 +139,72 @@ const MOCK_ENV: Record<string, string> = {
   LV_NAP_WEIGHT_DIM_URL: 'https://nap.example/lv/weight-dim',
 };
 
-describe('BN6 DP-160 LT_ICY_RE', () => {
-  it('łapie Apledėjusi / ledas / šlapdriba / sniegas; nie service', () => {
+describe('BN6 DP-160 / F7 #730 N1 LT_ICY_RE', () => {
+  it('rdzenie bez końcowej granicy; negatywy Drėgna/Sausa', () => {
     expect(LT_ICY_RE.test('Apledėjusi')).toBe(true);
+    expect(LT_ICY_RE.test('Šerkšnas')).toBe(true);
+    expect(LT_ICY_RE.test('Apledėję')).toBe(true);
+    expect(LT_ICY_RE.test('Ledo')).toBe(true);
+    expect(LT_ICY_RE.test('Snieguota')).toBe(true);
+    expect(LT_ICY_RE.test('Užsnigta')).toBe(true);
     expect(LT_ICY_RE.test('ledas')).toBe(true);
     expect(LT_ICY_RE.test('šlapdriba')).toBe(true);
-    expect(LT_ICY_RE.test('sniegas')).toBe(true);
     expect(LT_ICY_RE.test('service')).toBe(false);
     expect(LT_ICY_RE.test('Šlapia')).toBe(false);
+    expect(LT_ICY_RE.test('Drėgna')).toBe(false);
+    expect(LT_ICY_RE.test('Sausa')).toBe(false);
   });
 });
 
-describe('BN6 parse LV DATEX / GeoJSON', () => {
-  it('DATEX XML: zdarzenie na korytarzu + poza bboxem', () => {
+describe('BN6 parse LV DATEX / GeoJSON (F7 #730)', () => {
+  it('B1: Ceļa remontdarbi A7 → LOW; posList + roadClosed → HIGH', () => {
     const parsed = parseLvDatexXml(rwXml, 'ROADWORKS');
-    expect(parsed.length).toBe(2);
+    expect(parsed.length).toBe(3);
+    const rw = parsed.find((e) => e.id === 'bn6-lv-rw-riga')!;
+    expect(rw.severity).toBe('LOW');
+    expect(rw.title).toMatch(/roboty/);
+    expect(lvSeverityForRecord('ROADWORKS', 'Ceļa remontdarbi A7')).toBe('LOW');
+    const closed = parsed.find((e) => e.id === 'bn6-lv-rw-poslist')!;
+    expect(closed.severity).toBe('HIGH');
+    expect(closed.hasDetour).toBe(true);
+    expect(closed.lat).toBeCloseTo(56.9535, 3);
     const near = filterInLvBboxes(parsed);
-    expect(near.map((e) => e.id)).toEqual(['bn6-lv-rw-riga']);
-    expect(near[0].severity).toBe('MEDIUM');
-    expect(near[0].title).toMatch(/A7/);
+    expect(near.map((e) => e.id).sort()).toEqual(['bn6-lv-rw-poslist', 'bn6-lv-rw-riga'].sort());
   });
 
-  it('dedup śliskości WM+TI → jedno id sticky', () => {
+  it('B3: JSON z situationRecord nie idzie do XML; HTML → unknown', () => {
+    const body = JSON.stringify(datexJson);
+    expect(body[0]).toBe('{');
+    expect(body).toMatch(/situationRecord/i);
+    /* stary błąd: /situationRecord/ w pierwszych 500 znakach → XML; teraz pierwszy znak. */
+    expect(body.slice(0, 500)).toMatch(/situationRecord/i);
+    const parsed = parseLvFeedBody(body, 'ROADWORKS');
+    expect(parsed.format).toBe('datex-json');
+    expect(parsed.events.length).toBe(1);
+    expect(parsed.events[0].severity).toBe('LOW');
+    expect(parseLvFeedBody('<!DOCTYPE html><html>x</html>', 'ROADWORKS').format).toBe('unknown');
+    expect(parseLvFeedBody('', 'ROADWORKS').format).toBe('empty');
+  });
+
+  it('B6: posList centroid; N7 dekoduje encje XML', () => {
+    const rec = `<x><posList>56.95 24.10 56.96 24.12</posList><value>A &amp; B</value></x>`;
+    expect(lvCoordsFromRecord(rec)?.[0]).toBeCloseTo(56.955, 3);
+    const e = parseLvDatexXml(rwXml, 'ROADWORKS').find((x) => x.id === 'bn6-lv-rw-poslist')!;
+    expect(e.detail).toContain('&');
+    expect(e.detail).not.toContain('&amp;');
+  });
+
+  it('N5: dedup śliskości WM+TI → siatka 0,01°', () => {
     const a = parseLvDatexXml(slipWm, 'SLIPPERY_WM');
     const b = parseLvDatexXml(slipTi, 'SLIPPERY_TI');
-    expect(a[0].id).toMatch(/^slippery:/);
+    expect(a[0].id).toMatch(/^slippery:\d+\.\d{2}:/);
     expect(a[0].id).toBe(b[0].id);
     const dedup = dedupeLvSlippery([...a, ...b]);
     expect(dedup.length).toBe(1);
     expect(dedup[0].severity).toBe('HIGH');
   });
 
-  it('WEIGHT_DIM GeoJSON: height MEDIUM dim; weight; filtr bbox', () => {
+  it('WEIGHT_DIM GeoJSON: height → dim; weight; filtr bbox', () => {
     const parsed = parseLvWeightDimGeoJson(weightJson, 'WEIGHT_DIM');
     expect(parsed.length).toBe(3);
     const near = filterInLvBboxes(parsed);
@@ -174,16 +215,10 @@ describe('BN6 parse LV DATEX / GeoJSON', () => {
     const weight = near.find((e) => e.id === 'bn6-lv-wd-weight')!;
     expect(weight.weightLimitT).toBe(40);
   });
-
-  it('parseLvFeedBody wybiera format', () => {
-    expect(parseLvFeedBody(rwXml, 'ROADWORKS').format).toBe('datex-xml');
-    expect(parseLvFeedBody(JSON.stringify(weightJson), 'WEIGHT_DIM').format).toBe('geojson');
-    expect(parseLvFeedBody('', 'ROADWORKS').format).toBe('empty');
-  });
 });
 
-describe('BN6 runRoadLv', () => {
-  it('nagłówek Ocp-Apim + UA; bez URL w warnings; ryzyka + corridor', async () => {
+describe('BN6 runRoadLv F7 #730', () => {
+  it('nagłówek Ocp-Apim + UA; bez URL/kluczy w warnings; ryzyka + corridor', async () => {
     const st = new MemStore();
     const { d, headerCalls } = deps(st, {
       'nap.example/lv/roadworks': rwXml,
@@ -200,6 +235,8 @@ describe('BN6 runRoadLv', () => {
     expect(r.observations?.header).toBe(LV_NAP_KEY_HEADER);
     expect(r.observations?.complete).toBe('1');
     expect(r.warnings?.some((w) => /nap\.example|https?:\/\//i.test(w))).toBe(false);
+    expect(r.warnings?.some((w) => w.includes('k-rw-secret-value'))).toBe(false);
+    expect(JSON.stringify(r.observations ?? {})).not.toContain('k-rw-secret-value');
     expect(st.corridor?.corridor).toBe('ROAD_LV');
     expect(st.risks.some((x) => x.dedup === 'ROAD_LV:bn6-lv-rw-riga')).toBe(true);
     expect(st.risks.filter((x) => String(x.dedup).startsWith('ROAD_LV:slippery:')).length).toBe(1);
@@ -211,16 +248,36 @@ describe('BN6 runRoadLv', () => {
     expect(st.risks.some((x) => x.dedup === 'ROAD_LV:bn6-lv-rw-far-east')).toBe(false);
   });
 
-  it('SOURCE_DOWN po 3× fetched_ok===0', async () => {
+  it('B4: 1/4 HTML → complete=false, bez resolveStale', async () => {
+    const st = new MemStore();
+    const r = await runRoadLv(deps(st, {
+      'nap.example/lv/roadworks': '<!DOCTYPE html><html>serwiss</html>',
+      'nap.example/lv/slippery-wm': slipWm,
+      'nap.example/lv/slippery-ti': slipTi,
+      'nap.example/lv/weight-dim': JSON.stringify(weightJson),
+    }, MOCK_ENV).d);
+    expect(r.observations?.fetched_ok).toBe('3');
+    expect(r.observations?.complete).toBe('0');
+    expect(r.warnings?.some((w) => /nieczytelna odpowiedź ROADWORKS/.test(w))).toBe(true);
+    expect(st.staleCalls.length).toBe(0);
+  });
+
+  it('SOURCE_DOWN po 3× fetched_ok===0 (configured>0)', async () => {
     const st = new MemStore();
     st.runs.push(
       {
         job: 'road-lv', ok: false,
-        result: { job: 'road-lv', mode: 'LIVE', ok: false, observations: { fetched_ok: '0' } },
+        result: {
+          job: 'road-lv', mode: 'LIVE', ok: false,
+          observations: { fetched_ok: '0', configured: '4' },
+        },
       },
       {
         job: 'road-lv', ok: false,
-        result: { job: 'road-lv', mode: 'LIVE', ok: false, observations: { fetched_ok: '0' } },
+        result: {
+          job: 'road-lv', mode: 'LIVE', ok: false,
+          observations: { fetched_ok: '0', configured: '4' },
+        },
       },
     );
     const r = await runRoadLv(deps(st, {
@@ -235,12 +292,35 @@ describe('BN6 runRoadLv', () => {
     expect(r.warnings?.every((w) => !/https?:\/\//i.test(w))).toBe(true);
   });
 
-  it('brak sekretów → bez SOURCE_DOWN', async () => {
+  it('N3: brak sekretów → ok, configured:0, bez SOURCE_DOWN', async () => {
     const st = new MemStore();
     const r = await runRoadLv(deps(st, {}, {}).d);
-    expect(r.ok).toBe(false);
+    expect(r.ok).toBe(true);
     expect(r.observations?.configured).toBe('0');
     expect(st.risks.length).toBe(0);
+  });
+
+  it('B7: P/V → LOW; wielomiesięczne A7 z objazdem → MEDIUM bez slowdown', () => {
+    expect(extractBalticRoadRef('V1004 Salacgrīva')).toBe('V1004');
+    expect(lvRoadOnCorridor('A4')).toBe('on');
+    const pv = applyBalticCorridorRoadFilter('LV', [{
+      id: 'P', title: 'Closure · V1004', detail: 'boczna', severity: 'HIGH',
+      lat: 56.95, lon: 24.10, kind: 'CLOSURES', start: null, end: null, road: 'V1004',
+    }])[0];
+    expect(pv.severity).toBe('LOW');
+    expect(balticSlowdownMult([pv]).mult).toBe(1);
+
+    const longDetour: BalticRoadEvent = {
+      id: 'L', title: 'zamknięcie A7', detail: 'apbraukšana / detour',
+      severity: 'HIGH', lat: 56.95, lon: 24.10, kind: 'CLOSURES',
+      start: '2025-11-01T00:00:00Z', end: '2026-06-01T00:00:00Z',
+      road: 'A7', hasDetour: true,
+    };
+    const capped = balticCapLongDetourClosure(longDetour);
+    expect(capped.severity).toBe('MEDIUM');
+    const on = applyBalticCorridorRoadFilter('LV', [longDetour])[0];
+    expect(on.severity).toBe('MEDIUM');
+    expect(balticSlowdownMult([on]).mult).toBe(1);
   });
 
   it('HIGH zamknięcie na A7 spowalnia; height nie; DP-164 off-road bez slowdown', () => {

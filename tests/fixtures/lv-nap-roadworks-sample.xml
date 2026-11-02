@@ -1,8 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<d2LogicalModel xmlns="http://datex2.eu/schema/3/datex3" modelBaseVersion="3">
+<d2LogicalModel xmlns="http://datex2.eu/schema/3/datex3" modelBaseVersion="3"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <payloadPublication>
     <situation>
-      <situationRecord id="bn6-lv-rw-riga" xsi:type="MaintenanceWorks" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+      <!-- Zwykłe roboty A7 — decyzja 85 / F7 B1 → LOW -->
+      <situationRecord id="bn6-lv-rw-riga" xsi:type="MaintenanceWorks">
         <situationRecordCreationTime>2026-11-02T05:00:00Z</situationRecordCreationTime>
         <validity>
           <validityStatus>definedByValidityTimeSpec</validityStatus>
@@ -30,7 +32,28 @@
           </comment>
         </generalPublicComment>
       </situationRecord>
-      <situationRecord id="bn6-lv-rw-far-east" xsi:type="MaintenanceWorks" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+      <!-- v3 locationReference + posList (F7 B6) — zamknięcie z objazdem krótkie -->
+      <situationRecord id="bn6-lv-rw-poslist" xsi:type="RoadOrCarriagewayOrLaneManagement">
+        <validity>
+          <validityTimeSpecification>
+            <overallStartTime>2026-11-02T06:00:00Z</overallStartTime>
+            <overallEndTime>2026-11-02T18:00:00Z</overallEndTime>
+          </validityTimeSpecification>
+        </validity>
+        <locationReference>
+          <gmlLineString>
+            <posList>56.9520 24.1050 56.9550 24.1100</posList>
+          </gmlLineString>
+        </locationReference>
+        <roadOrCarriagewayOrLaneManagementType>roadClosed</roadOrCarriagewayOrLaneManagementType>
+        <rerouting>true</rerouting>
+        <severity>high</severity>
+        <roadNumber>A7</roadNumber>
+        <generalPublicComment>
+          <comment><values><value>Closed with detour &amp; apbraukšana</value></values></comment>
+        </generalPublicComment>
+      </situationRecord>
+      <situationRecord id="bn6-lv-rw-far-east" xsi:type="MaintenanceWorks">
         <validity>
           <validityTimeSpecification>
             <overallStartTime>2026-11-02T04:00:00Z</overallStartTime>

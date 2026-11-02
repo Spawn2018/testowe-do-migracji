@@ -1,4 +1,12 @@
 
+## 2026-11-02 08:45 — #728 SCALONE; #730 F7 r1 B1–B7
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie.
+- Scalanie: **#728 BN9-c4 SCALONE** `8cf14273` (F7: gotowe @ `468b3a52`, CI unit/visual ✔). #730 — F7 r1 „nie scalaj” (7 blokerów); CI @ `586bfdbe` unit/db/visual ✔ przed poprawkami.
+- **Krok F7 #730:** B1 decyzja 85 (roboty LOW; HIGH tylko zamknięcie/blokada); B2 pogoda (lód/śnieg/widoczność&lt;200 m); B3 JSON≠XML (pierwszy znak); B4 HTML/empty ≠ fetchedOk + bez resolveStale; B5 równolegle×6 / 10 s / budżet 65 s / cron 90 s / limit 5 MB; B6 posList + licznik pominiętych + etykiety PL; B7 A4/A5 + ≤3 km + długie zamknięcie z objazdem → MEDIUM; N1 LT_ICY_RE rdzenie; N3 configured:0 bez streak; N5 siatka 0,01°; N6 oś/długość → dim; N7/N8. vitest bn6-road-lt/lv **27**.
+- **Dalej:** push → CI → F7. Po F7: BN6 cz.4 EE. B6 LIVE: sekrety LV tylko na Edge — potwierdzenie po pierwszym przebiegu PROD.
+- Bez push na main.
+
 ## 2026-11-02 08:05 — #730 DP-164 filtr dróg korytarza LT/LV
 
 - Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. #728 wygląd (koordynator, bez F7).

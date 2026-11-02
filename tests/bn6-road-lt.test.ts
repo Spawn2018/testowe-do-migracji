@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 import {
   LT_ATTRIBUTION,
   LT_FRICTION_ADVERSE,
+  LT_ICY_RE,
   LT_RESTRICTIONS_URL,
   LT_UA,
   LT_WEATHER_URL,
@@ -221,7 +222,10 @@ describe('BN6 road-lt — eismoinfo', () => {
     expect(ltPerspejimaiText('Pliklus kelias').danger).toBe(true);
   });
 
-  it('DP-160: kelio_danga Apledėjusi/ledas/šlapdriba/sniegas → adverse', () => {
+  it('DP-160 + F7 #730 N1: kelio_danga Apledėjusi/ledas/šlapdriba/sniegas → adverse; Drėgna nie', () => {
+    expect(LT_ICY_RE.test('Šerkšnas')).toBe(true);
+    expect(LT_ICY_RE.test('Drėgna')).toBe(false);
+    expect(LT_ICY_RE.test('Sausa')).toBe(false);
     const far = parseLtWeather(wx).find((s) => s.id === 'bn6-lt-wx-far-east')!;
     expect(far.surface).toMatch(/ledas/i);
     expect(far.adverse).toBe(true);

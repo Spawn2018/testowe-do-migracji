@@ -34,7 +34,7 @@ begin
       'Authorization', 'Bearer ' || v_key,
       'Content-Type', 'application/json'),
     body    := '{}'::jsonb,
-    timeout_milliseconds := 120000
+    timeout_milliseconds := 90000
   );
 end;
 $$;
