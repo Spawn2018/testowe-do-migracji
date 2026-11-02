@@ -1381,7 +1381,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 ### #716 · BN6 — drogi LT/LV/EE/FI — W TOKU (`pakiet/bn6-cz2-road-lt` / **0377**; cz.1 SCALONE #726 / **0376**)
 Źródło: #716 (Spawn2018). Spec w treści zgłoszenia (Digitraffic FI, eismoinfo LT, LVC LV, Tark Tee EE; `ROAD_LT/LV/EE/FI`; bufor 2 km; limity masy). Ekrany BN9-c4 — koordynator. **Wybór:** 4 osobne rodzaje (spójne z Ryzyka › Drogi per kraj).
 1. ~~**cz.1 FI + baza**~~ — SCALONE (#726 `0c0cb064` / **0376**): enum `ROAD_LT/LV/EE/FI`; `corridor_conditions`; audience WSZYSCY; job `road-fi` Digitraffic (bboxy korytarza do BN7, resolveStale przy komplecie, SOURCE_DOWN po 3× `fetched_ok=0`); vitest `bn6-road-fi`; F7 r1+r2. DP-155/156 w rejestrze.
-2. **cz.2 LT** — W TOKU: eismoinfo restrictions + weather (bez wypadków w źródle); job `road-lt`; cron **0377**; vitest `bn6-road-lt`; `detail.oryginal` LD/SVKD.
+2. **cz.2 LT** — W TOKU (#727): eismoinfo restrictions + weather (bez wypadków w źródle); job `road-lt`; cron **0377**; vitest `bn6-road-lt`; `detail.oryginal` LD/SVKD; status EXPECTED **577**.
 3. **cz.3 LV** — LVC DATEX / GeoJSON 44751 + dedup śliskości.
 4. **cz.4 EE** — Tark Tee DATEX (klucz `X-DATEX-API-KEY`).
 
@@ -2515,6 +2515,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 02.11.2026 04:55 | #726 F7 r1: bbox zamiast 2 km, resolveStale przy komplecie, streak fetched_ok=0, DP-155/156; status 574 | pętla / F7 #726 |
 | 02.11.2026 05:25 | #726 CI db FAIL (risks 11/1 vs 9/0) — BN6 fixture bez title_key; fix + delete | pętla / BN6 |
 | 02.11.2026 05:55 | #726 SCALONE `0c0cb064`; start BN6 cz.2 LT `pakiet/bn6-cz2-road-lt` / **0377** (eismoinfo + cron road-lt) | pętla / BN6 |
+| 02.11.2026 06:25 | #727 db FAIL status 574→577 — cron FI+LT jedna asercja; EXPECTED 577 | pętla / BN6 |
 | 31.10.2026 — | Decyzja 73: TLLA-HEL ETA−150 min / HELA-TLL ETD+160 min (fixture Cargo; nocny 165 min OK). Decyzja 74: `sailings.source_ref` 0359; Digitraffic `digitraffic:portcall:<id>:<route>`; HTML/RECZNIE/DANE_STARTOWE wygrywają; #685-b RPC zastępuje digitraffic:% w ±3 h | F7 #688 r1–r4 |
 | 31.10.2026 — | F7 #683 nieblokujące (osobna poprawka): Scheduler grudzień + „on 2 January” → rok bieżący, ciche wygaśnięcie; Alert INFO bez ryzyka/historii — świadomie | F7 #683 r7 |
 | 31.10.2026 — | F7 #683 r8 nieblokujące (osobno): Alert poza Schedulerem obok Schedulera; sprzeczne bloki (resume→cofnięcie auto); rok przy długim oknie Schedulera; mutanty M10/M15–M17/M22 świadomie bez testów | F7 #683 r8 |

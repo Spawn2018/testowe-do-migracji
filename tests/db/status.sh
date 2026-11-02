@@ -2991,11 +2991,10 @@ q "delete from risk_signals
     where id='55555555-0000-0000-0000-000000000377'
        or dedup_key='ROAD_LT:bn6-test-0377'
        or detail->>'t'='bn6lt0377'" >/dev/null
+# Jedna asercja cronów FI+LT — ta sama liczba OK z pg_cron i bez (CI gate bez cron.job → 577).
 if [ "$(q "select to_regclass('cron.job') is not null")" = "t" ]; then
-  chk "BN6: cron tower-road-fi" \
-    "select count(*) from cron.job where jobname='tower-road-fi'" 1
-  chk "BN6: cron tower-road-lt" \
-    "select count(*) from cron.job where jobname='tower-road-lt'" 1
+  chk "BN6: cron tower-road-fi + tower-road-lt" \
+    "select count(*) from cron.job where jobname in ('tower-road-fi','tower-road-lt')" 2
 else
   chk "BN6: brak cron.job (stub) — OK" "select 1" 1
 fi
