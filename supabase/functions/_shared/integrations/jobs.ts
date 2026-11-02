@@ -87,7 +87,8 @@ import {
   errRssCancelRisk, filterErrFerryCancel, isErrRssEnabled, isErrRssItemFresh, parseErrRss,
 } from '../ferry/errRss.ts';
 import {
-  MARINE_CORRIDORS, MARINE_POINTS, SMHI_OCOBS_URL, dmiWamUrl, evaluateMarineWindow, fmiHarmonieUrl, fmiWamUrl,
+  MARINE_CORRIDORS, MARINE_POINTS, SMHI_OCOBS_URL, dmiPointsUnique, dmiWamUrl, evaluateMarineWindow,
+  fmiHarmonieUrl, fmiLastValidIso, fmiNanAllOffGrid, fmiWamUrl,
   marinePointsForCorridor, marinePointsForRoute, marineWeatherRisk, parseDmiCoverageJson, parseFmiTimeValuePair,
   parseSmhiOcobs, parseSmhiSnow1g, samplesInWindow, smhiSnow1gUrl, type MarineSample, type MarinePointCode,
 } from '../ferry/marineWeather.ts';
@@ -452,21 +453,44 @@ export interface JobResult {
 
 /** F7 #660: limit ścienny odczytu (20 s) — bez zawieszenia joba na martwym źródle. */
 const READ_TEXT_TIMEOUT_MS = 20_000;
+/** DP-150: krótszy timeout DMI (częste 429 / wiszące position). */
+const DMI_READ_TIMEOUT_MS = 8_000;
+const DMI_CACHE_TTL_MS = 3 * 3600_000;
+const DMI_DEFAULT_GAP_MS = 400;
 
-async function readText(deps: JobDeps, url: string, init?: RequestInit): Promise<{ ok: true; text: string } | { ok: false; warning: string }> {
+type DmiCacheEntry = { fetchedAt: number; text: string };
+const dmiResponseCache = new Map<string, DmiCacheEntry>();
+
+/** Testy DP-150: wyczyść cache odpowiedzi DMI między przebiegami. */
+export function clearDmiResponseCache(): void {
+  dmiResponseCache.clear();
+}
+
+async function readText(
+  deps: JobDeps,
+  url: string,
+  init?: RequestInit,
+  timeoutMs: number = READ_TEXT_TIMEOUT_MS,
+): Promise<{ ok: true; text: string } | { ok: false; warning: string }> {
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), READ_TEXT_TIMEOUT_MS);
+  const ms = Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : READ_TEXT_TIMEOUT_MS;
+  const timer = setTimeout(() => ctrl.abort(), ms);
   try {
     const res = await deps.fetch(url, { ...init, signal: ctrl.signal });
     if (!res.ok) return { ok: false, warning: `HTTP ${res.status} ${url}` };
     return { ok: true, text: await res.text() };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
-    if (/abort/i.test(msg)) return { ok: false, warning: `Timeout ${READ_TEXT_TIMEOUT_MS / 1000}s ${url}` };
+    if (/abort/i.test(msg)) return { ok: false, warning: `Timeout ${ms / 1000}s ${url}` };
     return { ok: false, warning: `Błąd sieci ${url}: ${msg}` };
   } finally {
     clearTimeout(timer);
   }
+}
+
+function sleepMs(ms: number): Promise<void> {
+  if (!(ms > 0)) return Promise.resolve();
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 /** F7 #660: jak AIS — RECZNIE/ODWOLANY: actual_* bez zmiany statusu. BN3: też delayed_arrival. */
@@ -3739,12 +3763,17 @@ export async function runFerryWeather(deps: JobDeps): Promise<JobResult> {
     fetchTo = new Date(Math.max(fetchTo.getTime(), dep + 6 * 3600_000));
   }
   const fFrom = fetchFrom.toISOString();
-  const fTo = fetchTo.toISOString();
+  /* DP-149: horyzont FMI WAM ~54 h — dalej i tak NaN; nie żądaj poza modelem. */
+  const fmiCapIso = new Date(now.getTime() + 54 * 3600_000).toISOString();
+  let fTo = fetchTo.toISOString();
+  if (fTo > fmiCapIso) fTo = fmiCapIso;
 
   const samples: MarineSample[] = [];
   let fmiOk = 0;
   let dmiOk = 0;
   let smhiOk = 0;
+  /* DP-149: NaN na końcu okna ≠ poza siatką; dalej przycinamy do ostatniej ważnej próbki. */
+  let fHorizonTo = fTo;
 
   for (const code of Object.keys(MARINE_POINTS) as MarinePointCode[]) {
     const p = MARINE_POINTS[code];
@@ -3755,8 +3784,11 @@ export async function runFerryWeather(deps: JobDeps): Promise<JobResult> {
     if (wRes.ok) {
       const parsed = parseFmiTimeValuePair(wRes.text, code, 'wave');
       samples.push(...parsed.samples);
-      if (parsed.nanSkipped > 0) {
+      if (fmiNanAllOffGrid(parsed)) {
         warnings.push(`FMI WAM ${code}: NaN poza siatką — punkt pominięty (${parsed.nanSkipped})`);
+      } else if (parsed.nanSkipped > 0 && parsed.samples.length) {
+        const last = fmiLastValidIso(parsed.samples);
+        if (last && last < fHorizonTo) fHorizonTo = last;
       }
       if (parsed.samples.length) fmiOk++;
     } else warnings.push(`FMI WAM ${code}: ${wRes.warning}`);
@@ -3764,8 +3796,11 @@ export async function runFerryWeather(deps: JobDeps): Promise<JobResult> {
     if (gRes.ok) {
       const parsed = parseFmiTimeValuePair(gRes.text, code, 'gust');
       samples.push(...parsed.samples);
-      if (parsed.nanSkipped > 0) {
+      if (fmiNanAllOffGrid(parsed)) {
         warnings.push(`FMI Harmonie ${code}: NaN poza siatką — punkt pominięty (${parsed.nanSkipped})`);
+      } else if (parsed.nanSkipped > 0 && parsed.samples.length) {
+        const last = fmiLastValidIso(parsed.samples);
+        if (last && last < fHorizonTo) fHorizonTo = last;
       }
       if (parsed.samples.length) {
         fmiOk++;
@@ -3791,27 +3826,48 @@ export async function runFerryWeather(deps: JobDeps): Promise<JobResult> {
         warnings.push(`SMHI snow1g ${code}: ${sRes.warning}`);
       }
     }
+  }
 
-    // DMI zapas — retry 1× przy 429 (brak DMI ≠ SOURCE_DOWN gdy FMI OK)
+  if (fHorizonTo < fTo) fTo = fHorizonTo;
+
+  /* DP-150: DMI — 1 punkt/korytarz, szeregowo z odstępem, cache 3 h, timeout 8 s. */
+  const dmiGapMs = Math.max(0, Number(deps.env.DMI_REQUEST_GAP_MS ?? DMI_DEFAULT_GAP_MS));
+  const dmiTimeoutMs = Math.max(1_000, Number(deps.env.DMI_TIMEOUT_MS ?? DMI_READ_TIMEOUT_MS));
+  const dmiCodes = dmiPointsUnique();
+  for (let i = 0; i < dmiCodes.length; i++) {
+    const code = dmiCodes[i]!;
+    if (i > 0) await sleepMs(dmiGapMs);
+    const p = MARINE_POINTS[code];
     const dUrl = dmiWamUrl(p.lon, p.lat, fFrom, fTo);
-    let dRes = await readText(deps, dUrl, {
-      headers: { 'User-Agent': USER_AGENT, Accept: 'application/prs.coverage+json,application/json' },
-    });
-    if (!dRes.ok && /HTTP 429/.test(dRes.warning)) {
-      dRes = await readText(deps, dUrl, {
-        headers: { 'User-Agent': USER_AGENT, Accept: 'application/prs.coverage+json,application/json' },
-      });
-    }
-    if (dRes.ok) {
-      try {
-        const parsed = parseDmiCoverageJson(JSON.parse(dRes.text), code);
-        samples.push(...parsed);
-        if (parsed.length) dmiOk++;
-      } catch {
-        warnings.push(`DMI ${code}: nieczytelny CoverageJSON`);
-      }
+    const cacheKey = `${code}|${fFrom}|${fTo}`;
+    const cached = dmiResponseCache.get(cacheKey);
+    let dText: string | null = null;
+    if (cached && now.getTime() - cached.fetchedAt < DMI_CACHE_TTL_MS) {
+      dText = cached.text;
     } else {
-      warnings.push(`DMI ${code}: ${dRes.warning}`);
+      let dRes = await readText(deps, dUrl, {
+        headers: { 'User-Agent': USER_AGENT, Accept: 'application/prs.coverage+json,application/json' },
+      }, dmiTimeoutMs);
+      if (!dRes.ok && /HTTP 429/.test(dRes.warning)) {
+        await sleepMs(dmiGapMs);
+        dRes = await readText(deps, dUrl, {
+          headers: { 'User-Agent': USER_AGENT, Accept: 'application/prs.coverage+json,application/json' },
+        }, dmiTimeoutMs);
+      }
+      if (dRes.ok) {
+        dText = dRes.text;
+        dmiResponseCache.set(cacheKey, { fetchedAt: now.getTime(), text: dRes.text });
+      } else {
+        warnings.push(`DMI ${code}: ${dRes.warning}`);
+      }
+    }
+    if (dText == null) continue;
+    try {
+      const parsed = parseDmiCoverageJson(JSON.parse(dText), code);
+      samples.push(...parsed);
+      if (parsed.length) dmiOk++;
+    } catch {
+      warnings.push(`DMI ${code}: nieczytelny CoverageJSON`);
     }
   }
 

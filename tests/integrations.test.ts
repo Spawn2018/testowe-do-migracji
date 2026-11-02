@@ -4,10 +4,11 @@
  * Trafikverket / DATEX II: przykłady w formacie z dokumentacji dostawców (brak kluczy) — tests/fixtures/*sample*.
  * TomTom Flow: usunięty (CLEAN-TT-HERE / D-28).
  */
-import { describe, expect, it } from 'vitest';
+import { beforeEach, describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import {
-  runFerryAis, runFerrySchedule, runFerryStatus, runFerryWeather, runJob, runRoadPl, runRoadSe, runTrafficFlow,
+  clearDmiResponseCache, runFerryAis, runFerrySchedule, runFerryStatus, runFerryWeather, runJob,
+  runRoadPl, runRoadSe, runTrafficFlow,
   type JobDeps, type JobResult, type SyncStore, type VehiclePos,
 } from '../supabase/functions/_shared/integrations/jobs';
 import type { DbSailing, RiskInput, SailingInsert, SailingPatch } from '../supabase/functions/_shared/integrations/sync';
@@ -154,6 +155,8 @@ class MemStore implements SyncStore {
 }
 
 function deps(store: MemStore, pages: Record<string, string | number>, env: Record<string, string> = {}, now = NOW) {
+  /* DP-150: w testach bez sztucznego odstępu DMI (prod: domyślnie 400 ms). */
+  const envMerged: Record<string, string> = { DMI_REQUEST_GAP_MS: '0', ...env };
   const calls: string[] = [];
   const headerCalls: { url: string; headers: Record<string, string> }[] = [];
   const f = (async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -190,7 +193,7 @@ function deps(store: MemStore, pages: Record<string, string | number>, env: Reco
     }
     throw new Error(`nieoczekiwane zapytanie (sieć zabroniona w teście): ${url}`);
   }) as typeof fetch;
-  const d: JobDeps = { store, fetch: f, env, now: () => now };
+  const d: JobDeps = { store, fetch: f, env: envMerged, now: () => now };
   return { d, calls, headerCalls };
 }
 
@@ -755,10 +758,15 @@ describe('ferry-weather — II-8 FMI+DMI+SMHI', () => {
   const FMI_WAM = fx('fmi-wam-mid-2026-10-02.xml');
   const FMI_GUST = fx('fmi-harmonie-gust-2026-10-02.xml');
   const FMI_NAN = fx('fmi-wam-nan-offgrid.xml');
+  const FMI_HORIZON = fx('fmi-wam-horizon-nan.xml');
   const DMI = fx('dmi-wam-nsb-2026-10-02.json');
   const SMHI = fx('smhi-ocobs-knolls-latest.json');
   const SNOW1G = fx('smhi-snow1g-gulf-mid.json');
   const WX_NOW = new Date('2026-10-02T04:00:00Z');
+
+  beforeEach(() => {
+    clearDmiResponseCache();
+  });
 
   function wxPages(): Record<string, string | number> {
     return {
@@ -848,7 +856,7 @@ describe('ferry-weather — II-8 FMI+DMI+SMHI', () => {
     expect(r.warnings?.some((w) => /DMI .*HTTP 429/.test(w))).toBe(true);
   });
 
-  it('BN5 cz.2: Harmonie padł → snow1g zapas wiatru; WAM NaN → ostrzeżenie w detail', async () => {
+  it('BN5 cz.2: Harmonie padł → snow1g zapas wiatru; WAM cały NaN → ostrzeżenie poza siatką', async () => {
     const st = new MemStore();
     const { d, calls } = deps(st, {
       'forecast::wam': FMI_NAN,
@@ -863,6 +871,22 @@ describe('ferry-weather — II-8 FMI+DMI+SMHI', () => {
     expect(calls.every((u) => !u.includes('pmp3g'))).toBe(true);
     expect(st.marineWarnings.some((w) => /NaN poza siatką/.test(w))).toBe(true);
     expect(st.marine!.sources).toMatch(/SMHI|DMI/);
+  });
+
+  it('DP-149: NaN na końcu horyzontu → bez „poza siatką”; DP-150: ≤5 zapytań DMI', async () => {
+    const st = new MemStore();
+    const { d, calls } = deps(st, {
+      'forecast::wam': FMI_HORIZON,
+      'forecast::harmonie': FMI_GUST,
+      'forecastedr/collections/wam_nsb': DMI,
+      'ocobs.smhi.se': SMHI,
+    }, {}, WX_NOW);
+    const r = await runFerryWeather(d);
+    expect(r.ok).toBe(true);
+    expect(r.warnings?.some((w) => /NaN poza siatką/.test(w))).toBe(false);
+    const dmiCalls = calls.filter((u) => u.includes('forecastedr/collections/wam_nsb'));
+    expect(dmiCalls.length).toBeGreaterThan(0);
+    expect(dmiCalls.length).toBeLessThanOrEqual(5);
   });
 
   it('BN5 cz.3: EEPLA ograniczenie → FERRY_ICE na PLD-KPS; GDN-NYN bez; gzip + Digitraffic-User', async () => {

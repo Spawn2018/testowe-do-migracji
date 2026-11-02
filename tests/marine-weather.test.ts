@@ -5,7 +5,10 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import {
+  dmiPointsUnique,
   evaluateMarineWindow,
+  fmiLastValidIso,
+  fmiNanAllOffGrid,
   marineWeatherRisk,
   msToKnots,
   parseDmiCoverageJson,
@@ -49,6 +52,18 @@ describe('marineWeather — FMI WFS', () => {
     expect(samples).toHaveLength(0);
     expect(nanSkipped).toBe(3);
     expect(samples.every((r) => r.waveM !== 0)).toBe(true);
+    expect(fmiNanAllOffGrid({ samples, nanSkipped })).toBe(true);
+  });
+  it('DP-149: NaN na końcu horyzontu → próbki + lastValid; nie off-grid', () => {
+    const xml = fx('fmi-wam-horizon-nan.xml');
+    const parsed = parseFmiTimeValuePair(xml, 'MID', 'wave');
+    expect(parsed.samples.length).toBe(2);
+    expect(parsed.nanSkipped).toBe(2);
+    expect(fmiNanAllOffGrid(parsed)).toBe(false);
+    expect(fmiLastValidIso(parsed.samples)).toBe('2026-10-02T01:00:00.000Z');
+  });
+  it('DP-150: dmiPointsUnique — 5 punktów (jeden na korytarz)', () => {
+    expect(dmiPointsUnique()).toEqual(['MID', 'MID_STENA', 'GULF_MID', 'NB_EAST', 'ALAND_SEA']);
   });
 });
 

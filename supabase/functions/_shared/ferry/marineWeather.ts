@@ -129,6 +129,46 @@ export function marinePointsForCorridor(corridor: MarineCorridor): MarineEvalPoi
   }
 }
 
+/**
+ * DP-150: jeden punkt DMI na korytarz (otwarta woda) — bez 11 równoległych zapytań → 429.
+ * Kolejność = MARINE_CORRIDORS; unikalne kody (GULF_MID nie dublujemy).
+ */
+export const DMI_POINT_PER_CORRIDOR: Readonly<Record<MarineCorridor, MarinePointCode>> = {
+  BALTIC_GDN_NYN: 'MID',
+  BALTIC_GDY_KAA: 'MID_STENA',
+  BALTIC_GULF_FI: 'GULF_MID',
+  BALTIC_PLD_KPS: 'NB_EAST',
+  BALTIC_TLL_STO: 'ALAND_SEA',
+};
+
+/** Unikalne punkty DMI w kolejności korytarzy (DP-150). */
+export function dmiPointsUnique(): MarinePointCode[] {
+  const seen = new Set<string>();
+  const out: MarinePointCode[] = [];
+  for (const c of MARINE_CORRIDORS) {
+    const p = DMI_POINT_PER_CORRIDOR[c];
+    if (seen.has(p)) continue;
+    seen.add(p);
+    out.push(p);
+  }
+  return out;
+}
+
+/** DP-149: ostrzeżenie „poza siatką” tylko gdy brak jakiejkolwiek próbki i są NaN. */
+export function fmiNanAllOffGrid(parsed: FmiParseResult): boolean {
+  return parsed.samples.length === 0 && parsed.nanSkipped > 0;
+}
+
+/** DP-149: ostatni ważny timestamp FMI (przycięcie okna do horyzontu modelu). */
+export function fmiLastValidIso(samples: MarineSample[]): string | null {
+  if (!samples.length) return null;
+  let last = samples[0]!.at;
+  for (const s of samples) {
+    if (s.at > last) last = s.at;
+  }
+  return last;
+}
+
 /** Punkty oceny rejsu; null gdy trasa nieznana (bez domyślnego GDN). */
 export function marinePointsForRoute(
   route: string | null | undefined,

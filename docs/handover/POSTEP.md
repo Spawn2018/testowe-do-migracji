@@ -1,4 +1,12 @@
 
+## 2026-11-02 03:40 — #724 SCALONE; start DP-149+150+151
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #714/#716/#718/#720 w planie. #723 BN9-c3 bez F7.
+- Scalanie: **#724 SCALONE** `17707bf9` (F7: gotowe @ `07175c91`; CI unit/db/visual ✔).
+- **Krok:** DP-149 (NaN horyzont) + DP-150 (DMI 1×korytarz / cache 3 h / timeout 8 s) + DP-151 (`detail` w select); PLAN rejestr + kolejka.
+- **Dalej:** push → CI → F7. Po F7: BN6 (#716).
+- Bez push na main.
+
 ## 2026-11-02 03:10 — #722 SCALONE; start DP-147+148
 
 - Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #714/#716/#718/#720 w planie.

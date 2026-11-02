@@ -25,7 +25,13 @@ export interface MarineConditionRow {
   observedAt: string;
   windowFrom: string | null;
   windowTo: string | null;
+  /** DP-151: status / warnings / ice z joba ferry-weather (opcjonalne dla #723). */
+  detail?: unknown;
 }
+
+/** Kolumny odczytu marine_conditions (DP-151: +detail). */
+export const MARINE_CONDITIONS_SELECT =
+  'corridor,max_wave_m,max_gust_kn,risk,wave_thr_m,gust_thr_kn,sources,attribution,observed_at,window_from,window_to,detail';
 
 /** null = brak odczytu / nie produkcja / błąd. */
 export async function fetchMarineCondition(): Promise<MarineConditionRow | null> {
@@ -35,9 +41,7 @@ export async function fetchMarineCondition(): Promise<MarineConditionRow | null>
     if (!sb) return null;
     const { data, error } = await sb
       .from('marine_conditions')
-      .select(
-        'corridor,max_wave_m,max_gust_kn,risk,wave_thr_m,gust_thr_kn,sources,attribution,observed_at,window_from,window_to',
-      )
+      .select(MARINE_CONDITIONS_SELECT)
       .eq('corridor', 'BALTIC_GDN_NYN')
       .maybeSingle();
     if (error || !data) return null;
@@ -53,6 +57,7 @@ export async function fetchMarineCondition(): Promise<MarineConditionRow | null>
       observed_at: string;
       window_from: string | null;
       window_to: string | null;
+      detail?: unknown;
     };
     if (row.max_wave_m == null && row.max_gust_kn == null && !row.sources) return null;
     return {
@@ -67,6 +72,7 @@ export async function fetchMarineCondition(): Promise<MarineConditionRow | null>
       observedAt: row.observed_at,
       windowFrom: row.window_from,
       windowTo: row.window_to,
+      detail: row.detail,
     };
   } catch {
     return null;
@@ -89,9 +95,7 @@ export async function fetchMarineConditions(): Promise<MarineConditionRow[]> {
     if (!sb) return [];
     const { data, error } = await sb
       .from('marine_conditions')
-      .select(
-        'corridor,max_wave_m,max_gust_kn,risk,wave_thr_m,gust_thr_kn,sources,attribution,observed_at,window_from,window_to',
-      )
+      .select(MARINE_CONDITIONS_SELECT)
       .in('corridor', ALL_MARINE_CORRIDORS);
     if (error || !data) return [];
     return (data as Array<Record<string, unknown>>).map((row) => ({
@@ -106,6 +110,7 @@ export async function fetchMarineConditions(): Promise<MarineConditionRow[]> {
       observedAt: String(row.observed_at ?? ''),
       windowFrom: typeof row.window_from === 'string' ? row.window_from : null,
       windowTo: typeof row.window_to === 'string' ? row.window_to : null,
+      detail: row.detail,
     }));
   } catch {
     return [];
