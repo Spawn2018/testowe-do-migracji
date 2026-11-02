@@ -23,6 +23,7 @@ import {
   balticFeedObsOk,
   balticKeyMeta,
   balticSlowdownMult,
+  classifyBalticNetError,
   dimensionLimitRisk,
   eeDatexApiKey,
   eeDatexApiKeyMeta,
@@ -494,6 +495,16 @@ describe('DP-168 roadBaltic shared', () => {
     expect(LV_ICY_CONTENT_RE.test('policeForces')).toBe(false);
   });
 
+  /* F7 #737 B1 — \\w* nie łapało ē/ā; [\\p{L}\\p{M}]* tak. */
+  it('F7 #737 B1: apledējis / apledējusi → lód; Šlapia / märg / police → nie', () => {
+    expect(LV_ICY_CONTENT_RE.test('Ceļš apledējis')).toBe(true);
+    expect(LV_ICY_CONTENT_RE.test('apledējusi brauktuve')).toBe(true);
+    expect(LV_ICY_CONTENT_RE.test('slidenā ceļa')).toBe(true);
+    expect(LV_ICY_CONTENT_RE.test('Šlapia')).toBe(false);
+    expect(EE_ICY_CONTENT_RE.test('märg')).toBe(false);
+    expect(LV_ICY_CONTENT_RE.test('police')).toBe(false);
+  });
+
   it('readBalticFeedBody: Content-Length > 5 MB → too_large; strumień OK', async () => {
     const bigCl = new Response('x', {
       status: 200,
@@ -506,6 +517,26 @@ describe('DP-168 roadBaltic shared', () => {
 
     const over = new Response(new Uint8Array(BALTIC_FEED_MAX_BYTES + 8), { status: 200 });
     expect(await readBalticFeedBody(over)).toEqual({ ok: false, reason: 'too_large' });
+  });
+
+  /* F7 #737 B2 — AbortError w trakcie czytania → classifyBalticNetError = timeout. */
+  it('F7 #737 B2: abort w trakcie czytania → timeout (nie „sieć”)', async () => {
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode('<partial'));
+        controller.error(new DOMException('The operation was aborted.', 'AbortError'));
+      },
+    });
+    const res = new Response(stream, { status: 200 });
+    let caught: unknown;
+    try {
+      await readBalticFeedBody(res);
+    } catch (e) {
+      caught = e;
+    }
+    expect(caught).toBeInstanceOf(DOMException);
+    expect((caught as DOMException).name).toBe('AbortError');
+    expect(classifyBalticNetError(caught)).toBe('timeout');
   });
 
   it('N3: eeSeverityForRecord z weightLimitT → MEDIUM', () => {

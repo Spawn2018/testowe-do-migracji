@@ -1394,9 +1394,10 @@ export async function readBalticFeedBody(
       }
       chunks.push(value);
     }
-  } catch {
+  } catch (e) {
     try { await reader.cancel(); } catch { /* ignore */ }
-    throw new Error('read body failed');
+    /* F7 #737 B2 — nie zamieniaj AbortError / reset na ogólne „sieć”. */
+    throw e;
   }
   const buf = new Uint8Array(total);
   let off = 0;
@@ -1513,14 +1514,15 @@ function lvIsWeatherCode(code: string): boolean {
 /**
  * DP-168 / F7 #733 r2 — wspólna lista słów lodowych/śniegowych per język (bez duplikatu „jäide”).
  * Regex budowany raz; granice słowa z flagą `u` (Litera Unicode).
+ * F7 #737 B1 — końcówki `[\\p{L}\\p{M}]*` zamiast `\\w*` (łapie ē/ā/ī itd.).
  */
 export const BALTIC_ICY_WORDS = {
   lv: [
-    'ledus', 'ledu', 'sliden\\w*', 'apled\\w*', 'aizsal\\w*', 'salna',
-    'riepoj\\w*', 'glaz\\w*', 'snieg\\w*', 'szron\\w*',
+    'ledus', 'ledu', 'sliden[\\p{L}\\p{M}]*', 'apled[\\p{L}\\p{M}]*', 'aizsal[\\p{L}\\p{M}]*', 'salna',
+    'riepoj[\\p{L}\\p{M}]*', 'glaz[\\p{L}\\p{M}]*', 'snieg[\\p{L}\\p{M}]*', 'szron[\\p{L}\\p{M}]*',
   ],
   ee: ['jäide', 'libedus', 'lumi', 'lörts', 'härmatis'],
-  common: ['go[lł]oled\\w*', 'black\\s*ice', 'ice', 'snow', 'frost'],
+  common: ['go[lł]oled[\\p{L}\\p{M}]*', 'black\\s*ice', 'ice', 'snow', 'frost'],
 } as const;
 
 export type BalticIcyLang = keyof typeof BALTIC_ICY_WORDS;
