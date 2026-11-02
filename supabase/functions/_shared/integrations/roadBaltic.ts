@@ -195,14 +195,149 @@ function weightFromAnn(props: Record<string, unknown>): number | null {
   return null;
 }
 
-function situationSeverity(type: string, weightT: number | null): RiskSeverity {
-  const t = type.toLowerCase();
-  if (weightT != null) return 'HIGH';
-  if (t.includes('accident') || t.includes('wypad')) return 'HIGH';
-  if (t.includes('closed') || t.includes('zamkn')) return 'HIGH';
-  if (t.includes('road work') || t.includes('robot')) return 'MEDIUM';
-  if (t.includes('weight')) return 'HIGH';
-  return 'MEDIUM';
+/**
+ * DP-158 — polska etykieta typu FI (params/title); surowy fiński zostaje w detail.
+ * Digitraffic: ROAD_WORK / Tietyö, TRAFFIC_ANNOUNCEMENT / Liikennetiedote,
+ * WEIGHT_RESTRICTION / painorajoitus.
+ */
+export function fiTypeLabelPl(situationType: string, titleFi: string): string {
+  const t = `${situationType} ${titleFi}`.toLowerCase();
+  if (/weight|painoraj|kelirikko|massa/.test(t)) return 'limit masy';
+  if (/accident|onnettom|wypad/.test(t)) return 'wypadek';
+  if (/closed|suljet|tien sulku|tie suljet|zamkn/.test(t)) return 'zamknięcie';
+  if (/road\s*work|road_work|tiety[oö]|työmaa|robot/.test(t)) return 'roboty drogowe';
+  if (/announcement|liikennetiedote|tiedote|komunikat/.test(t)) return 'komunikat';
+  if (/exempt|poikkeuskuljet/.test(t)) return 'transport specjalny';
+  return 'zdarzenie drogowe';
+}
+
+/**
+ * F7 #732 B4 — terminale HEL: Länsisatama (TLL-HEL / West Harbour) i Vuosaari.
+ * Zdarzenie ≤ 2 km → corridorMatch=on (drogi portowe bez numeru VT).
+ */
+export const FI_PORT_TERMINALS: LatLon[] = [
+  [60.150, 24.915], // Länsisatama / West Harbour / Jätkäsaari
+  [60.205, 25.195], // Vuosaari
+];
+
+export function nearFiPortTerminal(
+  lat: number,
+  lon: number,
+  maxKm = 2,
+): boolean {
+  return FI_PORT_TERMINALS.some((p) => haversineKm([lat, lon], p) <= maxKm);
+}
+
+/** DP-157(a) — zwykłe Tietyö bez zamknięcia/objazdu/limitu → LOW (jak decyzja 85 / LT N1). */
+export function fiSeverity(
+  situationType: string,
+  titleFi: string,
+  weightT: number | null,
+): { severity: RiskSeverity; roadClosed: boolean; hasDetour: boolean } {
+  const blob = `${situationType} ${titleFi}`.toLowerCase();
+  const roadClosed = /closed|suljet|tien sulku|tie suljet|carriageway.?blocked|ajorata\s*suljet/.test(blob);
+  const hasDetour = /kiertotie|kierretään|detour|rerout|objazd/.test(blob);
+  /* F7 #732 B1: liczba → HIGH (weightLimitRisk obniży bez masy ładunku);
+   * sam tekst kelirikko/painorajoitus → MEDIUM, nigdy HIGH (nie spowalnia ETA). */
+  if (weightT != null) {
+    return { severity: 'HIGH', roadClosed, hasDetour };
+  }
+  if (/weight|painoraj|kelirikko/.test(blob)) {
+    return { severity: 'MEDIUM', roadClosed, hasDetour };
+  }
+  /* F7 #732 B3: wypadek HIGH tylko z blokadą jezdni; bez roadClosed → MEDIUM. */
+  if (/accident|onnettom/.test(blob)) {
+    return { severity: roadClosed ? 'HIGH' : 'MEDIUM', roadClosed, hasDetour };
+  }
+  if (roadClosed) return { severity: 'HIGH', roadClosed: true, hasDetour };
+  if (hasDetour) return { severity: 'MEDIUM', roadClosed, hasDetour: true };
+  if (/road\s*work|road_work|tiety[oö]|työmaa/.test(blob)) {
+    return { severity: 'LOW', roadClosed, hasDetour };
+  }
+  if (/announcement|liikennetiedote|tiedote/.test(blob)) {
+    return { severity: 'LOW', roadClosed, hasDetour };
+  }
+  return { severity: 'MEDIUM', roadClosed, hasDetour };
+}
+
+/**
+ * DP-157(b) — numer drogi FI z tytułu Digitraffic („Tie 4”, „Vt 29”, „E75”, „Kehä III”).
+ * F7 #732: najpierw Tie|Vt|Kt|Seututie / Kehä; goła liczba tylko na początku tytułu
+ * (nie „2 km” / godzina w środku).
+ */
+export function extractFiRoadRef(text: string): string | null {
+  const t = String(text ?? '').trim();
+  if (!t) return null;
+  if (/kehä\s*iii|keha\s*iii|kehä\s*3|keha\s*3|\bkehäiii\b/i.test(t)) return '50';
+  /* F7 #732 B4: Kehä I (101) — dojazd z Länsisatamy. */
+  if (/kehä\s*i\b|keha\s*i\b|kehä\s*1\b|keha\s*1\b|\bkehäi\b/i.test(t)) return '101';
+  const e = t.match(/\bE\s*(\d{1,3})\b/i);
+  if (e) return `E${e[1]}`;
+  const named = t.match(/\b(?:vt|kt|tie|seututie)\s*(\d{1,3})\b/i);
+  if (named) return String(Number(named[1]));
+  const atStart = t.match(/^(\d{1,3})\b/);
+  if (atStart) return String(Number(atStart[1]));
+  return null;
+}
+
+/**
+ * DP-157(b) / F7 #732 B2+B4: VT4/E75, VT29/E8, Kehä III (50), Kehä I (101),
+ * Vuosaaren (103). Gołe „8”/„75” = VT8/Tie 75 → off (nie korytarz HEL→Tornio).
+ * E8/E75 tylko z prefiksem E.
+ */
+export function fiRoadOnCorridor(road: string | null | undefined): BalticCorridorRoadMatch {
+  if (road == null || road === '') return 'unknown';
+  const r = road.toUpperCase().replace(/\s+/g, '');
+  if (
+    r === '4' || r === 'VT4' || r === 'E75'
+    || r === '29' || r === 'VT29' || r === 'E8'
+    || r === '50' || r === '101' || r === '103'
+  ) {
+    return 'on';
+  }
+  return 'off';
+}
+
+/** Limit masy FI bez liczby w payloadzie (kelirikko / painorajoitus w tekście). */
+export function isFiWeightLimitLike(e: BalticRoadEvent): boolean {
+  if (e.weightLimitT != null) return true;
+  const blob = `${e.kind ?? ''} ${e.title ?? ''} ${e.detail ?? ''}`.toLowerCase();
+  return /weight|painoraj|kelirikko|massa|limit masy/.test(blob);
+}
+
+/** DP-157: road + corridorMatch + cap; unknown ≤ 3 km korytarza lub ≤ 2 km portu → on. */
+export function applyFiCorridorRoadFilter(
+  events: BalticRoadEvent[],
+  nowMs: number = Date.now(),
+): BalticRoadEvent[] {
+  const densified = densifyCorridor(CORRIDOR_FI);
+  return events.map((e) => {
+    const capped = balticCapLongDetourClosure(e, nowMs);
+    const road = capped.road
+      ?? extractFiRoadRef(`${capped.title ?? ''} ${capped.detail ?? ''}`);
+    let corridorMatch = fiRoadOnCorridor(road);
+    if (
+      corridorMatch !== 'on'
+      && capped.lat != null
+      && capped.lon != null
+      && nearFiPortTerminal(capped.lat, capped.lon)
+    ) {
+      corridorMatch = 'on';
+    } else if (
+      corridorMatch === 'unknown'
+      && capped.lat != null
+      && capped.lon != null
+      && minDistToCorridorKm(capped.lat, capped.lon, CORRIDOR_FI, densified) <= 3
+    ) {
+      corridorMatch = 'on';
+    }
+    return {
+      ...capped,
+      road,
+      corridorMatch,
+      severity: balticCapSeverity(capped.severity, corridorMatch),
+    };
+  });
 }
 
 /** Parsuje FeatureCollection Digitraffic traffic-message (roadworks / announcements / weight). */
@@ -220,18 +355,26 @@ export function parseFiTrafficMessages(json: unknown): BalticRoadEvent[] {
     const pt = featureCentroid(f.geometry);
     const times = annTimes(props);
     const sitType = String(props.situationType ?? 'unknown');
+    const titleFi = annTitle(props);
     const weightT = weightFromAnn(props);
+    const sig = fiSeverity(sitType, titleFi, weightT);
+    const labelPl = fiTypeLabelPl(sitType, titleFi);
+    const road = extractFiRoadRef(titleFi);
     out.push({
       id,
-      title: annTitle(props),
-      detail: sitType,
-      severity: situationSeverity(sitType, weightT),
+      /* DP-158: polska etykieta w title/params; fiński w detail. */
+      title: labelPl,
+      detail: titleFi,
+      severity: sig.severity,
       lat: pt?.[0] ?? null,
       lon: pt?.[1] ?? null,
       kind: sitType,
       start: times.start,
       end: times.end,
       weightLimitT: weightT,
+      road,
+      roadClosed: sig.roadClosed,
+      hasDetour: sig.hasDetour,
     });
   }
   return out;
@@ -307,7 +450,16 @@ export function weightLimitRisk(
 ): RiskInput {
   const base = balticRoadRisk(country, e, sourceUrl, attribution);
   const limit = e.weightLimitT;
-  if (limit == null) return base;
+  /* F7 #732 B1: limit bez liczby → MEDIUM „sprawdź…”, nigdy HIGH (nie spowalnia). */
+  if (limit == null) {
+    return {
+      ...base,
+      severity: 'MEDIUM',
+      title: `Trasa ${country}: limit masy — sprawdź zezwolenie / trasę`,
+      titleKey: 'rk_road_baltic_weight_check',
+      params: { country, event: e.title, limit: null },
+    };
+  }
   if (loadTons != null && loadTons > limit) {
     return {
       ...base,

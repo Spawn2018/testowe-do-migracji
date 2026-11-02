@@ -20,6 +20,7 @@ import { isFerryOperator, isKnownRoute } from '../lib/ferryCatalog';
 import { etaDetailFromBasis } from '../lib/etaDetail';
 import { opsThreshold } from '../lib/opsThresholdDefaults';
 import { trackerKind } from '../lib/trackerLink';
+import { BALTIC_ROAD_KINDS, roadInfoFromDetail } from '../lib/bn9c4RoadDetail';
 import type { Sailing, TrackingLinkInfo } from '../types';
 
 // ---- status ---------------------------------------------------------------
@@ -521,6 +522,8 @@ export function riskFromRow(r: RiskRow, nowIso: string): Risk {
     docRule: str(d.rule) || undefined,
     docPermit: typeof d.permit === 'boolean' ? d.permit : undefined,
     docPolicy: typeof d.policy === 'boolean' ? d.policy : undefined,
+    /* DP-162: ROAD_LT/LV/EE/FI — detail.zrodlo/od/do/lat/lon/limity w Risk.road (zamiast withBalticRoad). */
+    ...(BALTIC_ROAD_KINDS.has(r.kind) ? { road: roadInfoFromDetail(d) } : {}),
   };
 }
 

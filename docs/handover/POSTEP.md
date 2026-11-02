@@ -1,4 +1,12 @@
 
+## 2026-11-02 11:30 — #730 SCALONE; start DP-157+158+162
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie.
+- Scalanie: **#730 BN6 cz.3 LV SCALONE** `f060fd9e` (F7: gotowe @ `420642b0`, CI unit/db/visual ✔). deploy-main po merge.
+- **Krok:** DP-157+158+162 (`pakiet/dp157-158-162-road-fi`): Tietyö→LOW; filtr VT4/E75/29/E8/50/103; poza listą bez raise → resolveStale zamyka 146; etykiety PL (fiński w detail); `riskFromRow.road` (bez withBalticRoad). Vitest bn6-road-fi + bn9-c4 DP-162.
+- **Dalej:** push → CI → F7. Po F7: BN6 cz.4 EE.
+- Bez push na main.
+
 ## 2026-11-02 10:16 — #730 F7 r3 + #731 SCALONE
 
 - Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie.
