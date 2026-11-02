@@ -64,9 +64,10 @@ const SMOKE: Array<{
   },
 ]
 
-async function gotoFrozen(page: Page, width: number) {
+/* BN9-c5: `query` — dodatkowe parametry adresu (np. `demoRoute=…`, trasa przykładowa w demo), jak `now=` */
+async function gotoFrozen(page: Page, width: number, query = '') {
   await page.setViewportSize({ width, height: HEIGHT })
-  await page.goto(FROZEN_URL, { waitUntil: 'networkidle', timeout: 120_000 })
+  await page.goto(query ? `${FROZEN_URL}&${query}` : FROZEN_URL, { waitUntil: 'networkidle', timeout: 120_000 })
   await page.evaluate((key) => {
     try {
       sessionStorage.setItem('wtNavCollapsed', '0')
@@ -382,4 +383,101 @@ test.describe('BN9-c4 visual — drogi LT/LV/EE/FI (HHL pl)', () => {
       await expect(page).toHaveScreenshot(file, { clip, fullPage: true, maxDiffPixels: 60, threshold: 0.28, animations: 'disabled' })
     })
   }
+})
+
+/* BN9-c5 (#718 BN7 §4) — linie tras BN7. Demo: trasa przykładowa Tallinn – Helsinki z adresu (`demoRoute`, tylko demo;
+   dane demo bez zmian) i przykładowe linie dróg BN7 (`roadLinesDemo.ts`, „przykład”). Karta transportu (SG-11, przed oknem
+   śledzenia — cała trasa w kadrze): tylko legi PL-TLL i FI-HEL, tor TLL-HEL, dopisek „Trasa orientacyjna…”, komputer 1440
+   i telefon 390. Mapa (1440): rdzeń Polska–Szwecja i korytarz aktywnego transportu bałtyckiego (SG-17), kadr z Bałtykiem.
+   Decyzja 88 (02.11 22:32): Mapa i Kokpit pokazują całą sieć (wszystkie legi BN7 i tory bałtyckie) zawsze — także bez
+   `demoRoute`; parametr zostaje do migawek karty. */
+const BN7_DEMO_ROUTE = 'demoRoute=SG-11:TLL-HEL,SG-17:TLL-HEL'
+test.describe('BN9-c5 visual — karta transportu Tallinn – Helsinki (HHL pl)', () => {
+  test.describe.configure({ mode: 'serial' })
+
+  for (const width of [1440, 390]) {
+    const file = `karta-tll-hel__hhl__pl__${width}__light.png`
+    test(file, async ({ page }) => {
+      await page.emulateMedia({ reducedMotion: 'reduce' })
+      await gotoFrozen(page, width, BN7_DEMO_ROUTE)
+      await setRole(page, 'HHL')
+      await setTheme(page, 'light', 'dark')
+      await navTo(page, 'sched')
+      await page.evaluate(() => {
+        const el = [...document.querySelectorAll('[data-load]')].find((r) => /\bSG-11\b/.test(r.textContent ?? '')) as HTMLElement | undefined
+        if (!el) throw new Error('brak wiersza SG-11')
+        el.click()
+      })
+      const map = page.locator('.drawer [data-load-map]')
+      await expect(map).toBeVisible()
+      await expect(map.locator('[data-route-note="baltic"]')).toContainText('Trasa orientacyjna (HERE, bez wymiarów ładunku)')
+      await page.evaluate(async () => {
+        if (document.fonts?.ready) await document.fonts.ready
+      })
+      await page.waitForTimeout(1200)
+      await expect(map).toHaveScreenshot(file, {
+        maxDiffPixels: 60,
+        threshold: 0.28,
+        animations: 'disabled',
+      })
+    })
+  }
+})
+
+/* F7 #740: także telefon 390 — dopisek u góry na pełną szerokość (miejsce na „+ / −”), dolny pasek poza migawką */
+test.describe('BN9-c5 visual — Mapa z aktywnym transportem bałtyckim (HHL pl)', () => {
+  test.describe.configure({ mode: 'serial' })
+
+  for (const width of [1440, 390]) {
+    const file = `mapa-baltyk__hhl__pl__${width}__light.png`
+    test(file, async ({ page }) => {
+      await page.emulateMedia({ reducedMotion: 'reduce' })
+      await gotoFrozen(page, width, BN7_DEMO_ROUTE)
+      await setRole(page, 'HHL')
+      await setTheme(page, 'light', 'dark')
+      await navTo(page, 'map')
+      if (width < 769) await page.addStyleTag({ content: 'nav.tower-nav{display:none !important}' })
+      const map = page.locator('[data-page="map"] .corridor-map-root').first()
+      await expect(map).toBeVisible()
+      await expect(map.locator('[data-route-note="baltic"]')).toBeVisible()
+      await page.waitForTimeout(1200)
+      await expect(map).toHaveScreenshot(file, {
+        maxDiffPixels: 60,
+        threshold: 0.28,
+        animations: 'disabled',
+      })
+    })
+  }
+})
+
+/* F7 #740 D5 — karta transportu Polska–Szwecja ze znanym rejsem (SG-11, statek Polferries → GDN-NYN, przed oknem
+   śledzenia): tylko drogi PL-GDN i SE-NYN i tor Gdańsk – Nynäshamn, bez drugiego rdzenia (GDY-KAA) i bez dopisku. */
+test.describe('BN9-c5 visual — karta transportu Gdańsk – Nynäshamn (HHL pl 1440)', () => {
+  test.describe.configure({ mode: 'serial' })
+
+  const file = 'karta-gdn-nyn__hhl__pl__1440__light.png'
+  test(file, async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    await gotoFrozen(page, 1440)
+    await setRole(page, 'HHL')
+    await setTheme(page, 'light', 'dark')
+    await navTo(page, 'sched')
+    await page.evaluate(() => {
+      const el = [...document.querySelectorAll('[data-load]')].find((r) => /\bSG-11\b/.test(r.textContent ?? '')) as HTMLElement | undefined
+      if (!el) throw new Error('brak wiersza SG-11')
+      el.click()
+    })
+    const map = page.locator('.drawer [data-load-map]')
+    await expect(map).toBeVisible()
+    await expect(map.locator('[data-route-note]')).toHaveCount(0)
+    await page.evaluate(async () => {
+      if (document.fonts?.ready) await document.fonts.ready
+    })
+    await page.waitForTimeout(1200)
+    await expect(map).toHaveScreenshot(file, {
+      maxDiffPixels: 60,
+      threshold: 0.28,
+      animations: 'disabled',
+    })
+  })
 })

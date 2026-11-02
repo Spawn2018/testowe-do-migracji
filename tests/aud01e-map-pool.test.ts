@@ -7,7 +7,8 @@ describe('AUD-01e: jedna mapa na sesję (źródło)', () => {
   it('CorridorMap nie tworzy ani nie niszczy mapy — bierze ją z puli i oddaje', () => {
     expect(comp).not.toMatch(/L\.map\(/);
     expect(comp).not.toMatch(/map\.remove\(\)/);
-    expect(comp).toMatch(/acquireMap\(containerRef\.current, slot\)/);
+    /* BN9-c5: trzeci argument — zakres linii widoku (karta transportu / Mapa i Kokpit) */
+    expect(comp).toMatch(/acquireMap\(containerRef\.current, slot, linesSpecRef\.current\)/);
     expect(comp).toMatch(/releaseMap\(pooled, slot\)/);
   });
   it('słuchacze i obserwatory zdejmowane przy zamknięciu widoku (bez wycieku)', () => {

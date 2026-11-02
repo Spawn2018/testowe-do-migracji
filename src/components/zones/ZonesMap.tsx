@@ -14,6 +14,7 @@ import type { NearPos } from '../../lib/p8cSource';
 import { formatListDateTime } from '../../lib/format';
 import { DEMO_ROAD_LINES } from '../../data/roadLinesDemo';
 import { ferryLaneLines, ferryLaneOptions, restyleFerryLanes } from '../../lib/map/ferryLanes';
+import { coreLegsOnly } from '../../lib/map/routeLegs';
 import { p8ct } from '../../i18n/p8c';
 
 type Circle = { lat: number; lng: number; radiusM: number };
@@ -109,12 +110,15 @@ export default function ZonesMap({ mode, zones = NO_ZONES, zone, prev, draft, ne
         if (roadsRef.current === roads) paintOrangeRoads(roads, DEMO_ROAD_LINES.map((l) => [...l]));
       }).catch(() => undefined);
     } else {
-      void Promise.all([import('../map/applyBasemap'), import('../map/orangeRoads')]).then(async ([{ loadRoadLines }, { paintOrangeRoads }]) => {
-        const lines = await loadRoadLines();
-        if (roadsRef.current === roads) paintOrangeRoads(roads, lines);
+      /* BN9-c5 (#718 BN7 §4 pkt 3): mapa stref nie dotyczy transportu — sam rdzeń, bez legów BN7 (po `cron_fetch`) */
+      void Promise.all([import('../map/applyBasemap'), import('../map/orangeRoads')]).then(async ([{ loadRoadLines, loadRoadLegs }, { paintOrangeRoads }]) => {
+        await loadRoadLines();
+        const { legs } = await loadRoadLegs();
+        if (roadsRef.current === roads) paintOrangeRoads(roads, coreLegsOnly(legs).map((l) => [...l.line]));
       }).catch(() => undefined);
     }
-    /* DP-13: tory promów ze wspólnego źródła (`ferryLaneLines`) — Polska–Szwecja i 4 przeprawy bałtyckie.
+    /* DP-13: tory promów ze wspólnego źródła (`ferryLaneLines`) — Polska–Szwecja; BN9-c5 (#718 BN7 §4): bez torów
+       bałtyckich (mapa stref nie dotyczy transportu; tory bałtyckie tylko na mapach z transportem bałtyckim).
        DP-76: styl wspólny z mapą korytarza (`ferryLaneOptions(theme)`); zmianę motywu przerysowuje efekt motywu */
     laneThemeRef.current = useTowerStore.getState().theme;
     const laneOpts = ferryLaneOptions(laneThemeRef.current);

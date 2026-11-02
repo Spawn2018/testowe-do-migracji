@@ -16,6 +16,7 @@ import { renderToString } from 'react-dom/server';
 import { useVesselGroups } from '../src/lib/useVesselGroups';
 import { ferryLaneLines, HERE_FERRY_LEGS } from '../src/lib/map/ferryLanes';
 import { WATER_TRACKS_EXTRA } from '../src/lib/map/ferryLines';
+import type { WaterTrackId } from '../src/lib/ferryCatalog';
 import { WATER_GDN_NYN } from '../src/lib/map/draw';
 import type { Load } from '../src/types';
 
@@ -87,14 +88,18 @@ describe('DP-3, DP-5 · Harmonogram › Rejsy (U1–U3)', () => {
 
 describe('DP-7 · tory promów z jednego źródła', () => {
   const extra = Object.keys(WATER_TRACKS_EXTRA).length;
-  it('bez HERE: 2 stałe tory + wszystkie tory bałtyckie, w kolejności [lat, lng]', () => {
+  /* BN9-c5 (#718 BN7 §4): domyślnie rdzeń (2 tory); tory bałtyckie tylko, gdy są w zakresie mapy */
+  const all = new Set(['GDN-NYN', 'GDY-KAA', ...Object.keys(WATER_TRACKS_EXTRA)] as WaterTrackId[]);
+  it('bez HERE: 2 stałe tory rdzenia; z zakresem — także tory bałtyckie, w kolejności [lat, lng]', () => {
     const lines = ferryLaneLines();
-    expect(lines).toHaveLength(2 + extra);
+    expect(lines).toHaveLength(2);
     expect(lines[0][0]).toEqual([WATER_GDN_NYN[0][1], WATER_GDN_NYN[0][0]]);
+    expect(ferryLaneLines(new Set(), all)).toHaveLength(2 + extra);
   });
-  it('skipLegs: przeprawy narysowane z HERE nie rysują się drugi raz, tory bałtyckie zostają', () => {
-    expect(ferryLaneLines(new Set(['FERRY-GDN-NYN']))).toHaveLength(1 + extra);
-    expect(ferryLaneLines(new Set(HERE_FERRY_LEGS))).toHaveLength(extra);
+  it('skipLegs: przeprawy narysowane z HERE nie rysują się drugi raz, tory bałtyckie zakresu zostają', () => {
+    expect(ferryLaneLines(new Set(['FERRY-GDN-NYN']))).toHaveLength(1);
+    expect(ferryLaneLines(new Set(['FERRY-GDN-NYN']), all)).toHaveLength(1 + extra);
+    expect(ferryLaneLines(new Set(HERE_FERRY_LEGS), all)).toHaveLength(extra);
   });
   /* DP-33: rysowanie przez drawFerryLanes — test zachowania w tests/dp-front-4.jsdom.test.ts. */
 });
