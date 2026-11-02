@@ -104,9 +104,9 @@ import {
   applyBalticCorridorRoadFilter, applyFiCorridorRoadFilter, balticRoadRisk, balticSlowdownMult,
   capBalticRiskSeverity, dedupeLvSlippery, fiCorridorBboxes, fiTrafficUrl,
   filterInFiBboxes, filterInLvBboxes, dimensionLimitRisk, filterInLtBboxes,
-  isDimensionLimitEvent, ltWeatherToSlowdownEvents, lvNapKeyEnv, lvNapUrlEnv,
-  lvWeatherToSlowdownEvents, parseFiTrafficMessages, parseLtRestrictions, parseLtWeather,
-  parseLvFeedBody, weightLimitRisk,
+  isDimensionLimitEvent, isFiWeightLimitLike, ltWeatherToSlowdownEvents, lvNapKeyEnv,
+  lvNapUrlEnv, lvWeatherToSlowdownEvents, parseFiTrafficMessages, parseLtRestrictions,
+  parseLtWeather, parseLvFeedBody, weightLimitRisk,
   type BalticRoadEvent, type LvNapCode,
 } from './roadBaltic.ts';
 import { buildTrafficIncidentsUrl, parseHereTrafficIncidents } from '../here/trafficIncidents.ts';
@@ -3713,11 +3713,11 @@ export async function runRoadFi(deps: JobDeps): Promise<JobResult> {
   let risks = 0;
   const keep: string[] = [];
   for (const e of near) {
-    /* DP-157(c): off nie w keep — jednorazowe zamknięcie starych ROAD_FI poza korytarzem. */
-    if (e.corridorMatch === 'off') continue;
+    /* DP-157(c)/F7 #732: tylko corridorMatch=on w keep (off/unknown → resolveStale). */
+    if (e.corridorMatch !== 'on') continue;
     const src = byId.get(e.id)?.sourceUrl ?? FI_ROADWORKS_URL;
-    /* Znane ograniczenie: loadTons=null — HIGH masy gdy combo_weight_t (rzadkie na prod). */
-    const raw = e.weightLimitT != null
+    /* F7 #732 B1: kelirikko/painorajoitus bez liczby → weightLimitRisk(limit=null) MEDIUM. */
+    const raw = isFiWeightLimitLike(e)
       ? weightLimitRisk('FI', e, null, src, FI_ATTRIBUTION)
       : balticRoadRisk('FI', e, src, FI_ATTRIBUTION);
     const risk = capBalticRiskSeverity(raw, e.corridorMatch);
@@ -3737,7 +3737,7 @@ export async function runRoadFi(deps: JobDeps): Promise<JobResult> {
     await deps.store.resolveStaleRisks('ROAD_FI:', keep);
   }
 
-  const slow = balticSlowdownMult(near.filter((e) => e.corridorMatch !== 'off'));
+  const slow = balticSlowdownMult(near.filter((e) => e.corridorMatch === 'on'));
   if (deps.store.saveCorridorCondition) {
     await deps.store.saveCorridorCondition({
       corridor: 'ROAD_FI',

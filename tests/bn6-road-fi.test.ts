@@ -22,6 +22,7 @@ import {
   fiTrafficUrl,
   fiTypeLabelPl,
   filterInFiBboxes,
+  nearFiPortTerminal,
   parseFiTrafficMessages,
   weightLimitRisk,
   type BalticRoadEvent,
@@ -153,26 +154,79 @@ describe('BN6 road-fi — Digitraffic', () => {
     expect(fiSeverity('road work', 'Tie 4, Oulu. Tietyö.', null).severity).toBe('LOW');
     expect(fiSeverity('ROAD_WORK', 'Tietyö Kehä III', null).severity).toBe('LOW');
     expect(fiSeverity('road work', 'Tie 4 suljettu', null).severity).toBe('HIGH');
-    expect(fiSeverity('accident', 'Onnettomuus VT4', null).severity).toBe('HIGH');
   });
 
-  it('DP-157(b): filtr VT4/E75/50/103; ulica Helsinek → off', () => {
+  it('F7 #732 B1: kelirikko bez liczby → MEDIUM; nie spowalnia ETA', () => {
+    expect(fiSeverity('weight restriction', 'kelirikko VT4', null).severity).toBe('MEDIUM');
+    expect(fiSeverity('weight', 'painorajoitus ilman lukua', null).severity).toBe('MEDIUM');
+    const kel: BalticRoadEvent = {
+      id: 'KEL', title: 'limit masy', detail: 'kelirikko VT4', severity: 'MEDIUM',
+      lat: 65.0, lon: 25.5, kind: 'weight', start: null, end: null,
+      corridorMatch: 'on',
+    };
+    const risk = weightLimitRisk('FI', kel, null, FI_ROADWORKS_URL, 'Fintraffic');
+    expect(risk.severity).toBe('MEDIUM');
+    expect(risk.titleKey).toBe('rk_road_baltic_weight_check');
+    expect(risk.params).toMatchObject({ limit: null });
+    expect(balticSlowdownMult([{ ...kel, severity: 'MEDIUM' }]).mult).toBe(1);
+    expect(balticSlowdownMult([{
+      ...kel, severity: 'HIGH', weightLimitT: 12,
+    }]).mult).toBe(1);
+  });
+
+  it('F7 #732 B3: wypadek bez blokady → MEDIUM; z zamknięciem → HIGH', () => {
+    expect(fiSeverity('accident', 'Onnettomuus VT4', null).severity).toBe('MEDIUM');
+    expect(fiSeverity('accident', 'Onnettomuus VT4', null).roadClosed).toBe(false);
+    expect(fiSeverity('accident', 'Onnettomuus VT4 suljettu', null).severity).toBe('HIGH');
+    expect(fiSeverity('accident', 'Onnettomuus ajorata suljettu', null).severity).toBe('HIGH');
+  });
+
+  it('DP-157(b)/F7 B2: filtr VT4/E75/50/101/103; Tie 8/75 → off', () => {
     expect(extractFiRoadRef('Tie 4, Oulu. Tietyö.')).toBe('4');
     expect(extractFiRoadRef('Kehä III, Vantaa')).toBe('50');
+    expect(extractFiRoadRef('Kehä I, Helsinki')).toBe('101');
+    expect(extractFiRoadRef('Tietyö 2 km')).toBeNull();
     expect(fiRoadOnCorridor('4')).toBe('on');
     expect(fiRoadOnCorridor('E75')).toBe('on');
+    expect(fiRoadOnCorridor('E8')).toBe('on');
     expect(fiRoadOnCorridor('50')).toBe('on');
+    expect(fiRoadOnCorridor('101')).toBe('on');
     expect(fiRoadOnCorridor('103')).toBe('on');
     expect(fiRoadOnCorridor('110')).toBe('off');
+    expect(fiRoadOnCorridor('8')).toBe('off');
+    expect(fiRoadOnCorridor('75')).toBe('off');
+    expect(extractFiRoadRef('Tie 8, Vaasa')).toBe('8');
+    expect(fiRoadOnCorridor(extractFiRoadRef('Tie 8, Vaasa'))).toBe('off');
+    expect(fiRoadOnCorridor(extractFiRoadRef('Tie 75'))).toBe('off');
+    /* Poza 2 km od portów (F7 B4) — inaczej road 110 i tak byłby „on”. */
     const street: BalticRoadEvent = {
       id: 'HEL', title: 'roboty drogowe', detail: 'Mannerheimintie. Tietyö.',
-      severity: 'LOW', lat: 60.17, lon: 24.94, kind: 'road work', start: null, end: null,
+      severity: 'LOW', lat: 60.186, lon: 24.915, kind: 'road work', start: null, end: null,
       road: '110',
     };
     const vt4 = parseFiTrafficMessages(rw)[0]!;
     const filtered = applyFiCorridorRoadFilter([street, vt4]);
     expect(filtered.find((e) => e.id === 'HEL')!.corridorMatch).toBe('off');
     expect(filtered.find((e) => e.id === vt4.id)!.corridorMatch).toBe('on');
+  });
+
+  it('F7 #732 B4: ≤2 km od Länsisatamy/Vuosaari → on; 4 km + ulica → off', () => {
+    expect(nearFiPortTerminal(60.150, 24.915)).toBe(true);
+    /* ~1 km N od Länsisatamy */
+    const nearPort: BalticRoadEvent = {
+      id: 'PORT', title: 'roboty drogowe', detail: 'Länsisatama. Tietyö.',
+      severity: 'LOW', lat: 60.159, lon: 24.915, kind: 'road work',
+      start: null, end: null,
+    };
+    /* ~4 km N — Mannerheimintie poza terminalem i poza listą dróg */
+    const farStreet: BalticRoadEvent = {
+      id: 'FAR', title: 'roboty drogowe', detail: 'Mannerheimintie 110. Tietyö.',
+      severity: 'LOW', lat: 60.186, lon: 24.915, kind: 'road work',
+      start: null, end: null,
+    };
+    const filtered = applyFiCorridorRoadFilter([nearPort, farStreet]);
+    expect(filtered.find((e) => e.id === 'PORT')!.corridorMatch).toBe('on');
+    expect(filtered.find((e) => e.id === 'FAR')!.corridorMatch).not.toBe('on');
   });
 
   it('DP-158: etykieta PL w title; fiński w detail', () => {
@@ -365,11 +419,12 @@ describe('BN6 runRoadFi — F7 #726', () => {
       dedup: 'ROAD_FI:v2:GUID-STREET-HEL',
       detail: {}, titleKey: 'rk_road_baltic', params: {},
     });
+    /* F7 #732 B4: ~4 km od Länsisatamy — poza strefą portu 2 km. */
     const streetBody = JSON.stringify({
       type: 'FeatureCollection',
       features: [{
         type: 'Feature',
-        geometry: { type: 'Point', coordinates: [24.94, 60.17] },
+        geometry: { type: 'Point', coordinates: [24.915, 60.186] },
         properties: {
           situationId: 'GUID-STREET-HEL',
           situationType: 'road work',
