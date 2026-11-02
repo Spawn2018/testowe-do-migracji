@@ -365,6 +365,9 @@ test.describe('BN9-c4 visual — drogi LT/LV/EE/FI (HHL pl)', () => {
       if (width < 769) await page.addStyleTag({ content: 'nav.tower-nav{display:none !important}' })
       await page.setViewportSize({ width, height: width < 769 ? 4200 : 2600 })
       await page.evaluate(() => window.scrollTo(0, 0))
+      /* BN9-c4b: bez klikania przełączników `main` (przewijany) zostaje na górze — obszar „Drogi LT” – „Drogi FI” przewinięty
+         do widoku jak dawniej po kliknięciu, inaczej przy 1440 wycinek kończy się na dole okna (dół „Drogi LV”) */
+      await page.locator('[data-baltic]').first().evaluate((e) => e.scrollIntoView({ block: 'start' }))
       await page.waitForTimeout(300)
       if (width >= 769) await expectTwoRiskColumns(page)
       /* obszar od „Drogi LT” do „Drogi FI” (sekcje stoją jedna pod drugą; na komputerze w prawej kolumnie) */
