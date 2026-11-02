@@ -17,26 +17,12 @@ comment on column public.loads.ferry_route is
 alter table public.loads drop constraint if exists loads_ferry_route_chk;
 alter table public.loads
   add constraint loads_ferry_route_chk
-  check (ferry_route is null or ferry_route ~ '^[A-Z][A-Z0-9_-]{0,62}$');
+  check (ferry_route is null or ferry_route ~ '^[A-Z][A-Z0-9_-]{0,62}$') not valid;
+alter table public.loads validate constraint loads_ferry_route_chk;
 
 grant select (ferry_route) on table public.loads to authenticated;
-
-do $g$
-declare
-  v_cols text;
-begin
-  select string_agg(quote_ident(column_name), ', ' order by ordinal_position)
-    into v_cols
-    from information_schema.columns
-   where table_schema = 'public' and table_name = 'loads'
-     and column_name not in ('rio_secret', 'safefleet_token');
-  if v_cols is not null then
-    execute 'revoke insert, update on table public.loads from authenticated';
-    execute format('grant insert (%s) on table public.loads to authenticated', v_cols);
-    execute format('grant update (%s) on table public.loads to authenticated', v_cols);
-  end if;
-end
-$g$;
+-- W4/F7: tylko nowa kolumna — bez przebudowy grantów całej loads (nazwy tokenów poza diffem).
+grant insert (ferry_route), update (ferry_route) on table public.loads to authenticated;
 
 alter table public.ferry_routes
   add column if not exists assume_dep_min integer not null default 60,
@@ -614,7 +600,9 @@ begin
            coalesce(fr.overdue_tolerance_min, 120) as tol_min,
            public.ferry_route_arrival_country(s.route) as arr_country,
            case
+             -- Powrót (arrival PL): bez gałęzi „actual” — ląd docelowy to PL, nie SE|FI.
              when s.actual_arrival_at is not null
+                  and public.ferry_route_arrival_country(s.route) in ('SE', 'FI')
                   and s.actual_arrival_at
                       + make_interval(mins => greatest(coalesce(fr.overdue_tolerance_min, 120), 1))
                       < coalesce(p_now, now())
@@ -626,11 +614,8 @@ begin
                        and (
                          (public.ferry_route_arrival_country(s.route) = 'FI'
                           and st_covers(public.finland_land_geom(), p.geom_raw::geometry))
-                         or (coalesce(public.ferry_route_arrival_country(s.route), 'SE') = 'SE'
+                         or (public.ferry_route_arrival_country(s.route) = 'SE'
                              and st_covers(public.sweden_land_geom(), p.geom_raw::geometry))
-                         or (public.ferry_route_arrival_country(s.route) is null
-                             and (st_covers(public.sweden_land_geom(), p.geom_raw::geometry)
-                                  or st_covers(public.finland_land_geom(), p.geom_raw::geometry)))
                        )
                   )
              then 'actual'
@@ -724,7 +709,7 @@ declare
   v_first_land timestamptz;
   v_prop    uuid;
 begin
-  select l.project_id, s.route
+  select l.project_id, coalesce(s.route, l.ferry_route)
     into v_project, v_route
     from public.loads l
     left join public.sailings s on s.id = l.sailing_id
@@ -794,7 +779,7 @@ revoke all on function public.sailing_mismatch_propose_id(uuid)
   from public, anon, authenticated;
 grant execute on function public.sailing_mismatch_propose_id(uuid) to service_role;
 comment on function public.sailing_mismatch_propose_id(uuid) is
-  'BN8a/#720: outbound PL/EE→SE/FI; ostatni punkt PORT_OUT/LOADING kraju wyjścia; ląd SE|FI.';
+  'BN8a/#720: outbound PL/EE→SE/FI; filtr rodziny z coalesce(sailing, ferry_route); ląd SE|FI.';
 
 create or replace function public.sailing_mismatch_assign(p_load_id uuid, p_sailing_id uuid)
 returns jsonb
@@ -1040,8 +1025,14 @@ begin
    where l.id = p_load_id;
 
   -- BN8a: ląd kraju przypłynięcia (SE/FI); bez trasy — SE|FI jak propose_id.
-  select public.load_route_family(p_load_id) into v_route_key;
-  v_arr_country := public.ferry_route_arrival_country(v_route_key);
+  -- W2/F7: wyjątek — błąd helpera nie wycofuje zapisu pozycji.
+  begin
+    select public.load_route_family(p_load_id) into v_route_key;
+    v_arr_country := public.ferry_route_arrival_country(v_route_key);
+  exception when others then
+    v_route_key := null;
+    v_arr_country := null;
+  end;
   if v_arr_country = 'FI' then
     v_on_se := st_covers(public.finland_land_geom(), v_pt);
   elsif v_arr_country = 'SE' then
@@ -1386,14 +1377,18 @@ begin
     v_corr := null;
   end if;
 
-  -- Regresja PL/SE bez trasy (brak rejsu/ferry_route/strefy): jak 0339 — PL_ROAD / SE_E4.
+  -- W1/F7: bez trasy — PL_ROAD tylko w prostokącie PL (jak propose_id);
+  -- SE bez trasy → null (0339: brak v_op ⇒ brak v_corr; nie SE_E4 na Stena/FI).
   -- Znana rodzina bez corridor_code → brak alarmu (Bałtyk LT/LV, #720).
-  if v_corr is null and v_route is null then
-    if l.status = 'IN_TRANSIT_PL' then
-      v_corr := 'PL_ROAD';
-    elsif l.status = 'IN_TRANSIT_SE' then
-      v_corr := 'SE_E4';
-    end if;
+  if v_corr is null and v_route is null and l.status = 'IN_TRANSIT_PL' then
+    select 'PL_ROAD' into v_corr
+      from public.positions p
+     where p.load_id = p_load
+       and coalesce((p.raw->>'stale_point')::boolean, false) is not true
+       and st_x(p.geom_raw::geometry) between 14.0 and 24.2
+       and st_y(p.geom_raw::geometry) between 49.0 and 54.45
+     order by p.ts desc
+     limit 1;
   end if;
 
   -- B3/F7 BN8a: alarm OFF_CORRIDOR tylko rdzeń (PL_ROAD / SE_E4 / Stena dual).
@@ -1605,7 +1600,7 @@ comment on function public.apply_ferry_ais_arrival_backup(uuid, double precision
 revoke all on function public.refresh_load_eta(uuid) from public, anon, authenticated;
 grant execute on function public.refresh_load_eta(uuid) to service_role;
 comment on function public.refresh_load_eta(uuid) is
-  'BN8a/#720: OFF_CORRIDOR tylko core PL_ROAD/SE_E4/Stena dual; BN7 kody→bez alarmu (BN8b); bez trasy→PL_ROAD/SE_E4.';
+  'BN8a/#720: OFF_CORRIDOR tylko core PL_ROAD/SE_E4/Stena dual; BN7 kody→bez alarmu (BN8b); bez trasy→PL_ROAD w bbox PL, SE null.';
 
 -- ---------------------------------------------------------------------------
 -- 9) eta_record_segment_observations — filtr po trasie

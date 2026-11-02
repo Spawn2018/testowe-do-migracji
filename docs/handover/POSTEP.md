@@ -1,4 +1,12 @@
 
+## 2026-11-02 23:20 — BN8a F7 r2 (W1/W2/W4/W5) + CI db FAIL → poprawka
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. #742 DP-172 wpisane (po #741+DP-171). #740 BN9-c5 bez F7.
+- Scalanie: brak „F7: gotowe”. #741 @ `6af33333`: unit/visual ✔; db FAIL — status propose GDN (`f`), risks +`rk_off_corridor`/`rk_eta_breach`.
+- **Krok F7 r2:** W1 — PL_ROAD tylko bbox PL, SE bez trasy → null; W4 — grant tylko `ferry_route`; W2 — `begin…exception` w `process_position`; propose `coalesce(sailing, ferry_route)`; W5a0/c/d + sprzątanie ryzyk; overdue powrót bez „actual” PL; status **603**; DP-171/172 w PLAN.
+- **Dalej:** push → CI → F7. Po F7: DP-171 (#735) → DP-172 (#742); front `src/lib` / BN8b; #740 → cron_fetch=true.
+- Bez push na main.
+
 ## 2026-11-02 22:55 — BN8a F7 r1 B3/W2/W5 + CI db
 
 - Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. #740 BN9-c5 CI ✔, bez F7.
