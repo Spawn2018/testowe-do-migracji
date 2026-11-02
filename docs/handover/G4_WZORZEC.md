@@ -287,3 +287,14 @@ Dodane `tests/__screenshots__/pasek-na-promie-hhl-pl-{1440,390}-light.png` z wor
 gałąź `wyglad/BN9-c2`, przebieg 41353182007, commit `5b95c69`, artefakt `visual-artifacts`). Pozostałe 17 migawek w artefakcie jest identycznych co do bajtu.
 Migawka samego paska śledzenia w karcie transportu SG-03 (demo, Prom, Nova Star): „Na promie · Nova Star” i „brak pozycji statku · lokalizator naczepy na promie zwykle milknie”
 (w demo pozycje przykładowe nie są pozycją statku). Wzorca `shots-baseline` nie zmieniano.
+
+## BN9-c3 (02.11.2026) — nowe migawki: Ryzyka › „Pogoda na przeprawach”
+Dodane `tests/__screenshots__/pogoda-przeprawy-hhl-pl-{1440,390}-light.png` z workflowu `visual` (`update=true`,
+gałąź `wyglad/BN9-c3`, przebieg 41375312301, commit `d5b462a`, artefakt `visual-artifacts`). Pozostałe 19 migawek w artefakcie jest identycznych co do bajtu (Kokpit też — demo nie ma transportów bałtyckich, więc kart pogody w Kokpicie nie ma).
+Migawka samej sekcji (Administrator HHL, demo, telefon — zakładka „Na trasie”): pięć przepraw z wartościami przykładowymi (G-09), najpierw ryzyko wyższe, atrybucja, dopisek NAVTEX i link „Mapa lodowa FMI”.
+Dolny pasek telefonu ukryty, okno wyższe (1440×2200, 390×3400), żeby cała sekcja była w kadrze; test sprawdza też brak poziomego przewijania. Wzorca `shots-baseline` nie zmieniano.
+
+## BN9-c3 r2 (02.11.2026) — nowa migawka: Ryzyka KSH na komputerze
+Dodana `tests/__screenshots__/ryzyka-ksh-pl-1440-light.png` z workflowu `visual` (`update=true`, gałąź `wyglad/BN9-c3`,
+przebieg 41379235273, commit `e58ac97`, artefakt `visual-artifacts`). Pozostałe 21 migawek w artefakcie jest identycznych co do bajtu (także `pogoda-przeprawy-*` i Kokpit).
+Przegląd #723 pkt 3: u KSH „Pogoda na przeprawach” stoi w siatce `.rk-ksh .rk-route-parts` na pełną szerokość pod promami i drogami; „Drogi PL” i „Drogi SE” zostają w prawej kolumnie obok promów. Migawka całej strony Ryzyk KSH (demo, okno 1440×2200). Wzorca `shots-baseline` nie zmieniano.

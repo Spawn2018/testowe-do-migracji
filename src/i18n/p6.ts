@@ -141,7 +141,6 @@ const PL: Record<string, string> = {
   p6_ferries_none: 'Brak rejsów do Szwecji ani do Finlandii w rozkładzie na najbliższe dni.',
   p6_ferries_nodata: 'Brak danych o rejsach.',
   p6_ferry_warn: 'Ostrzeżenia rejsów',
-  p6_sea_attr: 'Dane morskie: {attr} · pomiar {at}',
   p6_weather: 'Pogoda i siła wyższa',
   p6_bans: 'Zakazy ruchu w dniu przejazdu',
   p6_bans_note: 'informacja — nie liczy się do „Do zrobienia”',

@@ -20,6 +20,7 @@ export function Cockpit({
   footer,
   moneyTags,
   onGo,
+  extra,
 }: {
   locale: Locale;
   role: RoleId;
@@ -31,6 +32,8 @@ export function Cockpit({
   /** Poziom pewności kwoty (G4 z M8) przy kafelku z kwotą. */
   moneyTags?: ReactNode;
   onGo: (tile: CockpitTile) => void;
+  /** BN9-c3: pod kafelkami (np. pogoda na przeprawach transportów); null — Kokpit jak dotąd */
+  extra?: ReactNode;
 }) {
   return (
     <section className="panel section-card ck-card" data-cockpit={role}>
@@ -73,6 +76,7 @@ export function Cockpit({
           </button>
         ))}
       </div>
+      {extra ?? null}
       {footer ? <div className="ck-ft">{footer}</div> : null}
     </section>
   );

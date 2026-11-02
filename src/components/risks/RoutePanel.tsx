@@ -13,7 +13,8 @@ import type { MarineConditionRow } from '../../lib/marineWeatherDb';
 import type { CorridorConditionRow } from '../../lib/corridorConditionsDb';
 import type { RoadSituation } from '../../lib/trafikverket';
 import { altProposal, ferryAlert, ferryRowsFromDb, impactOf, roadCounts, rowPorts, roadRowsFromCorridor, sortRoads, type FerryRowView, type RoadRowView } from '../../lib/p6Route';
-import { altSailingsOf, sampleFerryRowsOf, roadPlOf } from '../../lib/p6Source';
+import { altSailingsOf, sampleFerryRowsOf, sampleMarineOf, roadPlOf } from '../../lib/p6Source';
+import { MarineSection } from './MarineSection';
 import { routeRisks } from '../../lib/todoRules';
 import { effDeparture, sailingStatusLabel } from '../../lib/sailings';
 import { focusVoyage, loadsOnVoyage } from '../../lib/voyage';
@@ -142,8 +143,8 @@ export function RoutePanel({
   /* sytuacje na trasie bez transportu (dawna lista ryzyk): ostrzeżenia rejsów, pogoda, drogi PL, zakazy, sprawy techniczne */
   const rr = routeRisks(risks);
   const sysCount = rr.system.length;
-  const attribution = [...new Set(marine.map((m) => m.attribution).filter(Boolean))].join(' · ');
-  const seaAt = marine.map((m) => m.observedAt).filter(Boolean).sort().pop() ?? null;
+  /* BN9-c3: pogoda na przeprawach — produkcja `marine_conditions` (pięć korytarzy BN5), demo — przykład z p6Source */
+  const seaRows = PROD ? marine : sampleMarineOf(nowIso);
   const riskList = (list: Risk[], box: string | null, info = false) => (
     <ul className="rk-roads rk-risks">
       {list.map((r) => {
@@ -243,9 +244,6 @@ export function RoutePanel({
           </div>
         ) : null}
         {!phone ? <p className="rk-muted">{rt(locale, 'p6_ferries_note')}</p> : null}
-        {PROD && attribution ? (
-          <p className="rk-muted" data-attribution="marine">{rtp(locale, 'p6_sea_attr', { attr: attribution, at: seaAt ? formatListDateTime(seaAt) : '—' })}</p>
-        ) : null}
         {NoticeForm && role !== 'KSH' ? (
           <details className="rk-notice">
             <summary>{rt(locale, 'p6_notice')}</summary>
@@ -254,6 +252,10 @@ export function RoutePanel({
         ) : null}
       </section>,
     );
+  }
+  if (parts.includes('ferry')) {
+    /* BN9-c3: atrybucja danych morskich (dawniej pod promami, tylko produkcja) jest teraz pod tą sekcją */
+    sections.push(<MarineSection key="marine" locale={locale} marine={seaRows} demo={!PROD} />);
   }
   if (parts.includes('ferry') && rr.weather.length) {
     sections.push(

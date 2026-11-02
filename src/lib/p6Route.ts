@@ -13,6 +13,7 @@ import {
 } from './ferryCatalog';
 import { crossingLine, effDeparture, nearestCrossingByOperator, nearestCrossingSailings } from './sailings';
 import { stageTileOf } from './stageTiles';
+import { corridorOfRoute, isNoReading } from './bn9c3Marine';
 
 /** Armator przeprawy — z katalogu promów (BN9-a). */
 export type CrossingLine = FerryOperator;
@@ -79,8 +80,12 @@ export function ferryRowsFromDb(
     const todayRows = all.filter((s) => warsawDay(Date.parse(effDeparture(s))) === today);
     const pick = todayRows.length ? todayRows : all.slice(0, 1);
     const corridor = LINE_CORRIDOR[line];
-    const sea = corridor ? seaFromMarine(marine.find((m) => m.corridor === corridor)) : null;
+    const legacySea = corridor ? seaFromMarine(marine.find((m) => m.corridor === corridor)) : null;
     for (const s of pick) {
+      /* BN9-c3: armatorzy bałtyccy — pogoda korytarza rodziny trasy rejsu (BN5); wiersz startowy = bez pomiaru */
+      const balticCorr = corridor ? null : corridorOfRoute(s.route);
+      const bm = balticCorr ? marine.find((m) => m.corridor === balticCorr) : null;
+      const sea = corridor ? legacySea : bm && !isNoReading(bm) ? seaFromMarine(bm) : null;
       out.push({
         id: s.id, line, route: s.route, vessel: s.vessel, depIso: s.departureAt,
         delayedIso: s.delayedDepartureAt && s.delayedDepartureAt !== s.departureAt ? s.delayedDepartureAt : null,
