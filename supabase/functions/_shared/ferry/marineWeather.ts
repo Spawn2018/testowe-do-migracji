@@ -1,7 +1,8 @@
 /**
- * II-8 — pogoda morska Bałtyk (FMI WAM + DMI WAM + SMHI ocobs).
+ * II-8 / BN5 (#714) — pogoda morska Bałtyk (FMI WAM + DMI WAM + SMHI ocobs/snow1g).
  * Licencje CC BY 4.0 — w UI podać źródło. Bez klucza API.
  * Progi: WAVE_M (m) / GUST_KN (kn) z ops_thresholds (D-39: 3,8 m / 40 kn).
+ * Trasa bez mapy → null (nigdy domyślny GDN-NYN).
  */
 export const FMI_ATTRIBUTION = 'FMI Open Data (CC BY 4.0)';
 export const DMI_ATTRIBUTION = 'DMI Open Data (CC BY 4.0)';
@@ -9,7 +10,49 @@ export const SMHI_ATTRIBUTION = 'SMHI Open Data (CC BY 4.0)';
 export const MARINE_ATTRIBUTION =
   'Dane: FMI / DMI / SMHI (CC BY 4.0)';
 
-/** Punkty trasy Gdańsk–Nynäshamn (ZLECENIE II-8) + podejście SE. */
+export type MarineCorridor =
+  | 'BALTIC_GDN_NYN'
+  | 'BALTIC_GDY_KAA'
+  | 'BALTIC_GULF_FI'
+  | 'BALTIC_PLD_KPS'
+  | 'BALTIC_TLL_STO';
+
+export const MARINE_CORRIDORS: readonly MarineCorridor[] = [
+  'BALTIC_GDN_NYN',
+  'BALTIC_GDY_KAA',
+  'BALTIC_GULF_FI',
+  'BALTIC_PLD_KPS',
+  'BALTIC_TLL_STO',
+] as const;
+
+/** Słownik code → family_key (jak ferry_routes / 0338). */
+const ROUTE_TO_FAMILY: Record<string, string> = {
+  'GDN-NYN': 'GDN-NYN',
+  'NYN-GDN': 'GDN-NYN',
+  'GDY-KAA': 'GDY-KAA',
+  'KAA-GDY': 'GDY-KAA',
+  'TLL-HEL': 'TLL-HEL',
+  'TLLA-HEL': 'TLL-HEL',
+  'HEL-TLL': 'TLL-HEL',
+  'HELA-TLL': 'TLL-HEL',
+  'MUU-VUO': 'MUU-VUO',
+  'VUO-MUU': 'MUU-VUO',
+  'PLD-KPS': 'PLD-KPS',
+  'KPS-PLD': 'PLD-KPS',
+  'TLL-STO': 'TLL-STO',
+  'STO-TLL': 'TLL-STO',
+};
+
+const FAMILY_TO_CORRIDOR: Record<string, MarineCorridor> = {
+  'GDN-NYN': 'BALTIC_GDN_NYN',
+  'GDY-KAA': 'BALTIC_GDY_KAA',
+  'TLL-HEL': 'BALTIC_GULF_FI',
+  'MUU-VUO': 'BALTIC_GULF_FI',
+  'PLD-KPS': 'BALTIC_PLD_KPS',
+  'TLL-STO': 'BALTIC_TLL_STO',
+};
+
+/** Punkty PL–SE + otwarta woda bałtycka (#714). */
 export const MARINE_POINTS = {
   GDN: { lat: 54.4, lon: 18.67, label: 'Gdańsk' },
   MID: { lat: 56.5, lon: 18.5, label: 'środek trasy Gdańsk–Nynäshamn' },
@@ -17,17 +60,52 @@ export const MARINE_POINTS = {
   GDY: { lat: 54.53, lon: 18.55, label: 'Gdynia' },
   MID_STENA: { lat: 55.6, lon: 16.6, label: 'środek trasy Gdynia–Karlskrona' },
   KAA: { lat: 56.16, lon: 15.59, label: 'podejście Karlskrona' },
+  GULF_MID: { lat: 59.80, lon: 24.85, label: 'środek Zatoki Fińskiej' },
+  NB_EAST: { lat: 59.55, lon: 21.80, label: 'wschodni Bałtyk północny (PLD–KPS)' },
+  ALAND_S: { lat: 59.75, lon: 19.70, label: 'południe Wysp Alandzkich (PLD–KPS)' },
+  GULF_W: { lat: 59.40, lon: 21.20, label: 'zachód Zatoki Fińskiej (TLL–STO)' },
+  ALAND_SEA: { lat: 59.95, lon: 19.40, label: 'Morze Alandzkie (TLL–STO)' },
 } as const;
 export type MarinePointCode = keyof typeof MARINE_POINTS;
 
-/** Punkty oceny rejsu. SMHI Knolls Grund zostaje przy podejściu Nynäshamn. */
-export function marinePointsForRoute(route: string | null | undefined): Array<MarinePointCode | 'SMHI_KNOLLS'> {
-  if (route === 'GDY-KAA' || route === 'KAA-GDY') return ['GDY', 'MID_STENA', 'KAA'];
-  return ['GDN', 'MID', 'NYN', 'SMHI_KNOLLS'];
+export type MarineEvalPoint = MarinePointCode | 'SMHI_KNOLLS';
+
+/** Rodzina trasy ze słownika; null = poza mapą BN5. */
+export function marineRouteFamily(route: string | null | undefined): string | null {
+  if (route == null) return null;
+  const key = route.trim().toUpperCase();
+  if (!key) return null;
+  return ROUTE_TO_FAMILY[key] ?? null;
 }
 
-export function marineCorridorForRoute(route: string | null | undefined): 'BALTIC_GDN_NYN' | 'BALTIC_GDY_KAA' {
-  return route === 'GDY-KAA' || route === 'KAA-GDY' ? 'BALTIC_GDY_KAA' : 'BALTIC_GDN_NYN';
+export function marineCorridorForRoute(route: string | null | undefined): MarineCorridor | null {
+  const fam = marineRouteFamily(route);
+  if (!fam) return null;
+  return FAMILY_TO_CORRIDOR[fam] ?? null;
+}
+
+export function marinePointsForCorridor(corridor: MarineCorridor): MarineEvalPoint[] {
+  switch (corridor) {
+    case 'BALTIC_GDN_NYN':
+      return ['GDN', 'MID', 'NYN', 'SMHI_KNOLLS'];
+    case 'BALTIC_GDY_KAA':
+      return ['GDY', 'MID_STENA', 'KAA'];
+    case 'BALTIC_GULF_FI':
+      return ['GULF_MID'];
+    case 'BALTIC_PLD_KPS':
+      return ['NB_EAST', 'ALAND_S'];
+    case 'BALTIC_TLL_STO':
+      return ['GULF_W', 'GULF_MID', 'ALAND_SEA'];
+  }
+}
+
+/** Punkty oceny rejsu; null gdy trasa nieznana (bez domyślnego GDN). */
+export function marinePointsForRoute(
+  route: string | null | undefined,
+): MarineEvalPoint[] | null {
+  const corridor = marineCorridorForRoute(route);
+  if (!corridor) return null;
+  return marinePointsForCorridor(corridor);
 }
 
 /** SMHI Knolls Grund — aktywna boja falowa na podejściu SE (obserwacje). */
@@ -41,6 +119,9 @@ export const DMI_WAM_URL =
   'https://opendataapi.dmi.dk/v1/forecastedr/collections/wam_nsb/position';
 export const SMHI_OCOBS_URL =
   `https://opendata-download-ocobs.smhi.se/api/version/1.0/parameter/1/station/${SMHI_KNOLLS_STATION}/period/latest-hour/data.json`;
+/** BN5: zapas wiatru (nie pmp3g — 404 od 2026-03-31). */
+export const SMHI_SNOW1G_BASE =
+  'https://opendata-download-metfcst.smhi.se/api/category/snow1g/version/1/geotype/point';
 
 export type MarineSource = 'FMI' | 'DMI' | 'SMHI';
 export type MarineRiskLevel = 'niskie' | 'podwyższone' | 'wysokie';
@@ -52,7 +133,13 @@ export interface MarineSample {
   windMs: number | null;
   periodS: number | null;
   source: MarineSource;
-  point: MarinePointCode | 'SMHI_KNOLLS';
+  point: MarineEvalPoint;
+}
+
+export interface FmiParseResult {
+  samples: MarineSample[];
+  /** Wartości NaN (poza siatką WAM) — pominięte, nie zero. */
+  nanSkipped: number;
 }
 
 export interface MarineEval {
@@ -113,13 +200,19 @@ export function dmiWamUrl(lon: number, lat: number, fromIso: string, toIso: stri
   return `${DMI_WAM_URL}?${params.toString()}`;
 }
 
-/** Parsuje FMI WFS TimeValuePair XML → próbki (wave / gust / wind). */
+/** SMHI snow1g — zapas wiatru (BN5 #714; nie pmp3g). */
+export function smhiSnow1gUrl(lon: number, lat: number): string {
+  return `${SMHI_SNOW1G_BASE}/lon/${lon}/lat/${lat}/data.json`;
+}
+
+/** Parsuje FMI WFS TimeValuePair XML → próbki (wave / gust / wind). NaN = pominięte. */
 export function parseFmiTimeValuePair(
   xml: string,
   point: MarinePointCode,
   kind: 'wave' | 'gust',
-): MarineSample[] {
+): FmiParseResult {
   const out: MarineSample[] = [];
+  let nanSkipped = 0;
   // Każdy member ma własną serię; identyfikujemy po gml:id / phenomenon
   const members = xml.split(/<wfs:member>/i).slice(1);
   for (const mem of members) {
@@ -132,9 +225,16 @@ export function parseFmiTimeValuePair(
     for (const m of pairs) {
       const at = new Date(m[1]).toISOString();
       const raw = m[2].trim();
-      if (!raw || raw === 'NaN' || raw.toLowerCase() === 'nan') continue;
+      if (!raw) continue;
+      if (raw === 'NaN' || raw.toLowerCase() === 'nan') {
+        nanSkipped++;
+        continue;
+      }
       const num = Number(raw);
-      if (!Number.isFinite(num)) continue;
+      if (!Number.isFinite(num)) {
+        nanSkipped++;
+        continue;
+      }
       const sample: MarineSample = {
         at, waveM: null, gustKn: null, windMs: null, periodS: null, source: 'FMI', point,
       };
@@ -150,7 +250,7 @@ export function parseFmiTimeValuePair(
       out.push(sample);
     }
   }
-  return mergeSamples(out);
+  return { samples: mergeSamples(out), nanSkipped };
 }
 
 /** CoverageJSON DMI (PointSeries) → próbki. */
@@ -204,6 +304,36 @@ export function parseSmhiOcobs(json: unknown): MarineSample[] {
       source: 'SMHI' as const,
       point: 'SMHI_KNOLLS' as const,
     }));
+}
+
+/** SMHI snow1g JSON → próbki wiatru (zapas BN5). */
+export function parseSmhiSnow1g(json: unknown, point: MarinePointCode): MarineSample[] {
+  const body = json as {
+    timeSeries?: Array<{
+      time?: string;
+      data?: { wind_speed?: number; wind_speed_of_gust?: number };
+    }>;
+  };
+  const series = body.timeSeries ?? [];
+  const out: MarineSample[] = [];
+  for (const row of series) {
+    if (!row.time) continue;
+    const speed = row.data?.wind_speed;
+    const gust = row.data?.wind_speed_of_gust;
+    const windMs = typeof speed === 'number' && Number.isFinite(speed) ? speed : null;
+    const gustMs = typeof gust === 'number' && Number.isFinite(gust) ? gust : null;
+    if (windMs == null && gustMs == null) continue;
+    out.push({
+      at: new Date(row.time).toISOString(),
+      waveM: null,
+      gustKn: gustMs != null ? msToKnots(gustMs) : (windMs != null ? msToKnots(windMs) : null),
+      windMs,
+      periodS: null,
+      source: 'SMHI',
+      point,
+    });
+  }
+  return out;
 }
 
 function mergeSamples(rows: MarineSample[]): MarineSample[] {

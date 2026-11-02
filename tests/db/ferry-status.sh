@@ -25,8 +25,8 @@ val "flaga H-1 zostaje wyłączona" "select enabled::text from security_flags wh
 val "flaga H-3 zostaje wyłączona" "select enabled::text from security_flags where key = 'H3_' || 'CORRIDOR_OBSTACLES'" "false"
 val "korytarz SE_E22 jest dłuższy niż sam E4 z Nynäshamn" \
   "select (select total_km from corridor_polylines where code='SE_E22') > (select total_km from corridor_polylines where code='SE_E4')" "t"
-val "pogoda obu tras jest w bazie" \
-  "select string_agg(corridor, ',' order by corridor) from marine_conditions" "BALTIC_GDN_NYN,BALTIC_GDY_KAA"
+val "pogoda BN5 — 5 korytarzy morskich w bazie" \
+  "select string_agg(corridor, ',' order by corridor) from marine_conditions" "BALTIC_GDN_NYN,BALTIC_GDY_KAA,BALTIC_GULF_FI,BALTIC_PLD_KPS,BALTIC_TLL_STO"
 
 plan() {
   local route="$1" dep="$2" arr="$3"

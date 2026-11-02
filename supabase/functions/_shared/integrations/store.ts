@@ -643,7 +643,7 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
       return { waveM, gustKn };
     },
     async saveMarineCondition(row: {
-      corridor: 'BALTIC_GDN_NYN' | 'BALTIC_GDY_KAA';
+      corridor: 'BALTIC_GDN_NYN' | 'BALTIC_GDY_KAA' | 'BALTIC_GULF_FI' | 'BALTIC_PLD_KPS' | 'BALTIC_TLL_STO';
       maxWaveM: number | null;
       maxGustKn: number | null;
       risk: 'niskie' | 'podwyższone' | 'wysokie';
