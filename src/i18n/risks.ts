@@ -133,6 +133,8 @@ const pl: Dict = {
   rk_ferry_weather: 'Pogoda morska: możliwe odwołanie — fala {wave} m / porywy {gust} węzłów ({vessel}; progi {wave_thr} m / {gust_thr} węzłów)',
   /* BN3: Digitraffic winter-navigation v2 */
   rk_ferry_winter_nav: 'Żegluga zimowa: {kind} — {port} ({locode}): {summary}',
+  /* BN5 cz.3: FERRY_ICE (per rejs; vs FERRY_WINTER z ferry-portnet) */
+  rk_ferry_ice: 'Lód: {kind} {port} ({locode}) — {summary}; od {since} ({vessel})',
   rk_ferry_portcall_v2_fihel: 'Digitraffic port-call v2: anulowane wizyty FIHEL — sprawdź odwołania Helsinki',
   /* BN3 decyzja 61: podejrzenie odwołania (ETA+45 / Portnet + AIS w porcie) */
   rk_ferry_cancel_suspect: 'Podejrzenie odwołania: {vessel} {dep} — AIS stoi w porcie, brak ATA (HHL)',

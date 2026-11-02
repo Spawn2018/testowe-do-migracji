@@ -1,4 +1,17 @@
 
+## 2026-11-02 02:15 — BN5 cz.3 PR #721 (FERRY_ICE Digitraffic)
+
+- Skrzynka: #714/#716/#718/#720 wpisane; #550 WSTRZYMANE (właściciel 11:34); #608 w planie. Bez nowego `pilne` do realizacji.
+- Scalanie: F7 „gotowe @ acd96196” unieważnione nowymi commitami; CI cz.2 @ `156cd5e9` zielone (unit/db/visual) — czekam ponowne F7 po cz.3.
+- **Krok:** BN5 cz.3 na `pakiet/bn5-baltic-marine-weather`:
+  - Digitraffic winter-nav → `FERRY_ICE` per rejs (port wyjścia/celu); MEDIUM / HIGH przy zawieszeniu;
+  - vs istniejące `FERRY_WINTER` (ferry-portnet); atrybucja Fintraffic w `marine_conditions.detail.ice` + observations;
+  - gzip + Digitraffic-User; pusto = brak ograniczeń; awaria HTTP → ostrzeżenie (bez SOURCE_DOWN);
+  - DP-145 / DP-146 wpisane do rejestru z F7 #721;
+  - vitest: integrations ferry-weather + winterLocodes/ferryIceRisk.
+- **Dalej:** push → CI → F7. Po F7: BN5 pkt 4 (ryzyko per korytarz) albo BN6 (#716) jeśli F7 uzna BN5 domknięte.
+- Bez push na main.
+
 ## 2026-11-02 01:45 — BN5 cz.2 PR #721 (snow1g / NaN / DMI 429)
 
 - Skrzynka: #714/#716/#718/#720 wpisane; #550 WSTRZYMANE; #608 w planie. Bez nowego `pilne`.
