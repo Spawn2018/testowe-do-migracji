@@ -1288,6 +1288,68 @@ export function balticNetWarning(prefix: string, url: string, err: unknown): str
 }
 
 /**
+ * F7 #736 B2 — meta klucza bez wartości: długość, trim, czy nagłówek pójdzie.
+ * Klucz do użycia = `.trim()`; `key_trimmed=1` gdy przed trim były spacje / nowa linia.
+ */
+export type BalticKeyMeta = {
+  key: string;
+  key_len: number;
+  key_trimmed: 0 | 1;
+  key_header_sent: 0 | 1;
+};
+
+export function balticKeyMeta(raw: string | undefined | null): BalticKeyMeta {
+  const rawStr = raw ?? '';
+  const key = rawStr.trim();
+  return {
+    key,
+    key_len: key.length,
+    key_trimmed: rawStr !== key ? 1 : 0,
+    key_header_sent: key.length > 0 ? 1 : 0,
+  };
+}
+
+/** F7 #736 B3 — `host/pierwszy-segment` (bez parametrów, bez klucza). */
+export function balticUrlKind(url: string): string {
+  try {
+    const u = new URL(url);
+    const seg = u.pathname.split('/').filter(Boolean)[0] ?? '';
+    return seg ? `${u.host}/${seg}` : u.host || 'host';
+  } catch {
+    return 'host';
+  }
+}
+
+/** F7 #736 B1 — sonda `GET https://<host>/` bez klucza, timeout 5 s → `<kod|klasa>:<ms>`. */
+export const BALTIC_PROBE_TIMEOUT_MS = 5_000;
+
+export async function probeBalticHost(
+  fetchFn: typeof fetch,
+  host: string,
+  ua: string,
+): Promise<string> {
+  const safeHost = host.replace(/\/+$/, '') || 'host';
+  const url = `https://${safeHost}/`;
+  const t0 = Date.now();
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), BALTIC_PROBE_TIMEOUT_MS);
+  try {
+    const res = await fetchFn(url, {
+      method: 'GET',
+      headers: { 'User-Agent': ua, Accept: '*/*' },
+      signal: ctrl.signal,
+    });
+    const ms = Math.max(0, Date.now() - t0);
+    return `${res.status}:${ms}`;
+  } catch (e) {
+    const ms = Math.max(0, Date.now() - t0);
+    return `${classifyBalticNetError(e)}:${ms}`;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
  * Bboxy ±0,25° wokół odcinków CORRIDOR_LV (F7 #730 B7 — zwężenie vs ~85 km).
  */
 export function lvCorridorBboxes(): FiBbox[] {
@@ -2002,10 +2064,14 @@ export function eeDatexFeedUrl(path: string): string {
 
 /**
  * Klucz API: TARKTEE_DATEX_TOKEN, potem PASSWORD (gdy klucz leży w parze USER/PASSWORD).
- * Nazw sekretów nie zmieniamy (#716).
+ * Nazw sekretów nie zmieniamy (#716). F7 #736 B2 — trim + meta długości.
  */
+export function eeDatexApiKeyMeta(env: Record<string, string | undefined>): BalticKeyMeta {
+  return balticKeyMeta(env.TARKTEE_DATEX_TOKEN ?? env.TARKTEE_DATEX_PASSWORD ?? '');
+}
+
 export function eeDatexApiKey(env: Record<string, string | undefined>): string {
-  return (env.TARKTEE_DATEX_TOKEN ?? env.TARKTEE_DATEX_PASSWORD ?? '').trim();
+  return eeDatexApiKeyMeta(env).key;
 }
 
 export function nearEePortTerminal(
