@@ -1,4 +1,12 @@
 
+## 2026-11-02 23:50 — BN8a F7 r4 (W1 2 punkty + W5a0 + risks)
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. #740/#743 wygląd bez F7.
+- Scalanie: brak „F7: gotowe”. #741 @ `ccc7da91`: unit/visual ✔; db FAIL — risks 44/46 (`rk_off_corridor`/`rk_eta_breach`); F7 r4: W1 na historii PL + W5a0 za słaby.
+- **Krok F7 r4:** W1 — `PL_ROAD` tylko gdy oba ostatnie punkty (jak `corridor_progress`) w bbox PL; W5a0 — wcześniejsza pozycja PL + 2× LV; sprzątanie W5: notyfikacje → decyzje po `risk_id` → ryzyka (w tym globalnie `rk_off_corridor`/`rk_eta_breach`); status **603**.
+- **Dalej:** push → CI → F7. Po F7: DP-171 (#735) → DP-172 (#742); front `src/lib` / BN8b; #740 → cron_fetch=true.
+- Bez push na main.
+
 ## 2026-11-02 23:20 — BN8a F7 r2 (W1/W2/W4/W5) + CI db FAIL → poprawka
 
 - Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. #742 DP-172 wpisane (po #741+DP-171). #740 BN9-c5 bez F7.

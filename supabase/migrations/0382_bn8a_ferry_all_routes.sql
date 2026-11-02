@@ -1377,18 +1377,26 @@ begin
     v_corr := null;
   end if;
 
-  -- W1/F7: bez trasy — PL_ROAD tylko w prostokącie PL (jak propose_id);
+  -- W1/F7 r4: bez trasy — PL_ROAD tylko gdy oba ostatnie punkty (jak corridor_progress)
+  -- leżą w prostokącie PL; wcześniejszy wyjazd z PL nie wystarcza (Bałtyk bez rejsu).
   -- SE bez trasy → null (0339: brak v_op ⇒ brak v_corr; nie SE_E4 na Stena/FI).
-  -- Znana rodzina bez corridor_code → brak alarmu (Bałtyk LT/LV, #720).
   if v_corr is null and v_route is null and l.status = 'IN_TRANSIT_PL' then
-    select 'PL_ROAD' into v_corr
-      from public.positions p
-     where p.load_id = p_load
-       and coalesce((p.raw->>'stale_point')::boolean, false) is not true
-       and st_x(p.geom_raw::geometry) between 14.0 and 24.2
-       and st_y(p.geom_raw::geometry) between 49.0 and 54.45
-     order by p.ts desc
-     limit 1;
+    select case
+             when count(*) >= 1
+              and bool_and(
+                    st_x(s.g::geometry) between 14.0 and 24.2
+                    and st_y(s.g::geometry) between 49.0 and 54.45
+                  )
+             then 'PL_ROAD'
+           end
+      into v_corr
+      from (
+        select coalesce(geom_snapped, geom_raw) as g
+          from public.positions
+         where load_id = p_load
+         order by ts desc
+         limit 2
+      ) s;
   end if;
 
   -- B3/F7 BN8a: alarm OFF_CORRIDOR tylko rdzeń (PL_ROAD / SE_E4 / Stena dual).
@@ -1600,7 +1608,7 @@ comment on function public.apply_ferry_ais_arrival_backup(uuid, double precision
 revoke all on function public.refresh_load_eta(uuid) from public, anon, authenticated;
 grant execute on function public.refresh_load_eta(uuid) to service_role;
 comment on function public.refresh_load_eta(uuid) is
-  'BN8a/#720: OFF_CORRIDOR tylko core PL_ROAD/SE_E4/Stena dual; BN7 kody→bez alarmu (BN8b); bez trasy→PL_ROAD w bbox PL, SE null.';
+  'BN8a/#720: OFF_CORRIDOR tylko core PL_ROAD/SE_E4/Stena dual; BN7 kody→bez alarmu (BN8b); bez trasy→PL_ROAD gdy 2 ost. punkty w bbox PL, SE null.';
 
 -- ---------------------------------------------------------------------------
 -- 9) eta_record_segment_observations — filtr po trasie

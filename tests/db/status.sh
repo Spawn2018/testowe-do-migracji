@@ -2460,10 +2460,12 @@ q "insert into positions (load_id, ts, geom_raw, source) values
     ('$L820b', now() - interval '5 minutes', st_setsrid(st_makepoint(24.12, 56.96), 4326), 'TELEMATICS_API');" >/dev/null
 q "select public.refresh_load_eta('$L820b')" >/dev/null
 chk "BN8a W5a: TLL-HEL na LT/LV → brak OFF_CORRIDOR" "$(rk $L820b OFF_CORRIDOR)" 0
-# F7 r2: także bez rejsu/ferry_route (W1 — bez fałszywego PL_ROAD na LT/LV).
+# F7 r4 W5a0: bez rejsu + wcześniejsza pozycja w PL (jak wyjazd z placu) + 2× LV —
+# ostatnie 2 punkty poza PL ⇒ bez PL_ROAD (historia w PL nie wystarcza).
 q "insert into loads (id, project_id, carrier_org_id, hhl_order_no, carrier_order_no, status, plan_load_date, plan_delivery_date)
     values ('$L820d','$P','$SCXO','HHL/BN8A-820D','SCX/BN8A-820D','IN_TRANSIT_PL', current_date, current_date + 3)" >/dev/null
 q "insert into positions (load_id, ts, geom_raw, source) values
+    ('$L820d', now() - interval '6 hours', st_setsrid(st_makepoint(17.02, 52.07), 4326), 'TELEMATICS_API'),
     ('$L820d', now() - interval '20 minutes', st_setsrid(st_makepoint(24.10, 56.95), 4326), 'TELEMATICS_API'),
     ('$L820d', now() - interval '5 minutes', st_setsrid(st_makepoint(24.12, 56.96), 4326), 'TELEMATICS_API');" >/dev/null
 q "select public.refresh_load_eta('$L820d')" >/dev/null
@@ -2499,16 +2501,36 @@ q "insert into load_events (load_id, event_type, occurred_at) values
     ('$L820g','MILESTONE_LOADED','2026-10-20 08:00+00');
    insert into positions (load_id, ts, geom_raw, source) values
     ('$L820g', '2026-10-21 09:00+00', st_setsrid(st_makepoint(24.94, 60.17), 4326), 'TELEMATICS_API');" >/dev/null
+# F7 r4: W5d sprawdza rk_ferry_check_after_arrival; detect_ferry_overdue globalnie
+# może zostawić też rk_ferry_overdue (klucz w baseline risks.sh) — OK.
 chk "BN8a W5d: ląd FI po ATA → bez ferry_check_after" \
   "select detect_ferry_overdue('2026-10-21 12:00+00'); select count(*) from risk_signals where load_id='$L820g' and title_key='rk_ferry_check_after_arrival' and resolved_at is null" 0
-# Sprzątanie jak #487 (decyzje → ryzyka → pozycje → ładunki), żeby risks.sh nie widział rk_off_corridor/rk_eta_breach.
-q "delete from decision_events where decision_id in (
-     select d.id from decisions d where d.load_id in ('$L820b','$L820c','$L820d','$L820e','$L820f','$L820g'));
-   delete from decisions where load_id in ('$L820b','$L820c','$L820d','$L820e','$L820f','$L820g');
-   delete from risk_signals where load_id in ('$L820b','$L820c','$L820d','$L820e','$L820f','$L820g');
-   delete from notifications where load_id in ('$L820b','$L820c','$L820d','$L820e','$L820f','$L820g');
+# Sprzątanie: najpierw notyfikacje, potem decyzje po risk_id (#487), potem ryzyka.
+# W5b/refresh zostawia rk_off_corridor + rk_eta_breach — baseline risks.sh ich nie ma.
+# W5c promote_ferry_departures / W5d detect — globalne; fixture L820* usuwamy w całości.
+q "delete from notifications where load_id in ('$L820b','$L820c','$L820d','$L820e','$L820f','$L820g');
+   delete from decision_events where decision_id in (
+     select d.id from decisions d
+      where d.load_id in ('$L820b','$L820c','$L820d','$L820e','$L820f','$L820g')
+         or d.risk_id in (select id from risk_signals
+           where load_id in ('$L820b','$L820c','$L820d','$L820e','$L820f','$L820g')
+              or title_key in ('rk_off_corridor','rk_eta_breach')
+              or dedup_key like 'OFF_CORRIDOR:%'
+              or dedup_key like 'ETA_BREACH:%'));
+   delete from decisions where load_id in ('$L820b','$L820c','$L820d','$L820e','$L820f','$L820g')
+      or risk_id in (select id from risk_signals
+           where load_id in ('$L820b','$L820c','$L820d','$L820e','$L820f','$L820g')
+              or title_key in ('rk_off_corridor','rk_eta_breach')
+              or dedup_key like 'OFF_CORRIDOR:%'
+              or dedup_key like 'ETA_BREACH:%');
+   delete from risk_signals
+    where load_id in ('$L820b','$L820c','$L820d','$L820e','$L820f','$L820g')
+       or title_key in ('rk_off_corridor','rk_eta_breach')
+       or dedup_key like 'OFF_CORRIDOR:%'
+       or dedup_key like 'ETA_BREACH:%';
    delete from positions where load_id in ('$L820b','$L820c','$L820d','$L820e','$L820f','$L820g');
    delete from load_events where load_id in ('$L820b','$L820c','$L820d','$L820e','$L820f','$L820g');
+   update loads set sailing_id = null where id in ('$L820b','$L820c','$L820d','$L820e','$L820f','$L820g');
    delete from loads where id in ('$L820b','$L820c','$L820d','$L820e','$L820f','$L820g');
    delete from sailings where id in ('$S820e','$S820f','$S820g')" >/dev/null
 chk "BN8a W5e: assign grant authenticated" \
