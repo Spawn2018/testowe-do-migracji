@@ -1,4 +1,12 @@
 
+## 2026-11-03 00:15 — BN8a F7 r5 (W5 rollback + sprzątanie L820*)
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. #740/#743 wygląd bez F7.
+- Scalanie: brak „F7: gotowe”. #741 @ `98f84c39`: unit/visual ✔; db FAIL risks 44/46 (`rk_off_corridor`); F7 r5: globalne kasowanie title_key zabija strażnik.
+- **Krok F7 r5:** W5a/W5a0/W5b/W5c/W5d w `begin…rollback`; sprzątanie tylko `load_id` L820* (wzorzec #487) + `chk` count risk/loads=0; EXPECTED status **604**.
+- **Dalej:** push → CI → F7. Po F7: DP-171 (#735) → DP-172 (#742); front `src/lib` / BN8b; #740 → cron_fetch=true.
+- Bez push na main.
+
 ## 2026-11-02 23:50 — BN8a F7 r4 (W1 2 punkty + W5a0 + risks)
 
 - Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. #740/#743 wygląd bez F7.

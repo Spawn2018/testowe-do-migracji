@@ -2458,8 +2458,12 @@ q "insert into loads (id, project_id, carrier_org_id, hhl_order_no, carrier_orde
 q "insert into positions (load_id, ts, geom_raw, source) values
     ('$L820b', now() - interval '20 minutes', st_setsrid(st_makepoint(24.10, 56.95), 4326), 'TELEMATICS_API'),
     ('$L820b', now() - interval '5 minutes', st_setsrid(st_makepoint(24.12, 56.96), 4326), 'TELEMATICS_API');" >/dev/null
-q "select public.refresh_load_eta('$L820b')" >/dev/null
-chk "BN8a W5a: TLL-HEL na LT/LV → brak OFF_CORRIDOR" "$(rk $L820b OFF_CORRIDOR)" 0
+# F7 r5: W5a–W5d w transakcji z rollback (jak assign) — bez globalnego kasowania
+# rk_off_corridor/rk_eta_breach (strażnik risks.sh musi je złapać z innych fixture).
+chk "BN8a W5a: TLL-HEL na LT/LV → brak OFF_CORRIDOR" \
+  "begin; select public.refresh_load_eta('$L820b');
+   select count(*) from risk_signals where load_id='$L820b' and dedup_key like 'OFF_CORRIDOR%';
+   rollback" 0
 # F7 r4 W5a0: bez rejsu + wcześniejsza pozycja w PL (jak wyjazd z placu) + 2× LV —
 # ostatnie 2 punkty poza PL ⇒ bez PL_ROAD (historia w PL nie wystarcza).
 q "insert into loads (id, project_id, carrier_org_id, hhl_order_no, carrier_order_no, status, plan_load_date, plan_delivery_date)
@@ -2468,15 +2472,19 @@ q "insert into positions (load_id, ts, geom_raw, source) values
     ('$L820d', now() - interval '6 hours', st_setsrid(st_makepoint(17.02, 52.07), 4326), 'TELEMATICS_API'),
     ('$L820d', now() - interval '20 minutes', st_setsrid(st_makepoint(24.10, 56.95), 4326), 'TELEMATICS_API'),
     ('$L820d', now() - interval '5 minutes', st_setsrid(st_makepoint(24.12, 56.96), 4326), 'TELEMATICS_API');" >/dev/null
-q "select public.refresh_load_eta('$L820d')" >/dev/null
-chk "BN8a W5a0: bez trasy na LT/LV → brak OFF_CORRIDOR" "$(rk $L820d OFF_CORRIDOR)" 0
+chk "BN8a W5a0: bez trasy na LT/LV → brak OFF_CORRIDOR" \
+  "begin; select public.refresh_load_eta('$L820d');
+   select count(*) from risk_signals where load_id='$L820d' and dedup_key like 'OFF_CORRIDOR%';
+   rollback" 0
 q "insert into loads (id, project_id, carrier_org_id, hhl_order_no, carrier_order_no, status, plan_load_date, plan_delivery_date, ferry_route)
     values ('$L820c','$P','$SCXO','HHL/BN8A-820C','SCX/BN8A-820C','IN_TRANSIT_PL', current_date, current_date + 3, 'GDN-NYN')" >/dev/null
 q "insert into positions (load_id, ts, geom_raw, source) values
     ('$L820c', now() - interval '20 minutes', st_setsrid(st_makepoint(14.0, 52.0), 4326), 'TELEMATICS_API'),
     ('$L820c', now() - interval '5 minutes', st_setsrid(st_makepoint(14.0, 52.0), 4326), 'TELEMATICS_API');" >/dev/null
-q "select public.refresh_load_eta('$L820c')" >/dev/null
-chk "BN8a W5b: GDN-NYN poza korytarzem → OFF_CORRIDOR" "$(rk $L820c OFF_CORRIDOR)" 1
+chk "BN8a W5b: GDN-NYN poza korytarzem → OFF_CORRIDOR" \
+  "begin; select public.refresh_load_eta('$L820c');
+   select count(*) from risk_signals where load_id='$L820c' and dedup_key like 'OFF_CORRIDOR%';
+   rollback" 1
 # W5c: promote assume_dep 20 min TLL-HEL vs 60 min GDN-NYN.
 q "insert into sailings (id,project_id,vessel_id,route,departure_at,arrival_at,status,source) values
     ('$S820e','$P','66666666-0000-0000-0000-000000000001','TLL-HEL',
@@ -2489,9 +2497,11 @@ q "insert into load_events (load_id, event_type, occurred_at) values
     ('$L820e','MILESTONE_LOADED','2026-10-19 08:00+00'),
     ('$L820f','MILESTONE_LOADED','2026-10-19 08:00+00')" >/dev/null
 chk "BN8a W5c: TLL-HEL po 20 min → FERRY" \
-  "select promote_ferry_departures('2026-10-20 10:21+00'); select status from loads where id='$L820e'" FERRY
+  "begin; select promote_ferry_departures('2026-10-20 10:21+00');
+   select status from loads where id='$L820e'; rollback" FERRY
 chk "BN8a W5c: GDN-NYN po 20 min → nie FERRY" \
-  "select status from loads where id='$L820f'" AT_PORT_GDANSK
+  "begin; select promote_ferry_departures('2026-10-20 10:21+00');
+   select status from loads where id='$L820f'; rollback" AT_PORT_GDANSK
 # W5d: overdue z lądem FI po ATA → bez „Sprawdź po dopłynięciu”.
 q "insert into sailings (id,project_id,vessel_id,route,departure_at,arrival_at,actual_departure_at,actual_arrival_at,status,source) values
     ('$S820g','$P','66666666-0000-0000-0000-000000000001','TLL-HEL',
@@ -2501,38 +2511,34 @@ q "insert into load_events (load_id, event_type, occurred_at) values
     ('$L820g','MILESTONE_LOADED','2026-10-20 08:00+00');
    insert into positions (load_id, ts, geom_raw, source) values
     ('$L820g', '2026-10-21 09:00+00', st_setsrid(st_makepoint(24.94, 60.17), 4326), 'TELEMATICS_API');" >/dev/null
-# F7 r4: W5d sprawdza rk_ferry_check_after_arrival; detect_ferry_overdue globalnie
-# może zostawić też rk_ferry_overdue (klucz w baseline risks.sh) — OK.
+# F7 r5: detect_ferry_overdue w rollback — bez ryzyka na innych ładunkach.
 chk "BN8a W5d: ląd FI po ATA → bez ferry_check_after" \
-  "select detect_ferry_overdue('2026-10-21 12:00+00'); select count(*) from risk_signals where load_id='$L820g' and title_key='rk_ferry_check_after_arrival' and resolved_at is null" 0
-# Sprzątanie: najpierw notyfikacje, potem decyzje po risk_id (#487), potem ryzyka.
-# W5b/refresh zostawia rk_off_corridor + rk_eta_breach — baseline risks.sh ich nie ma.
-# W5c promote_ferry_departures / W5d detect — globalne; fixture L820* usuwamy w całości.
-q "delete from notifications where load_id in ('$L820b','$L820c','$L820d','$L820e','$L820f','$L820g');
+  "begin; select detect_ferry_overdue('2026-10-21 12:00+00');
+   select count(*) from risk_signals where load_id='$L820g' and title_key='rk_ferry_check_after_arrival' and resolved_at is null;
+   rollback" 0
+# F7 r5: sprzątanie tylko L820* (wzorzec #487); bez globalnego title_key;
+# chk count — ciche przerwanie ON_ERROR_STOP+>/dev/null nie może się powtórzyć.
+chk "BN8a W5 po teście brak risk_signals/loads L820*" \
+  "delete from notifications where load_id in ('$L820b','$L820c','$L820d','$L820e','$L820f','$L820g');
    delete from decision_events where decision_id in (
      select d.id from decisions d
       where d.load_id in ('$L820b','$L820c','$L820d','$L820e','$L820f','$L820g')
          or d.risk_id in (select id from risk_signals
-           where load_id in ('$L820b','$L820c','$L820d','$L820e','$L820f','$L820g')
-              or title_key in ('rk_off_corridor','rk_eta_breach')
-              or dedup_key like 'OFF_CORRIDOR:%'
-              or dedup_key like 'ETA_BREACH:%'));
+           where load_id in ('$L820b','$L820c','$L820d','$L820e','$L820f','$L820g')));
    delete from decisions where load_id in ('$L820b','$L820c','$L820d','$L820e','$L820f','$L820g')
       or risk_id in (select id from risk_signals
-           where load_id in ('$L820b','$L820c','$L820d','$L820e','$L820f','$L820g')
-              or title_key in ('rk_off_corridor','rk_eta_breach')
-              or dedup_key like 'OFF_CORRIDOR:%'
-              or dedup_key like 'ETA_BREACH:%');
+           where load_id in ('$L820b','$L820c','$L820d','$L820e','$L820f','$L820g'));
    delete from risk_signals
-    where load_id in ('$L820b','$L820c','$L820d','$L820e','$L820f','$L820g')
-       or title_key in ('rk_off_corridor','rk_eta_breach')
-       or dedup_key like 'OFF_CORRIDOR:%'
-       or dedup_key like 'ETA_BREACH:%';
+    where load_id in ('$L820b','$L820c','$L820d','$L820e','$L820f','$L820g');
    delete from positions where load_id in ('$L820b','$L820c','$L820d','$L820e','$L820f','$L820g');
    delete from load_events where load_id in ('$L820b','$L820c','$L820d','$L820e','$L820f','$L820g');
    update loads set sailing_id = null where id in ('$L820b','$L820c','$L820d','$L820e','$L820f','$L820g');
    delete from loads where id in ('$L820b','$L820c','$L820d','$L820e','$L820f','$L820g');
-   delete from sailings where id in ('$S820e','$S820f','$S820g')" >/dev/null
+   delete from sailings where id in ('$S820e','$S820f','$S820g');
+   select (select count(*) from risk_signals
+             where load_id in ('$L820b','$L820c','$L820d','$L820e','$L820f','$L820g'))
+        + (select count(*) from loads
+             where id in ('$L820b','$L820c','$L820d','$L820e','$L820f','$L820g'))" 0
 chk "BN8a W5e: assign grant authenticated" \
   "select has_function_privilege('authenticated','sailing_mismatch_assign(uuid,uuid)','execute')" t
 chk "BN8a W5f: ferry_sailings_map bez coalesce GDN" \
