@@ -218,6 +218,45 @@ describe('BN6 road-lt — eismoinfo', () => {
     expect(ltPerspejimaiText('Pliklus kelias').danger).toBe(true);
   });
 
+  it('DP-160: kelio_danga Apledėjusi/ledas/šlapdriba/sniegas → adverse', () => {
+    const far = parseLtWeather(wx).find((s) => s.id === 'bn6-lt-wx-far-east')!;
+    expect(far.surface).toMatch(/ledas/i);
+    expect(far.adverse).toBe(true);
+    const icy = parseLtWeather([
+      {
+        id: 'bn6-lt-wx-dp160-apled',
+        irenginys: 'x',
+        lat: 54.9,
+        lng: 23.9,
+        kelio_danga: 'Apledėjusi',
+        sukibimo_koeficientas: 0.55,
+        matomumas: 1000,
+        perspejimai: [],
+      },
+      {
+        id: 'bn6-lt-wx-dp160-slapdrib',
+        irenginys: 'x',
+        lat: 54.91,
+        lng: 23.91,
+        kelio_danga: 'Šlapdriba',
+        sukibimo_koeficientas: 0.5,
+        matomumas: 800,
+        perspejimai: [],
+      },
+      {
+        id: 'bn6-lt-wx-dp160-sniegas',
+        irenginys: 'x',
+        lat: 54.92,
+        lng: 23.92,
+        kelio_danga: 'Sniegas',
+        sukibimo_koeficientas: 0.45,
+        matomumas: 500,
+        perspejimai: [],
+      },
+    ]);
+    expect(icy.every((s) => s.adverse)).toBe(true);
+  });
+
   it('B3: prawdziwy feed weather — pola lat/lng/kelio_danga/perspejimai[]', () => {
     const stations = parseLtWeather(wxReal);
     expect(stations.length).toBeGreaterThanOrEqual(3);
