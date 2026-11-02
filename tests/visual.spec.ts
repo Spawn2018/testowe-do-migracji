@@ -271,8 +271,8 @@ test.describe('BN9-c3 visual — pogoda na przeprawach (HHL pl)', () => {
       await sec.scrollIntoViewIfNeeded()
       await page.waitForTimeout(300)
       await expect(sec).toHaveScreenshot(file, {
-        /* dolny pasek telefonu (E8) przykrywa treść — poza migawką sekcji */
-        style: 'nav{visibility:hidden !important}',
+        /* dolny pasek telefonu (E8) przykrywa treść — poza migawką sekcji (także przyciski paska, które mają własne visibility) */
+        style: 'nav,nav *{visibility:hidden !important}',
         maxDiffPixels: 60,
         threshold: 0.28,
         animations: 'disabled',
