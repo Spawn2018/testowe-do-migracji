@@ -1,4 +1,12 @@
 
+## 2026-11-02 19:10 — #738 F7 r1 B2–B5 (BN7)
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. DP-170 wpisane (EE/LV, osobna gałąź).
+- Scalanie: brak — F7 r1 @ `0cf9315` „nie scalaj”; CI @ `9a3db96f` unit/db/visual ✔ (tylko B1).
+- **Krok F7 #738 B2–B5 (+N9/N10/N11):** `cron_fetch` default **false** + `legDefFromRow`/`resolveLegs` `=== true`; ETA powroty = kody jak outbound (bez TALLINK/ECKERO/DFDS); `PL_EE_E67` Śrem→A2→S8→S61→E67 ≤15 km (nadpisanie po cron_fetch); `eta_segment_params` DO NOTHING; max_km PL-TLL/MUU **1500**; opisy legów po polsku; N2 VUO_MUU 2,40 zostawione (mediana n=1); N6/N7 → PLAN BN8; N12 deploy-main: db push przed Edge. Vitest bn7; bmapa EXPECTED **198**.
+- **Dalej:** push → CI → F7. Po F7: BN9-c5 → cron_fetch=true → BN8; DP-170 równolegle.
+- Bez push na main.
+
 ## 2026-11-02 18:45 — #738 BN7: poprawka bramy db (i2/bmapa)
 
 - Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. Brak F7 „gotowe”.

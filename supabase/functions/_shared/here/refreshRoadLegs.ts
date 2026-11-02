@@ -39,7 +39,7 @@ export type RoadLegDef = {
   viaPoints?: LatLng[];
   minKm?: number;
   maxKm?: number;
-  /** BN7 / DP-55: cron bierze leg tylko gdy true (brak = true dla core). */
+  /** BN7 / DP-55 / F7 #738 B2: cron bierze leg tylko gdy true (brak = false). */
   cronFetch?: boolean;
 };
 
@@ -48,9 +48,9 @@ export type RoadLegDef = {
  * Produkcja: `here_road_legs` przez `listLegs`.
  */
 export const ROAD_LEGS: readonly RoadLegDef[] = [
-  { leg: 'PL-GDN', origin: '52.07391,17.0246', destination: '54.40372,18.6813', spec: 'pl', summary: 'Trasa drogowa Śrem–Gdańsk', browserFetch: true, mapGroup: 'core' },
-  { leg: 'SE-NYN', origin: '58.90453,17.95621', destination: '65.80539,21.75914', spec: 'se', summary: 'Trasa drogowa Nynäshamn–Boden', browserFetch: true, mapGroup: 'core' },
-  { leg: 'PL-GDY', origin: '52.07391,17.0246', destination: '54.53321,18.54425', spec: 'loose', summary: 'Trasa drogowa Śrem–Gdynia', browserFetch: true, mapGroup: 'core' },
+  { leg: 'PL-GDN', origin: '52.07391,17.0246', destination: '54.40372,18.6813', spec: 'pl', summary: 'Trasa drogowa Śrem–Gdańsk', browserFetch: true, mapGroup: 'core', cronFetch: true },
+  { leg: 'SE-NYN', origin: '58.90453,17.95621', destination: '65.80539,21.75914', spec: 'se', summary: 'Trasa drogowa Nynäshamn–Boden', browserFetch: true, mapGroup: 'core', cronFetch: true },
+  { leg: 'PL-GDY', origin: '52.07391,17.0246', destination: '54.53321,18.54425', spec: 'loose', summary: 'Trasa drogowa Śrem–Gdynia', browserFetch: true, mapGroup: 'core', cronFetch: true },
   {
     leg: 'SE-KAA',
     origin: '56.1646,15.6308',
@@ -60,6 +60,7 @@ export const ROAD_LEGS: readonly RoadLegDef[] = [
     corridorCode: 'SE_E22',
     browserFetch: true,
     mapGroup: 'core',
+    cronFetch: true,
   },
   {
     leg: 'SE-KAA-INLAND',
@@ -70,6 +71,7 @@ export const ROAD_LEGS: readonly RoadLegDef[] = [
     corridorCode: 'SE_KAA_INLAND',
     browserFetch: true,
     mapGroup: 'core',
+    cronFetch: true,
   },
 ] as const;
 
@@ -135,7 +137,8 @@ export async function resolveLegs(
   const raw = store.listLegs ? await store.listLegs() : [...ROAD_LEGS];
   const all = raw.length > 0 ? raw : [...ROAD_LEGS];
   if (browserOnly) return all.filter((l) => l.browserFetch !== false);
-  return all.filter((l) => l.cronFetch !== false);
+  // F7 #738 B2: tylko jawne cronFetch===true (spójne z legDefFromRow / default false).
+  return all.filter((l) => l.cronFetch === true);
 }
 
 /** SOURCE_DOWN: core zawsze; BN7 dopiero gdy cron_fetch (po aktywacji — MEDIUM w jobie). */

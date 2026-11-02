@@ -17,7 +17,11 @@ alter table public.here_road_legs
   add column if not exists via_points jsonb not null default '[]'::jsonb,
   add column if not exists min_km numeric(8,2),
   add column if not exists max_km numeric(8,2),
-  add column if not exists cron_fetch boolean not null default true;
+  add column if not exists cron_fetch boolean not null default false;
+
+-- F7 #738 B2: default false (także gdy kolumna już istniała z default true).
+alter table public.here_road_legs
+  alter column cron_fetch set default false;
 
 comment on column public.here_road_legs.via_points is
   'BN7: [[lat,lng],…] passThrough HERE; puste = bez via (kaa bierze z korytarza).';
@@ -26,7 +30,7 @@ comment on column public.here_road_legs.min_km is
 comment on column public.here_road_legs.max_km is
   'BN7 dict: max. długość linii HERE [km].';
 comment on column public.here_road_legs.cron_fetch is
-  'BN7: cron here-roads bierze leg tylko gdy true (DP-55); start false dla bn7.';
+  'BN7: cron here-roads bierze leg tylko gdy true (DP-55); default false; core = true.';
 
 alter table public.here_road_geometry
   add column if not exists length_m double precision,
@@ -46,9 +50,9 @@ update public.here_road_legs set
     [53.13,23.16],[54.10,22.93],[54.90,23.90],
     [56.41,24.19],[57.87,24.36],[58.39,24.50]
   ]'::jsonb,
-  min_km = 1250, max_km = 1400,
+  min_km = 1250, max_km = 1500,
   corridor_code = 'PL_EE_E67',
-  summary = 'Trasa drogowa Śrem–Tallinn (Terminal D) — BN7 dict'
+  summary = 'Trasa drogowa Śrem–Tallinn (Terminal D)'
 where leg = 'PL-TLL';
 
 update public.here_road_legs set
@@ -57,9 +61,9 @@ update public.here_road_legs set
     [53.13,23.16],[54.10,22.93],[54.90,23.90],
     [56.41,24.19],[57.87,24.36],[58.39,24.50]
   ]'::jsonb,
-  min_km = 1250, max_km = 1400,
+  min_km = 1250, max_km = 1500,
   corridor_code = 'PL_EE_E67',
-  summary = 'Trasa drogowa Śrem–Muuga — BN7 dict'
+  summary = 'Trasa drogowa Śrem–Muuga'
 where leg = 'PL-MUU';
 
 update public.here_road_legs set
@@ -70,7 +74,7 @@ update public.here_road_legs set
   ]'::jsonb,
   min_km = 1300, max_km = 1450,
   corridor_code = 'PL_EE_E67',
-  summary = 'Trasa drogowa Śrem–Paldiski — BN7 dict'
+  summary = 'Trasa drogowa Śrem–Paldiski'
 where leg = 'PL-PLD';
 
 update public.here_road_legs set
@@ -80,7 +84,7 @@ update public.here_road_legs set
   ]'::jsonb,
   min_km = 880, max_km = 950,
   corridor_code = 'FI_E75',
-  summary = 'Trasa drogowa Helsinki–Boden — BN7 dict (HEL_T2/HEL_KAT)'
+  summary = 'Trasa drogowa Helsinki–Boden (oba terminale)'
 where leg = 'FI-HEL';
 
 update public.here_road_legs set
@@ -90,7 +94,7 @@ update public.here_road_legs set
   ]'::jsonb,
   min_km = 880, max_km = 950,
   corridor_code = 'FI_E75',
-  summary = 'Trasa drogowa Vuosaari–Boden — BN7 dict'
+  summary = 'Trasa drogowa Vuosaari–Boden'
 where leg = 'FI-VUO';
 
 update public.here_road_legs set
@@ -100,7 +104,7 @@ update public.here_road_legs set
   ]'::jsonb,
   min_km = 950, max_km = 1050,
   corridor_code = 'SE_E4_STO',
-  summary = 'Trasa drogowa Sztokholm–Boden — BN7 dict'
+  summary = 'Trasa drogowa Sztokholm–Boden'
 where leg = 'SE-STO';
 
 update public.here_road_legs set
@@ -110,10 +114,10 @@ update public.here_road_legs set
   ]'::jsonb,
   min_km = 950, max_km = 1050,
   corridor_code = 'SE_E18_KPS',
-  summary = 'Trasa drogowa Kapellskär–Boden — BN7 dict'
+  summary = 'Trasa drogowa Kapellskär–Boden'
 where leg = 'SE-KPS';
 
--- core: cron_fetch zostaje true (default)
+-- core: jawne cron_fetch=true (default kolumny = false — F7 #738 B2)
 update public.here_road_legs
    set cron_fetch = true
  where map_group = 'core';
@@ -129,34 +133,117 @@ alter table public.corridor_polylines
     'PL_EE_E67', 'FI_E75', 'SE_E4_STO', 'SE_E18_KPS'
   ));
 
--- PL→EE E67 (Śrem → Białystok → Suwałki → Kowno → Bauska → Ikla → Tallinn)
+-- PL→EE E67 (Śrem → A2 → S8 → S61 Budzisko → E67 → Tallinn; ≤15 km)
+-- F7 #738 B4: trasa A2/S8/S61 (nie Poznań→Bydgoszcz); korytarz nadpisany po cron_fetch=true (linia HERE).
 with g as (
   select st_setsrid(st_makeline(array[
-    st_makepoint(17.0246, 52.0739), -- Śrem
-    st_makepoint(16.93, 52.41),    -- Poznań
-    st_makepoint(18.01, 53.12),    -- Toruń
-    st_makepoint(19.46, 52.98),    -- Płońsk / S7
-    st_makepoint(21.01, 52.23),    -- Warszawa
-    st_makepoint(22.15, 52.70),
-    st_makepoint(23.16, 53.13),    -- Białystok
-    st_makepoint(22.93, 54.10),    -- Suwałki
-    st_makepoint(23.35, 54.56),    -- Marijampolė
-    st_makepoint(23.90, 54.90),    -- Kaunas
-    st_makepoint(24.15, 55.30),
-    st_makepoint(24.35, 55.73),    -- Panevėžys
-    st_makepoint(24.19, 56.41),    -- Bauska
-    st_makepoint(24.10, 56.95),    -- Rīga A7/A1
-    st_makepoint(24.40, 57.35),
-    st_makepoint(24.36, 57.87),    -- Ikla–Ainaži
-    st_makepoint(24.50, 58.39),    -- Pärnu
-    st_makepoint(24.43, 58.90),
-    st_makepoint(24.75, 59.44)     -- Tallinn
+    st_makepoint(17.0246, 52.0739),
+    st_makepoint(17.0023, 52.197),
+    st_makepoint(16.98, 52.32),
+    st_makepoint(17.175, 52.3217),
+    st_makepoint(17.37, 52.3233),
+    st_makepoint(17.565, 52.325),
+    st_makepoint(17.7175, 52.3075),
+    st_makepoint(17.87, 52.29),
+    st_makepoint(18.0605, 52.2565),
+    st_makepoint(18.251, 52.223),
+    st_makepoint(18.4455, 52.2115),
+    st_makepoint(18.64, 52.2),
+    st_makepoint(18.8267, 52.1933),
+    st_makepoint(19.0133, 52.1867),
+    st_makepoint(19.2, 52.18),
+    st_makepoint(19.335, 52.0873),
+    st_makepoint(19.47, 51.9947),
+    st_makepoint(19.605, 51.902),
+    st_makepoint(19.72, 51.968),
+    st_makepoint(19.835, 52.034),
+    st_makepoint(19.95, 52.1),
+    st_makepoint(20.094, 52.1645),
+    st_makepoint(20.238, 52.229),
+    st_makepoint(20.4035, 52.2343),
+    st_makepoint(20.569, 52.2395),
+    st_makepoint(20.7345, 52.2447),
+    st_makepoint(20.9, 52.25),
+    st_makepoint(21.01, 52.285),
+    st_makepoint(21.12, 52.32),
+    st_makepoint(21.18, 52.42),
+    st_makepoint(21.319, 52.506),
+    st_makepoint(21.458, 52.592),
+    st_makepoint(21.6037, 52.662),
+    st_makepoint(21.7493, 52.732),
+    st_makepoint(21.895, 52.802),
+    st_makepoint(22.011, 52.863),
+    st_makepoint(22.127, 52.924),
+    st_makepoint(22.243, 52.985),
+    st_makepoint(22.4272, 53.0144),
+    st_makepoint(22.6114, 53.0438),
+    st_makepoint(22.7956, 53.0732),
+    st_makepoint(22.9798, 53.1026),
+    st_makepoint(23.164, 53.132),
+    st_makepoint(23.041, 53.223),
+    st_makepoint(22.918, 53.314),
+    st_makepoint(22.797, 53.407),
+    st_makepoint(22.8428, 53.516),
+    st_makepoint(22.8885, 53.625),
+    st_makepoint(22.9342, 53.734),
+    st_makepoint(22.98, 53.843),
+    st_makepoint(22.9565, 53.972),
+    st_makepoint(22.933, 54.101),
+    st_makepoint(22.914, 54.203),
+    st_makepoint(22.895, 54.305),
+    st_makepoint(23.0467, 54.39),
+    st_makepoint(23.1983, 54.475),
+    st_makepoint(23.35, 54.56),
+    st_makepoint(23.4875, 54.645),
+    st_makepoint(23.625, 54.73),
+    st_makepoint(23.7625, 54.815),
+    st_makepoint(23.9, 54.9),
+    st_makepoint(23.9625, 55),
+    st_makepoint(24.025, 55.1),
+    st_makepoint(24.0875, 55.2),
+    st_makepoint(24.15, 55.3),
+    st_makepoint(24.2, 55.4075),
+    st_makepoint(24.25, 55.515),
+    st_makepoint(24.3, 55.6225),
+    st_makepoint(24.35, 55.73),
+    st_makepoint(24.3233, 55.8433),
+    st_makepoint(24.2967, 55.9567),
+    st_makepoint(24.27, 56.07),
+    st_makepoint(24.2433, 56.1833),
+    st_makepoint(24.2167, 56.2967),
+    st_makepoint(24.19, 56.41),
+    st_makepoint(24.172, 56.518),
+    st_makepoint(24.154, 56.626),
+    st_makepoint(24.136, 56.734),
+    st_makepoint(24.118, 56.842),
+    st_makepoint(24.1, 56.95),
+    st_makepoint(24.175, 57.05),
+    st_makepoint(24.25, 57.15),
+    st_makepoint(24.325, 57.25),
+    st_makepoint(24.4, 57.35),
+    st_makepoint(24.39, 57.48),
+    st_makepoint(24.38, 57.61),
+    st_makepoint(24.37, 57.74),
+    st_makepoint(24.36, 57.87),
+    st_makepoint(24.395, 58),
+    st_makepoint(24.43, 58.13),
+    st_makepoint(24.465, 58.26),
+    st_makepoint(24.5, 58.39),
+    st_makepoint(24.4825, 58.5175),
+    st_makepoint(24.465, 58.645),
+    st_makepoint(24.4475, 58.7725),
+    st_makepoint(24.43, 58.9),
+    st_makepoint(24.4946, 59.0074),
+    st_makepoint(24.5592, 59.1148),
+    st_makepoint(24.6238, 59.2222),
+    st_makepoint(24.6884, 59.3296),
+    st_makepoint(24.753, 59.437)
   ]), 4326) as geom
 )
 insert into public.corridor_polylines (code, geom, total_km, source, attribution)
 select 'PL_EE_E67', g.geom,
        round((st_length(g.geom::geography) / 1000.0)::numeric, 2),
-       'OSM / ODbL — Śrem→E67→Tallinn (BN7 start; uproszczenie miast ~30–50 km)',
+       'OSM / ODbL — Śrem→A2→S8→S61→E67→Tallinn (BN7; ≤15 km; nadpisanie po cron_fetch)',
        '© OpenStreetMap contributors'
   from g
 on conflict (code) do update set
@@ -272,8 +359,9 @@ insert into public.eta_segment_params (code, label, hours, spread_pct, source) v
    'rozkład 60 dni — do kalibracji'),
   ('CROSSING_MUU_VUO', 'Przeprawa Muuga → Vuosaari', 2.75, 10,
    'rozkład 60 dni — do kalibracji'),
+  -- N2 F7 #738: 2,40 h = mediana rzeczywista VUO→MUU (n=1, SELECT 02.11); nie ujednolicamy do 2,75.
   ('CROSSING_VUO_MUU', 'Przeprawa Vuosaari → Muuga', 2.40, 10,
-   'rozkład 60 dni — do kalibracji'),
+   'rozkład 60 dni — mediana VUO→MUU n=1 (02.11) — do kalibracji'),
   ('CROSSING_TLL_STO', 'Przeprawa Tallinn → Sztokholm', 17.50, 10,
    'rozkład 60 dni — do kalibracji'),
   ('CROSSING_STO_TLL', 'Przeprawa Sztokholm → Tallinn', 16.50, 10,
@@ -282,66 +370,55 @@ insert into public.eta_segment_params (code, label, hours, spread_pct, source) v
    'rozkład 60 dni — do kalibracji'),
   ('CROSSING_KPS_PLD', 'Przeprawa Kapellskär → Paldiski', 9.75, 10,
    'rozkład 60 dni — do kalibracji')
-on conflict (code) do update set
-  label = excluded.label,
-  hours = excluded.hours,
-  spread_pct = excluded.spread_pct,
-  source = excluded.source,
-  updated_at = now();
+-- F7 #738 B5: nie nadpisuj godzin/źródeł już skalibrowanych.
+on conflict (code) do nothing;
+
+-- F7 #738 B3: konwencja prod (jak NYN-GDN = te same kody co GDN-NYN); bez zamiany ról
+-- na powrotach; bez kluczy operatorskich (TALLINK/ECKERO/DFDS — martwe dla family_key).
+delete from public.eta_route_segments
+ where route_key in ('TALLINK', 'ECKERO', 'DFDS');
 
 insert into public.eta_route_segments (route_key, segment_role, segment_code) values
   ('TLL-HEL',  'PL_ROAD', 'PL_ROAD_EE'),
   ('TLL-HEL',  'PORT_CHECKIN', 'PORT_CHECKIN_TLL'),
   ('TLL-HEL',  'CROSSING', 'CROSSING_TLL_HEL'),
   ('TLL-HEL',  'SE_ROAD', 'FI_ROAD'),
-  ('HEL-TLL',  'PL_ROAD', 'FI_ROAD'),
+  ('HEL-TLL',  'PL_ROAD', 'PL_ROAD_EE'),
   ('HEL-TLL',  'PORT_CHECKIN', 'PORT_CHECKIN_TLL'),
-  ('HEL-TLL',  'CROSSING', 'CROSSING_HEL_TLL'),
-  ('HEL-TLL',  'SE_ROAD', 'PL_ROAD_EE'),
+  ('HEL-TLL',  'CROSSING', 'CROSSING_TLL_HEL'),
+  ('HEL-TLL',  'SE_ROAD', 'FI_ROAD'),
   ('TLLA-HEL', 'PL_ROAD', 'PL_ROAD_EE'),
   ('TLLA-HEL', 'PORT_CHECKIN', 'PORT_CHECKIN_TLL'),
-  ('TLLA-HEL', 'CROSSING', 'CROSSING_TLLA_HEL'),
+  ('TLLA-HEL', 'CROSSING', 'CROSSING_TLL_HEL'),
   ('TLLA-HEL', 'SE_ROAD', 'FI_ROAD'),
-  ('HELA-TLL', 'PL_ROAD', 'FI_ROAD'),
+  ('HELA-TLL', 'PL_ROAD', 'PL_ROAD_EE'),
   ('HELA-TLL', 'PORT_CHECKIN', 'PORT_CHECKIN_TLL'),
-  ('HELA-TLL', 'CROSSING', 'CROSSING_HELA_TLL'),
-  ('HELA-TLL', 'SE_ROAD', 'PL_ROAD_EE'),
+  ('HELA-TLL', 'CROSSING', 'CROSSING_TLL_HEL'),
+  ('HELA-TLL', 'SE_ROAD', 'FI_ROAD'),
   ('MUU-VUO',  'PL_ROAD', 'PL_ROAD_EE'),
   ('MUU-VUO',  'PORT_CHECKIN', 'PORT_CHECKIN_MUU'),
   ('MUU-VUO',  'CROSSING', 'CROSSING_MUU_VUO'),
   ('MUU-VUO',  'SE_ROAD', 'FI_ROAD'),
-  ('VUO-MUU',  'PL_ROAD', 'FI_ROAD'),
+  ('VUO-MUU',  'PL_ROAD', 'PL_ROAD_EE'),
   ('VUO-MUU',  'PORT_CHECKIN', 'PORT_CHECKIN_MUU'),
-  ('VUO-MUU',  'CROSSING', 'CROSSING_VUO_MUU'),
-  ('VUO-MUU',  'SE_ROAD', 'PL_ROAD_EE'),
+  ('VUO-MUU',  'CROSSING', 'CROSSING_MUU_VUO'),
+  ('VUO-MUU',  'SE_ROAD', 'FI_ROAD'),
   ('TLL-STO',  'PL_ROAD', 'PL_ROAD_EE'),
   ('TLL-STO',  'PORT_CHECKIN', 'PORT_CHECKIN_TLL'),
   ('TLL-STO',  'CROSSING', 'CROSSING_TLL_STO'),
   ('TLL-STO',  'SE_ROAD', 'SE_ROAD_STO'),
-  ('STO-TLL',  'PL_ROAD', 'SE_ROAD_STO'),
+  ('STO-TLL',  'PL_ROAD', 'PL_ROAD_EE'),
   ('STO-TLL',  'PORT_CHECKIN', 'PORT_CHECKIN_TLL'),
-  ('STO-TLL',  'CROSSING', 'CROSSING_STO_TLL'),
-  ('STO-TLL',  'SE_ROAD', 'PL_ROAD_EE'),
+  ('STO-TLL',  'CROSSING', 'CROSSING_TLL_STO'),
+  ('STO-TLL',  'SE_ROAD', 'SE_ROAD_STO'),
   ('PLD-KPS',  'PL_ROAD', 'PL_ROAD_EE'),
   ('PLD-KPS',  'PORT_CHECKIN', 'PORT_CHECKIN_PLD'),
   ('PLD-KPS',  'CROSSING', 'CROSSING_PLD_KPS'),
   ('PLD-KPS',  'SE_ROAD', 'SE_ROAD_KPS'),
-  ('KPS-PLD',  'PL_ROAD', 'SE_ROAD_KPS'),
+  ('KPS-PLD',  'PL_ROAD', 'PL_ROAD_EE'),
   ('KPS-PLD',  'PORT_CHECKIN', 'PORT_CHECKIN_PLD'),
-  ('KPS-PLD',  'CROSSING', 'CROSSING_KPS_PLD'),
-  ('KPS-PLD',  'SE_ROAD', 'PL_ROAD_EE'),
-  ('TALLINK',  'PL_ROAD', 'PL_ROAD_EE'),
-  ('TALLINK',  'PORT_CHECKIN', 'PORT_CHECKIN_TLL'),
-  ('TALLINK',  'CROSSING', 'CROSSING_TLL_HEL'),
-  ('TALLINK',  'SE_ROAD', 'FI_ROAD'),
-  ('ECKERO',   'PL_ROAD', 'PL_ROAD_EE'),
-  ('ECKERO',   'PORT_CHECKIN', 'PORT_CHECKIN_MUU'),
-  ('ECKERO',   'CROSSING', 'CROSSING_MUU_VUO'),
-  ('ECKERO',   'SE_ROAD', 'FI_ROAD'),
-  ('DFDS',     'PL_ROAD', 'PL_ROAD_EE'),
-  ('DFDS',     'PORT_CHECKIN', 'PORT_CHECKIN_PLD'),
-  ('DFDS',     'CROSSING', 'CROSSING_PLD_KPS'),
-  ('DFDS',     'SE_ROAD', 'SE_ROAD_KPS')
+  ('KPS-PLD',  'CROSSING', 'CROSSING_PLD_KPS'),
+  ('KPS-PLD',  'SE_ROAD', 'SE_ROAD_KPS')
 on conflict (route_key, segment_role) do update
   set segment_code = excluded.segment_code;
 

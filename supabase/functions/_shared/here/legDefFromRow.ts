@@ -54,6 +54,7 @@ export function legDefFromRow(row: HereRoadLegRow): RoadLegDef {
     viaPoints: parseVia(row.via_points),
     minKm: Number.isFinite(minKm) ? minKm : undefined,
     maxKm: Number.isFinite(maxKm) ? maxKm : undefined,
-    cronFetch: row.cron_fetch !== false,
+    // F7 #738 B2: tylko jawne true (default kolumny false — nowy leg nie idzie do crona).
+    cronFetch: row.cron_fetch === true,
   };
 }

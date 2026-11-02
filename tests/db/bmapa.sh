@@ -271,7 +271,9 @@ echo; echo "[#718] BN7 dict / cron_fetch / route_legs / ETA"
 val "BN7 spec=dict = 7" "select count(*)::text from here_road_legs where map_group='bn7' and active and spec='dict'" "7"
 val "BN7 cron_fetch=false = 7" "select count(*)::text from here_road_legs where map_group='bn7' and active and cron_fetch is not true" "7"
 val "core cron_fetch=true = 5" "select count(*)::text from here_road_legs where map_group='core' and active and cron_fetch" "5"
+val "cron_fetch default = false" "select (column_default like '%false%')::text from information_schema.columns where table_schema='public' and table_name='here_road_legs' and column_name='cron_fetch'" "true"
 val "BN7 corridor OSM = 4" "select count(*)::text from corridor_polylines where code in ('PL_EE_E67','FI_E75','SE_E4_STO','SE_E18_KPS')" "4"
+val "PL_EE_E67 ≥ 80 pkt (≤15 km)" "select (st_npoints(geom) >= 80)::text from corridor_polylines where code='PL_EE_E67'" "true"
 fk_pre=$(sys "select count(*)::text from pg_constraint where conname='ferry_routes_road_corridor_pre_fkey'")
 [ "$fk_pre" = "1" ] && { ok=$((ok+1)); echo "  OK    FK ferry_routes.road_corridor_pre"; } || { fail=$((fail+1)); echo "  FAIL  FK pre → $fk_pre"; }
 fk_post=$(sys "select count(*)::text from pg_constraint where conname='ferry_routes_road_corridor_post_fkey'")
@@ -283,6 +285,11 @@ val "ETA TLL-HEL SE_ROAD → FI_ROAD" "select eta_obs_segment_code('TLL-HEL','SE
 val "ETA TLL-STO SE_ROAD → SE_ROAD_STO" "select eta_obs_segment_code('TLL-STO','SE_ROAD')" "SE_ROAD_STO"
 val "ETA PLD-KPS SE_ROAD → SE_ROAD_KPS" "select eta_obs_segment_code('PLD-KPS','SE_ROAD')" "SE_ROAD_KPS"
 val "ETA PORT_CHECKIN TLL = 2h (82-C)" "select eta_obs_segment_code('TLL-HEL','PORT_CHECKIN')" "PORT_CHECKIN_TLL"
+# F7 #738 B3: powrót = te same kody co trasa tam (jak NYN-GDN); bez zamiany PL↔FI.
+val "ETA HEL-TLL PL_ROAD = PL_ROAD_EE (powrót)" "select eta_obs_segment_code('HEL-TLL','PL_ROAD')" "PL_ROAD_EE"
+val "ETA HEL-TLL CROSSING = TLL_HEL" "select eta_obs_segment_code('HEL-TLL','CROSSING')" "CROSSING_TLL_HEL"
+val "ETA VUO-MUU PL_ROAD = PL_ROAD_EE" "select eta_obs_segment_code('VUO-MUU','PL_ROAD')" "PL_ROAD_EE"
+val "brak ETA operatorskich TALLINK" "select count(*)::text from eta_route_segments where route_key in ('TALLINK','ECKERO','DFDS')" "0"
 
 # N3: fikcyjny ładunek PL + Verkö + inland SE → start po Verkö (nie w PL)
 # F7 r4 P3: odstępy SE 12 min (nie 1 min ≈ 810 km/h → filtr >150 km/h).
