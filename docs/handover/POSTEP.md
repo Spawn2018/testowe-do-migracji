@@ -1,4 +1,12 @@
 
+## 2026-11-02 05:55 — #726 SCALONE; BN6 cz.2 LT (eismoinfo)
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie.
+- Scalanie: **#726 SCALONE** `0c0cb064` (BN6 cz.1 FI / **0376**). Brak otwartych PR z F7.
+- **Krok:** BN6 cz.2 LT — parser eismoinfo restrictions+weather; job `road-lt`; Edge + cron **0377**; vitest `bn6-road-lt` (11); status +4 (audience/corridor/CHECK/cron LT) → **578**; `detail.oryginal` LD/SVKD; uwaga „źródło LT nie podaje wypadków”.
+- **Dalej:** push → CI → F7. Po F7: BN6 cz.3 LV.
+- Bez push na main.
+
 ## 2026-11-02 05:25 — #726 CI db FAIL → fix BN6 fixture title_key
 
 - Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie.

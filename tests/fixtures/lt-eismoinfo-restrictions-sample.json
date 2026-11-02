@@ -1,0 +1,129 @@
+[
+  {
+    "_id": "bn6-lt-construction-kaunas",
+    "type": "CONSTRUCTION",
+    "subtype": null,
+    "creationTime": "2026-10-01T08:00:00Z",
+    "updateTime": "2026-11-01T10:00:00Z",
+    "startTime": "2026-10-01T00:00:00+03:00",
+    "endTime": "2026-12-15T23:00:00+02:00",
+    "description": "Kelio darbai A1 ruože.",
+    "shortDescription": "Kelio darbai",
+    "location": {
+      "polyline": "54.900000 23.900000 54.901000 23.901000",
+      "direction": "BOTH_DIRECTIONS",
+      "street": "A1 Kaunas"
+    },
+    "source": {
+      "reference": "VIA",
+      "name": "AB \"Via Lietuva\"",
+      "url": "https://www.eismoinfo.lt/"
+    },
+    "restrictions": [
+      {
+        "restrictionType": "speedLimit",
+        "value": 70,
+        "transportType": "All"
+      }
+    ]
+  },
+  {
+    "_id": "bn6-lt-weight-panevezys",
+    "type": "HAZARD",
+    "subtype": "weakBridge",
+    "creationTime": "2026-09-01T08:00:00Z",
+    "updateTime": "2026-11-01T10:00:00Z",
+    "startTime": "2026-09-01T00:00:00+03:00",
+    "endTime": null,
+    "description": "Silpnas tiltas — ribojamas svoris.",
+    "shortDescription": "Silpnas tiltas",
+    "location": {
+      "polyline": "55.730000 24.350000 55.731000 24.351000",
+      "direction": "BOTH_DIRECTIONS",
+      "street": "A2 Panevezys"
+    },
+    "source": {
+      "reference": "VIA",
+      "name": "AB \"Via Lietuva\"",
+      "url": "https://www.eismoinfo.lt/"
+    },
+    "restrictions": [
+      {
+        "restrictionType": "weightLimit",
+        "value": 40,
+        "transportType": "All"
+      },
+      {
+        "restrictionType": "LD",
+        "value": 1,
+        "transportType": "All"
+      },
+      {
+        "restrictionType": "SVKD",
+        "value": 2,
+        "transportType": "All"
+      }
+    ]
+  },
+  {
+    "_id": "bn6-lt-closed-marijampole",
+    "type": "HAZARD",
+    "subtype": "obstructionType",
+    "creationTime": "2026-11-01T08:00:00Z",
+    "updateTime": "2026-11-02T06:00:00Z",
+    "startTime": "2026-11-01T00:00:00+02:00",
+    "endTime": "2026-11-05T23:00:00+02:00",
+    "description": "Kelias uzdarytas.",
+    "shortDescription": "Uzdaryta",
+    "location": {
+      "polyline": "54.560000 23.350000",
+      "direction": "BOTH_DIRECTIONS",
+      "street": "A5 Marijampole"
+    },
+    "source": {
+      "reference": "VIA",
+      "name": "AB \"Via Lietuva\"",
+      "url": "https://www.eismoinfo.lt/"
+    },
+    "restrictions": [
+      {
+        "restrictionType": "roadClosed",
+        "value": null,
+        "transportType": "All"
+      },
+      {
+        "restrictionType": "heightLimit",
+        "value": 4.0,
+        "transportType": "All"
+      }
+    ]
+  },
+  {
+    "_id": "bn6-lt-far-vilnius-east",
+    "type": "CONSTRUCTION",
+    "subtype": null,
+    "creationTime": "2026-10-01T08:00:00Z",
+    "updateTime": "2026-11-01T10:00:00Z",
+    "startTime": "2026-10-01T00:00:00+03:00",
+    "endTime": "2026-12-01T23:00:00+02:00",
+    "description": "Darbai toli od korytarza Via Baltica.",
+    "shortDescription": "Darbai",
+    "location": {
+      "polyline": "54.700000 25.600000 54.701000 25.601000",
+      "direction": "BOTH_DIRECTIONS",
+      "street": "Vilnius east"
+    },
+    "source": {
+      "reference": "VIA",
+      "name": "AB \"Via Lietuva\"",
+      "url": "https://www.eismoinfo.lt/"
+    },
+    "restrictions": [
+      {
+        "restrictionType": "speedLimit",
+        "value": 50,
+        "transportType": "All"
+      }
+    ]
+  }
+]

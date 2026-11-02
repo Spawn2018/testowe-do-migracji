@@ -1,7 +1,9 @@
 /**
  * BN6 (#716) — drogi LT/LV/EE/FI.
  * cz.1: Finlandia Digitraffic road (bez klucza, CC BY 4.0 Fintraffic).
- * Do BN7 (geometria FI_E75): filtr bboxami korytarza (F7 #726 B2); bbox w [20,59,32,71].
+ * cz.2: Litwa eismoinfo restrictions + weather (bez klucza; Via Lietuva).
+ * Do BN7 (geometria trasy): filtr bboxami korytarza (F7 #726 B2); FI bbox w [20,59,32,71].
+ * LT: źródło nie podaje wypadków — zapis w detail / corridor note.
  */
 import type { RiskInput, RiskSeverity } from './sync.ts';
 import { seRoadSlowdownMult, type LatLon } from './road.ts';
@@ -93,6 +95,8 @@ export interface BalticRoadEvent {
   weightLimitT?: number | null;
   heightLimitM?: number | null;
   widthLimitM?: number | null;
+  /** #716 LT: nieznane kody restrictionType (LD/SVKD) → detail.oryginal. */
+  unknownCodes?: string[];
 }
 
 function featureCentroid(geom: unknown): LatLon | null {
@@ -252,6 +256,7 @@ export function balticRoadRisk(
       weight_limit_t: e.weightLimitT ?? null,
       height_limit_m: e.heightLimitM ?? null,
       width_limit_m: e.widthLimitM ?? null,
+      ...(e.unknownCodes?.length ? { oryginal: e.unknownCodes.join(',') } : {}),
     },
     dedup: `${kind}:${e.id}`,
     sourceUrl,
@@ -313,4 +318,235 @@ export function balticSlowdownMult(
     weather: [],
     pct,
   });
+}
+
+/* ---------- Litwa — Via Lietuva / eismoinfo.lt (#716 cz.2) ---------- */
+
+/** Via Baltica PL→LT→LV (załadunek → Tallinn/Muuga/Paldiski); do BN7 bboxy zamiast 2 km. */
+export const CORRIDOR_LT: LatLon[] = [
+  [54.40, 22.90], // granica PL/LT Kalvarija
+  [54.56, 23.35], // Marijampolė
+  [54.90, 23.90], // Kaunas
+  [55.30, 24.15],
+  [55.73, 24.35], // Panevėžys
+  [56.05, 24.40], // Pasvalys
+  [56.25, 24.45], // granica LT/LV
+];
+
+export const LT_RESTRICTIONS_URL = 'https://restrictions.eismoinfo.lt/';
+export const LT_WEATHER_URL = 'https://eismoinfo.lt/weather-conditions-service';
+export const LT_ATTRIBUTION = 'Via Lietuva (eismoinfo.lt)';
+export const LT_UA = 'WatchTower/BN6 (log-mar.pl; road-lt; +48 kontakt HHL)';
+
+/** Bboxy wzdłuż CORRIDOR_LT — filtr zdarzeń do BN7. */
+export function ltCorridorBboxes(): FiBbox[] {
+  return [
+    { xMin: 22.5, xMax: 24.0, yMin: 54.2, yMax: 55.0 },
+    { xMin: 23.2, xMax: 24.8, yMin: 54.7, yMax: 55.6 },
+    { xMin: 23.8, xMax: 25.2, yMin: 55.4, yMax: 56.4 },
+  ];
+}
+
+export function eventInLtBboxes(
+  e: Pick<BalticRoadEvent, 'lat' | 'lon'>,
+  boxes: FiBbox[] = ltCorridorBboxes(),
+): boolean {
+  return eventInFiBboxes(e, boxes);
+}
+
+export function filterInLtBboxes(
+  events: BalticRoadEvent[],
+  boxes: FiBbox[] = ltCorridorBboxes(),
+): BalticRoadEvent[] {
+  return events.filter((e) => eventInLtBboxes(e, boxes));
+}
+
+/** polyline „lat lon lat lon…” → centroid [lat, lon]. */
+export function parseLtPolylineCentroid(polyline: string | null | undefined): LatLon | null {
+  if (!polyline || typeof polyline !== 'string') return null;
+  const nums = polyline.trim().split(/\s+/).map(Number).filter((n) => Number.isFinite(n));
+  if (nums.length < 2) return null;
+  let lat = 0;
+  let lon = 0;
+  let n = 0;
+  for (let i = 0; i + 1 < nums.length; i += 2) {
+    lat += nums[i];
+    lon += nums[i + 1];
+    n++;
+  }
+  return n ? [lat / n, lon / n] : null;
+}
+
+function ltRestrictionMeta(restrictions: unknown): {
+  weightLimitT: number | null;
+  heightLimitM: number | null;
+  widthLimitM: number | null;
+  roadClosed: boolean;
+  unknownCodes: string[];
+} {
+  const unknownCodes: string[] = [];
+  let weightLimitT: number | null = null;
+  let heightLimitM: number | null = null;
+  let widthLimitM: number | null = null;
+  let roadClosed = false;
+  if (!Array.isArray(restrictions)) {
+    return { weightLimitT, heightLimitM, widthLimitM, roadClosed, unknownCodes };
+  }
+  for (const raw of restrictions) {
+    if (!raw || typeof raw !== 'object') continue;
+    const t = String((raw as { restrictionType?: string }).restrictionType ?? '').trim();
+    const v = Number((raw as { value?: number }).value);
+    if (t === 'weightLimit' || t === 'axleWeightLimit') {
+      if (Number.isFinite(v)) weightLimitT = v;
+    } else if (t === 'heightLimit') {
+      if (Number.isFinite(v)) heightLimitM = v;
+    } else if (t === 'widthLimit') {
+      if (Number.isFinite(v)) widthLimitM = v;
+    } else if (t === 'roadClosed') {
+      roadClosed = true;
+    } else if (t === 'LD' || t === 'SVKD') {
+      /* #716: kody nieznane — surowe w detail.oryginal, bez interpretacji. */
+      unknownCodes.push(t);
+    }
+  }
+  return { weightLimitT, heightLimitM, widthLimitM, roadClosed, unknownCodes };
+}
+
+function ltSeverity(
+  type: string,
+  subtype: string | null,
+  meta: ReturnType<typeof ltRestrictionMeta>,
+): RiskSeverity {
+  if (meta.roadClosed) return 'HIGH';
+  if (meta.weightLimitT != null || meta.heightLimitM != null || meta.widthLimitM != null) {
+    return 'HIGH';
+  }
+  const sub = (subtype ?? '').toLowerCase();
+  if (sub.includes('weakbridge') || sub.includes('damagedbridge') || sub.includes('flood')) {
+    return 'HIGH';
+  }
+  if (type.toUpperCase() === 'CONSTRUCTION') return 'MEDIUM';
+  return 'MEDIUM';
+}
+
+/** Waze CIFS-podobny feed restrictions.eismoinfo.lt (tablica obiektów). */
+export function parseLtRestrictions(json: unknown): BalticRoadEvent[] {
+  if (!Array.isArray(json)) return [];
+  const out: BalticRoadEvent[] = [];
+  for (const raw of json) {
+    if (!raw || typeof raw !== 'object') continue;
+    const o = raw as Record<string, unknown>;
+    const id = String(o._id ?? o.id ?? '').trim();
+    if (!id) continue;
+    const loc = (o.location && typeof o.location === 'object')
+      ? o.location as { polyline?: string; street?: string }
+      : {};
+    const pt = parseLtPolylineCentroid(loc.polyline);
+    const meta = ltRestrictionMeta(o.restrictions);
+    const type = String(o.type ?? 'HAZARD');
+    const subtype = o.subtype == null ? null : String(o.subtype);
+    const title = String(o.shortDescription ?? o.description ?? subtype ?? type).trim() || type;
+    const detailParts = [
+      String(o.description ?? '').trim(),
+      loc.street ? `ul. ${loc.street}` : '',
+      'zrodlo LT nie podaje wypadkow',
+    ].filter(Boolean);
+    out.push({
+      id,
+      title,
+      detail: detailParts.join(' · '),
+      severity: ltSeverity(type, subtype, meta),
+      lat: pt?.[0] ?? null,
+      lon: pt?.[1] ?? null,
+      kind: subtype ?? type,
+      start: typeof o.startTime === 'string' ? o.startTime : null,
+      end: typeof o.endTime === 'string' ? o.endTime : null,
+      weightLimitT: meta.weightLimitT,
+      heightLimitM: meta.heightLimitM,
+      widthLimitM: meta.widthLimitM,
+      unknownCodes: meta.unknownCodes.length ? meta.unknownCodes : undefined,
+    });
+  }
+  return out;
+}
+
+export interface LtWeatherStation {
+  id: string;
+  lat: number;
+  lon: number;
+  friction: number | null;
+  surface: string | null;
+  visibilityM: number | null;
+  warning: string | null;
+  adverse: boolean;
+  title: string;
+}
+
+/** Próg przyczepności — poniżej = ślisko (spowolnienie korytarza). */
+export const LT_FRICTION_ADVERSE = 0.4;
+
+export function parseLtWeather(json: unknown): LtWeatherStation[] {
+  if (!Array.isArray(json)) return [];
+  const out: LtWeatherStation[] = [];
+  for (const raw of json) {
+    if (!raw || typeof raw !== 'object') continue;
+    const o = raw as Record<string, unknown>;
+    const id = String(o.id ?? '').trim();
+    const lat = Number(o.lat);
+    const lon = Number(o.lng ?? o.lon);
+    if (!id || !Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+    const frictionRaw = o.sukibimo_koeficientas;
+    const friction = frictionRaw == null || frictionRaw === ''
+      ? null
+      : Number(frictionRaw);
+    const surface = o.kelio_danga == null ? null : String(o.kelio_danga);
+    const visibilityM = o.matomumas == null || o.matomumas === ''
+      ? null
+      : Number(o.matomumas);
+    const warning = o.perspejimai == null || o.perspejimai === ''
+      ? null
+      : String(o.perspejimai);
+    const surfaceLow = (surface ?? '').toLowerCase();
+    const wet = /šlap|slap|drėgn|dregn|led|ice|snieg|śnieg|snieg/i.test(surfaceLow);
+    const lowFriction = friction != null && Number.isFinite(friction)
+      && friction < LT_FRICTION_ADVERSE;
+    const lowVis = visibilityM != null && Number.isFinite(visibilityM) && visibilityM < 200;
+    const adverse = Boolean(warning) || lowFriction || wet || lowVis;
+    out.push({
+      id,
+      lat,
+      lon,
+      friction: Number.isFinite(friction as number) ? friction : null,
+      surface,
+      visibilityM: Number.isFinite(visibilityM as number) ? visibilityM : null,
+      warning,
+      adverse,
+      title: String(o.irenginys ?? o.pavadinimas ?? `stacja ${id}`),
+    });
+  }
+  return out;
+}
+
+/** Stacje pogodowe w bboxach → zdarzenia HIGH do spowolnienia (bez osobnych ryzyk). */
+export function ltWeatherToSlowdownEvents(
+  stations: LtWeatherStation[],
+  boxes: FiBbox[] = ltCorridorBboxes(),
+): BalticRoadEvent[] {
+  return stations
+    .filter((s) => s.adverse && eventInLtBboxes({ lat: s.lat, lon: s.lon }, boxes))
+    .map((s) => ({
+      id: `wx:${s.id}`,
+      title: s.warning ? `Pogoda: ${s.warning}` : `Pogoda: ${s.title}`,
+      detail: [
+        s.surface ? `nawierzchnia ${s.surface}` : '',
+        s.friction != null ? `przyczepnosc ${s.friction}` : '',
+        s.visibilityM != null ? `widocznosc ${s.visibilityM} m` : '',
+      ].filter(Boolean).join(' · '),
+      severity: 'HIGH' as RiskSeverity,
+      lat: s.lat,
+      lon: s.lon,
+      kind: 'weather',
+      start: null,
+      end: null,
+    }));
 }
