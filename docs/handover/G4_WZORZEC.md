@@ -309,4 +309,4 @@ Dodane `tests/__screenshots__/drogi-baltyckie-hhl-pl-{1440,390}-light.png` i od�
 Z workflowu `visual` (`update=true`, przebieg 41399919530, commit `8796680`, artefakt `visual-artifacts`); pozostałe migawki identyczne co do bajtu.
 - Usunięta `drogi-baltyckie-hhl-pl-1440-light.png` (F7 r1 B1): utrwalała rozbity układ HHL 1440 (kolumna ~318 px, nachodzący tekst „Do zrobienia”) — to osobne DP-161 (BN9-c5). Komputer pokrywa `ryzyka-ksh-pl-1440-light.png`.
 - `drogi-baltyckie-hhl-pl-390-light.png`: dopisek „Źródło LT (Via Lietuva) nie podaje wypadków.”, w nagłówku FI „spowolnienie +15%” (demo `corridor_conditions`), kolejność FI wg czasu przy równym wpływie, EE „Brak utrudnień na korytarzu.” (świeży odczyt demo); tytuły bez ucięć (telefon — do 2 linii).
-- `ryzyka-ksh-pl-1440-light.png` (1230×1636): te same zmiany w siatce 2 × 2 (dopisek LT, spowolnienie FI); promy, Drogi PL/SE i pogoda bez zmian.
+- `ryzyka-ksh-pl-1440-light.png` (1230×1635): te same zmiany w siatce 2 × 2 (dopisek LT, spowolnienie FI); promy, Drogi PL/SE i pogoda bez zmian.
