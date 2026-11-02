@@ -15,7 +15,7 @@ export const EXPECTED_LOCAL = {
   security: 495, // #662-b: +1 maska URL/token w audit_log; #662 +8 → 494
   status: 583, // BN6/0379 EE: +3 (audience/corridor/CHECK); cron FI+LT+LV+EE w jednej asercji; 0378→580
   storage: 37,
-  money: 194, // DP-167: +3 raise_integration_risk update open (false/severity|title/count); było 191
+  money: 198, // DP-167 F7 #734: +4 identyczne xmin×2 + FERRY+load_id×2; było 194 (DP-167 +3 od 191)
   release: 146,
   backup: 44, // #516 F7 r2: +2 DO ponownie / stale≥OK; było 42 (+6 F7 r1 od 36)
   session: 33, // +6 my_session_revoke (D-20261014-1420-01 R3); 0218 truck_ban_holidays active

@@ -1,5 +1,7 @@
 -- DP-167: raise_integration_risk przy otwartym dedup aktualizuje wagę/etykietę/detail
 -- (zmiana wag FI/EE po wdrożeniu trafia do otwartych). Bez nowego RISK_OPEN (return false).
+-- F7 #734 r1: (a) tylko ROAD_* bez load_id; UPDATE wyłącznie gdy pola się zmieniają;
+-- valid_until = coalesce(p_valid_until, valid_until) — job bez końca nie kasuje istniejącej daty.
 
 create or replace function raise_integration_risk(
   p_project uuid, p_load uuid, p_kind risk_kind, p_sev risk_severity, p_title text, p_detail jsonb,
@@ -8,23 +10,35 @@ create or replace function raise_integration_risk(
 declare
   n int;
   v_id uuid;
+  v_detail jsonb;
 begin
   if p_dedup is null or length(p_dedup) = 0 then
     raise exception 'raise_integration_risk: wymagany klucz deduplikacji';
   end if;
 
-  -- DP-167: otwarte ryzyko z tym samym dedup — odśwież severity/title/detail, bez nowego wiersza.
+  -- Otwarte z tym samym dedup: bez nowego wiersza.
+  -- DP-167 / F7 #734 r1 (a): odśwież severity/title/detail tylko dla ROAD_* bez transportu
+  -- (bez zalewu RISK_SEVERITY z FERRY/WEATHER/ETA przy load_id).
   if exists (
     select 1 from risk_signals
      where dedup_key = p_dedup and resolved_at is null
   ) then
-    update risk_signals
-       set severity = p_sev,
-           title = p_title,
-           detail = coalesce(p_detail, '{}'::jsonb),
-           source_url = coalesce(p_source_url, source_url),
-           valid_until = p_valid_until
-     where dedup_key = p_dedup and resolved_at is null;
+    if p_kind in ('ROAD_SE', 'ROAD_PL', 'ROAD_LT', 'ROAD_LV', 'ROAD_EE', 'ROAD_FI')
+       and p_load is null then
+      v_detail := coalesce(p_detail, '{}'::jsonb);
+      update risk_signals
+         set severity = p_sev,
+             title = p_title,
+             detail = v_detail,
+             source_url = coalesce(p_source_url, source_url),
+             valid_until = coalesce(p_valid_until, valid_until)
+       where dedup_key = p_dedup and resolved_at is null
+         and (severity, title, detail, coalesce(source_url, ''), valid_until)
+             is distinct from
+             (p_sev, p_title, v_detail,
+              coalesce(coalesce(p_source_url, source_url), ''),
+              coalesce(p_valid_until, valid_until));
+    end if;
     return false;
   end if;
 
