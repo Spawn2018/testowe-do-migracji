@@ -1,4 +1,12 @@
 
+## 2026-11-02 22:55 — BN8a F7 r1 B3/W2/W5 + CI db
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. #740 BN9-c5 CI ✔, bez F7.
+- Scalanie: brak „F7: gotowe”. #741 @ `1d0a19e6`: unit/visual ✔; db FAIL — status 594/595 (propose GDN), risks 44/46 (`rk_off_corridor`), i2 671/675 (UUID `g-test` w `load_route_family`).
+- **Krok:** **0382** — OFF_CORRIDOR tylko core PL_ROAD/SE_E4/Stena (B3); UUID po regexie w `load_route_family`/`process_position` (W2); propose L640q + `ferry_route=GDN-NYN`; W5a/b/e/f; status **599**; PLAN W3 (zapis ferry_route).
+- **Dalej:** push → CI → F7. Po F7: front `src/lib` / BN8b; #740 → cron_fetch=true.
+- Bez push na main.
+
 ## 2026-11-02 21:45 — BN8a CI fix (0382 grant/map/OFF_CORRIDOR)
 
 - Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. #735 krok 2 po prod. #740 BN9-c5 CI ✔, bez F7.

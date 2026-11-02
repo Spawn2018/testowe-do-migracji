@@ -144,10 +144,17 @@ begin
     return public.eta_obs_route_family(v);
   end if;
 
+  -- W2/F7: tylko load_id (bez skanu detached); UUID tylko po regexie (nie-UUID w payload nie wywala).
   select coalesce(g.route, e.payload->>'route') into v
     from load_events e
-    left join geofences g on g.id = nullif(e.payload->>'geofence_id', '')::uuid
-   where (e.load_id = p_load or e.detached_load_id = p_load)
+    left join geofences g
+      on g.id = case
+           when (e.payload->>'geofence_id')
+                ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+           then (e.payload->>'geofence_id')::uuid
+           else null
+         end
+   where e.load_id = p_load
      and e.event_type in ('GEOFENCE_ENTER', 'GEOFENCE_EXIT')
      and coalesce(g.kind::text, e.payload->>'geofence_kind') in ('PORT_OUT', 'PRE_PORT')
      and coalesce(g.route, e.payload->>'route') is not null
@@ -1164,7 +1171,12 @@ begin
               select 1 from load_events e
               where e.load_id = p_load_id
                 and e.event_type = 'GEOFENCE_DWELL'
-                and (e.payload->>'geofence_id')::uuid = v_fence.id
+                and case
+                      when (e.payload->>'geofence_id')
+                           ~* '^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$'
+                      then (e.payload->>'geofence_id')::uuid
+                      else null
+                    end = v_fence.id
                 and e.occurred_at >= v_state.entered_at
             ) then
         v_emit := 'GEOFENCE_DWELL';
@@ -1384,7 +1396,16 @@ begin
     end if;
   end if;
 
+  -- B3/F7 BN8a: alarm OFF_CORRIDOR tylko rdzeń (PL_ROAD / SE_E4 / Stena dual).
+  -- Kody BN7 (PL_EE_E67, FI_E75, SE_E4_STO, SE_E18_KPS) → BN8b (§3); tu bez alarmu.
   if v_stena_dual is not true
+     and v_corr is distinct from 'PL_ROAD'
+     and v_corr is distinct from 'SE_E4' then
+    v_blocked := true;
+    v_samples := 0;
+    v_max_off := 0;
+    v_span := 0;
+  elsif v_stena_dual is not true
      and (v_corr is null
           or not exists (
             select 1 from corridor_polylines cp
@@ -1584,7 +1605,7 @@ comment on function public.apply_ferry_ais_arrival_backup(uuid, double precision
 revoke all on function public.refresh_load_eta(uuid) from public, anon, authenticated;
 grant execute on function public.refresh_load_eta(uuid) to service_role;
 comment on function public.refresh_load_eta(uuid) is
-  'BN8a/#720: OFF_CORRIDOR z road_corridor_*→corridor_code; bez trasy→PL_ROAD/SE_E4; znana trasa bez kodu→bez alarmu.';
+  'BN8a/#720: OFF_CORRIDOR tylko core PL_ROAD/SE_E4/Stena dual; BN7 kody→bez alarmu (BN8b); bez trasy→PL_ROAD/SE_E4.';
 
 -- ---------------------------------------------------------------------------
 -- 9) eta_record_segment_observations — filtr po trasie
