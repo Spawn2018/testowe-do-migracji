@@ -102,8 +102,9 @@ import {
   FI_ANNOUNCEMENTS_URL, FI_ATTRIBUTION, FI_ROADWORKS_URL, FI_WEIGHT_URL,
   LT_ATTRIBUTION, LT_RESTRICTIONS_URL, LT_UA, LT_WEATHER_URL,
   LV_ATTRIBUTION, LV_NAP_CODES, LV_NAP_KEY_HEADER, LV_SOURCE_REF, LV_UA,
-  applyBalticCorridorRoadFilter, applyFiCorridorRoadFilter, balticRoadRisk, balticSlowdownMult,
-  capBalticRiskSeverity, dedupeLvSlippery, eeDatexApiKey, eeDatexFeedUrl, fiCorridorBboxes, fiTrafficUrl,
+  applyBalticCorridorRoadFilter, applyFiCorridorRoadFilter, balticNetWarning, balticRoadRisk,
+  balticSlowdownMult, capBalticRiskSeverity, classifyBalticNetError, dedupeLvSlippery,
+  eeDatexApiKey, eeDatexFeedUrl, fiCorridorBboxes, fiTrafficUrl,
   filterInEeBboxes, filterInFiBboxes, filterInLvBboxes, dimensionLimitRisk, filterInLtBboxes,
   isDimensionLimitEvent, isFiWeightLimitLike, ltWeatherToSlowdownEvents, lvNapKeyEnv,
   lvNapUrlEnv, lvWeatherToSlowdownEvents, parseEeFeedBody, parseFiTrafficMessages, parseLtRestrictions,
@@ -4036,11 +4037,13 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
         skipped: localStats.skipped, swapped: localStats.swapped,
       };
     } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
+      /* DP-165: klasa błędu + host bez ścieżki (klucz nie w warnings). */
+      const klass = classifyBalticNetError(e);
       return {
         code, ok: false as const,
-        warning: `LV ${code}: ${/abort/i.test(msg) ? 'timeout' : 'błąd sieci'}`,
-        per: 'error', format: '', events: [] as BalticRoadEvent[],
+        warning: balticNetWarning(`LV ${code}`, url, e),
+        per: klass === 'timeout' ? 'timeout' : `error:${klass}`,
+        format: '', events: [] as BalticRoadEvent[],
         skipped: 0, swapped: 0,
       };
     } finally {
@@ -4302,11 +4305,13 @@ async function fetchEeFeedPart(
       sites: parsed.sites,
     };
   } catch (e) {
-    const msg = e instanceof Error ? e.message : String(e);
+    /* DP-169: klasa błędu + host bez ścieżki (klucz nie w warnings). */
+    const klass = classifyBalticNetError(e);
     return {
       code: feed.code, ok: false,
-      warning: `EE ${feed.code}: ${/abort/i.test(msg) ? 'timeout' : 'błąd sieci'}`,
-      per: 'error', format: '', events: [],
+      warning: balticNetWarning(`EE ${feed.code}`, url, e),
+      per: klass === 'timeout' ? 'timeout' : `error:${klass}`,
+      format: '', events: [],
     };
   } finally {
     clearTimeout(timer);

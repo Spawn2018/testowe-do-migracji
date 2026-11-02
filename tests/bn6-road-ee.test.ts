@@ -408,4 +408,21 @@ describe('BN6 runRoadEe', () => {
     const j = parseEeFeedBody(JSON.stringify(srtiJson), 'SRTI_ACCIDENT', 'json');
     expect(j.format).toBe('datex-json');
   });
+
+  it('DP-169: timeout w warning z hostem tarktee.ee, bez ścieżki i klucza', async () => {
+    const store = new MemStore();
+    const f = (async () => {
+      throw new DOMException('The operation was aborted.', 'AbortError');
+    }) as typeof fetch;
+    const d: JobDeps = {
+      store,
+      fetch: f,
+      env: { TARKTEE_DATEX_TOKEN: 'sekret-ee-xyz' },
+      now: () => new Date('2026-11-02T12:00:00Z'),
+    };
+    const res = await runRoadEe(d);
+    expect(res.warnings?.some((w) => /timeout tarktee\.ee/i.test(w))).toBe(true);
+    expect(JSON.stringify(res)).not.toContain('sekret-ee-xyz');
+    expect(JSON.stringify(res)).not.toMatch(/\/api\/v1\/datex\//);
+  });
 });

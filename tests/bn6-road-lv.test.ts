@@ -13,7 +13,10 @@ import {
   LV_UA,
   applyBalticCorridorRoadFilter,
   balticCapLongDetourClosure,
+  balticNetWarning,
   balticSlowdownMult,
+  balticWarnHost,
+  classifyBalticNetError,
   dedupeLvSlippery,
   extractBalticRoadRef,
   extractBalticRoadRefPreferStreet,
@@ -532,9 +535,46 @@ describe('BN6 runRoadLv F7 #730', () => {
     /* podmień timeout na krótki przez Abort — jobs używa 10s; tu fetch od razu abort */
     const r = await runRoadLv(d);
     expect(calls).toBeGreaterThan(0);
-    expect(r.warnings?.some((w) => /timeout|błąd sieci|niepobrany/i.test(w))).toBe(true);
+    expect(r.warnings?.some((w) => /timeout nap\.example/i.test(w))).toBe(true);
+    expect(r.warnings?.every((w) => !/\/lv\/roadworks/i.test(w))).toBe(true);
     expect(JSON.stringify(r)).not.toContain('sekret-klucz-xyz');
     expect(st.risks.every((x) => !JSON.stringify(x.detail ?? {}).includes('sekret-klucz-xyz')))
       .toBe(true);
+  });
+
+  it('DP-165: klasa DNS/TLS/reset + host bez ścieżki w warning', async () => {
+    const cases: { err: Error; re: RegExp }[] = [
+      { err: Object.assign(new Error('getaddrinfo ENOTFOUND bad.host'), { name: 'TypeError' }), re: /DNS bad\.host/ },
+      { err: new Error('unable to verify the first certificate'), re: /TLS bad\.host/ },
+      { err: Object.assign(new Error('read ECONNRESET'), { name: 'Error' }), re: /reset bad\.host/ },
+    ];
+    for (const { err, re } of cases) {
+      const st = new MemStore();
+      const r = await runRoadLv({
+        store: st,
+        fetch: (async () => { throw err; }) as typeof fetch,
+        env: {
+          LV_NAP_ROADWORKS_KEY: 'sekret-abc',
+          LV_NAP_ROADWORKS_URL: 'https://bad.host/lv/api/pull/secret-path?k=sekret-abc',
+        },
+        now: () => NOW,
+      });
+      expect(r.warnings?.some((w) => re.test(w))).toBe(true);
+      expect(JSON.stringify(r)).not.toContain('sekret-abc');
+      expect(JSON.stringify(r)).not.toContain('secret-path');
+    }
+  });
+});
+
+describe('DP-165/169 classifyBalticNetError', () => {
+  it('mapuje typowe komunikaty i host bez ścieżki', () => {
+    expect(classifyBalticNetError(new DOMException('aborted', 'AbortError'))).toBe('timeout');
+    expect(classifyBalticNetError(new Error('getaddrinfo ENOTFOUND x'))).toBe('DNS');
+    expect(classifyBalticNetError(new Error('self signed certificate'))).toBe('TLS');
+    expect(classifyBalticNetError(new Error('read ECONNRESET'))).toBe('reset');
+    expect(classifyBalticNetError(new Error('connect ETIMEDOUT'))).toBe('timeout');
+    expect(balticWarnHost('https://a.example/path?key=sek')).toBe('a.example');
+    expect(balticNetWarning('LV X', 'https://a.example/secret', new Error('ECONNRESET')))
+      .toBe('LV X: reset a.example');
   });
 });

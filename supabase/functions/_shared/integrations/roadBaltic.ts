@@ -1238,6 +1238,56 @@ export function lvNapUrlEnv(code: LvNapCode): string {
 }
 
 /**
+ * DP-165 / DP-169 — klasa błędu sieci w ostrzeżeniu (bez wartości klucza, bez ścieżki URL).
+ * Abort z naszego limitu czasu = „timeout”; DNS / TLS / reset / connect|read timeout osobno.
+ */
+export type BalticNetErrorClass =
+  | 'timeout'
+  | 'DNS'
+  | 'TLS'
+  | 'reset'
+  | 'connect timeout'
+  | 'read timeout'
+  | 'sieć';
+
+export function balticWarnHost(url: string): string {
+  try {
+    const h = new URL(url).host;
+    return h || 'host';
+  } catch {
+    return 'host';
+  }
+}
+
+export function classifyBalticNetError(err: unknown): BalticNetErrorClass {
+  const name = err instanceof Error ? err.name : '';
+  const msg = err instanceof Error ? err.message : String(err);
+  if (name === 'AbortError' || /aborted|abort(?:ed)?\b/i.test(msg)) return 'timeout';
+  if (/ENOTFOUND|EAI_AGAIN|getaddrinfo|name not resolved|nie można rozpoznać nazwy|nxdomain/i.test(msg)) {
+    return 'DNS';
+  }
+  if (/CERT_|ERR_TLS|SSL|TLS|certificate|UNABLE_TO_VERIFY|handshake/i.test(msg)) return 'TLS';
+  if (/ECONNRESET|connection reset|reset by peer|forcibly closed/i.test(msg)) return 'reset';
+  if (/ECONNREFUSED|EHOSTUNREACH|ENETUNREACH|connect(?:ion)? timed out|connect timeout/i.test(msg)) {
+    return 'connect timeout';
+  }
+  if (/read timed out|body.?timeout|header.?timeout|und_err_headers_timeout|und_err_body_timeout/i.test(msg)) {
+    return 'read timeout';
+  }
+  if (/ETIMEDOUT|timed?\s*out|timeout/i.test(msg)) return 'timeout';
+  return 'sieć';
+}
+
+/** Ostrzeżenie: `LV ROADWORKS: TLS host.example` — host bez ścieżki (ścieżka może mieć klucz). */
+export function balticNetWarning(prefix: string, url: string, err: unknown): string {
+  const klass = classifyBalticNetError(err);
+  const host = balticWarnHost(url);
+  if (klass === 'timeout') return `${prefix}: timeout ${host}`;
+  if (klass === 'sieć') return `${prefix}: błąd sieci (${host})`;
+  return `${prefix}: ${klass} ${host}`;
+}
+
+/**
  * Bboxy ±0,25° wokół odcinków CORRIDOR_LV (F7 #730 B7 — zwężenie vs ~85 km).
  */
 export function lvCorridorBboxes(): FiBbox[] {
