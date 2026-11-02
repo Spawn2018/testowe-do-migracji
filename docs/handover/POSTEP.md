@@ -1,4 +1,12 @@
 
+## 2026-11-02 21:45 — BN8a CI fix (0382 grant/map/OFF_CORRIDOR)
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. #735 krok 2 po prod. #740 BN9-c5 CI ✔, bez F7.
+- Scalanie: brak „F7: gotowe do scalenia”. #741 @ `607009af`: unit ✔; visual LFS 502 (infra); db status 579/595, nullguard 901/905, i2 670/675.
+- **Krok:** poprawka **0382** — `sailing_mismatch_assign` → `authenticated` (jak 0372); `ferry_sailings_map` przywrócone z 0370 (bez coalesce GDN / bez `fr.active`); OFF_CORRIDOR: bez trasy → `PL_ROAD`/`SE_E4` (II-7); testy BN1 0344 → BN8a EE outbound (propose/assign TLL-HEL).
+- **Dalej:** push → CI → F7. Po F7: front `src/lib` / BN8b.
+- Bez push na main.
+
 ## 2026-11-02 21:10 — #739 SCALONE; start BN8a
 
 - Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. #735 — krok 2 po prod DP-170 (koordynator odczyta `ee_probe_api`/`lv_shape_*`). #740 BN9-c5 wygląd otwarty (CI, bez F7).

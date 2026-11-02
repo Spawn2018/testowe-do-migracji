@@ -951,10 +951,10 @@ begin
   );
 end $function$;
 revoke all on function public.sailing_mismatch_assign(uuid, uuid)
-  from public, anon, authenticated;
-grant execute on function public.sailing_mismatch_assign(uuid, uuid) to service_role;
+  from public, anon;
+grant execute on function public.sailing_mismatch_assign(uuid, uuid) to authenticated;
 comment on function public.sailing_mismatch_assign(uuid, uuid) is
-  'BN8a/#720: assign outbound PL/EE→SE/FI; FI AIS-only, SE + se_from_position.';
+  'BN8a/#720: HHL_ADMIN+2FA; assign outbound PL/EE→SE/FI; FI AIS-only, SE + se_from_position.';
 
 -- ---------------------------------------------------------------------------
 -- 7) process_position — ląd kraju przypłynięcia
@@ -1374,6 +1374,16 @@ begin
     v_corr := null;
   end if;
 
+  -- Regresja PL/SE bez trasy (brak rejsu/ferry_route/strefy): jak 0339 — PL_ROAD / SE_E4.
+  -- Znana rodzina bez corridor_code → brak alarmu (Bałtyk LT/LV, #720).
+  if v_corr is null and v_route is null then
+    if l.status = 'IN_TRANSIT_PL' then
+      v_corr := 'PL_ROAD';
+    elsif l.status = 'IN_TRANSIT_SE' then
+      v_corr := 'SE_E4';
+    end if;
+  end if;
+
   if v_stena_dual is not true
      and (v_corr is null
           or not exists (
@@ -1452,7 +1462,8 @@ begin
 end $$;
 
 
--- 6) ferry_sailings_map
+-- ferry_sailings_map: bez zmian względem 0370 (DP-134) — nie cofaj coalesce GDN ani fr.active.
+-- (wcześniejsza wersja w tej migracji psuła BN4/DP-134; przywrócona jawnie.)
 create or replace function public.ferry_sailings_map()
 returns table (
   sailing_id uuid,
@@ -1499,11 +1510,11 @@ begin
       s.arrival_at,
       s.actual_departure_at as departed_at,
       s.actual_arrival_at as arrived_at,
-      coalesce(fr.port_from, 'GDN') as dep_port,
-      coalesce(fr.port_to, 'NYN') as arr_port
+      fr.port_from as dep_port,
+      fr.port_to as arr_port
     from sailings s
     join vessels ves on ves.id = s.vessel_id
-    left join ferry_routes fr on fr.code = s.route and fr.active
+    join ferry_routes fr on fr.code = s.route
     where s.status is distinct from 'ODWOLANY'
       and coalesce(s.actual_departure_at, s.delayed_departure_at, s.departure_at) <= now() + interval '6 hours'
       and coalesce(s.actual_arrival_at, s.delayed_arrival_at, s.arrival_at) >= now() - interval '6 hours'
@@ -1550,6 +1561,11 @@ begin
 end
 $$;
 
+revoke all on function public.ferry_sailings_map() from public, anon;
+grant execute on function public.ferry_sailings_map() to authenticated;
+comment on function public.ferry_sailings_map() is
+  'BN4/DP-134: rejsy mapy + AIS; join ferry_routes bez fr.active (wyłączona trasa zostaje na mapie).';
+
 
 revoke all on function public.apply_geofence_status() from public, anon, authenticated;
 
@@ -1568,7 +1584,7 @@ comment on function public.apply_ferry_ais_arrival_backup(uuid, double precision
 revoke all on function public.refresh_load_eta(uuid) from public, anon, authenticated;
 grant execute on function public.refresh_load_eta(uuid) to service_role;
 comment on function public.refresh_load_eta(uuid) is
-  'BN8a/#720: OFF_CORRIDOR z road_corridor_*→corridor_code; brak kodu = brak alarmu; Stena dual zachowane.';
+  'BN8a/#720: OFF_CORRIDOR z road_corridor_*→corridor_code; bez trasy→PL_ROAD/SE_E4; znana trasa bez kodu→bez alarmu.';
 
 -- ---------------------------------------------------------------------------
 -- 9) eta_record_segment_observations — filtr po trasie

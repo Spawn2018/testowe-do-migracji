@@ -2687,7 +2687,7 @@ chk "BN1 0344: NYN-GDN + ląd SE ≥2 km → IN_TRANSIT_SE" "$(st $L640n)" IN_TR
 q "select public.apply_ferry_se_from_position('$L640k', 59.00, 17.90, '2026-10-15 15:00+00')" >/dev/null
 chk "BN1 0344: GDY-KAA + ląd SE ≥2 km → IN_TRANSIT_SE" "$(st $L640k)" IN_TRANSIT_SE
 
-# Behawioralne propose/assign (F7): TLL-HEL odmowa; GDN-NYN OK
+# Behawioralne propose/assign: BN8a (#720) — EE outbound dozwolone (było: TLL-HEL odmowa w 0344).
 L640p=$(L e3)
 mk $L640p P640 "'HHL/P640'" "'SCX/P640'" AT_PORT_GDANSK "'$S640t'"
 q "insert into load_events (load_id, event_type, occurred_at) values
@@ -2695,15 +2695,14 @@ q "insert into load_events (load_id, event_type, occurred_at) values
    insert into positions (load_id, ts, geom_raw, source) values
     ('$L640p', '2026-10-14 11:00+00', st_setsrid(st_makepoint(18.6800, 54.4030), 4326), 'TELEMATICS_API'),
     ('$L640p', '2026-10-15 09:30+00', st_setsrid(st_makepoint(17.90, 59.00), 4326), 'TELEMATICS_API');" >/dev/null
-chk "BN1 0344: propose nie bierze TLL-HEL (port EE)" \
-  "select (public.sailing_mismatch_propose_id('$L640p') is distinct from '$S640t')" t
-out=$(q "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
- select sailing_mismatch_assign('$L640p','$S640t'); rollback;" 2>&1)
-echo "$out" | grep -qiE 'portem w PL|Tylko trasa|ferry_routes|22023|P0001' \
-  && { ok=$((ok+1)); echo "  OK    BN1 0344: assign TLL-HEL odmowa"; } \
-  || { fail=$((fail+1)); echo "  FAIL  BN1 0344: assign TLL-HEL odmowa: $out"; }
+chk "BN8a: propose bierze TLL-HEL (port EE outbound)" \
+  "select (public.sailing_mismatch_propose_id('$L640p') = '$S640t')" t
+q "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+   select sailing_mismatch_assign('$L640p','$S640t'); commit" >/dev/null
+chk "BN8a: assign TLL-HEL → sailing" \
+  "select (sailing_id = '$S640t') from loads where id='$L640p'" t
 L640q=$(L e4)
-# bez rejsu = filtr rodziny wyłączony; w oknie tylko S640g (PL outbound; TLL/EE i KAA poza arrival)
+# bez rejsu = filtr rodziny wyłączony; najpóźniejszy outbound w oknie = S640g (GDN-NYN)
 mk $L640q Q640 "'HHL/Q640'" "'SCX/Q640'" AT_PORT_GDANSK null
 q "insert into load_events (load_id, event_type, occurred_at) values
     ('$L640q','MILESTONE_LOADED','2026-10-13 08:00+00');
