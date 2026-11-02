@@ -1,0 +1,64 @@
+[
+  {
+    "id": "bn6-lt-wx-kaunas-ok",
+    "irenginys": "Kaunas A1 test",
+    "lat": "54.900100",
+    "lng": "23.900100",
+    "sukibimo_koeficientas": "0.81",
+    "kelio_danga": "Sausa",
+    "matomumas": "5000",
+    "dangos_temperatura": "5.0",
+    "perspejimai": null,
+    "surinkimo_data": "2026-11-02 06:25"
+  },
+  {
+    "id": "bn6-lt-wx-wet-ok",
+    "irenginys": "Kaunas wet test",
+    "lat": "54.905000",
+    "lng": "23.905000",
+    "sukibimo_koeficientas": "0.60",
+    "kelio_danga": "Šlapia",
+    "matomumas": "4000",
+    "dangos_temperatura": "4.0",
+    "perspejimai": [
+      {
+        "pavadinimas": "Kelio dangos būklė: Šlapia",
+        "kodas": "KDB_003"
+      },
+      {
+        "pavadinimas": "Lietus - silpni krituliai",
+        "kodas": "KR001"
+      }
+    ],
+    "surinkimo_data": "2026-11-02 06:25"
+  },
+  {
+    "id": "bn6-lt-wx-panevezys-slippery",
+    "irenginys": "Panevezys A2 test",
+    "lat": "55.730100",
+    "lng": "24.350100",
+    "sukibimo_koeficientas": "0.28",
+    "kelio_danga": "Plikledis",
+    "matomumas": "800",
+    "dangos_temperatura": "0.5",
+    "perspejimai": [
+      {
+        "pavadinimas": "Pliklus kelias",
+        "kodas": "KDB_ICE"
+      }
+    ],
+    "surinkimo_data": "2026-11-02 06:25"
+  },
+  {
+    "id": "bn6-lt-wx-far-east",
+    "irenginys": "East far test",
+    "lat": "54.700100",
+    "lng": "25.600100",
+    "sukibimo_koeficientas": "0.20",
+    "kelio_danga": "Ledas",
+    "matomumas": "500",
+    "dangos_temperatura": "-1.0",
+    "perspejimai": "Ledas",
+    "surinkimo_data": "2026-11-02 06:25"
+  }
+]
