@@ -642,6 +642,21 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
       }
       return { waveM, gustKn };
     },
+    /** DP-145 / BN5: family_key ze słownika ferry_routes (nie ROUTE_TO_FAMILY w kodzie). */
+    async ferryRouteFamilies() {
+      const rows = must(
+        await sb.from('ferry_routes').select('code,family_key'),
+        'ferry_routes families',
+      ) as { code: string; family_key: string | null }[];
+      const out: Record<string, string> = {};
+      for (const row of rows) {
+        const code = String(row.code ?? '').trim().toUpperCase();
+        if (!code) continue;
+        const fam = String(row.family_key ?? row.code ?? '').trim().toUpperCase();
+        if (fam) out[code] = fam;
+      }
+      return out;
+    },
     async saveMarineCondition(row: {
       corridor: 'BALTIC_GDN_NYN' | 'BALTIC_GDY_KAA' | 'BALTIC_GULF_FI' | 'BALTIC_PLD_KPS' | 'BALTIC_TLL_STO';
       maxWaveM: number | null;

@@ -164,6 +164,9 @@ describe('BN3 winter-nav / MMSI / DP-11', () => {
     expect(winterLocodesForRoute('PLD-KPS')).toEqual(['EEPLA', 'SEKPS']);
     expect(winterLocodesForRoute('TLL-HEL')).toEqual(['EETLL', 'FIHEL']);
     expect(winterLocodesForRoute('HEL-STO')).toEqual([]);
+    /* F7 #722 B1: Vuosaari → FIHEL (Port Helsinki). */
+    expect(winterLocodesForRoute('MUU-VUO')).toEqual(['EEMUG', 'FIHEL']);
+    expect(winterLocodesForRoute('VUO-MUU')).toEqual(['FIHEL', 'EEMUG']);
     const hit = {
       locode: 'EEPLA', name: 'PALDISKI', kind: 'RESTRICTION' as const,
       summary: 'II 2000', startTime: '2026-02-01T00:00:00Z', endTime: null,

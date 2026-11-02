@@ -1,15 +1,10 @@
 
-## 2026-11-02 02:15 — BN5 cz.3 `pakiet/bn5-ferry-ice` (FERRY_ICE Digitraffic)
+## 2026-11-02 02:30 — BN5 #722 F7 r1 B1 + DP-145
 
-- Skrzynka: #714/#716/#718/#720 wpisane; #550 WSTRZYMANE (właściciel 11:34); #608 w planie. Bez nowego `pilne` do realizacji.
-- Scalanie: **#721 SCALONE** `a56d022f` (cz.1+cz.2 / **0375**). Brak otwartego PR z F7.
-- **Krok:** BN5 cz.3 na `pakiet/bn5-ferry-ice` (z `main` po #721):
-  - Digitraffic winter-nav → `FERRY_ICE` per rejs (port wyjścia/celu); MEDIUM / HIGH przy zawieszeniu;
-  - vs istniejące `FERRY_WINTER` (ferry-portnet); atrybucja Fintraffic w `marine_conditions.detail.ice` + observations;
-  - gzip + Digitraffic-User; pusto = brak ograniczeń; awaria HTTP → ostrzeżenie (bez SOURCE_DOWN);
-  - DP-145 / DP-146 wpisane do rejestru z F7 #721;
-  - vitest: integrations ferry-weather + winterLocodes/ferryIceRisk.
-- **Dalej:** push → PR → CI → F7. Po F7: BN5 pkt 4 (ryzyko per korytarz) albo BN6 (#716).
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #721 SCALONE.
+- Scalanie: PR #722 — F7 r1 **niegotowe** (B1 Vuosaari); CI w toku na starym SHA.
+- **Krok:** F7 B1 `VUO→FIHEL` + test MUU-VUO; DP-145 `ferryRouteFamilies` w tym samym PR.
+- **Dalej:** push → CI → F7. Po F7: BN5 pkt 4 albo BN6 (#716).
 - Bez push na main.
 
 ## 2026-11-02 01:45 — BN5 cz.2 PR #721 (snow1g / NaN / DMI 429)

@@ -341,6 +341,11 @@ export interface SyncStore {
   ferryPortDelayMin?(): Promise<number>;
   /** II-8: progi WAVE_M / GUST_KN z ops_thresholds (domyślnie 3.8 / 40) */
   opsThresholds?(): Promise<{ waveM: number; gustKn: number }>;
+  /**
+   * DP-145 / BN5: `ferry_routes.code` → `family_key` (UPPER).
+   * Brak metody → marineWeather używa zapasu w kodzie.
+   */
+  ferryRouteFamilies?(): Promise<Record<string, string>>;
 
   /** H-2-PL / D-78: zapis zużycia HERE (service_role → here_note_service). */
   noteHereUsage?(service: 'tiles' | 'routing' | 'matching' | 'attributes' | 'traffic', n: number): Promise<void>;
@@ -3707,6 +3712,10 @@ export async function runFerryWeather(deps: JobDeps): Promise<JobResult> {
   const thr = deps.store.opsThresholds
     ? await deps.store.opsThresholds()
     : { waveM: 3.8, gustKn: 40 };
+  /* DP-145: family_key ze słownika ferry_routes; brak → zapas w marineWeather. */
+  const familyByCode = deps.store.ferryRouteFamilies
+    ? await deps.store.ferryRouteFamilies()
+    : null;
   const fromIso = new Date(now.getTime() - 3 * 3600_000).toISOString();
   const toIso = new Date(now.getTime() + 72 * 3600_000).toISOString();
   const sailings = await deps.store.sailingsSince(fromIso);
@@ -3872,7 +3881,7 @@ export async function runFerryWeather(deps: JobDeps): Promise<JobResult> {
   let risks = 0;
   const breachedIds = new Set<string>();
   for (const s of upcoming) {
-    const routePts = marinePointsForRoute(s.route);
+    const routePts = marinePointsForRoute(s.route, familyByCode);
     if (!routePts?.length) continue; // BN5: trasa bez mapy — bez oceny / bez GDN-NYN
     const pts = new Set(routePts);
     const winFrom = new Date(Date.parse(s.departure_at) - 6 * 3600_000).toISOString();

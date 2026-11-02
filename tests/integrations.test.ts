@@ -133,6 +133,11 @@ class MemStore implements SyncStore {
     if (row.corridor === 'SE_E4') this.corridor = { corridor: row.corridor, slowdownMult: row.slowdownMult, reason: row.reason, detail: row.detail };
   }
   async opsThresholds() { return this.thr; }
+  /** DP-145: opcjonalny słownik code→family_key (jak ferry_routes). */
+  ferryFamilies: Record<string, string> | null = null;
+  async ferryRouteFamilies() {
+    return this.ferryFamilies ?? {};
+  }
   async saveMarineCondition(row: {
     corridor: 'BALTIC_GDN_NYN' | 'BALTIC_GDY_KAA' | 'BALTIC_GULF_FI' | 'BALTIC_PLD_KPS' | 'BALTIC_TLL_STO'; maxWaveM: number | null; maxGustKn: number | null;
     risk: 'niskie' | 'podwyższone' | 'wysokie'; sources: string; detail?: unknown;
@@ -909,6 +914,30 @@ describe('ferry-weather — II-8 FMI+DMI+SMHI', () => {
     expect(winterHdr?.headers['Digitraffic-User']).toBeTruthy();
   });
 
+  it('DP-145: ferryRouteFamilies — HEL-STO ze słownika dostaje FERRY_WEATHER; bez mapy nie', async () => {
+    const pages = wxPages();
+    const sailing = {
+      id: 's-hel-sto', vessel_id: WAW, route: 'HEL-STO' as never,
+      departure_at: '2026-10-02T12:00:00.000Z', arrival_at: '2026-10-02T20:00:00.000Z',
+      delayed_departure_at: null, delayed_arrival_at: null, status: 'ZAPLANOWANY' as const, source: 'TALLINK',
+    };
+    const bare = new MemStore();
+    bare.thr = { waveM: 1.05, gustKn: 40 };
+    bare.sailings = [sailing];
+    bare.ferryFamilies = {}; // puste = tylko zapas kodu; HEL-STO poza mapą
+    const r0 = await runFerryWeather(deps(bare, pages, {}, WX_NOW).d);
+    expect(r0.ok).toBe(true);
+    expect(bare.risks.filter((x) => x.dedup.startsWith('FERRY_WEATHER:'))).toHaveLength(0);
+
+    const mapped = new MemStore();
+    mapped.thr = { waveM: 1.05, gustKn: 40 };
+    mapped.sailings = [sailing];
+    mapped.ferryFamilies = { 'HEL-STO': 'TLL-STO' };
+    const r1 = await runFerryWeather(deps(mapped, pages, {}, WX_NOW).d);
+    expect(r1.ok).toBe(true);
+    expect(mapped.risks.some((x) => x.dedup === 'FERRY_WEATHER:s-hel-sto')).toBe(true);
+  });
+
   it('BN5 cz.3: zawieszenie FIHEL → FERRY_ICE HIGH na TLL-HEL; pusto = bez ryzyka', async () => {
     const susp = JSON.stringify({
       type: 'FeatureCollection',
@@ -947,6 +976,36 @@ describe('ferry-weather — II-8 FMI+DMI+SMHI', () => {
     expect(r2.ok).toBe(true);
     expect(empty.risks.filter((x) => x.dedup.startsWith('FERRY_ICE:'))).toHaveLength(0);
     expect(r2.observations?.attribution).toMatch(/Fintraffic/);
+  });
+
+  it('F7 #722 B1: ograniczenie FIHEL → FERRY_ICE na MUU-VUO (Vuosaari=FIHEL)', async () => {
+    const restr = JSON.stringify({
+      type: 'FeatureCollection',
+      features: [{
+        type: 'Feature',
+        properties: {
+          name: 'HELSINKI',
+          locodeList: 'FIHEL',
+          restrictions: [{
+            startTime: '2026-10-01T00:00:00Z',
+            endTime: '2026-10-20T00:00:00Z',
+            textCompilation: 'I 2000',
+          }],
+        },
+      }],
+    });
+    const st = new MemStore();
+    st.sailings = [{
+      id: 's-muu', vessel_id: WAW, route: 'MUU-VUO',
+      departure_at: '2026-10-02T10:00:00.000Z', arrival_at: '2026-10-02T12:00:00.000Z',
+      delayed_departure_at: null, delayed_arrival_at: null, status: 'ZAPLANOWANY', source: 'ECKERO',
+    }];
+    const r = await runFerryWeather(deps(st, { ...wxPages(), 'winter-navigation': restr }, {}, WX_NOW).d);
+    expect(r.ok).toBe(true);
+    const ice = st.risks.filter((x) => x.dedup.startsWith('FERRY_ICE:'));
+    expect(ice).toHaveLength(1);
+    expect(ice[0]!.dedup).toBe('FERRY_ICE:s-muu:FIHEL:RESTRICTION');
+    expect(ice[0]!.severity).toBe('MEDIUM');
   });
 });
 

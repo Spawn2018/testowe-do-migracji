@@ -43,7 +43,8 @@ export const PORT_TO_WINTER_LOCODE: Readonly<Partial<Record<AisPortCode, string>
   GDN: 'PLGDN',
   GDY: 'PLGDY',
   KAA: 'SEKAA',
-  /* VUO (Vuosaari) — Digitraffic nie publikuje osobnego locode w watch-liście BN3/BN5. */
+  /* F7 #722 B1: Vuosaari = Port Helsinki → ten sam UN/LOCODE FIHEL. */
+  VUO: 'FIHEL',
 };
 
 export type WinterNavHitKind = 'RESTRICTION' | 'SUSPENSION';
