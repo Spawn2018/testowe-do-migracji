@@ -5,12 +5,13 @@
  *   z `map_display_state.route_legs`) i tor wodny tej trasy (`extraWaterTracksFor([route])`). GDY-KAA: przy `SE-KAA`
  *   także `SE-KAA-INLAND` (decyzja 36 — jedno pole w bazie, reguła tutaj). Trasa nieznana (bez rejsu i statku) — rdzeń
  *   Polska–Szwecja jak dotąd.
- * - Mapa i Kokpit: rdzeń Polska–Szwecja (jak dotąd) i korytarze tras, którymi jadą aktywne transporty (okno śledzenia).
- *   Tory bałtyckie i legi BN7 tylko wtedy, gdy jedzie nimi aktywny transport.
+ * - Mapa i Kokpit (decyzja 88, 02.11 22:32): cała sieć ZAWSZE — rdzeń Polska–Szwecja, wszystkie legi BN7 (Litwa, Łotwa,
+ *   Estonia, Finlandia, Sztokholm/Kapellskär → Boden) i wszystkie tory przepraw bałtyckich, niezależnie od transportów
+ *   (`networkScope`).
  * - Inne mapy (strefy, edytor strefy): sam rdzeń — bez legów BN7 i torów bałtyckich.
  * - Trasy powrotne: bez linii (Q-18 — powroty ukryte, `isOutbound`).
  */
-import { isOutbound, waterTrackOf, type WaterTrackId } from '../ferryCatalog';
+import { isOutbound, portByCode, routeEnds, waterTrackOf, type WaterTrackId } from '../ferryCatalog';
 import { routeOfVessel, type VesselGroup } from '../vesselGroups';
 import type { LatLng } from './draw';
 
@@ -81,9 +82,30 @@ export function baselineScope(routeLegs: readonly RouteLegRow[] = []): CorridorS
 }
 
 /**
- * Zakres linii dla tras. `baseline` — rdzeń zawsze (Mapa, Kokpit, mapy stref); bez rdzenia (karta transportu) — tylko
- * trasy z listy. Zapas „rdzeń” tylko dla pustej listy (trasa transportu nieznana — dzisiejszy rysunek); trasa znana,
- * ale powrotna albo spoza katalogu — pusty zakres (F7 #740 W1, Q-18: bez dróg i torów).
+ * Decyzja 88 (02.11 22:32): Mapa i Kokpit — cała sieć zawsze: legi rdzenia i wszystkie 7 legów BN7 (oraz legi z
+ * `route_legs`, gdy baza nazwie je inaczej), wszystkie tory (rdzeń i bałtyckie). Karta transportu i mapy stref — bez zmian.
+ */
+export function networkScope(routeLegs: readonly RouteLegRow[] = []): CorridorScope {
+  const tracks = Object.keys(ROUTE_LEGS_FALLBACK) as WaterTrackId[];
+  return scopeOf([...CORE_LEGS, ...BN7_LEGS, ...tracks.flatMap((r) => legsOfRoute(r, routeLegs))], tracks);
+}
+
+/**
+ * Trasa rozpoznana jako powrotna — Q-18: bez linii. Porty z katalogu, aliasu albo bazy (`routeEnds`): wypływa ze
+ * Szwecji/Finlandii do Polski/Estonii. Kod nierozpoznany (albo kierunek wyjazdowy spoza katalogu) — nie.
+ */
+function knownReturn(route: string): boolean {
+  if (isOutbound(route)) return false;
+  const ends = routeEnds(route);
+  const from = ends ? portByCode(ends.from)?.country : undefined;
+  const to = ends ? portByCode(ends.to)?.country : undefined;
+  return (from === 'SE' || from === 'FI') && (to === 'PL' || to === 'EE');
+}
+
+/**
+ * Zakres linii dla tras. `baseline` — rdzeń zawsze (mapy stref, zapas); bez rdzenia (karta transportu) — tylko
+ * trasy z listy. Zapas „rdzeń”, gdy żadna trasa nie jest rozpoznana (trasa transportu nieznana albo spoza katalogu —
+ * dzisiejszy rysunek; F7 r2 #740 R2-D1); trasa rozpoznana jako powrotna — pusty zakres (F7 #740 W1, Q-18).
  */
 export function corridorScope(
   routes: Iterable<string | null | undefined>,
@@ -95,10 +117,14 @@ export function corridorScope(
   let known = 0;
   for (const route of routes) {
     if (!route) continue;
-    known += 1;
-    if (!isOutbound(route)) continue;
+    /* R2-D1: do „znanych” tylko trasy rozpoznane jako powrotne albo z torem — wyjazdowa spoza katalogu → rdzeń */
+    if (!isOutbound(route)) {
+      if (knownReturn(route)) known += 1;
+      continue;
+    }
     const track = waterTrackOf(route);
     if (!track) continue;
+    known += 1;
     legs.push(...legsOfRoute(route, routeLegs));
     tracks.push(track);
   }

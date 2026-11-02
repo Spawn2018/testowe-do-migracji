@@ -19,16 +19,15 @@ import { isServerId } from '../../data/registry';
 import { transportLabel } from '../../lib/transportName';
 import { SUPABASE_AUTH_ENABLED } from '../../auth/config';
 import { h6Requests } from '../../lib/map/draw';
-import { corridorScope, routeOfLoad, sailingIndex, sessionDemoRoutes } from '../../lib/map/routeLegs';
-import { filterLoadsForRole } from '../../lib/permissions';
-import { trackingPhase } from '../../lib/stageTiles';
+import { routeOfLoad, sailingIndex, sessionDemoRoutes } from '../../lib/map/routeLegs';
 import { routeOfVessel, vesselKeyOf } from '../../lib/vesselGroups';
 import { vesselsLoader } from '../../lib/vesselsLoad';
 import { useVesselGroups } from '../../lib/useVesselGroups';
 import {
-  acquireMap, attributionOf, drawCorridorLines, ensureBasemap, fitCorridor, releaseMap, retryBasemap, subscribeBasemapHealth,
-  type BasemapHealth, type LayerBag, type LinesSpec, type MapSlot, type PoolEntry,
+  acquireMap, attributionOf, drawCorridorLines, ensureBasemap, fitCorridor, NETWORK_LINES, releaseMap, retryBasemap,
+  scopeOfSpec, subscribeBasemapHealth, type BasemapHealth, type LayerBag, type LinesSpec, type MapSlot, type PoolEntry,
 } from './mapPool';
+import { isProgrammatic, programmatic } from './programmaticMove';
 import { BasemapFailCard } from './BasemapFailCard';
 import { hm, mapRow, markerTone, type MapRow, type MarkerTone } from '../../lib/p9cMap';
 import { stageTileOf } from '../../lib/stageTiles';
@@ -223,32 +222,19 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
   })();
   /*
    * BN9-c5 (#718 BN7 §4): linie tras w zakresie widoku. Karta transportu (Przegląd) — trasa transportu panelu (legi jego
-   * rodziny i tor wodny; trasa nieznana — rdzeń). Mapa i Kokpit — rdzeń Polska–Szwecja i trasy aktywnych transportów
-   * (okno śledzenia, transporty firmy). Powroty bez linii (Q-18). F7 #740 W3: liczone tylko przy zmianie danych
-   * (transporty, rola, rejsy, statki, transport panelu) i co minutę (okno śledzenia), rejsy z indeksu.
+   * rodziny i tor wodny; trasa nieznana — rdzeń). Powroty bez linii (Q-18). Decyzja 88 (02.11 22:32): Mapa i Kokpit —
+   * cała sieć zawsze (rdzeń Polska–Szwecja, wszystkie legi BN7 i tory bałtyckie), niezależnie od transportów.
    */
-  const linesMinute = Math.floor(Date.parse(getNowIso()) / 60_000);
   const sailIdx = useMemo(() => sailingIndex(sailings), [sailings]);
   const linesSpec: LinesSpec = useMemo(() => {
-    const over = demoRoutes();
-    const card = slot === 'drawer';
-    if (card) {
-      const r = panelLoad ? routeOfLoad(panelLoad, sailIdx, vessels, over) : null;
-      return { routes: r ? [r] : [], baseline: false };
-    }
-    const nowIso = new Date(linesMinute * 60_000).toISOString();
-    const routes = new Set<string>();
-    for (const l of filterLoadsForRole(allLoads, role)) {
-      if (trackingPhase(l, nowIso) !== 'on') continue;
-      const r = routeOfLoad(l, sailIdx, vessels, over);
-      if (r) routes.add(r);
-    }
-    return { routes: [...routes].sort(), baseline: true };
-  }, [slot, panelLoad, allLoads, role, sailIdx, vessels, linesMinute]);
-  const linesKey = `${linesSpec.baseline ? 'b' : 'r'}:${linesSpec.routes.join(',')}`;
+    if (slot !== 'drawer') return NETWORK_LINES;
+    const r = panelLoad ? routeOfLoad(panelLoad, sailIdx, vessels, demoRoutes()) : null;
+    return { routes: r ? [r] : [], baseline: false };
+  }, [slot, panelLoad, sailIdx, vessels]);
+  const linesKey = `${linesSpec.network ? 'n' : linesSpec.baseline ? 'b' : 'r'}:${linesSpec.routes.join(',')}`;
   const linesSpecRef = useRef(linesSpec);
   linesSpecRef.current = linesSpec;
-  const linesScope = useMemo(() => corridorScope(linesSpec.routes, [], linesSpec.baseline), [linesSpec]);
+  const linesScope = useMemo(() => scopeOfSpec(linesSpec), [linesSpec]);
   /* tory zakresu (kadr): zmiana zbioru torów = nowy kadr (F7 #740 W2) */
   const tracksKey = [...linesScope.tracks].sort().join(',');
   /* dopisek przy linii bałtyckiej (BN7 §7 pkt 1) */
@@ -264,9 +250,15 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
   const [openGroup, setOpenGroup] = useState<string | null>(null);
   const groupViewsRef = useRef<Map<string, GroupView>>(new Map());
   const closeGroup = useCallback(() => setOpenGroup(null), []);
-  /* E1 (Przegląd): przybliżenie 11 na ostatniej pozycji, podążanie co 60 s, póki użytkownik nie ruszy mapy */
-  const programmaticRef = useRef(false);
+  /* E1 (Przegląd): przybliżenie 11 na ostatniej pozycji, podążanie co 60 s, póki użytkownik nie ruszy mapy.
+     F7 r2 #740 R2-W1: ruch użytkownika tylko z interakcji (przeciągnięcie, kółko, dotyk, +/−, prostokąt, klawisze) —
+     programowe `fitBounds` / `setView` / `setMaxZoom` (`programmatic`) go nie ustawiają. `data-user-moved` — podgląd/testy. */
   const userMovedRef = useRef(false);
+  const setUserMoved = useCallback((on: boolean) => {
+    userMovedRef.current = on;
+    const el = entryRef.current?.el;
+    if (el) el.dataset.userMoved = on ? '1' : '0';
+  }, []);
   const lastFollowRef = useRef(0);
   const followedIdRef = useRef<string | null>(null);
   const [tick, setTick] = useState(0);
@@ -383,6 +375,7 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
     fitTracksRef.current = tracksKey;
     const { map } = pooled;
     entryRef.current = pooled;
+    setUserMoved(false);
     layersRef.current = pooled.layers;
     mapRef.current = map;
     const onZoom = () => setZoom(map.getZoom());
@@ -404,6 +397,7 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
     const refit = () => {
       if (!alive || slot === 'drawer') return;
       cancelAnimationFrame(refitRaf);
+      /* F7 r2 #740 R2-W1: `fitCorridor` jest ruchem programowym — nie wyłącza kadru przy zmianie torów (W2) */
       refitRaf = requestAnimationFrame(() => { if (alive) fitCorridor(map); });
     };
     const raf = requestAnimationFrame(() => safeInvalidate());
@@ -419,16 +413,35 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
     }) : null;
     if (ro) ro.observe(pooled.el);
     if (ro && attr) ro.observe(attr);
-    /* E1 (Przegląd): użytkownik przesunął albo przybliżył → mapa przestaje podążać za pojazdem */
-    const onUserMove = () => { if (!programmaticRef.current) userMovedRef.current = true; };
+    /* E1 (Przegląd): użytkownik przesunął albo przybliżył → mapa przestaje podążać za pojazdem (i kadrować przy zmianie
+       torów). F7 r2 #740 R2-W1: nie z samego `zoomstart` (wysyła go też kadr i `setMaxZoom`) — tylko z interakcji */
+    const onUserMove = () => { if (!isProgrammatic(map)) setUserMoved(true); };
+    const onTouch = (ev: Event) => { if ((ev as TouchEvent).touches?.length >= 2) onUserMove(); };
+    const onZoomBtn = (ev: Event) => {
+      const tgt = ev.target as Element | null;
+      if (tgt?.closest?.('.leaflet-control-zoom-in, .leaflet-control-zoom-out')) onUserMove();
+    };
+    const ZOOM_KEYS = new Set(['+', '-', '=', '_', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight']);
+    const onKey = (ev: Event) => { if (ZOOM_KEYS.has((ev as KeyboardEvent).key)) onUserMove(); };
+    const box = map.getContainer();
     map.on('dragstart', onUserMove);
-    map.on('zoomstart', onUserMove);
+    map.on('boxzoomstart', onUserMove);
+    map.on('dblclick', onUserMove);
+    box.addEventListener('wheel', onUserMove, { passive: true });
+    box.addEventListener('touchstart', onTouch, { passive: true });
+    box.addEventListener('click', onZoomBtn, true);
+    box.addEventListener('keydown', onKey);
 
     return () => {
       alive = false;
       cancelAnimationFrame(refitRaf);
       map.off('dragstart', onUserMove);
-      map.off('zoomstart', onUserMove);
+      map.off('boxzoomstart', onUserMove);
+      map.off('dblclick', onUserMove);
+      box.removeEventListener('wheel', onUserMove);
+      box.removeEventListener('touchstart', onTouch);
+      box.removeEventListener('click', onZoomBtn, true);
+      box.removeEventListener('keydown', onKey);
       cancelAnimationFrame(raf);
       clearTimeout(t);
       ro?.disconnect();
@@ -500,10 +513,7 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
     if (fitTracksRef.current === tracksKey) return;
     fitTracksRef.current = tracksKey;
     if (userMovedRef.current) return;
-    if (slot !== 'drawer' || followedIdRef.current === '-') {
-      programmaticRef.current = true;
-      try { fitCorridor(mapReady); } finally { programmaticRef.current = false; }
-    }
+    if (slot !== 'drawer' || followedIdRef.current === '-') fitCorridor(mapReady);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapReady, basemapReady, linesKey]);
 
@@ -654,16 +664,14 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
       if (slot === 'drawer') {
         const f = fleet[0];
         const nowMs = Date.now();
-        if (f && followedIdRef.current !== f.id) { followedIdRef.current = f.id; userMovedRef.current = false; lastFollowRef.current = 0; }
+        if (f && followedIdRef.current !== f.id) { followedIdRef.current = f.id; setUserMoved(false); lastFollowRef.current = 0; }
         if (f && !userMovedRef.current && nowMs - lastFollowRef.current >= FOLLOW_MS) {
-          programmaticRef.current = true;
-          try { map.setView([f.lat, f.lng], DRAWER_ZOOM, { animate: false }); } finally { programmaticRef.current = false; }
+          programmatic(map, () => map.setView([f.lat, f.lng], DRAWER_ZOOM, { animate: false }));
           lastFollowRef.current = nowMs;
         } else if (!f && followedIdRef.current !== '-') {
           /* brak pozycji GPS → cała trasa i „Brak pozycji GPS” */
           followedIdRef.current = '-';
-          programmaticRef.current = true;
-          try { fitCorridor(map); } finally { programmaticRef.current = false; }
+          fitCorridor(map);
         }
       }
       /* wyglad/P9-e (E45 pkt 5, R5): auta jednego rejsu na promie — jeden znacznik na statku z AIS; więcej niż 1 auto
@@ -831,7 +839,7 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
           .addTo(layers.ais);
       }
     }
-  }, [loads, tick, situations, aisPositions, mapLayers, focusMode, selectedLoadId, geofences, mapFocusKey, risks, zoom, gpsFixes, role, sailings, embedded, slot, panelAtSite, applyHover, vessels]);
+  }, [loads, tick, situations, aisPositions, mapLayers, focusMode, selectedLoadId, geofences, mapFocusKey, risks, zoom, gpsFixes, role, sailings, embedded, slot, panelAtSite, applyHover, vessels, setUserMoved]);
 
   /* wyglad/P9-e: lista grupy z ostatniego rysowania; grupa, która zniknęła (np. auto wyjechało ze strefy), zamyka listę */
   const openView = openGroup ? groupViewsRef.current.get(openGroup) ?? null : null;
@@ -868,10 +876,7 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
   const noteLines = drawerNote?.lines.length ?? 0;
   useEffect(() => {
     if (!mapReady || slot !== 'drawer' || followedIdRef.current !== '-') return;
-    const raf = requestAnimationFrame(() => {
-      programmaticRef.current = true;
-      try { fitCorridor(mapReady); } finally { programmaticRef.current = false; }
-    });
+    const raf = requestAnimationFrame(() => fitCorridor(mapReady));
     return () => cancelAnimationFrame(raf);
   }, [attrH, noteLines, noteInDrawer, mapReady, slot]);
 

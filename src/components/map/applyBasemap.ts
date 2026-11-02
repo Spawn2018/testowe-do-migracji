@@ -18,6 +18,7 @@ import {
 import { HERE_BROWSER_KEY, directTileTemplate, servedFromCache, sharedTileMeter } from './hereTileMeter';
 import { checkFerries, ferrySummary, type FerryLeg } from '../../lib/map/ferryLines';
 import { TILE_LANG } from '../../../supabase/functions/_shared/map/tilePolicy';
+import { programmatic } from './programmaticMove';
 
 /** AUD-01b: funkcje Edge w regionie bazy (eu-west-1), nie w regionie najbliższym przeglądarce. */
 export const FUNCTION_REGION = 'eu-west-1';
@@ -209,7 +210,8 @@ export async function applyBasemap(
 ): Promise<L.Layer> {
   const choice = await resolveBasemap(theme);
   if (prev && map.hasLayer(prev)) map.removeLayer(prev);
-  map.setMaxZoom(choice.maxZoom);
+  /* F7 r2 #740 R2-W1: przycięcie przybliżenia to ruch programowy (nie użytkownika) */
+  programmatic(map, () => map.setMaxZoom(choice.maxZoom));
   const layer = choice.hereRequests
     ? hereRasterLayer(choice, onClosed)
     : fallbackTileLayer(choice);

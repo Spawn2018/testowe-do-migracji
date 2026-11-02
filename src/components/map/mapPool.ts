@@ -15,7 +15,8 @@ import { DEMO_ROAD_LEGS } from '../../data/roadLinesDemo';
 import { WATER_GDN_NYN, WATER_GDY_KAA, type LatLng, type ThemeName } from '../../lib/map/draw';
 import { CORE_LANE_TRACKS, ferryLaneLines, ferryLaneOptions, restyleFerryLanes } from '../../lib/map/ferryLanes';
 import { WATER_TRACKS_EXTRA } from '../../lib/map/ferryLines';
-import { corridorScope, FAMILY_EXTENT, linesInScope, type CorridorScope, type RouteLegRow } from '../../lib/map/routeLegs';
+import { corridorScope, FAMILY_EXTENT, linesInScope, networkScope, type CorridorScope, type RouteLegRow } from '../../lib/map/routeLegs';
+import { programmatic } from './programmaticMove';
 import type { WaterTrackId } from '../../lib/ferryCatalog';
 import { paintRoadLegs } from './orangeRoads';
 import { useTowerStore } from '../../store/useTowerStore';
@@ -69,11 +70,14 @@ export type PoolEntry = {
 };
 
 /**
- * BN9-c5 (#718 BN7 §4): co rysuje mapa — trasy (kody rejsów) i czy z rdzeniem Polska–Szwecja (Mapa, Kokpit) czy bez
- * (karta transportu: tylko trasa transportu; trasa nieznana — rdzeń).
+ * BN9-c5 (#718 BN7 §4): co rysuje mapa — trasy (kody rejsów) i czy z rdzeniem Polska–Szwecja czy bez (karta transportu:
+ * tylko trasa transportu; trasa nieznana — rdzeń). `network` — decyzja 88: Mapa i Kokpit, cała sieć (rdzeń, wszystkie
+ * legi BN7 i tory bałtyckie) niezależnie od transportów.
  */
-export type LinesSpec = { routes: readonly string[]; baseline: boolean };
+export type LinesSpec = { routes: readonly string[]; baseline: boolean; network?: boolean };
 export const BASELINE_LINES: LinesSpec = { routes: [], baseline: true };
+/** Decyzja 88: Mapa i Kokpit — cała sieć zawsze. */
+export const NETWORK_LINES: LinesSpec = { routes: [], baseline: true, network: true };
 
 /** wyglad/P9-a (E24-1): stan podkładu na mapie z puli. `reported` = zgłoszenie zapisane dla HHL (p9aSource). */
 export type BasemapHealth = TileHealth & { via: TileVia; reported: boolean; cause: 'tiles' | 'chunk' };
@@ -94,7 +98,8 @@ const POINTS = [SITES.loading, SITES.portOut, SITES.portIn, SITES.site];
  * wyglad/P9-d (E1, zdecydowane 07.10): Kokpit i Mapa — kadr całej trasy (droga, promy, Śrem i Boden), margines 24 px,
  * krok przybliżenia 0,25; przy każdym wejściu i zmianie rozmiaru, bez zapamiętywania przesunięcia, bez „Cała trasa”.
  * BN9-c5 (#718 BN7 §4 pkt 4 i 7): z trasami bałtyckimi w zakresie mapy kadr obejmuje też ich tory wodne i drogi (punkty
- * via legów, `FAMILY_EXTENT`); bez tras bałtyckich — kadr Polska–Szwecja bez zmian.
+ * via legów, `FAMILY_EXTENT`); bez tras bałtyckich — kadr Polska–Szwecja bez zmian. Decyzja 88: Mapa i Kokpit mają
+ * w zakresie wszystkie tory — kadr domyślny to cała sieć (Gdańsk/Śrem – Boden z Bałtykiem).
  */
 let corridorBounds: L.LatLngBounds | null = null;
 const balticBounds = new Map<string, L.LatLngBounds>();
@@ -196,7 +201,8 @@ export function corridorView(map: L.Map): { center: L.LatLng; zoom: number } {
 export function fitCorridor(map: L.Map): void {
   try {
     if (!map.getPane('mapPane')) return;
-    map.fitBounds(boundsFor(map), { ...corridorPadding(map), animate: false });
+    /* F7 r2 #740 R2-W1: kadr to ruch programowy (zdarzenia Leaflet synchronicznie — znacznik obejmuje cały łańcuch) */
+    programmatic(map, () => map.fitBounds(boundsFor(map), { ...corridorPadding(map), animate: false }));
   } catch {
     /* mapa usunięta albo bez rozmiaru */
   }
@@ -243,6 +249,7 @@ function build(pooled: boolean, root: HTMLElement): PoolEntry {
 
 /** Zakres linii dla specyfikacji (legi z `route_legs`, gdy już wczytane). */
 export function scopeOfSpec(spec: LinesSpec, routeLegs: readonly RouteLegRow[] = []): CorridorScope {
+  if (spec.network) return networkScope(routeLegs);
   return corridorScope(spec.routes, routeLegs, spec.baseline);
 }
 
@@ -381,7 +388,7 @@ export function acquireMap(root: HTMLElement, slot: MapSlot, spec?: LinesSpec): 
   // Powrót do tego samego miejsca bez zmiany rozmiaru i widoku → nic (zero nowych kafelków). Inaczej widok ustawiany
   // od nowa (`reset`) — piksel w piksel jak świeżo utworzona mapa (wzorce wizualne), kafelki z pamięci przeglądarki.
   if (!untouched) {
-    e.map.setView(target?.center ?? L.latLng(DEFAULT_CENTER), target?.zoom ?? DEFAULT_ZOOM, { reset: true } as L.ZoomPanOptions);
+    programmatic(e.map, () => e.map.setView(target?.center ?? L.latLng(DEFAULT_CENTER), target?.zoom ?? DEFAULT_ZOOM, { reset: true } as L.ZoomPanOptions));
     // Warstwy wektorowe od nowa w tej samej kolejności (obcięcie linii i wzór kresek jak w świeżej mapie). Bez kafelków.
     const { route, ferryLeg, detour, geofences, poi, fleet, situations, ais } = e.layers;
     const on = [route, ferryLeg, detour, geofences, poi, fleet, situations, ais].filter((l) => e.map.hasLayer(l));
