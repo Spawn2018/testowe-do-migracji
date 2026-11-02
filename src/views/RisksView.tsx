@@ -108,7 +108,7 @@ export function RisksView() {
     <RoutePanel
       role={role} locale={locale} phone={phone} nowIso={nowIso} loads={loads} risks={risks} sailings={sailings}
       marine={marine} corridor={corridor} seSituations={seSituations} seDemo={seDemo} showDemoMarks={showDemoMarks}
-      parts={parts} withHead={withHead}
+      parts={parts} withHead={withHead} balticDemo={!PROD}
     />
   );
   const todo = (showHead: boolean) => role === 'KSH' ? null : (

@@ -309,3 +309,51 @@ test.describe('BN9-c3 visual — Ryzyka KSH (pl 1440)', () => {
     })
   })
 })
+
+/* BN9-c4 (#573 „Ekrany po BN6”) — Ryzyka › Drogi: „Drogi LT”, „Drogi LV”, „Drogi EE”, „Drogi FI” pod „Drogi PL” i „Drogi SE”.
+   Demo: przykładowa trasa transportu Tallinn – Helsinki, zdarzenia wymyślone (G-09), limit masy wyróżniony, Estonia bez
+   zdarzeń („Brak utrudnień na korytarzu”). Migawka obszaru czterech sekcji, komputer 1440 i telefon 390 (zakładka „Na trasie”). */
+test.describe('BN9-c4 visual — drogi LT/LV/EE/FI (HHL pl)', () => {
+  test.describe.configure({ mode: 'serial' })
+
+  for (const width of [1440, 390]) {
+    const file = `drogi-baltyckie__hhl__pl__${width}__light.png`
+    test(file, async ({ page }) => {
+      await page.emulateMedia({ reducedMotion: 'reduce' })
+      await gotoFrozen(page, width)
+      await setRole(page, 'HHL')
+      await setTheme(page, 'light', 'dark')
+      await navTo(page, 'risk')
+      if (width < 769) await page.locator('[data-rk-tab="route"]').click()
+      const secs = page.locator('[data-baltic]')
+      await expect(secs).toHaveCount(4)
+      await expect(page.locator('[data-panel="road-fi"] [data-limit="WEIGHT"]')).toHaveCount(1)
+      await expect(page.locator('[data-empty="road-ee"]')).toBeVisible()
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
+      expect(overflow).toBeLessThanOrEqual(0)
+      await page.evaluate(async () => {
+        if (document.fonts?.ready) await document.fonts.ready
+      })
+      await page.addStyleTag({ content: 'nav.tower-nav{display:none !important}' })
+      await page.setViewportSize({ width, height: width < 769 ? 4200 : 2600 })
+      await page.evaluate(() => window.scrollTo(0, 0))
+      await page.waitForTimeout(300)
+      /* obszar od „Drogi LT” do „Drogi FI” (sekcje stoją jedna pod drugą) */
+      const clip = await page.evaluate(() => {
+        const els = [...document.querySelectorAll('[data-baltic]')].map((e) => e.getBoundingClientRect())
+        const x = Math.min(...els.map((r) => r.left))
+        const y = Math.min(...els.map((r) => r.top)) + window.scrollY
+        const w = Math.max(...els.map((r) => r.right)) - x
+        const h = Math.max(...els.map((r) => r.bottom)) + window.scrollY - y
+        return { x: Math.floor(x), y: Math.floor(y), width: Math.ceil(w), height: Math.ceil(h) }
+      })
+      await expect(page).toHaveScreenshot(file, {
+        clip,
+        fullPage: true,
+        maxDiffPixels: 60,
+        threshold: 0.28,
+        animations: 'disabled',
+      })
+    })
+  }
+})

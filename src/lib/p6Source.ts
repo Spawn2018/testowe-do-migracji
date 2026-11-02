@@ -9,7 +9,7 @@ import type { CaseEvent, CasePerson, TodoDecision, TodoIssue } from './p6Todo';
 import type { FerryRowView, RoadRowView } from './p6Route';
 import type { FeeSuggestion } from './p5Fees';
 import type { MarineConditionRow } from './marineWeatherDb';
-import { demoAssignments, demoDecisions, demoFerryRows, demoMarineRows, demoHistory, demoMe, demoStenaSailings, demoTimeBans, DEMO_PEOPLE } from './p6Demo';
+import { DEMO_BALTIC_ROUTES, demoBalticRoadRisks, demoAssignments, demoDecisions, demoFerryRows, demoMarineRows, demoHistory, demoMe, demoStenaSailings, demoTimeBans, DEMO_PEOPLE } from './p6Demo';
 
 /** E6: osoby firmy z telefonem (imię, nazwisko, rodzaj konta). null = nie podłączone — bez „Zadzwoń”. */
 export function casePeopleOf(org: OrgKind): CasePerson[] | null {
@@ -94,4 +94,14 @@ export function altSailingsOf(sailings: readonly Sailing[], nowIso: string): rea
 /** E2: drogi PL z HERE. null = nie podłączone („Brak danych”). */
 export function roadPlOf(): RoadRowView[] | null {
   return null;
+}
+
+/** BN9-c4: drogi LT/LV/EE/FI w demo (produkcja: ryzyka `ROAD_LT/LV/EE/FI` z bazy, pusta lista tutaj). */
+export function sampleBalticRoadRisksOf(nowIso: string): Risk[] {
+  return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? demoBalticRoadRisks(nowIso) : [];
+}
+
+/** BN9-c4: trasa rejsu transportu w demo (dane demo nie mają transportu bałtyckiego); produkcja — z transportów i rejsów. */
+export function sampleBalticRoutesOf(): readonly string[] {
+  return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? DEMO_BALTIC_ROUTES : [];
 }

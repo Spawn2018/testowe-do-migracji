@@ -529,6 +529,21 @@ export interface Risk {
   docRule?: string;
   docPermit?: boolean;
   docPolicy?: boolean;
+  /** BN9-c4: ryzyko drogowe LT/LV/EE/FI (BN6) — pola `detail` potrzebne w Ryzyka › Drogi (źródło, od/do, limity). */
+  road?: RoadRiskInfo;
+}
+
+/** BN9-c4: wybrane pola `risk_signals.detail` ryzyka drogowego bałtyckiego (BN6, `roadBaltic.ts`). */
+export interface RoadRiskInfo {
+  /** `detail.zrodlo` — atrybucja źródła (np. Fintraffic / digitraffic.fi, CC BY 4.0) */
+  source: string | null;
+  from: string | null;
+  to: string | null;
+  lat: number | null;
+  lon: number | null;
+  weightLimitT: number | null;
+  heightLimitM: number | null;
+  widthLimitM: number | null;
 }
 
 export interface RateRule {

@@ -13,8 +13,10 @@ import type { MarineConditionRow } from '../../lib/marineWeatherDb';
 import type { CorridorConditionRow } from '../../lib/corridorConditionsDb';
 import type { RoadSituation } from '../../lib/trafikverket';
 import { altProposal, ferryAlert, ferryRowsFromDb, impactOf, roadCounts, rowPorts, roadRowsFromCorridor, sortRoads, type FerryRowView, type RoadRowView } from '../../lib/p6Route';
-import { altSailingsOf, sampleFerryRowsOf, sampleMarineOf, roadPlOf } from '../../lib/p6Source';
+import { altSailingsOf, sampleBalticRoadRisksOf, sampleBalticRoutesOf, sampleFerryRowsOf, sampleMarineOf, roadPlOf } from '../../lib/p6Source';
 import { MarineSection } from './MarineSection';
+import { balticRoadSectionNodes } from './BalticRoads';
+import { balticCountriesOfLoads, balticCountriesOfRoutes, balticRoadSections } from '../../lib/bn9c4Roads';
 import { routeRisks } from '../../lib/todoRules';
 import { effDeparture, sailingStatusLabel } from '../../lib/sailings';
 import { focusVoyage, loadsOnVoyage } from '../../lib/voyage';
@@ -54,6 +56,8 @@ interface Props {
   parts?: RoutePart[];
   /** nagłówek „Sytuacja na trasie” (komputer) */
   withHead?: boolean;
+  /** BN9-c4: demo — przykładowe drogi LT/LV/EE/FI i trasa transportu Tallinn – Helsinki (p6Source) */
+  balticDemo?: boolean;
 }
 
 function FerryRow({ r, locale, phone, onOpen }: { r: FerryRowView; locale: Locale; phone: boolean; onOpen?: () => void }) {
@@ -102,7 +106,7 @@ function FerryRow({ r, locale, phone, onOpen }: { r: FerryRowView; locale: Local
 
 export function RoutePanel({
   role, locale, phone, nowIso, loads, risks, sailings, marine, corridor, seSituations, seDemo, showDemoMarks,
-  parts = ['ferry', 'roads', 'system'], withHead = true,
+  parts = ['ferry', 'roads', 'system'], withHead = true, balticDemo = false,
 }: Props) {
   const navigate = useNavigate();
   const setView = useTowerStore((s) => s.setView);
@@ -145,6 +149,11 @@ export function RoutePanel({
   const sysCount = rr.system.length;
   /* BN9-c3: pogoda na przeprawach — produkcja `marine_conditions` (pięć korytarzy BN5), demo — przykład z p6Source */
   const seaRows = PROD ? marine : sampleMarineOf(nowIso);
+  /* BN9-c4: drogi LT/LV/EE/FI — kraje z tras aktywnych transportów; bez transportów bałtyckich sekcji nie ma */
+  const balticDemoOn = balticDemo && !PROD;
+  const balticOnRoute = balticCountriesOfLoads(loads, sailings, nowIso);
+  if (balticDemoOn) balticCountriesOfRoutes(sampleBalticRoutesOf()).forEach((c) => balticOnRoute.add(c));
+  const balticSections = balticRoadSections(balticDemoOn ? [...rr.roadBaltic, ...sampleBalticRoadRisksOf(nowIso)] : rr.roadBaltic, balticOnRoute);
   const riskList = (list: Risk[], box: string | null, info = false) => (
     <ul className="rk-roads rk-risks">
       {list.map((r) => {
@@ -315,6 +324,7 @@ export function RoutePanel({
         {!phone ? <p className="rk-muted">{rt(locale, 'p6_road_note')}</p> : null}
       </section>,
     );
+    sections.push(...balticRoadSectionNodes({ sections: balticSections, locale, phone, demo: balticDemoOn }));
     if (rr.bans.length) {
       sections.push(
         <section key="bans" className="rk-sec-box" data-panel="bans" aria-labelledby="rk-bans-h">
