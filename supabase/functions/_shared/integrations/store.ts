@@ -642,12 +642,16 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
       }
       return { waveM, gustKn };
     },
-    /** DP-145 / BN5: family_key ze słownika ferry_routes (nie ROUTE_TO_FAMILY w kodzie). */
+    /**
+     * DP-145 / BN5: family_key ze słownika ferry_routes (nie ROUTE_TO_FAMILY w kodzie).
+     * DP-147: bez must() — błąd PostgREST rzuca; runFerryWeather łapie (DP-148) i idzie na zapas w kodzie.
+     */
     async ferryRouteFamilies() {
-      const rows = must(
-        await sb.from('ferry_routes').select('code,family_key'),
-        'ferry_routes families',
-      ) as { code: string; family_key: string | null }[];
+      const res = await sb.from('ferry_routes').select('code,family_key');
+      if (res.error) {
+        throw new Error(`ferry_routes families: ${res.error.message}`);
+      }
+      const rows = (res.data ?? []) as { code: string; family_key: string | null }[];
       const out: Record<string, string> = {};
       for (const row of rows) {
         const code = String(row.code ?? '').trim().toUpperCase();
