@@ -18,6 +18,7 @@ import {
   dimensionLimitRisk,
   eventInLtBboxes,
   extractBalticRoadRef,
+  extractBalticRoadRefPreferStreet,
   filterInLtBboxes,
   isDimensionLimitEvent,
   ltPerspejimaiText,
@@ -26,6 +27,7 @@ import {
   parseLtPolylineCentroid,
   parseLtRestrictions,
   parseLtWeather,
+  stripBalticDetourText,
   weightLimitRisk,
   type BalticRoadEvent,
 } from '../supabase/functions/_shared/integrations/roadBaltic.ts';
@@ -48,6 +50,10 @@ const restReal = JSON.parse(
 );
 const wxReal = JSON.parse(
   readFileSync(resolve('tests/fixtures/lt-eismoinfo-weather-real.json'), 'utf8'),
+);
+/** F7 #730 r2 B1 — prawdziwe zamknięcia boczne (1907/2511/2016/1609/1204) z eismoinfo. */
+const sideClosures = JSON.parse(
+  readFileSync(resolve('tests/fixtures/lt-eismoinfo-side-closures-f7.json'), 'utf8'),
 );
 const NOW = new Date('2026-11-02T06:00:00Z');
 
@@ -178,7 +184,7 @@ describe('BN6 road-lt — eismoinfo', () => {
     const w = parseLtRestrictions(rest).find((e) => e.id === 'bn6-lt-weight-panevezys')!;
     const r = balticRoadRisk('LT', w, LT_RESTRICTIONS_URL, LT_ATTRIBUTION);
     expect(r.kind).toBe('ROAD_LT');
-    expect(r.dedup).toBe('ROAD_LT:bn6-lt-weight-panevezys');
+    expect(r.dedup).toBe('ROAD_LT:v2:bn6-lt-weight-panevezys');
     expect(r.detail.oryginal).toBe('LD,SVKD');
     expect(r.detail.zrodlo).toBe(LT_ATTRIBUTION);
     expect(String(r.detail.opis)).not.toMatch(/nie podaje wypadkow/);
@@ -273,7 +279,9 @@ describe('BN6 road-lt — eismoinfo', () => {
     const parsedRest = parseLtRestrictions(restReal);
     expect(parsedRest.length).toBeGreaterThanOrEqual(3);
     expect(parsedRest.some((e) => e.kind === 'weakBridge')).toBe(true);
-    expect(parsedRest.some((e) => e.severity === 'LOW')).toBe(true);
+    /* r2 B2: „eismas draudžiamas” → roadClosed HIGH; limity H/W bez zamknięcia → MEDIUM. */
+    expect(parsedRest.some((e) => e.roadClosed === true)).toBe(true);
+    expect(parsedRest.some((e) => e.severity === 'MEDIUM')).toBe(true);
   });
 
   it('balticSlowdownMult: zamknięcie na A5 spowalnia; height i masa nie; reason zamknięcia', () => {
@@ -297,6 +305,32 @@ describe('BN6 road-lt — eismoinfo', () => {
     const slow = balticSlowdownMult([closed]);
     expect(slow.mult).toBeGreaterThan(1);
     expect(slow.reason).toBe('zamknięcia: 1');
+  });
+
+  it('F7 #730 r2 B1: street przed opisem objazdu; A1 tylko bbox Kowna; 5 bocznych → LOW/mult1', () => {
+    const detour = 'Eismas draudžiamas apylanka magistraliniu keliu A1 Vilnius–Kaunas–Klaipėda';
+    expect(stripBalticDetourText(`Remont. ${detour}`)).not.toMatch(/A1/);
+    expect(extractBalticRoadRefPreferStreet(
+      '1907 Vilkija–Čekiškė–Ariogala 24.360-24.600km.',
+      'Viadukas',
+      detour,
+    )).toBe('1907');
+    expect(extractBalticRoadRef('0001037004 A01_113.669_04 (Sitkūnų I sankr.)')).toBe('A1');
+    expect(ltRoadOnCorridor('A1', {
+      lat: 55.1, lon: 23.9, title: 'x', detail: 'Kaunas w nazwie drogi',
+    })).toBe('off');
+    expect(ltRoadOnCorridor('A1', {
+      lat: 54.90, lon: 23.90, title: 'x', detail: '',
+    })).toBe('on');
+    const parsed = parseLtRestrictions(sideClosures);
+    expect(parsed.length).toBe(5);
+    const filtered = applyBalticCorridorRoadFilter('LT', parsed);
+    expect(filtered.every((e) => e.corridorMatch === 'off')).toBe(true);
+    expect(filtered.every((e) => e.severity === 'LOW')).toBe(true);
+    expect(balticSlowdownMult(filtered).mult).toBe(1);
+    const r1907 = parsed.find((e) => String(e.road) === '1907');
+    expect(r1907?.roadClosed).toBe(true);
+    expect(r1907?.hasDetour).toBe(true);
   });
 
   it('DP-164: droga 134 z objazdem → LOW, bez spowolnienia; A5 HIGH spowalnia', () => {
@@ -398,20 +432,22 @@ describe('BN6 runRoadLt', () => {
     expect(stOk.staleCalls.length).toBe(1);
     expect(stOk.risks.some((x) => x.dedup === 'ROAD_LT:OLD')).toBe(false);
     expect(stOk.corridor?.corridor).toBe('ROAD_LT');
-    expect(stOk.risks.some((x) => x.dedup === 'ROAD_LT:bn6-lt-construction-kaunas')).toBe(true);
-    const constr = stOk.risks.find((x) => x.dedup === 'ROAD_LT:bn6-lt-construction-kaunas');
+    expect(stOk.risks.some((x) => x.dedup === 'ROAD_LT:v2:bn6-lt-construction-kaunas')).toBe(true);
+    const constr = stOk.risks.find((x) => x.dedup === 'ROAD_LT:v2:bn6-lt-construction-kaunas');
     expect(constr?.severity).toBe('LOW');
-    expect(stOk.risks.some((x) => x.dedup === 'ROAD_LT:bn6-lt-far-vilnius-east')).toBe(false);
-    const weightRisk = stOk.risks.find((x) => x.dedup === 'ROAD_LT:bn6-lt-weight-panevezys');
+    expect(stOk.risks.some((x) => x.dedup === 'ROAD_LT:v2:bn6-lt-far-vilnius-east')).toBe(false);
+    const weightRisk = stOk.risks.find((x) => x.dedup === 'ROAD_LT:v2:bn6-lt-weight-panevezys');
     expect(weightRisk?.detail?.oryginal).toBe('LD,SVKD');
     expect(weightRisk?.detail?.uwaga_wypadki).toMatch(/nie podaje wypadkow/);
     /* DP-164: A2 poza listą korytarza → maks. LOW (było MEDIUM z weightLimitRisk). */
     expect(weightRisk?.severity).toBe('LOW');
     expect(weightRisk?.detail?.korytarz_droga).toBe('off');
-    const heightRisk = stOk.risks.find((x) => x.dedup === 'ROAD_LT:bn6-lt-height-only-kaunas');
+    const heightRisk = stOk.risks.find((x) => x.dedup === 'ROAD_LT:v2:bn6-lt-height-only-kaunas');
     expect(heightRisk?.severity).toBe('MEDIUM');
     expect(heightRisk?.titleKey).toBe('rk_road_baltic_dim_check');
     expect(heightRisk?.detail?.korytarz_droga).toBe('on');
+    /* F7 #730 r2 B3: stare ROAD_LT:<id> zamyka resolveStale (nowe = v2). */
+    expect(stOk.risks.some((x) => x.dedup === 'ROAD_LT:OLD')).toBe(false);
 
     const stPart = new MemStore();
     stPart.risks.push({
@@ -431,13 +467,58 @@ describe('BN6 runRoadLt', () => {
   it('sourceUrl = restrictions; weather tylko w corridor slowdown; reason pogoda', async () => {
     const st = new MemStore();
     await runRoadLt(deps(st, allOkPages()).d);
-    const hit = st.risks.find((r) => r.dedup === 'ROAD_LT:bn6-lt-construction-kaunas');
+    const hit = st.risks.find((r) => r.dedup === 'ROAD_LT:v2:bn6-lt-construction-kaunas');
     expect(hit?.sourceUrl).toBe(LT_RESTRICTIONS_URL);
     expect(hit?.detail?.zrodlo).toBe(LT_ATTRIBUTION);
-    expect(st.risks.some((r) => String(r.dedup).startsWith('ROAD_LT:wx:'))).toBe(false);
+    expect(st.risks.some((r) => String(r.dedup).startsWith('ROAD_LT:v2:wx:'))).toBe(false);
     expect(Number(st.corridor?.slowdownMult)).toBeGreaterThan(1);
     expect(st.corridor?.reason).toMatch(/pogoda:\s*\d/);
     expect(st.corridor?.reason).not.toMatch(/nawierzchnia/);
     expect(LT_WEATHER_URL).toMatch(/weather-conditions/);
+  });
+});
+
+describe('BN6 F7 #730 r2 — LT B1/B2 (ulica, A1 bbox, objazd)', () => {
+  it('numer ze street; A1 z opisu objazdu ignorowane; A1 tylko bbox Kowna', () => {
+    const blob =
+      '1907 Vilkija–Ariogala. Eismas draudžiamas ir kreipiamas apylanka magistraliniu keliu A1 Vilnius–Kaunas–Klaipėda';
+    expect(extractBalticRoadRefPreferStreet(
+      '1907 Vilkija–Čekiškė–Ariogala 24.360-24.600km.',
+      'Kelio remontas',
+      blob,
+    )).toBe('1907');
+    expect(stripBalticDetourText(blob)).not.toMatch(/\bA1\b/);
+    expect(ltRoadOnCorridor('A1', {
+      lat: 55.1, lon: 23.9, title: 'Kaunas tekst', detail: 'przy Kownie',
+    })).toBe('off');
+    expect(ltRoadOnCorridor('A1', {
+      lat: 54.90, lon: 23.90, title: 'x', detail: 'y',
+    })).toBe('on');
+  });
+
+  it('5 prawdziwych zamknięć bocznych → off/LOW, mult 1.00', () => {
+    const parsed = parseLtRestrictions(sideClosures);
+    expect(parsed.length).toBe(5);
+    const filtered = applyBalticCorridorRoadFilter('LT', parsed);
+    expect(filtered.every((e) => e.corridorMatch === 'off')).toBe(true);
+    expect(filtered.every((e) => e.severity === 'LOW')).toBe(true);
+    expect(balticSlowdownMult(filtered).mult).toBe(1);
+    const r1907 = filtered.find((e) => e.id === 'f234eea99c44f96216fccbe06afc6b9a')!;
+    expect(r1907.road).toBe('1907');
+    expect(r1907.roadClosed).toBe(true);
+  });
+
+  it('zamknięcie z objazdem bez końca → MEDIUM; bez objazdu → HIGH', () => {
+    const noEnd: BalticRoadEvent = {
+      id: 'n', title: 'Uzdaryta', detail: 'eismas draudžiamas, apylanka',
+      severity: 'HIGH', lat: 54.9, lon: 23.9, kind: 'obstructionType',
+      start: '2026-01-01T00:00:00Z', end: null, road: 'A5',
+      roadClosed: true, hasDetour: true,
+    };
+    expect(applyBalticCorridorRoadFilter('LT', [noEnd])[0].severity).toBe('MEDIUM');
+    const noDetour: BalticRoadEvent = {
+      ...noEnd, id: 'd', detail: 'eismas draudžiamas', hasDetour: false, end: null,
+    };
+    expect(applyBalticCorridorRoadFilter('LT', [noDetour])[0].severity).toBe('HIGH');
   });
 });

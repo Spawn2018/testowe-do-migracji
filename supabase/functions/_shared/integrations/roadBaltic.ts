@@ -113,8 +113,21 @@ export interface BalticRoadEvent {
   visibilityM?: number | null;
   /** Objazd / rerouting w rekordzie (B7: długie zamknięcie z objazdem → MEDIUM). */
   hasDetour?: boolean;
+  /** Zamknięcie drogi (LT roadClosed / LV roadClosed / „eismas draudžiamas”). */
+  roadClosed?: boolean;
   /** #716 LT: nieznane kody restrictionType (LD/SVKD) → detail.oryginal. */
   unknownCodes?: string[];
+}
+
+/** F7 #730 r2 — prefiks dedup, żeby stare HIGH dostały resolveStale (raise bez UPDATE wagi). */
+export const BALTIC_RISK_DEDUP_VER = 'v2';
+
+/** F7 #730 r2 B1 — usuń fragment opisu objazdu (nie bierz stamtąd numeru drogi). */
+export function stripBalticDetourText(text: string): string {
+  return String(text ?? '').replace(
+    /(?:^|[\s,.;:])(?:apylank\w*|apbraukš\w*|apbrauk\w*|apvedceļ\w*|apvedcel\w*|objazd\w*|detour\w*|rerout\w*)\b[\s\S]*$/i,
+    ' ',
+  );
 }
 
 function featureCentroid(geom: unknown): LatLon | null {
@@ -276,7 +289,7 @@ export function balticRoadRisk(
       width_limit_m: e.widthLimitM ?? null,
       ...(e.unknownCodes?.length ? { oryginal: e.unknownCodes.join(',') } : {}),
     },
-    dedup: `${kind}:${e.id}`,
+    dedup: `${kind}:${BALTIC_RISK_DEDUP_VER}:${e.id}`,
     sourceUrl,
     validUntil,
   };
@@ -355,10 +368,18 @@ export function balticSlowdownMult(
   };
 }
 
-/** DP-164 — wyciąg numeru drogi z street / roadNumber / opisu. */
+/**
+ * DP-164 / F7 #730 r2 B1 — wyciąg numeru drogi.
+ * Najpierw street / roadNumber; opis dopiero po `stripBalticDetourText`
+ * (nigdy z fragmentu po słowach objazdu: apylank, objazd, apbrauk).
+ * Kod „A01_…” / „0001… A01_…” → A1.
+ */
 export function extractBalticRoadRef(text: string): string | null {
   const t = String(text ?? '').trim();
   if (!t) return null;
+  /* LT kod węzła: A01_113… → A1 */
+  const a0 = t.match(/\bA0*(\d{1,2})(?:_\d|\b)/i);
+  if (a0) return `A${Number(a0[1])}`;
   const a = t.match(/\bA\s*(\d{1,2})\b/i);
   if (a) return `A${a[1]}`;
   const e = t.match(/\bE\s*(\d{2,3})\b/i);
@@ -369,6 +390,20 @@ export function extractBalticRoadRef(text: string): string | null {
   /* krašto / rajoninis: „134 Name…” na początku street */
   const n = t.match(/^(\d{1,4})\b/);
   if (n) return n[1];
+  return null;
+}
+
+/** Street → title/detail (bez opisu objazdu). */
+export function extractBalticRoadRefPreferStreet(
+  street: string | null | undefined,
+  ...rest: Array<string | null | undefined>
+): string | null {
+  const fromStreet = extractBalticRoadRef(String(street ?? '').trim());
+  if (fromStreet) return fromStreet;
+  for (const part of rest) {
+    const hit = extractBalticRoadRef(stripBalticDetourText(String(part ?? '')));
+    if (hit) return hit;
+  }
   return null;
 }
 
@@ -419,30 +454,37 @@ export function minDistToCorridorKm(
 }
 
 /**
- * F7 #730 B7 / decyzja 85: HIGH zamknięcie z objazdem trwające > 72 h → MEDIUM
- * (bez spowolnienia). Wspólne LT+LV.
+ * F7 #730 r2 B2 / decyzja 85: HIGH tylko zamknięcie drogi korytarza bez objazdu
+ * albo ze znanym końcem ≤ 72 h; objazd + brak końca / > 72 h → MEDIUM.
+ * Wspólne LT+LV — flaga `roadClosed` (nie regex po „clos” w kind).
  */
 export function balticCapLongDetourClosure(e: BalticRoadEvent): BalticRoadEvent {
   if (e.severity !== 'HIGH') return e;
   if (e.weightLimitT != null) return e;
-  const closureLike = /clos|block|zamkn|roadclosed|carriagewayblocked/i.test(
-    `${e.kind ?? ''} ${e.title ?? ''} ${e.detail ?? ''}`,
-  ) || e.kind === 'CLOSURES' || e.kind === 'BLOCKAGE';
-  if (!closureLike) return e;
+  const closed = e.roadClosed === true
+    || e.kind === 'CLOSURES'
+    || e.kind === 'BLOCKAGE';
+  if (!closed) return e;
   const blob = `${e.title ?? ''} ${e.detail ?? ''}`;
   const hasDetour = e.hasDetour === true
-    || /(?:apylank|objazd|detour|rerout|apbraukt|apbrauc)/i.test(blob);
-  if (!hasDetour) return e;
-  if (e.start == null || e.end == null) return e;
+    || /(?:apylank\w*|apbraukš\w*|apbrauk\w*|apvedceļ\w*|apvedcel\w*|objazd\w*|detour\w*|rerout\w*)/i
+      .test(blob);
+  if (!hasDetour) return { ...e, roadClosed: true };
+  /* Objazd: bez końca albo > 72 h → MEDIUM (bez spowolnienia). */
+  if (e.end == null || e.start == null) {
+    return { ...e, severity: 'MEDIUM', hasDetour: true, roadClosed: true };
+  }
   const a = Date.parse(e.start);
   const b = Date.parse(e.end);
-  if (!Number.isFinite(a) || !Number.isFinite(b) || b <= a) return e;
+  if (!Number.isFinite(a) || !Number.isFinite(b) || b <= a) {
+    return { ...e, severity: 'MEDIUM', hasDetour: true, roadClosed: true };
+  }
   const hours = (b - a) / 3_600_000;
-  if (hours > 72) return { ...e, severity: 'MEDIUM', hasDetour: true };
-  return { ...e, hasDetour: true };
+  if (hours > 72) return { ...e, severity: 'MEDIUM', hasDetour: true, roadClosed: true };
+  return { ...e, hasDetour: true, roadClosed: true };
 }
 
-/** LT: A5, A8, A10, E67 + A1 tylko przy Kownie (DP-164). */
+/** LT: A5, A8, A10, E67 + A1 tylko w bboxie Kowna (F7 #730 r2 B1 — nie po tekście). */
 export function ltRoadOnCorridor(
   road: string | null | undefined,
   e: Pick<BalticRoadEvent, 'lat' | 'lon' | 'title' | 'detail'>,
@@ -451,12 +493,10 @@ export function ltRoadOnCorridor(
   const r = road.toUpperCase().replace(/\s+/g, '');
   if (r === 'A5' || r === 'A8' || r === 'A10' || r === 'E67') return 'on';
   if (r === 'A1') {
-    const blob = `${e.title ?? ''} ${e.detail ?? ''}`.toLowerCase();
-    if (/kaun|kowno/.test(blob)) return 'on';
     if (
       e.lat != null && e.lon != null
-      && e.lat >= 54.7 && e.lat <= 55.15
-      && e.lon >= 23.5 && e.lon <= 24.3
+      && e.lat >= 54.85 && e.lat <= 54.98
+      && e.lon >= 23.75 && e.lon <= 24.05
     ) {
       return 'on';
     }
@@ -486,22 +526,31 @@ function balticCapSeverity(
 }
 
 /**
- * DP-164 + F7 #730 B7: oznacz road + corridorMatch; poza listą / bez numeru
+ * DP-164 + F7 #730 B7/r2: oznacz road + corridorMatch; poza listą / bez numeru
  * obniż severity; LV unknown w ≤ 3 km od CORRIDOR_LV → on; długie zamknięcie
- * z objazdem → MEDIUM. Pogoda (`kind=weather`) → zawsze `on`.
+ * z objazdem → MEDIUM. Pogoda/śliskość: tylko ≤ 3 km od korytarza (r2 decyzja).
  */
 export function applyBalticCorridorRoadFilter(
   country: 'LT' | 'LV',
   events: BalticRoadEvent[],
 ): BalticRoadEvent[] {
-  const densifiedLv = country === 'LV' ? densifyCorridor(CORRIDOR_LV) : null;
+  const densified = densifyCorridor(country === 'LV' ? CORRIDOR_LV : CORRIDOR_LT);
+  const corridor = country === 'LV' ? CORRIDOR_LV : CORRIDOR_LT;
   return events.map((e) => {
     const capped = balticCapLongDetourClosure(e);
-    if (capped.kind === 'weather') {
-      return { ...capped, corridorMatch: 'on' as const, road: capped.road ?? null };
+    const weatherLike = capped.kind === 'weather' || balticIsWeatherSlowEvent(capped);
+    if (weatherLike) {
+      const nearWx = capped.lat != null && capped.lon != null
+        && minDistToCorridorKm(capped.lat, capped.lon, corridor, densified) <= 3;
+      return {
+        ...capped,
+        corridorMatch: (nearWx ? 'on' : 'off') as BalticCorridorRoadMatch,
+        road: capped.road ?? null,
+        severity: nearWx ? capped.severity : 'LOW' as RiskSeverity,
+      };
     }
     const road = capped.road
-      ?? extractBalticRoadRef([capped.title, capped.detail].filter(Boolean).join(' '));
+      ?? extractBalticRoadRefPreferStreet(null, capped.title, capped.detail);
     let corridorMatch: BalticCorridorRoadMatch = country === 'LT'
       ? ltRoadOnCorridor(road, capped)
       : lvRoadOnCorridor(road);
@@ -509,10 +558,9 @@ export function applyBalticCorridorRoadFilter(
     if (
       country === 'LV'
       && corridorMatch === 'unknown'
-      && densifiedLv
       && capped.lat != null
       && capped.lon != null
-      && minDistToCorridorKm(capped.lat, capped.lon, CORRIDOR_LV, densifiedLv) <= 3
+      && minDistToCorridorKm(capped.lat, capped.lon, CORRIDOR_LV, densified) <= 3
     ) {
       corridorMatch = 'on';
     }
@@ -749,12 +797,18 @@ export function parseLtRestrictions(json: unknown): BalticRoadEvent[] {
     ].filter(Boolean);
     /* F7 #727 N2: uwaga o wypadkach tylko w corridor / risk.uwaga_wypadki, nie w każdym detail. */
     const textForSev = `${title} ${desc}`;
-    const road = extractBalticRoadRef([street, title, desc].filter(Boolean).join(' '));
+    /* F7 #730 r2 B1: numer najpierw ze street; opis bez fragmentu objazdu. */
+    const road = extractBalticRoadRefPreferStreet(street, title, desc);
+    const closedByText = /eismas\s+draudžiamas|uždarytas|uzdarytas/i.test(textForSev);
+    const hasDetour = /(?:apylank\w*|apbrauk\w*|apvedceļ\w*|objazd\w*|detour\w*|rerout\w*)/i
+      .test(textForSev);
+    const roadClosed = meta.roadClosed || closedByText;
+    const metaClosed = { ...meta, roadClosed };
     out.push({
       id,
       title,
       detail: detailParts.join(' · '),
-      severity: ltSeverity(type, subtype, meta, textForSev),
+      severity: ltSeverity(type, subtype, metaClosed, textForSev),
       lat: pt?.[0] ?? null,
       lon: pt?.[1] ?? null,
       kind: subtype ?? type,
@@ -764,6 +818,8 @@ export function parseLtRestrictions(json: unknown): BalticRoadEvent[] {
       weightLimitT: meta.weightLimitT,
       heightLimitM: meta.heightLimitM,
       widthLimitM: meta.widthLimitM,
+      roadClosed,
+      hasDetour,
       unknownCodes: meta.unknownCodes.length ? meta.unknownCodes : undefined,
     });
   }
@@ -891,13 +947,15 @@ export function parseLtWeather(json: unknown): LtWeatherStation[] {
   return out;
 }
 
-/** Stacje pogodowe w bboxach → zdarzenia HIGH do spowolnienia (bez osobnych ryzyk). */
+/** Stacje pogodowe ≤ 3 km od korytarza → HIGH do spowolnienia (F7 #730 r2). */
 export function ltWeatherToSlowdownEvents(
   stations: LtWeatherStation[],
   boxes: FiBbox[] = ltCorridorBboxes(),
 ): BalticRoadEvent[] {
+  const densified = densifyCorridor(CORRIDOR_LT);
   return stations
     .filter((s) => s.adverse && eventInLtBboxes({ lat: s.lat, lon: s.lon }, boxes))
+    .filter((s) => minDistToCorridorKm(s.lat, s.lon, CORRIDOR_LT, densified) <= 3)
     .map((s) => ({
       id: `wx:${s.id}`,
       title: s.warning ? `Pogoda: ${s.warning}` : `Pogoda: ${s.title}`,
@@ -912,7 +970,7 @@ export function ltWeatherToSlowdownEvents(
       kind: 'weather',
       start: null,
       end: null,
-      corridorMatch: 'on',
+      corridorMatch: 'on' as const,
     }));
 }
 
@@ -1004,19 +1062,11 @@ export function filterInLvBboxes(
 }
 
 /**
- * F7 #730 N4 — kod zbioru → nid portalu (gdy znany).
- * 22 sekrety właściciela (#589) = aktywne zbiory; 461762 / 461673 / 461765
- * spoza tej listy nie mają pary KEY/URL → pominięte do uzupełnienia sekretów.
+ * F7 #730 r2 N4 — tylko potwierdzone nidy z subskrypcji (#589).
+ * Bez zgadywanych mapowań WM/TI/RM; 461762 / 461673 / 461765 bez KEY/URL.
  */
 export const LV_NAP_NID: Partial<Record<LvNapCode, number | string>> = {
   WEIGHT_DIM: 44751,
-  /* widoczność / nawierzchnia — typowe nidy z katalogu NAP (F7 #730 N4) */
-  WEATHER_SAFETY_WM: '16/17/18',
-  WEATHER_SAFETY_TI: '16/17/18',
-  WEATHER_SAFETY_RM: '16/17/18',
-  POOR_ROAD_WM: '227/240/253',
-  POOR_ROAD_TI: '227/240/253',
-  POOR_ROAD_RM: '227/240/253',
 };
 
 /** F7 #730 N7 — polskie etykiety typów DATEX zamiast surowych nazw. */
@@ -1061,12 +1111,43 @@ function lvIsWeatherCode(code: string): boolean {
     || code.startsWith('POOR_ROAD_');
 }
 
-/** F7 #730 B2 — lód/śnieg/szron/gołoledź (LV + wspólne rdzenie LT). */
-const LV_ICY_RE =
-  /(?:led|ice|snow|snieg|sliden|slidens|apled|go[lł]oled|frost|szron|black\s*ice|aizsal|salna|riepoj|glaz)/i;
+/**
+ * F7 #730 r2 B5 — lód/śnieg tylko na polach treści (granice słowa), nie na surowym XML
+ * (unikaj „ice” w policeForces / „led” w scheduled).
+ */
+const LV_ICY_CONTENT_RE =
+  /(?:^|[^a-zāčēģīķļņšūžA-ZĀČĒĢĪĶĻŅŠŪŽ])(?:ledus|ledu|sliden\w*|apled\w*|go[lł]oled\w*|szron\w*|aizsal\w*|salna|riepoj\w*|glaz\w*|snieg\w*|black\s*ice|\bice\b|\bsnow\b|frost)(?:[^a-zāčēģīķļņšūžA-ZĀČĒĢĪĶĻŅŠŪŽ]|$)/i;
+
+/** Kody DATEX zjawisk lodowych / śniegu (zamiast regexu po całym rekordzie). */
+const LV_ICY_DATEX_TYPE_RE =
+  /\b(?:ice|blackIce|snowOnTheRoad|freezingRain|frost|hoarFrost|iceOnRoadway|snowDrifts|blizzard)\b/i;
 
 function lvTag(rec: string, n: string): string | undefined {
   return rec.match(new RegExp(`<(?:\\w+:)?${n}\\b[^>]*>([^<]*)<`, 'i'))?.[1]?.trim();
+}
+
+/** F7 #730 r2 B7 — komentarz publiczny, nie sourceName (pierwszy value). */
+function lvPublicComment(rec: string): string {
+  const fromGpc = rec.match(
+    /<(?:\w+:)?generalPublicComment\b[\s\S]*?<(?:\w+:)?value\b[^>]*>([^<]*)</i,
+  )?.[1];
+  if (fromGpc != null && fromGpc.trim()) return decodeXmlEntities(fromGpc.trim());
+  const fromComment = rec.match(
+    /<(?:\w+:)?(?:comment|publicComment)\b[\s\S]*?<(?:\w+:)?value\b[^>]*>([^<]*)</i,
+  )?.[1];
+  if (fromComment != null && fromComment.trim()) return decodeXmlEntities(fromComment.trim());
+  return '';
+}
+
+/** Normalizacja lat/lon LV (~55.6–58.1 N, 20.9–28.3 E); zamiana gdy odwrócone. */
+export function lvNormalizeLatLon(a: number, b: number): {
+  lat: number; lon: number; swapped: boolean;
+} {
+  const inLv = (lat: number, lon: number) =>
+    lat >= 55.4 && lat <= 58.3 && lon >= 20.7 && lon <= 28.5;
+  if (inLv(a, b)) return { lat: a, lon: b, swapped: false };
+  if (inLv(b, a)) return { lat: b, lon: a, swapped: true };
+  return { lat: a, lon: b, swapped: false };
 }
 
 /** Centroid z latitude/longitude albo GML posList (DATEX v3 locationReference). */
@@ -1079,13 +1160,14 @@ export function lvCoordsFromRecord(rec: string): LatLon | null {
   if (!posRaw) return null;
   const nums = posRaw.trim().split(/[\s,]+/).map(Number).filter((n) => Number.isFinite(n));
   if (nums.length < 2) return null;
-  /* GML: pary lat lon (EPSG:4326 w DATEX LV). */
+  /* GML: pary lat lon (EPSG:4326 w DATEX LV) → centroid; korekta zamiany osi. */
   let sumLat = 0;
   let sumLon = 0;
   let n = 0;
   for (let i = 0; i + 1 < nums.length; i += 2) {
-    sumLat += nums[i]!;
-    sumLon += nums[i + 1]!;
+    const norm = lvNormalizeLatLon(nums[i]!, nums[i + 1]!);
+    sumLat += norm.lat;
+    sumLon += norm.lon;
     n++;
   }
   return n ? [sumLat / n, sumLon / n] : null;
@@ -1103,34 +1185,68 @@ function lvParseVisibilityM(rec: string): number | null {
 function lvRecordSignals(rec: string): {
   roadClosed: boolean;
   carriagewayBlocked: boolean;
+  lanesBlocked: boolean;
+  laneClosures: boolean;
+  alternateTraffic: boolean;
   narrowOrContraflow: boolean;
   hasDetour: boolean;
-  hasLimit: boolean;
+  hasDimLimit: boolean;
+  speedLimitOnly: boolean;
 } {
-  const low = rec.toLowerCase();
   const mgmt = [...rec.matchAll(
     /<(?:\w+:)?roadOrCarriagewayOrLaneManagementType\b[^>]*>([^<]*)</gi,
   )].map((m) => m[1].toLowerCase());
   const constr = [...rec.matchAll(
     /<(?:\w+:)?trafficConstrictionType\b[^>]*>([^<]*)</gi,
   )].map((m) => m[1].toLowerCase());
-  const roadClosed = mgmt.some((t) => t.includes('roadclosed'))
-    || /roadclosed/i.test(low);
-  const carriagewayBlocked = constr.some((t) => t.includes('carriagewayblocked') || t.includes('blocked'))
-    || /carriagewayblocked/i.test(low);
+  const mgmtBlob = mgmt.join(' ');
+  const constrBlob = constr.join(' ');
+  const roadClosed = mgmt.some((t) => t === 'roadclosed' || t.includes('roadclosed'))
+    || /<(?:\w+:)?roadOrCarriagewayOrLaneManagementType\b[^>]*>\s*roadClosed\s*</i.test(rec);
+  /* F7 #730 r2 B6a: HIGH tylko carriagewayBlocked — nie lanesBlocked. */
+  const carriagewayBlocked = constr.some((t) => t.includes('carriagewayblocked'))
+    || /carriagewayBlocked/i.test(rec);
+  const lanesBlocked = constr.some((t) =>
+    t.includes('lanesblocked') || t === 'blocked' || t.includes('laneblocked')
+  ) || /\blanesBlocked\b/i.test(rec);
+  const laneClosures = mgmt.some((t) => t.includes('laneclosure') || t.includes('lanesclosed'))
+    || /\blaneClosures?\b/i.test(rec);
+  const alternateTraffic = mgmt.some((t) =>
+    t.includes('singlealternatelinetraffic') || t.includes('alternatingtraffic')
+  ) || /singleAlternateLineTraffic/i.test(rec);
   const narrowOrContraflow = mgmt.some((t) =>
     t.includes('narrowlanes') || t.includes('contraflow') || t.includes('lanesrestricted')
-  ) || constr.some((t) => t.includes('narrow') || t.includes('oneLane'));
+  ) || constr.some((t) =>
+    t.includes('narrow') || t.includes('onelane') || t.includes('one_lane')
+  ) || /\boneLane\b/i.test(rec);
   const hasDetour = /<(?:\w+:)?rerouting\b/i.test(rec)
-    || /(?:apbraukt|apbrauc|objazd|detour|rerout)/i.test(low);
-  const hasLimit = /<(?:\w+:)?(?:height|width|weight|length|axle)/i.test(rec)
-    || /limit/i.test(low);
-  return { roadClosed, carriagewayBlocked, narrowOrContraflow, hasDetour, hasLimit };
+    || /(?:apbraukš\w*|apbrauk\w*|apvedceļ\w*|apvedcel\w*|objazd\w*|detour\w*|rerout\w*)/i
+      .test(rec);
+  const hasDimLimit = /<(?:\w+:)?(?:heightCharacteristic|widthCharacteristic|weightCharacteristic|lengthCharacteristic|axleSpacing)/i
+    .test(rec)
+    || /<(?:\w+:)?(?:height|width|weight|length|axle)\w*Limit/i.test(rec);
+  /* Sam temporarySpeedLimit → nie hasLimit (r2 B6d → LOW). */
+  const speedLimitOnly = /temporarySpeedLimit/i.test(rec) && !hasDimLimit
+    && !roadClosed && !carriagewayBlocked;
+  void mgmtBlob;
+  void constrBlob;
+  return {
+    roadClosed,
+    carriagewayBlocked,
+    lanesBlocked,
+    laneClosures,
+    alternateTraffic,
+    narrowOrContraflow,
+    hasDetour,
+    hasDimLimit,
+    speedLimitOnly,
+  };
 }
 
 /**
- * F7 #730 B1 / decyzja 85: zwykłe roboty → LOW; MEDIUM zwężenie/objazd/limit;
- * HIGH zamknięcie / zablokowana jezdnia / wypadek z blokadą; wrong-way → MEDIUM.
+ * F7 #730 B1/r2 B6 / decyzja 85: zwykłe roboty → LOW; MEDIUM zwężenie/wahadło/objazd;
+ * HIGH zamknięcie / carriagewayBlocked / wypadek z blokadą; wrong-way → MEDIUM;
+ * LANE_CLOSURES / laneClosures / singleAlternate → MEDIUM; sam speedLimit → LOW.
  */
 export function lvSeverityForRecord(
   code: LvNapCode,
@@ -1138,28 +1254,43 @@ export function lvSeverityForRecord(
   opts: {
     visibilityM?: number | null;
     signals?: ReturnType<typeof lvRecordSignals>;
+    /** Pola treści do LV_ICY (nie surowy rekord). */
+    contentText?: string;
   } = {},
 ): RiskSeverity {
   const sig = opts.signals ?? lvRecordSignals(recOrText);
-  const text = recOrText;
+  const content = opts.contentText ?? recOrText;
   if (code === 'WRONG_WAY') return 'MEDIUM';
   if (lvIsWeatherCode(code)) {
     const vis = opts.visibilityM;
     const lowVis = vis != null && Number.isFinite(vis) && vis > 0 && vis < 200;
-    if (LV_ICY_RE.test(text) || lowVis || LT_ICY_RE.test(text)) return 'HIGH';
+    const icy = LV_ICY_DATEX_TYPE_RE.test(content)
+      || LV_ICY_CONTENT_RE.test(content)
+      || LT_ICY_RE.test(content);
+    if (icy || lowVis) return 'HIGH';
     return 'MEDIUM';
   }
+  if (sig.roadClosed || sig.carriagewayBlocked) return 'HIGH';
   if (code === 'CLOSURES' || code === 'BLOCKAGE') return 'HIGH';
   if (code === 'ACCIDENTS' || code === 'ACCIDENT_AREA') {
     return (sig.roadClosed || sig.carriagewayBlocked) ? 'HIGH' : 'MEDIUM';
   }
-  if (sig.roadClosed || sig.carriagewayBlocked) return 'HIGH';
-  if (code === 'WEIGHT_DIM' || sig.hasLimit) return 'MEDIUM';
+  /* r2 B6b: pas/pasy / wahadło / LANE_CLOSURES → MEDIUM */
   if (
-    code === 'ROADWORKS' || code === 'ROADWORKS_SHORT' || code === 'LANE_CLOSURES'
-    || /maintenance|roadwork|construction|remontdarb/i.test(text)
+    code === 'LANE_CLOSURES'
+    || sig.laneClosures
+    || sig.alternateTraffic
+    || sig.lanesBlocked
   ) {
-    if (sig.narrowOrContraflow || sig.hasDetour || sig.hasLimit) return 'MEDIUM';
+    return 'MEDIUM';
+  }
+  if (code === 'WEIGHT_DIM' || sig.hasDimLimit) return 'MEDIUM';
+  if (sig.speedLimitOnly) return 'LOW';
+  if (
+    code === 'ROADWORKS' || code === 'ROADWORKS_SHORT'
+    || /maintenance|roadwork|construction|remontdarb/i.test(content)
+  ) {
+    if (sig.narrowOrContraflow || sig.hasDetour || sig.hasDimLimit) return 'MEDIUM';
     return 'LOW';
   }
   if (sig.narrowOrContraflow || sig.hasDetour) return 'MEDIUM';
@@ -1201,17 +1332,21 @@ export function parseLvDatexXml(
     const coords = lvCoordsFromRecord(rec);
     if (!coords) { skipped++; continue; }
     const [lat, lon] = coords;
-    const commentRaw = [...rec.matchAll(/<(?:\w+:)?value\b[^>]*>([^<]*)</gi)]
-      .map((m) => decodeXmlEntities(m[1].trim()))
-      .find((t) => t.length > 0) ?? type;
-    const comment = decodeXmlEntities(commentRaw);
+    const comment = lvPublicComment(rec) || lvTypeLabel(String(type));
     const signals = lvRecordSignals(rec);
     const visibilityM = lvParseVisibilityM(rec);
-    const severity = lvSeverityForRecord(code, `${rec} ${comment}`, { visibilityM, signals });
+    const weatherType = lvTag(rec, 'weatherRelatedRoadConditionType')
+      ?? lvTag(rec, 'poorEnvironmentType')
+      ?? lvTag(rec, 'precipitationType')
+      ?? '';
+    const contentText = [comment, weatherType, String(type)].filter(Boolean).join(' ');
+    const severity = lvSeverityForRecord(code, rec, {
+      visibilityM, signals, contentText,
+    });
     const roadRaw = lvTag(rec, 'roadNumber');
     const road = roadRaw
       ? (extractBalticRoadRef(roadRaw) ?? roadRaw.trim())
-      : extractBalticRoadRef(comment);
+      : extractBalticRoadRefPreferStreet(null, comment);
     const label = lvTypeLabel(String(type));
     out.push({
       id: lvIsSlipperyCode(code) ? lvSlipperyId(lat, lon) : id,
@@ -1225,6 +1360,7 @@ export function parseLvDatexXml(
       end: lvTag(rec, 'overallEndTime') ?? null,
       road,
       hasDetour: signals.hasDetour,
+      roadClosed: signals.roadClosed || signals.carriagewayBlocked,
       visibilityM,
     });
   }
@@ -1308,27 +1444,60 @@ export function parseLvDatexJson(
           if (pos) {
             const nums = pos.trim().split(/[\s,]+/).map(Number).filter((n) => Number.isFinite(n));
             if (nums.length >= 2) {
-              lat = nums[0]!;
-              lon = nums[1]!;
+              /* F7 #730 r2 B7: centroid, nie pierwsza para. */
+              let sLat = 0;
+              let sLon = 0;
+              let n = 0;
+              for (let i = 0; i + 1 < nums.length; i += 2) {
+                const norm = lvNormalizeLatLon(nums[i]!, nums[i + 1]!);
+                sLat += norm.lat;
+                sLon += norm.lon;
+                n++;
+              }
+              if (n) {
+                lat = sLat / n;
+                lon = sLon / n;
+              }
             }
           }
         }
       }
     }
+    if (lat != null && lon != null) {
+      const norm = lvNormalizeLatLon(lat, lon);
+      lat = norm.lat;
+      lon = norm.lon;
+    }
     if (lat == null || lon == null) { skipped++; continue; }
     const type = String(rec.type ?? rec['@type'] ?? rec.situationRecordType ?? code);
-    const comment = decodeXmlEntities(String(
-      rec.comment ?? rec.generalPublicComment ?? rec.description ?? type,
-    ).trim());
-    const blob = `${JSON.stringify(rec)} ${comment}`;
-    const signals = lvRecordSignals(blob);
+    const gpc = rec.generalPublicComment ?? rec.GeneralPublicComment;
+    let comment = '';
+    if (typeof gpc === 'string') comment = gpc;
+    else if (gpc && typeof gpc === 'object') {
+      const raw = JSON.stringify(gpc);
+      comment = raw.match(/"value"\s*:\s*"([^"]*)"/)?.[1] ?? '';
+    }
+    if (!comment) {
+      comment = String(rec.comment ?? rec.description ?? type).trim();
+    }
+    comment = decodeXmlEntities(comment);
+    const weatherType = String(
+      rec.weatherRelatedRoadConditionType
+        ?? rec.poorEnvironmentType
+        ?? rec.precipitationType
+        ?? '',
+    );
+    const contentText = [comment, weatherType, type].filter(Boolean).join(' ');
+    const signals = lvRecordSignals(JSON.stringify(rec));
     const visRaw = rec.minimumVisibilityDistance ?? rec.visibility ?? rec.visibilityDistance;
     const visibilityM = visRaw != null && Number.isFinite(Number(visRaw)) ? Number(visRaw) : null;
-    const severity = lvSeverityForRecord(code, blob, { visibilityM, signals });
+    const severity = lvSeverityForRecord(code, JSON.stringify(rec), {
+      visibilityM, signals, contentText,
+    });
     const roadRaw = rec.roadNumber ?? rec.RoadNumber;
     const road = roadRaw != null && String(roadRaw).trim()
       ? (extractBalticRoadRef(String(roadRaw)) ?? String(roadRaw).trim())
-      : extractBalticRoadRef(comment);
+      : extractBalticRoadRefPreferStreet(null, comment);
     const label = lvTypeLabel(type.replace(/^.*:/, ''));
     out.push({
       id: lvIsSlipperyCode(code) ? lvSlipperyId(lat, lon) : id,
@@ -1342,6 +1511,7 @@ export function parseLvDatexJson(
       end: typeof rec.overallEndTime === 'string' ? rec.overallEndTime : null,
       road,
       hasDetour: signals.hasDetour,
+      roadClosed: signals.roadClosed || signals.carriagewayBlocked,
       visibilityM,
     });
   }
@@ -1419,8 +1589,9 @@ export function parseLvWeightDimGeoJson(
 }
 
 /**
- * F7 #730 B3: rozpoznaj format po pierwszym znaku (`{`/`[` vs `<`), nie po
- * `/situationRecord/` w JSON.
+ * F7 #730 B3/r2 B4: pierwszy znak `{`/`[` vs `<`; format OK tylko z markerami
+ * DATEX/GeoJSON (`situationRecord` / `payload` / `d2LogicalModel` / `features`).
+ * `{"message":"maintenance"}`, `[]`, `<Error>` → unknown (complete=false).
  */
 export function parseLvFeedBody(
   body: string,
@@ -1434,6 +1605,9 @@ export function parseLvFeedBody(
     if (/^<!DOCTYPE\s+html/i.test(t) || /^<html[\s>]/i.test(t)) {
       return { events: [], format: 'unknown' };
     }
+    if (!/situationRecord|d2LogicalModel|payloadPublication/i.test(t)) {
+      return { events: [], format: 'unknown' };
+    }
     return { events: parseLvDatexXml(t, code, stats), format: 'datex-xml' };
   }
   if (c0 === '{' || c0 === '[') {
@@ -1441,6 +1615,12 @@ export function parseLvFeedBody(
       const json = JSON.parse(t) as unknown;
       if (json && typeof json === 'object' && Array.isArray((json as { features?: unknown }).features)) {
         return { events: parseLvWeightDimGeoJson(json, code, stats), format: 'geojson' };
+      }
+      const marker = /situationRecord|d2LogicalModel|"payload"|payloadPublication/i
+        .test(t);
+      if (!marker) {
+        if (stats) stats.skipped += 1;
+        return { events: [], format: 'unknown' };
       }
       return { events: parseLvDatexJson(json, code, stats), format: 'datex-json' };
     } catch {
@@ -1467,9 +1647,13 @@ export function dedupeLvSlippery(events: BalticRoadEvent[]): BalticRoadEvent[] {
   return [...byId.values()];
 }
 
-/** Pogoda/śliskość HIGH (lód/śnieg/widoczność) → spowolnienie; deszcz/wiatr = MEDIUM → nie. */
+/**
+ * Pogoda/śliskość HIGH → spowolnienie; deszcz/wiatr = MEDIUM → nie.
+ * F7 #730 r2: nie dubluj — caller ma użyć `balticSlowdownMult(near)`, nie near+weatherSlow.
+ * Zostawione dla kompatybilności testów / LT-stylu.
+ */
 export function lvWeatherToSlowdownEvents(events: BalticRoadEvent[]): BalticRoadEvent[] {
-  return events
-    .filter((e) => lvIsWeatherCode(String(e.kind ?? '')) && e.severity === 'HIGH')
-    .map((e) => ({ ...e, severity: 'HIGH' as RiskSeverity }));
+  return events.filter(
+    (e) => lvIsWeatherCode(String(e.kind ?? '')) && e.severity === 'HIGH',
+  );
 }

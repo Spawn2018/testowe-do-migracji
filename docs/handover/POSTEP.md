@@ -1,4 +1,12 @@
 
+## 2026-11-02 09:25 — #730 F7 r2 poprawki
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie.
+- Scalanie: F7 r2 „nie scalaj” @ `2fd452e3` (CI unit/db/visual ✔ na docs `fd709b8c`). Bez F7 „gotowe”.
+- **Krok F7 #730 r2:** B1 `extractBalticRoadRefPreferStreet` + strip objazdu + A1 bbox Kowna + fixture `lt-eismoinfo-side-closures-f7.json`; B2 `roadClosed` / objazd bez końca → MEDIUM; B3 dedup `v2`; B4 markery DATEX; B5/B6 wagi + DATEX icy; B7 per-zbiór observations + Content-Length; pogoda ≤3 km; bez dublowania weather w slowdown. Vitest bn6-road-lt/lv **36**.
+- **Dalej:** push → CI → F7. Po F7: BN6 cz.4 EE.
+- Bez push na main.
+
 ## 2026-11-02 08:50 — #730 F7 r1 push @ `2fd452e3`
 
 - Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie.

@@ -16,6 +16,7 @@ import {
   balticSlowdownMult,
   dedupeLvSlippery,
   extractBalticRoadRef,
+  extractBalticRoadRefPreferStreet,
   filterInLvBboxes,
   isDimensionLimitEvent,
   lvCoordsFromRecord,
@@ -172,7 +173,7 @@ describe('BN6 parse LV DATEX / GeoJSON (F7 #730)', () => {
     expect(near.map((e) => e.id).sort()).toEqual(['bn6-lv-rw-poslist', 'bn6-lv-rw-riga'].sort());
   });
 
-  it('B3: JSON z situationRecord nie idzie do XML; HTML → unknown', () => {
+  it('B3/r2 B4: JSON z situationRecord; HTML/APIM/Error/[] → unknown', () => {
     const body = JSON.stringify(datexJson);
     expect(body[0]).toBe('{');
     expect(body).toMatch(/situationRecord/i);
@@ -184,6 +185,55 @@ describe('BN6 parse LV DATEX / GeoJSON (F7 #730)', () => {
     expect(parsed.events[0].severity).toBe('LOW');
     expect(parseLvFeedBody('<!DOCTYPE html><html>x</html>', 'ROADWORKS').format).toBe('unknown');
     expect(parseLvFeedBody('', 'ROADWORKS').format).toBe('empty');
+    expect(parseLvFeedBody('{"message":"maintenance"}', 'ROADWORKS').format).toBe('unknown');
+    expect(parseLvFeedBody('[]', 'ROADWORKS').format).toBe('unknown');
+    expect(parseLvFeedBody('<Error>fail</Error>', 'CLOSURES').format).toBe('unknown');
+    expect(parseLvFeedBody('<?xml version="1.0"?><html><body/></html>', 'ROADWORKS').format)
+      .toBe('unknown');
+  });
+
+  it('r2 B5/B6: ice w policeForces ≠ HIGH; lanesBlocked→MEDIUM; LANE_CLOSURES→MEDIUM; speedLimit→LOW', () => {
+    const police = JSON.stringify({
+      sourceType: 'policeForces',
+      type: 'strongWinds',
+      advice: 'ServicePatrol',
+    });
+    expect(lvSeverityForRecord('EXC_WEATHER_WM', police, {
+      contentText: 'strongWinds ServicePatrol',
+      signals: {
+        roadClosed: false, carriagewayBlocked: false, lanesBlocked: false,
+        laneClosures: false, alternateTraffic: false, narrowOrContraflow: false,
+        hasDetour: false, hasDimLimit: false, speedLimitOnly: false,
+      },
+    })).toBe('MEDIUM');
+    expect(lvSeverityForRecord('ROADWORKS', 'x', {
+      contentText: 'roboty',
+      signals: {
+        roadClosed: false, carriagewayBlocked: false, lanesBlocked: true,
+        laneClosures: false, alternateTraffic: false, narrowOrContraflow: false,
+        hasDetour: false, hasDimLimit: false, speedLimitOnly: false,
+      },
+    })).toBe('MEDIUM');
+    expect(lvSeverityForRecord('LANE_CLOSURES', 'x', {
+      contentText: 'pas',
+      signals: {
+        roadClosed: false, carriagewayBlocked: false, lanesBlocked: false,
+        laneClosures: true, alternateTraffic: false, narrowOrContraflow: false,
+        hasDetour: false, hasDimLimit: false, speedLimitOnly: false,
+      },
+    })).toBe('MEDIUM');
+    expect(lvSeverityForRecord('ROADWORKS', 'temporarySpeedLimit only', {
+      contentText: 'temporarySpeedLimit',
+      signals: {
+        roadClosed: false, carriagewayBlocked: false, lanesBlocked: false,
+        laneClosures: false, alternateTraffic: false, narrowOrContraflow: false,
+        hasDetour: false, hasDimLimit: false, speedLimitOnly: true,
+      },
+    })).toBe('LOW');
+    expect(extractBalticRoadRefPreferStreet(
+      null,
+      'remontdarbi uz V1004, apbraukšana pa A7',
+    )).toBe('V1004');
   });
 
   it('B6: posList centroid; N7 dekoduje encje XML', () => {
@@ -238,14 +288,15 @@ describe('BN6 runRoadLv F7 #730', () => {
     expect(r.warnings?.some((w) => w.includes('k-rw-secret-value'))).toBe(false);
     expect(JSON.stringify(r.observations ?? {})).not.toContain('k-rw-secret-value');
     expect(st.corridor?.corridor).toBe('ROAD_LV');
-    expect(st.risks.some((x) => x.dedup === 'ROAD_LV:bn6-lv-rw-riga')).toBe(true);
-    expect(st.risks.filter((x) => String(x.dedup).startsWith('ROAD_LV:slippery:')).length).toBe(1);
-    const dim = st.risks.find((x) => x.dedup === 'ROAD_LV:bn6-lv-wd-riga-bridge');
+    expect(st.risks.some((x) => x.dedup === 'ROAD_LV:v2:bn6-lv-rw-riga')).toBe(true);
+    expect(st.risks.filter((x) => String(x.dedup).startsWith('ROAD_LV:v2:slippery:')).length).toBe(1);
+    const dim = st.risks.find((x) => x.dedup === 'ROAD_LV:v2:bn6-lv-wd-riga-bridge');
     expect(dim?.titleKey).toBe('rk_road_baltic_dim_check');
     expect(dim?.detail?.zrodlo).toBe(LV_ATTRIBUTION);
     expect(dim?.sourceUrl).toBe(LV_SOURCE_REF);
     expect(st.staleCalls.length).toBe(1);
-    expect(st.risks.some((x) => x.dedup === 'ROAD_LV:bn6-lv-rw-far-east')).toBe(false);
+    expect(st.risks.some((x) => x.dedup === 'ROAD_LV:v2:bn6-lv-rw-far-east')).toBe(false);
+    expect(String(r.observations?.lv_roadworks ?? '')).toMatch(/^ok:\d+:\d+:datex-xml$/);
   });
 
   it('B4: 1/4 HTML → complete=false, bez resolveStale', async () => {
@@ -329,7 +380,7 @@ describe('BN6 runRoadLv F7 #730', () => {
     const closed: BalticRoadEvent = {
       id: 'C', title: 'zamkniecie', detail: 'x', severity: 'HIGH',
       lat: 56.95, lon: 24.10, kind: 'CLOSURES', start: null, end: null,
-      road: 'A7', corridorMatch: 'on',
+      road: 'A7', corridorMatch: 'on', roadClosed: true,
     };
     const height: BalticRoadEvent = {
       id: 'H', title: 'wys', detail: 'x', severity: 'MEDIUM',
@@ -344,5 +395,76 @@ describe('BN6 runRoadLv F7 #730', () => {
     }])[0];
     expect(off.severity).toBe('LOW');
     expect(balticSlowdownMult([off]).mult).toBe(1);
+  });
+
+  it('r2 B4: maintenance/[]/Error/XHTML → unknown; bez resolveStale', async () => {
+    expect(parseLvFeedBody('{"message":"maintenance"}', 'ROADWORKS').format).toBe('unknown');
+    expect(parseLvFeedBody('[]', 'ROADWORKS').format).toBe('unknown');
+    expect(parseLvFeedBody('<Error>fail</Error>', 'ROADWORKS').format).toBe('unknown');
+    expect(parseLvFeedBody('<?xml version="1.0"?><html><body>x</body></html>', 'ROADWORKS').format)
+      .toBe('unknown');
+    const st = new MemStore();
+    const r = await runRoadLv(deps(st, {
+      'nap.example/lv/roadworks': '{"message":"maintenance"}',
+      'nap.example/lv/slippery-wm': '[]',
+      'nap.example/lv/slippery-ti': '<Error>x</Error>',
+      'nap.example/lv/weight-dim': '<?xml version="1.0"?><html>x</html>',
+    }, MOCK_ENV).d);
+    expect(r.observations?.complete).toBe('0');
+    expect(r.observations?.fetched_ok).toBe('0');
+    expect(st.staleCalls.length).toBe(0);
+  });
+
+  it('r2 B5: ice w policeForces ≠ HIGH; Slidens w komentarzu = HIGH', () => {
+    const police = `<situationRecord id="p1" xsi:type="AuthorityOperation">
+      <pointCoordinates><latitude>56.95</latitude><longitude>24.10</longitude></pointCoordinates>
+      <source><sourceType>policeForces</sourceType></source>
+      <advice>ice</advice>
+      <generalPublicComment><comment><values><value>Strong winds</value></values></comment></generalPublicComment>
+    </situationRecord>`;
+    const wrap = `<?xml version="1.0"?><d2LogicalModel><payloadPublication><situation>${police}</situation></payloadPublication></d2LogicalModel>`;
+    const parsed = parseLvDatexXml(wrap, 'EXC_WEATHER_WM');
+    expect(parsed[0]?.severity).toBe('MEDIUM');
+    expect(lvSeverityForRecord('SLIPPERY_WM', '', {
+      contentText: 'Slidens ceļš',
+    })).toBe('HIGH');
+  });
+
+  it('r2 B6: lanesBlocked → MEDIUM; LANE_CLOSURES → MEDIUM; speedLimit → LOW', () => {
+    expect(lvSeverityForRecord('ROADWORKS',
+      '<trafficConstrictionType>lanesBlocked</trafficConstrictionType>')).toBe('MEDIUM');
+    expect(lvSeverityForRecord('LANE_CLOSURES',
+      '<roadOrCarriagewayOrLaneManagementType>laneClosures</roadOrCarriagewayOrLaneManagementType>'))
+      .toBe('MEDIUM');
+    expect(lvSeverityForRecord('ROADWORKS',
+      '<temporarySpeedLimit>70</temporarySpeedLimit>')).toBe('LOW');
+    expect(lvSeverityForRecord('ROADWORKS',
+      '<trafficConstrictionType>carriagewayBlocked</trafficConstrictionType>')).toBe('HIGH');
+  });
+
+  it('r2 N8: timeout w warnings; wartość klucza nie w detail', async () => {
+    const st = new MemStore();
+    let calls = 0;
+    const f = (async () => {
+      calls++;
+      await new Promise((r) => setTimeout(r, 50));
+      throw new DOMException('The operation was aborted.', 'AbortError');
+    }) as typeof fetch;
+    const d: JobDeps = {
+      store: st,
+      fetch: f,
+      env: {
+        LV_NAP_ROADWORKS_KEY: 'sekret-klucz-xyz',
+        LV_NAP_ROADWORKS_URL: 'https://nap.example/lv/roadworks',
+      },
+      now: () => NOW,
+    };
+    /* podmień timeout na krótki przez Abort — jobs używa 10s; tu fetch od razu abort */
+    const r = await runRoadLv(d);
+    expect(calls).toBeGreaterThan(0);
+    expect(r.warnings?.some((w) => /timeout|błąd sieci|niepobrany/i.test(w))).toBe(true);
+    expect(JSON.stringify(r)).not.toContain('sekret-klucz-xyz');
+    expect(st.risks.every((x) => !JSON.stringify(x.detail ?? {}).includes('sekret-klucz-xyz')))
+      .toBe(true);
   });
 });
