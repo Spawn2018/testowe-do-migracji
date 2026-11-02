@@ -1144,9 +1144,7 @@ describe('BN3 Tallink Alert — runFerryStatus (F7 B5)', () => {
       '00:01',
       '2026-11-02',
     );
-    const alerts = finalizeTallinkAlertsForStatus(
-      parseTallinkAlerts(html, TALLINK_HOME(), NOW).alerts,
-    );
+    const alerts = finalizeTallinkAlertsForStatus(parseTallinkAlerts(html, TALLINK_HOME(), NOW).alerts,NOW);
     expect(alerts.length).toBeGreaterThanOrEqual(2);
     expect(alerts.every((a) => a.autoCancelOk === false)).toBe(true);
 
@@ -1178,9 +1176,7 @@ describe('BN3 Tallink Alert — runFerryStatus (F7 B5)', () => {
       '12:00',
       '2026-11-02',
     );
-    const alerts = finalizeTallinkAlertsForStatus(
-      parseTallinkAlerts(html, TALLINK_HOME(), NOW).alerts,
-    );
+    const alerts = finalizeTallinkAlertsForStatus(parseTallinkAlerts(html, TALLINK_HOME(), NOW).alerts,NOW);
     expect(alerts.length).toBeGreaterThanOrEqual(2);
     const cancelAlert = alerts.find((a) => /cancelled/i.test(a.text))!;
     const corrAlert = alerts.find((a) => /correction/i.test(a.text))!;
@@ -1218,9 +1214,7 @@ describe('BN3 Tallink Alert — runFerryStatus (F7 B5)', () => {
       '14:00',
       '2026-11-02',
     );
-    const alerts = finalizeTallinkAlertsForStatus(
-      parseTallinkAlerts(html, TALLINK_HOME(), NOW).alerts,
-    );
+    const alerts = finalizeTallinkAlertsForStatus(parseTallinkAlerts(html, TALLINK_HOME(), NOW).alerts,NOW);
     const cancelAlert = alerts.find((a) => /cancelled/i.test(a.text) && !/correction/i.test(a.text))!;
     expect(cancelAlert.autoCancelOk).toBe(true);
     expect(cancelAlert.windowTimeStart).toBe('14:00');
@@ -1295,9 +1289,7 @@ describe('BN3 Tallink Alert — runFerryStatus (F7 B5)', () => {
     const inner =
       `<Scheduler dateStart="2026-13-01" dateEnd="2026-13-01" timeStart="10:00">` +
       `<CwsSection data-analytics-group="Alert"><CwsP>${C}</CwsP></CwsSection></Scheduler>`;
-    const alerts = finalizeTallinkAlertsForStatus(
-      parseTallinkAlerts(wrapRendered(inner), TALLINK_HOME(), NOW).alerts,
-    );
+    const alerts = finalizeTallinkAlertsForStatus(parseTallinkAlerts(wrapRendered(inner), TALLINK_HOME(), NOW).alerts,NOW);
     expect(alerts[0]!.filterReject).toBe('invalid_date');
     expect(alerts[0]!.autoCancelOk).toBe(false);
   });
@@ -1311,9 +1303,7 @@ describe('BN3 Tallink Alert — runFerryStatus (F7 B5)', () => {
     const cancel =
       `<Scheduler dateStart="2026-11-02" timeStart="10:00" dateEnd="2026-11-02">` +
       `<CwsSection data-analytics-group="Alert"><CwsP>${C}</CwsP></CwsSection></Scheduler>`;
-    const alerts = finalizeTallinkAlertsForStatus(
-      parseTallinkAlerts(wrapRendered(camp + cancel), TALLINK_HOME(), NOW).alerts,
-    );
+    const alerts = finalizeTallinkAlertsForStatus(parseTallinkAlerts(wrapRendered(camp + cancel), TALLINK_HOME(), NOW).alerts,NOW);
     const win = alerts.find((a) => /cancelled/i.test(a.text))!;
     expect(win.autoCancelOk).toBe(true);
     expect(alerts.some((a) => a.isCampaign)).toBe(true);
@@ -1342,18 +1332,14 @@ describe('BN3 Tallink Alert — runFerryStatus (F7 B5)', () => {
       `<Scheduler dateStart="2026-11-02" dateStart="2026-11-03" dateEnd="2026-11-02"><CwsSection data-analytics-group="Alert"><CwsP>${C}</CwsP></CwsSection></Scheduler>`,
     ];
     // Pojedyncze cudzysłowy są OK (R12-B1) — ten wariant ma auto.
-    const singleOk = finalizeTallinkAlertsForStatus(
-      parseTallinkAlerts(wrapRendered(cases[3]!), TALLINK_HOME(), NOW).alerts,
-      NOW,
-    );
+    const singleOk = finalizeTallinkAlertsForStatus(parseTallinkAlerts(wrapRendered(cases[3]!), TALLINK_HOME(), NOW).alerts,
+      NOW,NOW);
     expect(singleOk[0]!.autoCancelOk).toBe(true);
 
     for (const [i, inner] of cases.entries()) {
       if (i === 3) continue;
-      const alerts = finalizeTallinkAlertsForStatus(
-        parseTallinkAlerts(wrapRendered(inner), TALLINK_HOME(), NOW).alerts,
-        NOW,
-      );
+      const alerts = finalizeTallinkAlertsForStatus(parseTallinkAlerts(wrapRendered(inner), TALLINK_HOME(), NOW).alerts,
+        NOW,NOW);
       expect(alerts.every((a) => a.autoCancelOk === false), `case ${i}`).toBe(true);
     }
 
@@ -1364,10 +1350,8 @@ describe('BN3 Tallink Alert — runFerryStatus (F7 B5)', () => {
     const goodC =
       `<Scheduler dateStart="2026-10-31" timeStart="10:00" dateEnd="2026-10-31">` +
       `<CwsSection data-analytics-group="Alert"><CwsP>${C}</CwsP></CwsSection></Scheduler>`;
-    const mixed = finalizeTallinkAlertsForStatus(
-      parseTallinkAlerts(wrapRendered(goodC + badCorr), TALLINK_HOME(), NOW).alerts,
-      NOW,
-    );
+    const mixed = finalizeTallinkAlertsForStatus(parseTallinkAlerts(wrapRendered(goodC + badCorr), TALLINK_HOME(), NOW).alerts,
+      NOW,NOW);
     expect(mixed.every((a) => a.autoCancelOk === false)).toBe(true);
   });
 
@@ -1381,9 +1365,7 @@ describe('BN3 Tallink Alert — runFerryStatus (F7 B5)', () => {
       `<CwsSection data-analytics-group="Alert"><CwsP>${C}</CwsP></CwsSection></Scheduler>` +
       `<Scheduler dateStart="2026-10-31" timeStart="10:00">` +
       `<CwsSection data-analytics-group="Alert"><CwsP>${corr}</CwsP></CwsSection></Scheduler>`;
-    expect(finalizeTallinkAlertsForStatus(
-      parseTallinkAlerts(wrapRendered(a), TALLINK_HOME(), NOW).alerts, NOW,
-    ).every((x) => !x.autoCancelOk)).toBe(true);
+    expect(finalizeTallinkAlertsForStatus(parseTallinkAlerts(wrapRendered(a), TALLINK_HOME(), NOW).alerts, NOW,NOW).every((x) => !x.autoCancelOk)).toBe(true);
 
     // C 29–30.10 + sprostowanie 31.10–2.11 → brak ODWOLANY.
     const b =
@@ -1391,17 +1373,13 @@ describe('BN3 Tallink Alert — runFerryStatus (F7 B5)', () => {
       `<CwsSection data-analytics-group="Alert"><CwsP>${C}</CwsP></CwsSection></Scheduler>` +
       `<Scheduler dateStart="2026-10-31" dateEnd="2026-11-02" timeStart="10:00">` +
       `<CwsSection data-analytics-group="Alert"><CwsP>${corr}</CwsP></CwsSection></Scheduler>`;
-    expect(finalizeTallinkAlertsForStatus(
-      parseTallinkAlerts(wrapRendered(b), TALLINK_HOME(), NOW).alerts, NOW,
-    ).every((x) => !x.autoCancelOk)).toBe(true);
+    expect(finalizeTallinkAlertsForStatus(parseTallinkAlerts(wrapRendered(b), TALLINK_HOME(), NOW).alerts, NOW,NOW).every((x) => !x.autoCancelOk)).toBe(true);
 
     const t0 = Date.now();
     const huge =
       `<Scheduler dateStart="2026-10-31" dateEnd="9999-12-31" timeStart="00:00">` +
       `<CwsSection data-analytics-group="Alert"><CwsP>${C}</CwsP></CwsSection></Scheduler>`;
-    const h = finalizeTallinkAlertsForStatus(
-      parseTallinkAlerts(wrapRendered(huge), TALLINK_HOME(), NOW).alerts, NOW,
-    );
+    const h = finalizeTallinkAlertsForStatus(parseTallinkAlerts(wrapRendered(huge), TALLINK_HOME(), NOW).alerts, NOW,NOW);
     expect(Date.now() - t0).toBeLessThan(100);
     // Bez pętli dni: ogromne dateEnd nie wybucha; sam C → auto.
     expect(h[0]!.autoCancelOk).toBe(true);
@@ -1431,9 +1409,7 @@ describe('BN3 Tallink Alert — runFerryStatus (F7 B5)', () => {
       `<CwsSection data-analytics-group="Alert"><CwsP>${C}</CwsP></CwsSection></Scheduler>` +
       `<Scheduler dateStart="2026-10-31" dateEnd="2026-11-02" timeStart="12:00">` +
       `<CwsSection data-analytics-group="Alert"><CwsP>${corr}</CwsP></CwsSection></Scheduler>`;
-    const alerts = finalizeTallinkAlertsForStatus(
-      parseTallinkAlerts(wrapRendered(html), TALLINK_HOME(), NOW).alerts, NOW,
-    );
+    const alerts = finalizeTallinkAlertsForStatus(parseTallinkAlerts(wrapRendered(html), TALLINK_HOME(), NOW).alerts, NOW,NOW);
     expect(alerts.every((a) => a.autoCancelOk === false)).toBe(true);
   });
 
@@ -1443,17 +1419,13 @@ describe('BN3 Tallink Alert — runFerryStatus (F7 B5)', () => {
     const quoted =
       `<Scheduler dateStart="2026-11-02" dateEnd="2026-11-02">` +
       `<CwsSection data-analytics-group='Alert'><CwsP>${C}</CwsP></CwsSection></Scheduler>`;
-    expect(finalizeTallinkAlertsForStatus(
-      parseTallinkAlerts(wrapRendered(quoted), TALLINK_HOME(), NOW).alerts, NOW,
-    )[0]!.autoCancelOk).toBe(true);
+    expect(finalizeTallinkAlertsForStatus(parseTallinkAlerts(wrapRendered(quoted), TALLINK_HOME(), NOW).alerts, NOW,NOW)[0]!.autoCancelOk).toBe(true);
 
     // data-type="campaign" nie jest kampanią strukturalną (R13-B2); allowlista HTML → brak auto.
     const fakeCamp =
       `<Scheduler dateStart="2026-11-02" dateEnd="2026-11-02">` +
       `<CwsSection data-analytics-group="Alert"><CwsAlert data-type="campaign"><CwsP>${C}</CwsP></CwsAlert></CwsSection></Scheduler>`;
-    expect(finalizeTallinkAlertsForStatus(
-      parseTallinkAlerts(wrapRendered(fakeCamp), TALLINK_HOME(), NOW).alerts, NOW,
-    )[0]!.autoCancelOk).toBe(false);
+    expect(finalizeTallinkAlertsForStatus(parseTallinkAlerts(wrapRendered(fakeCamp), TALLINK_HOME(), NOW).alerts, NOW,NOW)[0]!.autoCancelOk).toBe(false);
 
     // Jawna kampania z treścią cancel → trucizna 72b (brak auto dla wszystkich).
     const poison =
@@ -1461,15 +1433,11 @@ describe('BN3 Tallink Alert — runFerryStatus (F7 B5)', () => {
       `<CwsSection data-analytics-group="Alert"><CwsAlert type="campaign"><CwsP>${C}</CwsP></CwsAlert></CwsSection></Scheduler>` +
       `<Scheduler dateStart="2026-11-02" timeStart="10:00" dateEnd="2026-11-02">` +
       `<CwsSection data-analytics-group="Alert"><CwsP>${C}</CwsP></CwsSection></Scheduler>`;
-    expect(finalizeTallinkAlertsForStatus(
-      parseTallinkAlerts(wrapRendered(poison), TALLINK_HOME(), NOW).alerts, NOW,
-    ).every((a) => !a.autoCancelOk)).toBe(true);
+    expect(finalizeTallinkAlertsForStatus(parseTallinkAlerts(wrapRendered(poison), TALLINK_HOME(), NOW).alerts, NOW,NOW).every((a) => !a.autoCancelOk)).toBe(true);
 
     // Luźny Alert poza Schedulerem.
     const loose = wrapRendered(`<CwsSection data-analytics-group="Alert"><CwsP>${C}</CwsP></CwsSection>`);
-    expect(finalizeTallinkAlertsForStatus(
-      parseTallinkAlerts(loose, TALLINK_HOME(), NOW).alerts, NOW,
-    ).every((a) => !a.autoCancelOk)).toBe(true);
+    expect(finalizeTallinkAlertsForStatus(parseTallinkAlerts(loose, TALLINK_HOME(), NOW).alerts, NOW,NOW).every((a) => !a.autoCancelOk)).toBe(true);
   });
 
   it('F7 R12 / 72c: zdegradowany Alert podnosi ryzyko mimo auto-zwycięzcy', async () => {
@@ -1621,9 +1589,7 @@ describe('BN3 Tallink Alert — runFerryStatus (F7 B5)', () => {
       `<CwsSection data-analytics-group="Alert"><CwsP>${C}</CwsP></CwsSection></Scheduler>` +
       `<Scheduler dateStart="2026-10-31" timeStart="12:00" dateEnd="2026-11-02">` +
       `<CwsSection data-analytics-group="Alert"><CwsAlert data-type="campaign"><CwsP>${corr}</CwsP></CwsAlert></CwsSection></Scheduler>`;
-    const alerts = finalizeTallinkAlertsForStatus(
-      parseTallinkAlerts(wrapRendered(html), TALLINK_HOME(), NOW).alerts, NOW,
-    );
+    const alerts = finalizeTallinkAlertsForStatus(parseTallinkAlerts(wrapRendered(html), TALLINK_HOME(), NOW).alerts, NOW,NOW);
     // data-type ≠ kampania → nowsze sprostowanie wygrywa (brak auto); bez trucizny kampanii.
     expect(alerts.every((a) => !a.autoCancelOk)).toBe(true);
     expect(alerts.every((a) => !a.isCampaign)).toBe(true);
@@ -1639,9 +1605,7 @@ describe('BN3 Tallink Alert — runFerryStatus (F7 B5)', () => {
       `</CwsAlert></CwsSection></Scheduler>` +
       `<Scheduler dateStart="2026-10-31" timeStart="10:00" dateEnd="2026-11-02">` +
       `<CwsSection data-analytics-group="Alert"><CwsP>${C}</CwsP></CwsSection></Scheduler>`;
-    expect(finalizeTallinkAlertsForStatus(
-      parseTallinkAlerts(wrapRendered(poisonCamp), TALLINK_HOME(), NOW).alerts, NOW,
-    ).every((a) => !a.autoCancelOk)).toBe(true);
+    expect(finalizeTallinkAlertsForStatus(parseTallinkAlerts(wrapRendered(poisonCamp), TALLINK_HOME(), NOW).alerts, NOW,NOW).every((a) => !a.autoCancelOk)).toBe(true);
 
     const bookNow =
       `<Scheduler dateStart="2026-11-02" timeStart="18:00" dateEnd="2026-11-02">` +
@@ -1649,9 +1613,7 @@ describe('BN3 Tallink Alert — runFerryStatus (F7 B5)', () => {
       `<CwsP>Last chance — Book now</CwsP></CwsAlert></CwsSection></Scheduler>` +
       `<Scheduler dateStart="2026-11-02" timeStart="10:00" dateEnd="2026-11-02">` +
       `<CwsSection data-analytics-group="Alert"><CwsP>${C}</CwsP></CwsSection></Scheduler>`;
-    const ok = finalizeTallinkAlertsForStatus(
-      parseTallinkAlerts(wrapRendered(bookNow), TALLINK_HOME(), NOW).alerts, NOW,
-    );
+    const ok = finalizeTallinkAlertsForStatus(parseTallinkAlerts(wrapRendered(bookNow), TALLINK_HOME(), NOW).alerts, NOW,NOW);
     expect(ok.find((a) => /cancelled/i.test(a.text))!.autoCancelOk).toBe(true);
   });
 
@@ -1683,9 +1645,7 @@ describe('BN3 Tallink Alert — runFerryStatus (F7 B5)', () => {
     const inner =
       `<Scheduler dateStart="2026-11-31" dateEnd="2026-11-31" timeStart="10:00">` +
       `<CwsSection data-analytics-group="Alert"><CwsP>${C}</CwsP></CwsSection></Scheduler>`;
-    const alerts = finalizeTallinkAlertsForStatus(
-      parseTallinkAlerts(wrapRendered(inner), TALLINK_HOME(), NOW).alerts, NOW,
-    );
+    const alerts = finalizeTallinkAlertsForStatus(parseTallinkAlerts(wrapRendered(inner), TALLINK_HOME(), NOW).alerts, NOW,NOW);
     expect(alerts[0]!.filterReject).toBe('invalid_date');
     expect(alerts[0]!.autoCancelOk).toBe(false);
   });
@@ -1738,9 +1698,7 @@ describe('BN3 Tallink Alert — runFerryStatus (F7 B5)', () => {
         `<Scheduler dateStart="2026-10-31" timeStart="18:00" dateEnd="2026-11-02">` +
         `<CwsSection data-analytics-group="Alert"><CwsAlert type="campaign">` +
         `<CwsP>${text}</CwsP></CwsAlert></CwsSection></Scheduler>`;
-      const alerts = finalizeTallinkAlertsForStatus(
-        parseTallinkAlerts(wrapRendered(html), TALLINK_HOME(), NOW).alerts, NOW,
-      );
+      const alerts = finalizeTallinkAlertsForStatus(parseTallinkAlerts(wrapRendered(html), TALLINK_HOME(), NOW).alerts, NOW,NOW);
       expect(alerts.every((a) => !a.autoCancelOk), text).toBe(true);
     }
   });
@@ -1795,9 +1753,7 @@ describe('BN3 #686 Tallink restore', () => {
       `<CwsP>${CANCEL}</CwsP>`, '08:00', `<CwsP>${RESTORE}</CwsP>`, '12:00', '2026-10-31',
     );
     // Mutacja M11: wybór najstarszego → cancel.autoCancelOk true → pada.
-    const alerts = finalizeTallinkAlertsForStatus(
-      parseTallinkAlerts(html, TALLINK_HOME(), NOW).alerts,
-    );
+    const alerts = finalizeTallinkAlertsForStatus(parseTallinkAlerts(html, TALLINK_HOME(), NOW).alerts,NOW);
     expect(alerts.filter((a) => a.autoCancelOk)).toHaveLength(0);
     expect(alerts.some((a) => a.autoRestoreOk)).toBe(true);
 

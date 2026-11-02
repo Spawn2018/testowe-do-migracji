@@ -200,6 +200,7 @@ const pl: Dict = {
   rk_road_baltic: 'Trasa {country}: {event}',
   rk_road_baltic_weight: 'Trasa {country}: limit masy {limit} t (ładunek {load} t)',
   rk_road_baltic_weight_check: 'Trasa {country}: limit masy {limit} t — sprawdź zezwolenie / trasę',
+  rk_road_baltic_dim_check: 'Trasa {country}: sprawdź wymiary / trasę',
   rk_flow_closed: '{code}: droga zamknięta przy pozycji auta',
   rk_flow_slow: '{code}: ruch {kmh} km/h wobec {free} km/h swobodnie przy pozycji auta',
   rk_ais_arrived: 'AIS: {vessel} w porcie Nynäshamn — potwierdzenie przypłynięcia (informacja)',
