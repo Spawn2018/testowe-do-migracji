@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<d2LogicalModel xmlns="http://datex2.eu/schema/2/2_0" modelBaseVersion="2"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <payloadPublication xsi:type="MeasuredDataPublication">
+    <!-- F7 #733 r2 B1: zagnieżdżone temperature / relativeHumidity / integerMetreDistance -->
+    <siteMeasurements>
+      <measurementSiteReference id="ee-site-t4-marjamaa"/>
+      <measurementTimeDefault>2026-11-02T10:00:00Z</measurementTimeDefault>
+      <measuredValue>
+        <basicData>
+          <weatherRelatedRoadConditionType>ice</weatherRelatedRoadConditionType>
+          <roadSurfaceTemperature><temperature>-3.0</temperature></roadSurfaceTemperature>
+          <relativeHumidity><percentage>97</percentage></relativeHumidity>
+          <value lang="et">Jäide, libedus teel</value>
+        </basicData>
+      </measuredValue>
+    </siteMeasurements>
+    <!-- zimno + RH≥90 → spowolnienie (bez tekstu lodu) -->
+    <siteMeasurements>
+      <measurementSiteReference id="ee-site-t4-marjamaa"/>
+      <measurementTimeDefault>2026-11-02T10:15:00Z</measurementTimeDefault>
+      <measuredValue>
+        <basicData>
+          <roadSurfaceTemperature><temperature>-1.0</temperature></roadSurfaceTemperature>
+          <relativeHumidity><percentage>95</percentage></relativeHumidity>
+        </basicData>
+      </measuredValue>
+    </siteMeasurements>
+    <!-- mgła 120 m → spowolnienie -->
+    <siteMeasurements>
+      <measurementSiteReference id="ee-site-t4-marjamaa"/>
+      <measurementTimeDefault>2026-11-02T10:30:00Z</measurementTimeDefault>
+      <measuredValue>
+        <basicData>
+          <minimumVisibilityDistance><integerMetreDistance>120</integerMetreDistance></minimumVisibilityDistance>
+        </basicData>
+      </measuredValue>
+    </siteMeasurements>
+    <!-- märg + temp > 0 → nie -->
+    <siteMeasurements>
+      <measurementSiteReference id="ee-site-t4-marjamaa"/>
+      <measurementTimeDefault>2026-11-02T11:00:00Z</measurementTimeDefault>
+      <measuredValue>
+        <basicData>
+          <value lang="et">märg</value>
+          <roadSurfaceTemperature><temperature>4.0</temperature></roadSurfaceTemperature>
+        </basicData>
+      </measuredValue>
+    </siteMeasurements>
+    <!-- stacja poza mapą — noSite -->
+    <siteMeasurements>
+      <measurementSiteReference id="ee-site-unknown"/>
+      <measurementTimeDefault>2026-11-02T10:00:00Z</measurementTimeDefault>
+      <measuredValue>
+        <basicData>
+          <value lang="et">Jäide</value>
+        </basicData>
+      </measuredValue>
+    </siteMeasurements>
+    <!-- stacja daleko (Narva) — poza korytarzem po filtrze -->
+    <siteMeasurements>
+      <measurementSiteReference id="ee-site-far"/>
+      <measurementTimeDefault>2026-11-02T10:00:00Z</measurementTimeDefault>
+      <measuredValue>
+        <basicData>
+          <value lang="et">Jäide</value>
+        </basicData>
+      </measuredValue>
+    </siteMeasurements>
+  </payloadPublication>
+</d2LogicalModel>

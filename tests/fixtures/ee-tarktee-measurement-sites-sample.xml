@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<d2LogicalModel xmlns="http://datex2.eu/schema/2/2_0" modelBaseVersion="2"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <payloadPublication xsi:type="MeasurementSiteTablePublication">
+    <measurementSiteTable>
+      <measurementSiteRecord id="ee-site-t4-marjamaa">
+        <measurementSiteIdentification>ee-site-t4-marjamaa</measurementSiteIdentification>
+        <measurementSiteLocation>
+          <pointByCoordinates>
+            <pointCoordinates>
+              <latitude>58.904000</latitude>
+              <longitude>24.425000</longitude>
+            </pointCoordinates>
+          </pointByCoordinates>
+        </measurementSiteLocation>
+      </measurementSiteRecord>
+      <measurementSiteRecord id="ee-site-far">
+        <measurementSiteIdentification>ee-site-far</measurementSiteIdentification>
+        <measurementSiteLocation>
+          <pointByCoordinates>
+            <pointCoordinates>
+              <latitude>59.380000</latitude>
+              <longitude>28.190000</longitude>
+            </pointCoordinates>
+          </pointByCoordinates>
+        </measurementSiteLocation>
+      </measurementSiteRecord>
+    </measurementSiteTable>
+  </payloadPublication>
+</d2LogicalModel>

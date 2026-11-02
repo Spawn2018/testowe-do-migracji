@@ -1,4 +1,36 @@
 
+## 2026-11-02 14:15 — #733 F7 r3 pusta struktura JSON = OK
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie.
+- Scalanie: brak F7 „gotowe” (#733 F7 r3 — jedna korekta: nie traktować pustej poprawnej odpowiedzi jako unknown). CI @ `a70bc3ef` unit/db/visual ✔ przed poprawką.
+- **Krok F7 #733 r3:** `eeJsonHasValidStructure` — `{"features":[]}` i `payload` bez situation → `datex-json` / 0 zdarzeń; `{"message",payload:null}` / `null` / `[]` → unknown. Vitest BN6 drogi **82**.
+- **Dalej:** push → CI → F7. Po F7: DP-166+167 → DP-165 → BN7 (#718).
+- Bez push na main.
+
+## 2026-11-02 13:55 — #733 F7 r2 B1–B3 EE
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie.
+- Scalanie: brak F7 „gotowe” (#733 F7 r2 „nie scalaj”, 3 blokery). CI @ `0dfecb04` unit/db/visual ✔ przed poprawkami.
+- **Krok F7 #733 r2:** R2-B1 nested DATEX weather (`temperature`/`percentage`/`integerMetreDistance`; RH≥90|opad; zimno+mokro→HIGH); R2-B2 0 stacji / >50% no-site → complete=0 + „brak stacji” bez resolveStale; R2-B3 CORRIDOR_EE T11 Jüri/Väo + T8 Keila–Paldiski; drobne: `EE_WEATHER`→„pogoda: N”, id+czas, pusty payload/features→unknown. Vitest BN6 drogi **82**. DP-168 w rejestrze (osobny PR przed BN7).
+- **Dalej:** push → CI → F7. Po F7: DP-166+167 → DP-165 → BN7 (#718).
+- Bez push na main.
+
+## 2026-11-02 13:15 — #733 F7 r1 B1–B9 EE
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie.
+- Scalanie: brak F7 „gotowe” (#733 F7 r1 „nie scalaj”, 9 blokerów). CI @ `4f97b1ad` unit/db/visual ✔ przed poprawkami.
+- **Krok F7 #733 r1:** B1 gołe 1/4/8/11→T*; B2 `ümbersõi` we wspólnym `BALTIC_DETOUR_*`; B3 CORRIDOR_EE po T4 (Märjamaa/Kernu) + bufor 3 km; B4 `hasDatexMarker` (message/null/[]/Error); B5 measurementSites+weather (jäide/libedus; nie märg); B6 fetch 10 s / 65 s / 5 MB; B7 atrybucja `Transpordiamet / Tark Tee (tarktee.ee)`; B8 `:swapped` w obs; B9 `vehicleHeight`. Vitest bn6-road-ee **20**; regresja LT/LV/FI **81**. DP-166+167 w rejestrze.
+- **Dalej:** push → CI → F7. Po F7: DP-166+167 → DP-165 → BN7 (#718).
+- Bez push na main.
+
+## 2026-11-02 12:35 — BN6 cz.4 EE push (0379)
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. DP-165 (road-lv sieć) wpisane do rejestru — po F7 EE.
+- Scalanie: brak otwartego PR z F7 „gotowe”; #732 już SCALONE `74127a7b`.
+- **Krok:** BN6 cz.4 EE (`pakiet/bn6-cz4-road-ee` / **0379**): Tark Tee DATEX (`X-DATEX-API-KEY`; `TARKTEE_DATEX_TOKEN`/`_PASSWORD`); job `road-ee` + cron; filtr E67/T4/T11 + T1/T8 przy portach + ≤2 km; raise tylko `on`; vitest `bn6-road-ee` **12**; status **583** (+3 audience/corridor/CHECK EE).
+- **Dalej:** CI → F7. Po F7: BN7 (#718); DP-165 osobno.
+- Bez push na main.
+
 ## 2026-11-02 11:30 — #730 SCALONE; start DP-157+158+162
 
 - Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie.

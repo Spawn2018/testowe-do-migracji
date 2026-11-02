@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<d2LogicalModel xmlns="http://datex2.eu/schema/2/2_0" modelBaseVersion="2"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+  <payloadPublication>
+    <situation>
+      <!-- Zwykłe roboty T4 / E67 — decyzja 85 → LOW -->
+      <situationRecord id="bn6-ee-rw-parnu" xsi:type="MaintenanceWorks">
+        <validity>
+          <validityTimeSpecification>
+            <overallStartTime>2026-11-02T04:00:00Z</overallStartTime>
+            <overallEndTime>2026-11-03T20:00:00Z</overallEndTime>
+          </validityTimeSpecification>
+        </validity>
+        <groupOfLocations>
+          <pointByCoordinates>
+            <pointCoordinates>
+              <latitude>58.390000</latitude>
+              <longitude>24.500000</longitude>
+            </pointCoordinates>
+          </pointByCoordinates>
+        </groupOfLocations>
+        <probabilityOfOccurrence>certain</probabilityOfOccurrence>
+        <severity>medium</severity>
+        <roadNumber>T4</roadNumber>
+        <generalPublicComment>
+          <comment>
+            <values>
+              <value lang="et">Teetööd T4 Pärnu</value>
+            </values>
+          </comment>
+        </generalPublicComment>
+      </situationRecord>
+      <!-- Zamknięcie z blokadą na Via Baltica → HIGH -->
+      <situationRecord id="bn6-ee-closed-t4" xsi:type="RoadOrCarriagewayOrLaneManagement">
+        <validity>
+          <validityTimeSpecification>
+            <overallStartTime>2026-11-02T06:00:00Z</overallStartTime>
+            <overallEndTime>2026-11-02T18:00:00Z</overallEndTime>
+          </validityTimeSpecification>
+        </validity>
+        <groupOfLocations>
+          <pointByCoordinates>
+            <pointCoordinates>
+              <latitude>58.904000</latitude>
+              <longitude>24.425000</longitude>
+            </pointCoordinates>
+          </pointByCoordinates>
+        </groupOfLocations>
+        <roadOrCarriagewayOrLaneManagementType>roadClosed</roadOrCarriagewayOrLaneManagementType>
+        <severity>high</severity>
+        <roadNumber>E67</roadNumber>
+        <generalPublicComment>
+          <comment><values><value>Tee suletud E67</value></values></comment>
+        </generalPublicComment>
+      </situationRecord>
+      <!-- Limit masy bez liczby w tytule — weightCharacteristic -->
+      <situationRecord id="bn6-ee-weight-t4" xsi:type="NetworkManagement">
+        <validity>
+          <validityTimeSpecification>
+            <overallStartTime>2026-11-02T00:00:00Z</overallStartTime>
+          </validityTimeSpecification>
+        </validity>
+        <groupOfLocations>
+          <pointByCoordinates>
+            <pointCoordinates>
+              <latitude>59.130000</latitude>
+              <longitude>24.430000</longitude>
+            </pointCoordinates>
+          </pointByCoordinates>
+        </groupOfLocations>
+        <maxGrossWeightAllowed>40</maxGrossWeightAllowed>
+        <roadNumber>T4</roadNumber>
+        <generalPublicComment>
+          <comment><values><value>Massipiirang 40 t</value></values></comment>
+        </generalPublicComment>
+      </situationRecord>
+      <!-- Limit wysokości — F7 #733 B9 -->
+      <situationRecord id="bn6-ee-height-t4" xsi:type="NetworkManagement">
+        <validity>
+          <validityTimeSpecification>
+            <overallStartTime>2026-11-02T00:00:00Z</overallStartTime>
+            <overallEndTime>2026-11-02T20:00:00Z</overallEndTime>
+          </validityTimeSpecification>
+        </validity>
+        <groupOfLocations>
+          <pointByCoordinates>
+            <pointCoordinates>
+              <latitude>58.385000</latitude>
+              <longitude>24.498000</longitude>
+            </pointCoordinates>
+          </pointByCoordinates>
+        </groupOfLocations>
+        <heightCharacteristic>
+          <vehicleHeight>4.2</vehicleHeight>
+        </heightCharacteristic>
+        <roadNumber>T4</roadNumber>
+        <generalPublicComment>
+          <comment><values><value>Kõrguspiirang 4,2 m</value></values></comment>
+        </generalPublicComment>
+      </situationRecord>
+      <!-- Zamknięcie z ümbersõit — F7 #733 B2: numer z opisu nie z T4 objazdu -->
+      <situationRecord id="bn6-ee-detour-local" xsi:type="RoadOrCarriagewayOrLaneManagement">
+        <validity>
+          <validityTimeSpecification>
+            <overallStartTime>2026-11-02T00:00:00Z</overallStartTime>
+            <overallEndTime>2027-01-01T00:00:00Z</overallEndTime>
+          </validityTimeSpecification>
+        </validity>
+        <groupOfLocations>
+          <pointByCoordinates>
+            <pointCoordinates>
+              <latitude>58.904000</latitude>
+              <longitude>24.425000</longitude>
+            </pointCoordinates>
+          </pointByCoordinates>
+        </groupOfLocations>
+        <roadOrCarriagewayOrLaneManagementType>roadClosed</roadOrCarriagewayOrLaneManagementType>
+        <roadNumber>15128</roadNumber>
+        <generalPublicComment>
+          <comment><values><value>Tee nr 15128 suletud. Ümbersõit mööda T4</value></values></comment>
+        </generalPublicComment>
+      </situationRecord>
+      <!-- Goły numer drogi 4 — F7 #733 B1 -->
+      <situationRecord id="bn6-ee-bare-4" xsi:type="MaintenanceWorks">
+        <validity>
+          <validityTimeSpecification>
+            <overallStartTime>2026-11-02T04:00:00Z</overallStartTime>
+            <overallEndTime>2026-11-03T20:00:00Z</overallEndTime>
+          </validityTimeSpecification>
+        </validity>
+        <groupOfLocations>
+          <pointByCoordinates>
+            <pointCoordinates>
+              <latitude>58.385000</latitude>
+              <longitude>24.498000</longitude>
+            </pointCoordinates>
+          </pointByCoordinates>
+        </groupOfLocations>
+        <roadNumber>4 Tallinn–Pärnu–Ikla</roadNumber>
+        <generalPublicComment>
+          <comment><values><value>Tööd 4 Tallinn–Pärnu–Ikla</value></values></comment>
+        </generalPublicComment>
+      </situationRecord>
+      <!-- Daleko na wschodzie (Narva) — poza bboxem korytarza -->
+      <situationRecord id="bn6-ee-far-east" xsi:type="MaintenanceWorks">
+        <validity>
+          <validityTimeSpecification>
+            <overallStartTime>2026-11-02T04:00:00Z</overallStartTime>
+          </validityTimeSpecification>
+        </validity>
+        <groupOfLocations>
+          <pointByCoordinates>
+            <pointCoordinates>
+              <latitude>59.380000</latitude>
+              <longitude>28.190000</longitude>
+            </pointCoordinates>
+          </pointByCoordinates>
+        </groupOfLocations>
+        <roadNumber>T1</roadNumber>
+        <generalPublicComment>
+          <comment><values><value>Tööd Narvas</value></values></comment>
+        </generalPublicComment>
+      </situationRecord>
+    </situation>
+  </payloadPublication>
+</d2LogicalModel>
