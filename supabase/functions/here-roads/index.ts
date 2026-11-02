@@ -40,7 +40,7 @@ function roadStore(sb: ReturnType<typeof createClient>): RoadRefreshStore {
     async listLegs() {
       const r = await sb
         .from('here_road_legs')
-        .select('leg,origin_lat,origin_lng,dest_lat,dest_lng,spec,summary,corridor_code,browser_fetch,map_group')
+        .select('leg,origin_lat,origin_lng,dest_lat,dest_lng,spec,summary,corridor_code,browser_fetch,map_group,via_points,min_km,max_km,cron_fetch')
         .eq('active', true)
         .order('sort_order');
       if (r.error) throw new Error(`here_road_legs: ${r.error.message}`);
@@ -57,9 +57,11 @@ function roadStore(sb: ReturnType<typeof createClient>): RoadRefreshStore {
         retry_after: row.retry_after != null ? String(row.retry_after) : null,
       }));
     },
-    async storeRoad(leg, points, summary, nowIso) {
+    async storeRoad(leg, points, summary, nowIso, meta) {
       const args: Record<string, unknown> = { p_leg: leg, p_points: points, p_summary: summary };
       if (nowIso) args.p_now = nowIso;
+      if (meta?.lengthM != null) args.p_length_m = meta.lengthM;
+      if (meta?.durationS != null) args.p_duration_s = meta.durationS;
       const save = await sb.rpc('here_store_road', args);
       return !save.error;
     },

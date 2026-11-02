@@ -46,7 +46,8 @@ val "podsumowanie zostaje w wierszu" "select summary from here_road_geometry whe
 sys "update here_road_geometry set fetched_at = now() - interval '31 days' where leg='PL-GDN'" >/dev/null
 val "geometria starsza niż 30 dni jest kasowana" "select purge_here_road_geometry(now())::text" "1"
 val "podsumowanie zostaje po kasowaniu punktów" "select summary || ':' || coalesce(points::text,'null') from here_road_geometry where leg='PL-GDN'" "trasa drogowa Śrem–Gdańsk:null"
-val "konto nie zapisuje geometrii HERE" "select has_function_privilege('authenticated','here_store_road(text,jsonb,text,timestamptz)','execute')::text" "false"
+# BN7 #718 / 0381: podpis + length_m/duration_s (stary 4-arg usunięty)
+val "konto nie zapisuje geometrii HERE" "select has_function_privilege('authenticated','here_store_road(text,jsonb,text,timestamptz,double precision,double precision)','execute')::text" "false"
 # H-2-PL: osobna pula traffic
 val "pule potwierdzone source tiles" "select source from app_parameters where key='HERE_TILES_FREE'" "konto HERE właściciela, 05.10"
 val "pule potwierdzone source routes" "select source from app_parameters where key='HERE_ROUTES_FREE'" "konto HERE właściciela, 05.10"
@@ -264,6 +265,31 @@ fk=$(sys "select count(*)::text from pg_constraint where conname='here_road_geom
 [ "$fk" = "1" ] && { ok=$((ok+1)); echo "  OK    FK here_road_geometry → here_road_legs"; } || { fail=$((fail+1)); echo "  FAIL  FK → $fk"; }
 no_in=$(sys "select count(*)::text from pg_constraint where conname='here_road_geometry_leg_check'")
 [ "$no_in" = "0" ] && { ok=$((ok+1)); echo "  OK    brak CHECK IN (…) na leg"; } || { fail=$((fail+1)); echo "  FAIL  CHECK IN nadal → $no_in"; }
+
+# BN7 #718 / 0381: dict + cron_fetch + route_legs + FK + ETA (odbiór §6)
+echo; echo "[#718] BN7 dict / cron_fetch / route_legs / ETA"
+val "BN7 spec=dict = 7" "select count(*)::text from here_road_legs where map_group='bn7' and active and spec='dict'" "7"
+val "BN7 cron_fetch=false = 7" "select count(*)::text from here_road_legs where map_group='bn7' and active and cron_fetch is not true" "7"
+val "core cron_fetch=true = 5" "select count(*)::text from here_road_legs where map_group='core' and active and cron_fetch" "5"
+val "cron_fetch default = false" "select (column_default like '%false%')::text from information_schema.columns where table_schema='public' and table_name='here_road_legs' and column_name='cron_fetch'" "true"
+val "BN7 corridor OSM = 4" "select count(*)::text from corridor_polylines where code in ('PL_EE_E67','FI_E75','SE_E4_STO','SE_E18_KPS')" "4"
+val "PL_EE_E67 ≥ 80 pkt (≤15 km)" "select (st_npoints(geom) >= 80)::text from corridor_polylines where code='PL_EE_E67'" "true"
+fk_pre=$(sys "select count(*)::text from pg_constraint where conname='ferry_routes_road_corridor_pre_fkey'")
+[ "$fk_pre" = "1" ] && { ok=$((ok+1)); echo "  OK    FK ferry_routes.road_corridor_pre"; } || { fail=$((fail+1)); echo "  FAIL  FK pre → $fk_pre"; }
+fk_post=$(sys "select count(*)::text from pg_constraint where conname='ferry_routes_road_corridor_post_fkey'")
+[ "$fk_post" = "1" ] && { ok=$((ok+1)); echo "  OK    FK ferry_routes.road_corridor_post"; } || { fail=$((fail+1)); echo "  FAIL  FK post → $fk_post"; }
+rl=$(asu "$HHL_465" "select jsonb_array_length(coalesce(map_display_state()->'route_legs','[]'::jsonb))")
+if [ "$rl" -ge 8 ] 2>/dev/null; then ok=$((ok+1)); echo "  OK    map_display_state().route_legs ≥ 8 ($rl)"; else fail=$((fail+1)); echo "  FAIL  route_legs → $rl"; fi
+val "ETA TLL-HEL PL_ROAD → PL_ROAD_EE" "select eta_obs_segment_code('TLL-HEL','PL_ROAD')" "PL_ROAD_EE"
+val "ETA TLL-HEL SE_ROAD → FI_ROAD" "select eta_obs_segment_code('TLL-HEL','SE_ROAD')" "FI_ROAD"
+val "ETA TLL-STO SE_ROAD → SE_ROAD_STO" "select eta_obs_segment_code('TLL-STO','SE_ROAD')" "SE_ROAD_STO"
+val "ETA PLD-KPS SE_ROAD → SE_ROAD_KPS" "select eta_obs_segment_code('PLD-KPS','SE_ROAD')" "SE_ROAD_KPS"
+val "ETA PORT_CHECKIN TLL = 2h (82-C)" "select eta_obs_segment_code('TLL-HEL','PORT_CHECKIN')" "PORT_CHECKIN_TLL"
+# F7 #738 B3: powrót = te same kody co trasa tam (jak NYN-GDN); bez zamiany PL↔FI.
+val "ETA HEL-TLL PL_ROAD = PL_ROAD_EE (powrót)" "select eta_obs_segment_code('HEL-TLL','PL_ROAD')" "PL_ROAD_EE"
+val "ETA HEL-TLL CROSSING = TLL_HEL" "select eta_obs_segment_code('HEL-TLL','CROSSING')" "CROSSING_TLL_HEL"
+val "ETA VUO-MUU PL_ROAD = PL_ROAD_EE" "select eta_obs_segment_code('VUO-MUU','PL_ROAD')" "PL_ROAD_EE"
+val "brak ETA operatorskich TALLINK" "select count(*)::text from eta_route_segments where route_key in ('TALLINK','ECKERO','DFDS')" "0"
 
 # N3: fikcyjny ładunek PL + Verkö + inland SE → start po Verkö (nie w PL)
 # F7 r4 P3: odstępy SE 12 min (nie 1 min ≈ 810 km/h → filtr >150 km/h).

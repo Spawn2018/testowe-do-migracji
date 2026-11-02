@@ -374,7 +374,13 @@ export interface SyncStore {
   listHereRoadGeometry?(): Promise<{ leg: string; fetched_at: string; points: unknown; retry_after: string | null }[]>;
   /** #667 E / DP-23 */
   listHereRoadLegs?(): Promise<import('../here/refreshRoadLegs.ts').RoadLegDef[]>;
-  storeHereRoad?(leg: string, points: unknown, summary: string, nowIso?: string): Promise<void>;
+  storeHereRoad?(
+    leg: string,
+    points: unknown,
+    summary: string,
+    nowIso?: string,
+    meta?: { lengthM?: number; durationS?: number },
+  ): Promise<void>;
   hereCorridorBundle?(code: string): Promise<{ code: string; pts: [number, number][]; via: [number, number][]; updatedAt: number }>;
   /** TELM: aktywne transporty do dopasowania naczepy. */
   listActiveLoadsForTelematics?(): Promise<{ id: string; trailer_plate: string | null; telematics_vehicle_id: string | null; status: string | null; plannedLoadDate?: string | null; plannedDeliverDate?: string | null; trackingOpenedAt?: string | null }[]>;
@@ -4575,8 +4581,8 @@ export async function runHereRoads(deps: JobDeps): Promise<JobResult> {
       ? () => deps.store.listHereRoadLegs!()
       : undefined,
     listGeometry: () => deps.store.listHereRoadGeometry!(),
-    async storeRoad(leg, points, summary, nowIsoArg) {
-      await deps.store.storeHereRoad!(leg, points, summary, nowIsoArg);
+    async storeRoad(leg, points, summary, nowIsoArg, meta) {
+      await deps.store.storeHereRoad!(leg, points, summary, nowIsoArg, meta);
       return true;
     },
     async loadCorridor(code) {

@@ -1,4 +1,28 @@
 
+## 2026-11-02 19:10 — #738 F7 r1 B2–B5 (BN7)
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. DP-170 wpisane (EE/LV, osobna gałąź).
+- Scalanie: brak — F7 r1 @ `0cf9315` „nie scalaj”; CI @ `9a3db96f` unit/db/visual ✔ (tylko B1).
+- **Krok F7 #738 B2–B5 (+N9/N10/N11):** `cron_fetch` default **false** + `legDefFromRow`/`resolveLegs` `=== true`; ETA powroty = kody jak outbound (bez TALLINK/ECKERO/DFDS); `PL_EE_E67` Śrem→A2→S8→S61→E67 ≤15 km (nadpisanie po cron_fetch); `eta_segment_params` DO NOTHING; max_km PL-TLL/MUU **1500**; opisy legów po polsku; N2 VUO_MUU 2,40 zostawione (mediana n=1); N6/N7 → PLAN BN8; N12 deploy-main: db push przed Edge. Vitest bn7; bmapa EXPECTED **198**.
+- **Dalej:** push → CI → F7. Po F7: BN9-c5 → cron_fetch=true → BN8; DP-170 równolegle.
+- Bez push na main.
+
+## 2026-11-02 18:45 — #738 BN7: poprawka bramy db (i2/bmapa)
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. Brak F7 „gotowe”.
+- Scalanie: brak (CI db FAIL @ `0cf93159`; unit/visual ✔).
+- **Krok:** przepisanie asercji pod **0381** — `i2` ETA 12→29 + korytarze 5→9; `bmapa` podpis `here_store_road` 6-arg; +12 asercji BN7 (dict/cron_fetch/OSM/FK/route_legs/ETA); EXPECTED bmapa **192**.
+- **Dalej:** push → CI → F7. Po F7: BN9-c5 (koordynator) → cron_fetch=true → BN8 (#720).
+- Bez push na main.
+
+## 2026-11-02 18:05 — #737 SCALONE; start BN7 (#718) cz.1
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. #735 otwarte (krok 2 po prod).
+- Scalanie: **#737 SCALONE** `4cee7bad` (F7: gotowe @ `79ba8978`, CI unit/db/visual ✔). deploy-main po merge. DP-168 DONE.
+- **Krok BN7 cz.1:** migracja **0381** — `via_points`/`min_km`/`max_km`/`cron_fetch`/`spec=dict`; korytarze OSM `PL_EE_E67`/`FI_E75`/`SE_E4_STO`/`SE_E18_KPS`; ETA bałtyckie + `PORT_CHECKIN_*` (82-C); FK `ferry_routes.road_corridor_*`; `map_display_state.route_legs`; `length_m`/`duration_s`. Edge: `roadSpecFromDict`, via+`exclude[countries]=RUS,BLR`, `resolveLegs`×`cron_fetch` (DP-55). Front: `loadRoadLegs`. **`cron_fetch=false`**. Vitest `bn7-road-dict`.
+- **Dalej:** push → CI → F7. Po F7: cron_fetch=true dopiero po BN9-c5 (koordynator); potem BN8 (#720).
+- Bez push na main.
+
 ## 2026-11-02 17:20 — #736 SCALONE; start DP-168
 
 - Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. #735 otwarte (krok 2 po prod).

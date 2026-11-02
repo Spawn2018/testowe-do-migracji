@@ -8,6 +8,7 @@ import {
   basemapFor,
   looseRoadOk,
   roadGeometryOk,
+  roadSpecFromDict,
   warsawMonth,
   type BasemapChoice,
   type LatLng,
@@ -233,25 +234,53 @@ const SPEC_FALLBACK: Record<string, RoadSpec | 'loose'> = {
   'SE-KAA-INLAND': ROAD_KAA,
 };
 
-/** #677 F7 B2: eksport pod testy zachowania (kaa+SE_E22 vs SE_KAA_INLAND). */
+/** #677 F7 B2 / BN7: eksport pod testy (kaa+SE_E22 vs SE_KAA_INLAND; dict). */
 export function roadSpecFromRow(row: {
   leg?: string;
   spec?: string;
   corridor_code?: string | null;
-}): RoadSpec | 'loose' | null {
+}): RoadSpec | 'loose' | 'dict' | null {
   const kind = String(row.spec ?? '');
   const corridor = String(row.corridor_code ?? '');
   if (kind === 'pl') return ROAD_PL;
   if (kind === 'se') return ROAD_SE;
   if (kind === 'loose') return 'loose';
+  if (kind === 'dict') return 'dict';
   if (kind === 'kaa') return corridor === 'SE_E22' ? ROAD_KAA_E22 : ROAD_KAA;
   const leg = String(row.leg ?? '');
   return SPEC_FALLBACK[leg] ?? null;
 }
 
-function roadLineWhy(leg: string, spec: RoadSpec | 'loose', line: LatLng[]): string | null {
+function parseViaPoints(raw: unknown): LatLng[] {
+  if (!Array.isArray(raw)) return [];
+  const out: LatLng[] = [];
+  for (const p of raw) {
+    if (!Array.isArray(p) || p.length < 2) continue;
+    const lat = Number(p[0]);
+    const lng = Number(p[1]);
+    if (Number.isFinite(lat) && Number.isFinite(lng)) out.push([lat, lng]);
+  }
+  return out;
+}
+
+function roadLineWhy(
+  leg: string,
+  spec: RoadSpec | 'loose' | 'dict',
+  line: LatLng[],
+  row?: { via_points?: unknown; min_km?: unknown; max_km?: unknown },
+): string | null {
   if (line.length < 2) return 'brak punktów';
   if (spec === 'loose') return looseRoadOk(line) ? null : 'geometria (luźna)';
+  if (spec === 'dict') {
+    const minKm = Number(row?.min_km);
+    const maxKm = Number(row?.max_km);
+    const ok = roadSpecFromDict(line, {
+      via: parseViaPoints(row?.via_points),
+      minKm: Number.isFinite(minKm) ? minKm : 0,
+      maxKm: Number.isFinite(maxKm) ? maxKm : Number.POSITIVE_INFINITY,
+    });
+    return ok ? null : 'geometria (dict via/długość)';
+  }
   return roadGeometryOk(line, spec) ? null : 'geometria (via/długość)';
 }
 
@@ -278,6 +307,9 @@ export function checkRoads(rows: unknown): {
       corridor_code?: string | null;
       map_group?: string;
       browser_fetch?: boolean;
+      via_points?: unknown;
+      min_km?: unknown;
+      max_km?: unknown;
     };
     const leg = String(r.leg ?? '');
     const spec = roadSpecFromRow(r);
@@ -299,7 +331,7 @@ export function checkRoads(rows: unknown): {
       rejected.push({ leg, why: summary || 'brak punktów' });
       continue;
     }
-    const why = roadLineWhy(leg, spec, line);
+    const why = roadLineWhy(leg, spec, line, r);
     if (why) rejected.push({ leg, why: summary && /odchyłka|odrzucon|HTTP/i.test(summary) ? summary : why });
     else out.push(line);
   }
@@ -353,6 +385,61 @@ export function __resetRoadLinesCacheForTests(): void {
 /** #667 F7 r6 B6: okno sesji 0 w teście in-flight (żeby drugi call nie odpadał po finally). */
 export function __setHereRoadsSessionMsForTests(ms: number): void {
   HERE_ROADS_SESSION_MS = ms;
+}
+
+/** BN7 (#718): legi z linią — `{leg, line}[]` (+ route_legs ze stanu). loadRoadLines zostaje. */
+export type RoadLegLine = { leg: string; line: LatLng[] };
+
+export async function loadRoadLegs(): Promise<{
+  legs: RoadLegLine[];
+  routeLegs: { route: string; pre: string | null; post: string | null }[];
+}> {
+  if (!SUPABASE_AUTH_ENABLED) return { legs: [], routeLegs: [] };
+  const state = await readMapDisplayState();
+  const roads = Array.isArray(state?.roads) ? state!.roads : [];
+  const legs: RoadLegLine[] = [];
+  for (const row of roads) {
+    if (!row || typeof row !== 'object') continue;
+    const r = row as {
+      leg?: string;
+      points?: unknown;
+      spec?: string;
+      corridor_code?: string | null;
+      via_points?: unknown;
+      min_km?: unknown;
+      max_km?: unknown;
+      summary?: string;
+    };
+    const leg = String(r.leg ?? '');
+    const spec = roadSpecFromRow(r);
+    if (!spec || !Array.isArray(r.points) || r.points.length < 2) continue;
+    const line: LatLng[] = [];
+    for (const p of r.points) {
+      if (!Array.isArray(p) || p.length < 2) continue;
+      const lat = Number(p[0]);
+      const lng = Number(p[1]);
+      if (Number.isFinite(lat) && Number.isFinite(lng)) line.push([lat, lng]);
+    }
+    if (line.length < 2) continue;
+    if (roadLineWhy(leg, spec, line, r)) continue;
+    legs.push({ leg, line });
+  }
+  const rawRoute = (state as { route_legs?: unknown } | null)?.route_legs;
+  const routeLegs: { route: string; pre: string | null; post: string | null }[] = [];
+  if (Array.isArray(rawRoute)) {
+    for (const row of rawRoute) {
+      if (!row || typeof row !== 'object') continue;
+      const r = row as { route?: unknown; pre?: unknown; post?: unknown };
+      const route = String(r.route ?? '');
+      if (!route) continue;
+      routeLegs.push({
+        route,
+        pre: r.pre != null ? String(r.pre) : null,
+        post: r.post != null ? String(r.post) : null,
+      });
+    }
+  }
+  return { legs, routeLegs };
 }
 
 /** #667 F7 r1 N4: loadRoadLines + loadFerryLines dzielą cache `readMapDisplayState` (TTL 60 s). */

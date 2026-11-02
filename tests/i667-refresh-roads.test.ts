@@ -115,7 +115,7 @@ describe('#667 C refreshRoadLegs', () => {
     expect(r.missingLegs).toEqual(ROAD_LEGS.map((l) => l.leg));
   });
 
-  /** #677 F7 r1 B1/B2 — BN7 poza browserOnly/cron; pusty słownik → ROAD_LEGS. */
+  /** #677 F7 r1 B1/B2 / BN7 #718 — BN7 poza browserOnly/cron (cron_fetch); pusty → ROAD_LEGS. */
   const BN7_OFF = {
     leg: 'PL-TLL',
     origin: '52.07,17.02',
@@ -124,9 +124,10 @@ describe('#667 C refreshRoadLegs', () => {
     summary: 'BN7 placeholder',
     browserFetch: false,
     mapGroup: 'bn7' as const,
+    cronFetch: false,
   };
 
-  it('F7 #677 B2: BN7 browserFetch:false — brak fetch w browserOnly i cronie; poza missingLegs', async () => {
+  it('F7 #677 B2 / BN7: cron_fetch false — brak fetch w browserOnly i cronie; poza missingLegs', async () => {
     const legs = [...ROAD_LEGS, BN7_OFF];
     const stale = [
       ...ROAD_LEGS.map((l) => geom(l.leg, 40 * 864e5, null)),
