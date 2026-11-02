@@ -8,8 +8,9 @@ import {
   applyFerryDictSnapshot, operatorsForRoute, resetFerryDictRpc,
 } from '../src/lib/ferryCatalog';
 import {
-  isWinterNavWindowActive, parseWinterNavigationLocations, portCallV2CancelledHasFihel,
-  winterNavIceRisk, winterNavRiskDedup, WINTER_NAV_LOCATIONS_URL,
+  ferryIceRisk, ferryIceRiskDedup, isWinterNavWindowActive,
+  parseWinterNavigationLocations, portCallV2CancelledHasFihel,
+  winterLocodesForRoute, winterNavIceRisk, winterNavRiskDedup, WINTER_NAV_LOCATIONS_URL,
 } from '../supabase/functions/_shared/ferry/winterNavigation';
 import {
   runFerryPortnet, type JobDeps, type JobResult, type SyncStore,
@@ -157,6 +158,33 @@ describe('BN3 winter-nav / MMSI / DP-11', () => {
     expect(isWinterNavWindowActive('2026-02-15T00:00:00Z', '2026-02-20T00:00:00Z', now)).toBe(false);
     expect(isWinterNavWindowActive('2026-01-01T00:00:00Z', '2026-02-01T00:00:00Z', now)).toBe(false);
     expect(isWinterNavWindowActive('2026-02-01T00:00:00Z', null, now)).toBe(true);
+  });
+
+  it('BN5: winterLocodesForRoute + ferryIceRisk MEDIUM/HIGH (vs FERRY_WINTER)', () => {
+    expect(winterLocodesForRoute('PLD-KPS')).toEqual(['EEPLA', 'SEKPS']);
+    expect(winterLocodesForRoute('TLL-HEL')).toEqual(['EETLL', 'FIHEL']);
+    expect(winterLocodesForRoute('HEL-STO')).toEqual([]);
+    /* F7 #722 B1: Vuosaari → FIHEL (Port Helsinki). */
+    expect(winterLocodesForRoute('MUU-VUO')).toEqual(['EEMUG', 'FIHEL']);
+    expect(winterLocodesForRoute('VUO-MUU')).toEqual(['FIHEL', 'EEMUG']);
+    const hit = {
+      locode: 'EEPLA', name: 'PALDISKI', kind: 'RESTRICTION' as const,
+      summary: 'II 2000', startTime: '2026-02-01T00:00:00Z', endTime: null,
+    };
+    const med = ferryIceRisk({
+      hit, sailingId: 's1', vessel: 'Sirena', route: 'PLD-KPS',
+      departureUtc: '2026-02-10T12:00:00Z', nowIso: '2026-02-10T12:00:00Z',
+    });
+    expect(med.severity).toBe('MEDIUM');
+    expect(med.dedup).toBe(ferryIceRiskDedup('s1', hit));
+    expect(med.title).toMatch(/sprawdź klasę lodową/);
+    const high = ferryIceRisk({
+      hit: { ...hit, kind: 'SUSPENSION', summary: 'closed' },
+      sailingId: 's1', vessel: 'Sirena', route: 'PLD-KPS',
+      departureUtc: '2026-02-10T12:00:00Z', nowIso: '2026-02-10T12:00:00Z',
+    });
+    expect(high.severity).toBe('HIGH');
+    expect(high.dedup).not.toBe(winterNavRiskDedup(hit));
   });
 
   it('parseWinterNavigationLocations: aktywne ograniczenie FIHEL → hit; przeszłe pominięte', () => {

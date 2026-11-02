@@ -5,6 +5,7 @@ import { describe, expect, it } from 'vitest';
 import {
   MARINE_CORRIDORS,
   MARINE_POINTS,
+  marineCorridorForFamily,
   marineCorridorForRoute,
   marinePointsForCorridor,
   marinePointsForRoute,
@@ -61,5 +62,15 @@ describe('BN5 marineCorridorForRoute / marinePointsForRoute', () => {
     for (const c of MARINE_CORRIDORS) {
       expect(marinePointsForCorridor(c).length).toBeGreaterThan(0);
     }
+  });
+
+  it('DP-145: family_key ze słownika wygrywa z zapasem w kodzie', () => {
+    expect(marineCorridorForRoute('HEL-STO')).toBeNull();
+    expect(marineCorridorForRoute('HEL-STO', { 'HEL-STO': 'TLL-STO' })).toBe('BALTIC_TLL_STO');
+    expect(marineRouteFamily('X-NEW', { 'X-NEW': 'PLD-KPS' })).toBe('PLD-KPS');
+    expect(marineCorridorForFamily('PLD-KPS')).toBe('BALTIC_PLD_KPS');
+    expect(marinePointsForRoute('X-NEW', new Map([['X-NEW', 'MUU-VUO']]))).toEqual(['GULF_MID']);
+    /* Znana trasa: słownik może nadpisać rodzinę (np. alias w bazie). */
+    expect(marineCorridorForRoute('GDN-NYN', { 'GDN-NYN': 'GDY-KAA' })).toBe('BALTIC_GDY_KAA');
   });
 });

@@ -31,9 +31,9 @@ import {
 } from '../ferry/digitrafficPortCalls.ts';
 export { DIGITRAFFIC_USER };
 import {
-  PORT_CALL_V2_CANCELLED_URL, WINTER_NAV_LOCATIONS_URL,
-  parseWinterNavigationLocations, portCallV2CancelledHasFihel,
-  winterNavIceRisk,
+  FERRY_ICE_ATTRIBUTION, PORT_CALL_V2_CANCELLED_URL, WINTER_NAV_LOCATIONS_URL,
+  ferryIceRisk, parseWinterNavigationLocations, portCallV2CancelledHasFihel,
+  winterLocodesForRoute, winterNavIceRisk,
 } from '../ferry/winterNavigation.ts';
 import {
   cancelSuspectRisk, cancelSuspectRiskDedup, cancelSuspectTrigger,
@@ -341,6 +341,11 @@ export interface SyncStore {
   ferryPortDelayMin?(): Promise<number>;
   /** II-8: progi WAVE_M / GUST_KN z ops_thresholds (domyślnie 3.8 / 40) */
   opsThresholds?(): Promise<{ waveM: number; gustKn: number }>;
+  /**
+   * DP-145 / BN5: `ferry_routes.code` → `family_key` (UPPER).
+   * Brak metody → marineWeather używa zapasu w kodzie.
+   */
+  ferryRouteFamilies?(): Promise<Record<string, string>>;
 
   /** H-2-PL / D-78: zapis zużycia HERE (service_role → here_note_service). */
   noteHereUsage?(service: 'tiles' | 'routing' | 'matching' | 'attributes' | 'traffic', n: number): Promise<void>;
@@ -3707,6 +3712,10 @@ export async function runFerryWeather(deps: JobDeps): Promise<JobResult> {
   const thr = deps.store.opsThresholds
     ? await deps.store.opsThresholds()
     : { waveM: 3.8, gustKn: 40 };
+  /* DP-145: family_key ze słownika ferry_routes; brak → zapas w marineWeather. */
+  const familyByCode = deps.store.ferryRouteFamilies
+    ? await deps.store.ferryRouteFamilies()
+    : null;
   const fromIso = new Date(now.getTime() - 3 * 3600_000).toISOString();
   const toIso = new Date(now.getTime() + 72 * 3600_000).toISOString();
   const sailings = await deps.store.sailingsSince(fromIso);
@@ -3821,6 +3830,11 @@ export async function runFerryWeather(deps: JobDeps): Promise<JobResult> {
   }
   await deps.store.resolveRisks('SOURCE_DOWN:MARINE_WEATHER:');
 
+  /* BN5 cz.3: Digitraffic winter-nav przed zapisem korytarzy (atrybucja + detail.ice).
+   * Pusto poza sezonem = brak ograniczeń (nie błąd). Awaria HTTP → ostrzeżenie, bez SOURCE_DOWN. */
+  const iceSnap = await fetchWinterNavIceSnapshot(deps, nowIso);
+  warnings.push(...iceSnap.warnings);
+
   const nearTo = new Date(now.getTime() + 24 * 3600_000).toISOString();
   const evalByCorridor = new Map<string, ReturnType<typeof evaluateMarineWindow>>();
   for (const corridor of MARINE_CORRIDORS) {
@@ -3829,6 +3843,9 @@ export async function runFerryWeather(deps: JobDeps): Promise<JobResult> {
     const ev = evaluateMarineWindow(slice.length ? slice : samples.filter((s) => pts.has(s.point)), thr.waveM, thr.gustKn);
     evalByCorridor.set(corridor, ev);
     if (deps.store.saveMarineCondition && (slice.length || ev.sources.length)) {
+      const attr = iceSnap.attribution
+        ? `${ev.attribution} · ${iceSnap.attribution}`
+        : ev.attribution;
       await deps.store.saveMarineCondition({
         corridor,
         maxWaveM: ev.maxWaveM,
@@ -3837,7 +3854,7 @@ export async function runFerryWeather(deps: JobDeps): Promise<JobResult> {
         waveThrM: thr.waveM,
         gustThrKn: thr.gustKn,
         sources: ev.sources.join('+'),
-        attribution: ev.attribution,
+        attribution: attr,
         windowFrom: fFrom,
         windowTo: fTo,
         detail: {
@@ -3845,6 +3862,14 @@ export async function runFerryWeather(deps: JobDeps): Promise<JobResult> {
           samples: slice.length, sailings: upcoming.length,
           warnings: warnings.slice(0, 24),
           punkty: [...pts],
+          ice: {
+            ok: iceSnap.ok,
+            hits: iceSnap.hits.map((h) => ({
+              locode: h.locode, kind: h.kind, summary: h.summary,
+              start: h.startTime, end: h.endTime,
+            })),
+            atrybucja: iceSnap.attribution,
+          },
         },
         observedAt: nowIso,
       });
@@ -3856,7 +3881,7 @@ export async function runFerryWeather(deps: JobDeps): Promise<JobResult> {
   let risks = 0;
   const breachedIds = new Set<string>();
   for (const s of upcoming) {
-    const routePts = marinePointsForRoute(s.route);
+    const routePts = marinePointsForRoute(s.route, familyByCode);
     if (!routePts?.length) continue; // BN5: trasa bez mapy — bez oceny / bez GDN-NYN
     const pts = new Set(routePts);
     const winFrom = new Date(Date.parse(s.departure_at) - 6 * 3600_000).toISOString();
@@ -3879,6 +3904,8 @@ export async function runFerryWeather(deps: JobDeps): Promise<JobResult> {
     await deps.store.resolveRisks('FERRY_WEATHER:');
   }
 
+  risks += await raiseFerryIceRisks(deps, upcoming, vesselName, nowIso, iceSnap.hits);
+
   return {
     job: 'ferry-weather', mode: 'LIVE', ok: true, risks, warnings,
     observations: {
@@ -3887,9 +3914,106 @@ export async function runFerryWeather(deps: JobDeps): Promise<JobResult> {
       risk: globalEval.risk,
       sources: globalEval.sources.join('+'),
       fmi: String(fmiOk), dmi: String(dmiOk), smhi: String(smhiOk),
-      attribution: globalEval.attribution,
+      attribution: iceSnap.attribution
+        ? `${globalEval.attribution} · ${iceSnap.attribution}`
+        : globalEval.attribution,
+      ...(iceSnap.hits.length ? { ice_hits: String(iceSnap.hits.length) } : {}),
     },
   };
+}
+
+type WinterNavIceSnapshot = {
+  ok: boolean;
+  hits: ReturnType<typeof parseWinterNavigationLocations>['hits'];
+  warnings: string[];
+  attribution: string | null;
+};
+
+/** BN5 cz.3 — GET winter-nav (gzip + Digitraffic-User); pusto = OK. */
+async function fetchWinterNavIceSnapshot(
+  deps: JobDeps,
+  nowIso: string,
+): Promise<WinterNavIceSnapshot> {
+  const page = await readText(deps, WINTER_NAV_LOCATIONS_URL, {
+    headers: {
+      'User-Agent': USER_AGENT,
+      Accept: 'application/json',
+      'Accept-Encoding': 'gzip',
+      'Digitraffic-User': DIGITRAFFIC_USER,
+    },
+  });
+  if (!page.ok) {
+    return {
+      ok: false, hits: [],
+      warnings: [`winter-nav (FERRY_ICE): ${page.warning}`],
+      attribution: null,
+    };
+  }
+  let json: unknown;
+  try { json = JSON.parse(page.text); } catch {
+    return {
+      ok: false, hits: [],
+      warnings: ['winter-nav (FERRY_ICE): nieczytelny JSON'],
+      attribution: null,
+    };
+  }
+  const parsed = parseWinterNavigationLocations(json, nowIso);
+  if (parsed.warnings.some((w) => /struktura/i.test(w))) {
+    return {
+      ok: false, hits: [],
+      warnings: parsed.warnings.map((w) => `winter-nav (FERRY_ICE): ${w}`),
+      attribution: null,
+    };
+  }
+  return {
+    ok: true,
+    hits: parsed.hits,
+    warnings: parsed.warnings,
+    attribution: FERRY_ICE_ATTRIBUTION,
+  };
+}
+
+/** BN5 cz.3 — FERRY_ICE per rejs gdy port wyjścia/celu ma aktywne ograniczenie/zawieszenie. */
+async function raiseFerryIceRisks(
+  deps: JobDeps,
+  upcoming: { id: string; vessel_id: string; route: string; departure_at: string }[],
+  vesselName: (id: string) => string,
+  nowIso: string,
+  hits: WinterNavIceSnapshot['hits'],
+): Promise<number> {
+  const byLocode = new Map<string, WinterNavIceSnapshot['hits']>();
+  for (const hit of hits) {
+    const list = byLocode.get(hit.locode) ?? [];
+    list.push(hit);
+    byLocode.set(hit.locode, list);
+  }
+  const keep: string[] = [];
+  let risks = 0;
+  for (const s of upcoming) {
+    const locodes = winterLocodesForRoute(s.route);
+    if (!locodes.length) continue;
+    for (const locode of locodes) {
+      for (const hit of byLocode.get(locode) ?? []) {
+        const risk = ferryIceRisk({
+          hit,
+          sailingId: s.id,
+          vessel: vesselName(s.vessel_id),
+          route: s.route,
+          departureUtc: s.departure_at,
+          nowIso,
+          hasIceClass: false,
+        });
+        keep.push(risk.dedup);
+        if (await deps.store.raiseRisk(risk)) risks += 1;
+      }
+    }
+  }
+  if (deps.store.resolveStaleRisks) {
+    await deps.store.resolveStaleRisks('FERRY_ICE:', keep);
+  } else if (!keep.length) {
+    await deps.store.resolveRisks('FERRY_ICE:');
+  }
+  return risks;
 }
 
 /**

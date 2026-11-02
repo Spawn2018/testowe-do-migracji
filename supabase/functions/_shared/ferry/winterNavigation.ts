@@ -1,27 +1,51 @@
 /**
- * BN3 (#573) — Digitraffic winter-navigation v2 (IBNet) + lekka obserwacja port-call v2 cancelled.
- * GET …/locations → ograniczenia lodowe / zawieszenia portów tras → ryzyko FERRY MEDIUM.
+ * BN3 (#573) / BN5 (#714) — Digitraffic winter-navigation v2 (IBNet)
+ * + lekka obserwacja port-call v2 cancelled.
+ * BN3: GET …/locations → FERRY_WINTER (ferry-portnet).
+ * BN5 cz.3: te same lokalizacje → FERRY_ICE per rejs (ferry-weather; HIGH przy zawieszeniu).
  * Licencja CC BY 4.0 (Fintraffic Digitraffic). Nagłówek Digitraffic-User + gzip.
  * F7 #694 r1: bez ryzyka z v2 cancelled (DP-121); locode tylko z tras korytarza.
  */
 import type { RiskInput } from '../integrations/sync.ts';
+import { ROUTE_AIS_PORTS, type AisPortCode } from './digitraffic.ts';
 
 export const WINTER_NAV_LOCATIONS_URL =
   'https://meri.digitraffic.fi/api/winter-navigation/v2/locations';
 export const WINTER_NAV_ATTRIBUTION =
   'Zimowa nawigacja: Fintraffic Digitraffic IBNet, licencja CC BY 4.0';
+/** BN5 — skrót atrybucji do marine_conditions / FERRY_ICE. */
+export const FERRY_ICE_ATTRIBUTION = 'Fintraffic / digitraffic.fi (CC BY 4.0)';
 export const PORT_CALL_V2_CANCELLED_URL =
   'https://meri.digitraffic.fi/api/port-call/v2/visits?status=cancelled&locode=FIHEL';
 
 /**
  * UN/LOCODE portów tras korytarza (ferryCatalog / ferry_ports).
  * F7 #694 R1-B2: bez SEMMA / LTKLJ / LVRIX (spoza tras).
+ * BN5 #714: FIHEL, EETLL, EEMUG, EEPLA, SEKPS, SESTO (+ SENYN).
  */
 export const WINTER_NAV_WATCHED_LOCODES = [
   'FIHEL', 'EETLL', 'EEMUG', 'EEPLA',
   'SEKPS', 'SESTO', 'SEKAA', 'SENYN',
   'PLGDY', 'PLGDN',
 ] as const;
+
+/** Kod portu Watch Tower → UN/LOCODE Digitraffic winter-nav (#714). */
+export const PORT_TO_WINTER_LOCODE: Readonly<Partial<Record<AisPortCode, string>>> = {
+  HEL: 'FIHEL',
+  HELA: 'FIHEL',
+  TLL: 'EETLL',
+  TLLA: 'EETLL',
+  MUU: 'EEMUG',
+  PLD: 'EEPLA',
+  KPS: 'SEKPS',
+  STO: 'SESTO',
+  NYN: 'SENYN',
+  GDN: 'PLGDN',
+  GDY: 'PLGDY',
+  KAA: 'SEKAA',
+  /* F7 #722 B1: Vuosaari = Port Helsinki → ten sam UN/LOCODE FIHEL. */
+  VUO: 'FIHEL',
+};
 
 export type WinterNavHitKind = 'RESTRICTION' | 'SUSPENSION';
 
@@ -118,6 +142,79 @@ export function winterNavIceRisk(hit: WinterNavHit, nowIso: string): RiskInput {
     },
     dedup: winterNavRiskDedup(hit),
     sourceUrl: WINTER_NAV_LOCATIONS_URL,
+  };
+}
+
+/** LOCODE wyjścia/przypłynięcia rejsu (oba końce); pusta trasa → []. */
+export function winterLocodesForRoute(route: string | null | undefined): string[] {
+  if (!route) return [];
+  const ports = ROUTE_AIS_PORTS[route.trim().toUpperCase()];
+  if (!ports) return [];
+  const out: string[] = [];
+  for (const code of [ports.dep, ports.arr]) {
+    const loc = PORT_TO_WINTER_LOCODE[code];
+    if (loc && !out.includes(loc)) out.push(loc);
+  }
+  return out;
+}
+
+export function ferryIceRiskDedup(sailingId: string, hit: WinterNavHit): string {
+  return `FERRY_ICE:${sailingId}:${hit.locode}:${hit.kind}`;
+}
+
+/**
+ * BN5 cz.3 — ryzyko FERRY_ICE per rejs (MEDIUM; HIGH przy zawieszeniu).
+ * Bez klasy lodowej w `vessels` → informacja „sprawdź klasę lodową”, bez zgadywania.
+ */
+export function ferryIceRisk(args: {
+  hit: WinterNavHit;
+  sailingId: string;
+  vessel: string;
+  route: string;
+  departureUtc: string;
+  nowIso: string;
+  /** Dziś zawsze false — kolumny ice class w vessels nie ma (#714 §8). */
+  hasIceClass?: boolean;
+}): RiskInput {
+  const { hit } = args;
+  const suspension = hit.kind === 'SUSPENSION';
+  const what = suspension ? 'zawieszenie ruchu do portu' : 'ograniczenie lodowe';
+  const since = hit.startTime ? hit.startTime.slice(0, 16) : '—';
+  const checkClass = args.hasIceClass === true
+    ? ''
+    : ' — sprawdź klasę lodową statku';
+  return {
+    kind: 'FERRY',
+    severity: suspension ? 'HIGH' : 'MEDIUM',
+    title: `Lód: ${what} ${hit.name} (${hit.locode}) — ${hit.summary}; od ${since}`
+      + ` (${args.vessel}${checkClass})`,
+    titleKey: 'rk_ferry_ice',
+    params: {
+      kind: what,
+      port: hit.name,
+      locode: hit.locode,
+      summary: hit.summary.slice(0, 80),
+      vessel: args.vessel,
+      since,
+    },
+    detail: {
+      zrodlo: 'DIGITRAFFIC_ICE',
+      locode: hit.locode,
+      port: hit.name,
+      kind: hit.kind,
+      text: hit.summary,
+      start: hit.startTime,
+      end: hit.endTime,
+      sailing_id: args.sailingId,
+      trasa: args.route,
+      odejscie: args.departureUtc,
+      klasa_lodowa: args.hasIceClass === true ? 'znana' : 'brak — sprawdź klasę lodową statku',
+      atrybucja: FERRY_ICE_ATTRIBUTION,
+      czas: args.nowIso,
+    },
+    dedup: ferryIceRiskDedup(args.sailingId, hit),
+    sourceUrl: WINTER_NAV_LOCATIONS_URL,
+    validUntil: new Date(Date.parse(args.departureUtc) + 18 * 3600_000).toISOString(),
   };
 }
 

@@ -25,8 +25,11 @@ export const MARINE_CORRIDORS: readonly MarineCorridor[] = [
   'BALTIC_TLL_STO',
 ] as const;
 
-/** Słownik code → family_key (jak ferry_routes / 0338). */
-const ROUTE_TO_FAMILY: Record<string, string> = {
+/**
+ * Zapas code → family_key gdy store bez `ferryRouteFamilies` (testy / awaria odczytu).
+ * DP-145 / #714 §2: produkcja bierze `family_key` ze słownika `ferry_routes`.
+ */
+const ROUTE_TO_FAMILY_FALLBACK: Record<string, string> = {
   'GDN-NYN': 'GDN-NYN',
   'NYN-GDN': 'GDN-NYN',
   'GDY-KAA': 'GDY-KAA',
@@ -52,6 +55,21 @@ const FAMILY_TO_CORRIDOR: Record<string, MarineCorridor> = {
   'TLL-STO': 'BALTIC_TLL_STO',
 };
 
+/** Słownik code → family_key (z `ferry_routes` albo testowy stub). */
+export type MarineFamilyByCode =
+  | Readonly<Record<string, string>>
+  | ReadonlyMap<string, string>;
+
+function familyFromDict(
+  familyByCode: MarineFamilyByCode | null | undefined,
+  code: string,
+): string | null {
+  if (!familyByCode) return null;
+  if (familyByCode instanceof Map) return familyByCode.get(code) ?? null;
+  const v = familyByCode[code];
+  return v ? String(v) : null;
+}
+
 /** Punkty PL–SE + otwarta woda bałtycka (#714). */
 export const MARINE_POINTS = {
   GDN: { lat: 54.4, lon: 18.67, label: 'Gdańsk' },
@@ -71,17 +89,29 @@ export type MarinePointCode = keyof typeof MARINE_POINTS;
 export type MarineEvalPoint = MarinePointCode | 'SMHI_KNOLLS';
 
 /** Rodzina trasy ze słownika; null = poza mapą BN5. */
-export function marineRouteFamily(route: string | null | undefined): string | null {
+export function marineRouteFamily(
+  route: string | null | undefined,
+  familyByCode?: MarineFamilyByCode | null,
+): string | null {
   if (route == null) return null;
   const key = route.trim().toUpperCase();
   if (!key) return null;
-  return ROUTE_TO_FAMILY[key] ?? null;
+  return familyFromDict(familyByCode, key) ?? ROUTE_TO_FAMILY_FALLBACK[key] ?? null;
 }
 
-export function marineCorridorForRoute(route: string | null | undefined): MarineCorridor | null {
-  const fam = marineRouteFamily(route);
-  if (!fam) return null;
-  return FAMILY_TO_CORRIDOR[fam] ?? null;
+/** family_key → korytarz BN5; nieznana rodzina → null. */
+export function marineCorridorForFamily(
+  family: string | null | undefined,
+): MarineCorridor | null {
+  if (!family) return null;
+  return FAMILY_TO_CORRIDOR[family] ?? null;
+}
+
+export function marineCorridorForRoute(
+  route: string | null | undefined,
+  familyByCode?: MarineFamilyByCode | null,
+): MarineCorridor | null {
+  return marineCorridorForFamily(marineRouteFamily(route, familyByCode));
 }
 
 export function marinePointsForCorridor(corridor: MarineCorridor): MarineEvalPoint[] {
@@ -102,8 +132,9 @@ export function marinePointsForCorridor(corridor: MarineCorridor): MarineEvalPoi
 /** Punkty oceny rejsu; null gdy trasa nieznana (bez domyślnego GDN). */
 export function marinePointsForRoute(
   route: string | null | undefined,
+  familyByCode?: MarineFamilyByCode | null,
 ): MarineEvalPoint[] | null {
-  const corridor = marineCorridorForRoute(route);
+  const corridor = marineCorridorForRoute(route, familyByCode);
   if (!corridor) return null;
   return marinePointsForCorridor(corridor);
 }
