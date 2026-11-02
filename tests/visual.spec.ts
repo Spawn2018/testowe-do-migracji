@@ -242,3 +242,41 @@ test.describe('BN9-c2 visual — pasek śledzenia na promie (HHL pl)', () => {
     })
   }
 })
+
+/* BN9-c3 (#573 „Ekrany po BN5”) — Ryzyka › Sytuacja na trasie › „Pogoda na przeprawach”: pięć przepraw (Polska – Szwecja
+   i trzy bałtyckie), najpierw ryzyko wyższe; atrybucja, dopisek NAVTEX, link do mapy lodowej FMI. Demo: wartości przykładowe
+   (G-09). Migawka samej sekcji, komputer 1440 i telefon 390 (zakładka „Na trasie”). */
+test.describe('BN9-c3 visual — pogoda na przeprawach (HHL pl)', () => {
+  test.describe.configure({ mode: 'serial' })
+
+  for (const width of [1440, 390]) {
+    const file = `pogoda-przeprawy__hhl__pl__${width}__light.png`
+    test(file, async ({ page }) => {
+      await page.emulateMedia({ reducedMotion: 'reduce' })
+      await gotoFrozen(page, width)
+      await setRole(page, 'HHL')
+      await setTheme(page, 'light', 'dark')
+      await navTo(page, 'risk')
+      if (width < 769) await page.locator('[data-rk-tab="route"]').click()
+      const sec = page.locator('[data-panel="marine"]')
+      await expect(sec).toBeVisible()
+      await expect(sec.locator('[data-marine-row]')).toHaveCount(5)
+      await expect(sec.locator('a[data-ice-chart]')).toHaveAttribute('rel', 'noopener noreferrer')
+      /* telefon: bez poziomego przewijania strony */
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
+      expect(overflow).toBeLessThanOrEqual(0)
+      await page.evaluate(async () => {
+        if (document.fonts?.ready) await document.fonts.ready
+      })
+      await sec.scrollIntoViewIfNeeded()
+      await page.waitForTimeout(300)
+      await expect(sec).toHaveScreenshot(file, {
+        /* dolny pasek telefonu (E8) przykrywa treść — poza migawką sekcji */
+        style: 'nav{visibility:hidden !important}',
+        maxDiffPixels: 60,
+        threshold: 0.28,
+        animations: 'disabled',
+      })
+    })
+  }
+})

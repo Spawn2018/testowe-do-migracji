@@ -8,7 +8,8 @@ import type { DeliveredCheck, Load, OrgKind, Risk, Sailing } from '../types';
 import type { CaseEvent, CasePerson, TodoDecision, TodoIssue } from './p6Todo';
 import type { FerryRowView, RoadRowView } from './p6Route';
 import type { FeeSuggestion } from './p5Fees';
-import { demoAssignments, demoDecisions, demoFerryRows, demoHistory, demoMe, demoStenaSailings, demoTimeBans, DEMO_PEOPLE } from './p6Demo';
+import type { MarineConditionRow } from './marineWeatherDb';
+import { demoAssignments, demoDecisions, demoFerryRows, demoMarineRows, demoHistory, demoMe, demoStenaSailings, demoTimeBans, DEMO_PEOPLE } from './p6Demo';
 
 /** E6: osoby firmy z telefonem (imię, nazwisko, rodzaj konta). null = nie podłączone — bez „Zadzwoń”. */
 export function casePeopleOf(org: OrgKind): CasePerson[] | null {
@@ -78,6 +79,11 @@ export function todoExtrasOf(
 /** Promy w demo (produkcja: `ferryRowsFromDb` z `sailings` i `marine_conditions`). */
 export function sampleFerryRowsOf(nowIso: string, onBoard: number): FerryRowView[] {
   return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? demoFerryRows(nowIso, onBoard) : [];
+}
+
+/** BN9-c3: pogoda morska w demo (produkcja: `fetchMarineConditions` — `marine_conditions`, pusta lista tutaj). */
+export function sampleMarineOf(nowIso: string): MarineConditionRow[] {
+  return import.meta.env.VITE_AUTH_MODE !== 'supabase' ? demoMarineRows(nowIso) : [];
 }
 
 /** Rozkład do propozycji drugiej przeprawy (8.4): produkcja — `sailings`; demo — przykład Steny. */

@@ -29,6 +29,9 @@ import { lazyRetry } from '../lib/lazyRetry';
 import { accountRole } from '../lib/accountRole';
 import { latestNbp } from '../lib/p5Finance';
 import { useLatestNbp } from '../lib/nbpLive';
+import type { MarineConditionRow } from '../lib/marineWeatherDb';
+import { cockpitCrossings } from '../lib/bn9c3Marine';
+import { MarineCards } from '../components/dash/MarineCards';
 
 /* wyglad/J4 (E9; E11/E12 „ocena przewoźnika → Kokpit”): produkcja — odczyt `carrier_scorecard` (chunk leniwy) */
 const CarrierRatingLive = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/CarrierRatingLive'))) : null;
@@ -39,6 +42,8 @@ export function DashboardView() {
   const [detectLag, setDetectLag] = useState<{ samples: number; medianMin: number | null } | 'error' | null>(null);
   /* B3 / H3.4: pomiar morza z marine_conditions do kafelka „Najbliższy prom” */
   const [marineSea, setMarineSea] = useState<{ waveM: number; risk: string; gustKn?: number | null } | null>(null);
+  /* BN9-c3: wszystkie korytarze `marine_conditions` (BN5) — karty przepraw aktywnych transportów; demo — przykład */
+  const [marineRows, setMarineRows] = useState<MarineConditionRow[]>([]);
   const role = useTowerStore((s) => s.role);
   const locale = useTowerStore((s) => s.locale);
   const currency = useTowerStore((s) => s.displayCurrency);
@@ -59,10 +64,14 @@ export function DashboardView() {
       void import('../lib/detectLag')
         .then((m) => m.fetchDetectionLag())
         .then((r) => { if (!cancelled) setDetectLag(r); }, () => { if (!cancelled) setDetectLag('error'); });
+      /* BN9-c3: jedno zapytanie o wszystkie korytarze; kafelek „Najbliższy prom” jak dotąd z Gdańsk – Nynäshamn */
       void import('../lib/marineWeatherDb')
-        .then((m) => m.fetchMarineCondition())
-        .then((row) => {
-          if (cancelled || !row || row.maxWaveM == null) return;
+        .then((m) => m.fetchMarineConditions())
+        .then((rows) => {
+          if (cancelled) return;
+          setMarineRows(rows);
+          const row = rows.find((r) => r.corridor === 'BALTIC_GDN_NYN');
+          if (!row || row.maxWaveM == null) return;
           setMarineSea({
             waveM: row.maxWaveM,
             risk: formatSeaRiskLabel(row.risk, locale),
@@ -71,7 +80,9 @@ export function DashboardView() {
         }, () => { /* brak odczytu — kafelek bez morza */ });
       return () => { cancelled = true; };
     }
-    return undefined;
+    let cancelled = false;
+    void import('../lib/p6Source').then((m) => { if (!cancelled) setMarineRows(m.sampleMarineOf(getNow().toISOString())); });
+    return () => { cancelled = true; };
   }, [locale]);
   /* rodzaj konta oglądanej firmy (w Podglądzie — rodzaj domyślny tej firmy, nie rodzaj osoby z HHL) */
   const kind = viewedKind(role, accountRole(role));
@@ -160,6 +171,8 @@ export function DashboardView() {
     }
     return m;
   }, [events]);
+  /* BN9-c3: przeprawy aktywnych transportów (te same co na mapie Kokpitu); bez bałtyckich — pusta lista, Kokpit jak dotąd */
+  const seaCrossings = useMemo(() => cockpitCrossings(mapLoads, sailings, marineRows), [mapLoads, sailings, marineRows]);
   const tiles = buildCockpit({
     role, locale, nowIso: getNow().toISOString(), loads, documents, bills,
     todo, ferry, margin: marginInfo, siteSince,
@@ -205,6 +218,9 @@ export function DashboardView() {
         footer={footer}
         moneyTags={moneyTags}
         onGo={onGo}
+        extra={seaCrossings.length ? (
+          <MarineCards locale={locale} crossings={seaCrossings} onGo={() => navigateTo({ view: 'risk', riskFilter: 'FERRY' })} />
+        ) : null}
       />
 
       {/* Claude renderDash triad: q_title | progress + mini map; KSH bez listy (E9) — postęp i mapa na całą szerokość */}

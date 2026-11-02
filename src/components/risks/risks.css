@@ -213,3 +213,7 @@
 .rk-ferry.is-link{cursor:pointer;border-radius:2px}
 .rk-ferry.is-link:hover{background:var(--hover, rgba(127,127,127,.08))}
 .rk-ferry.is-link:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+/* BN9-c3: Pogoda na przeprawach — długie nazwy i źródła łamią się (telefon 390 px bez poziomego przewijania) */
+.rk-marine .rk-ferry-tx{flex:1 1 auto}
+.rk-marine .rk-ferry-tx b,.rk-sea-meta{overflow-wrap:anywhere}
+.rk-ice a{color:var(--ink);text-decoration:underline}

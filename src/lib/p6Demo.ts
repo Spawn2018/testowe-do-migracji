@@ -6,6 +6,7 @@
 import type { Load, OrgKind, Risk, Sailing } from '../types';
 import type { CaseEvent, CasePerson, TodoDecision } from './p6Todo';
 import type { FerryRowView } from './p6Route';
+import type { MarineConditionRow } from './marineWeatherDb';
 import { formatListDateTime } from './format';
 import { TZ_OPS, wallLocalToIso } from './time';
 
@@ -103,6 +104,26 @@ export function demoFerryRows(nowIso: string, onBoard: number): FerryRowView[] {
       sea: { risk: 'wysokie', waveM: 3.2, gustKn: 42, thrWaveM: 3.8, thrGustKn: 40, at: at('11:16') } },
     { id: 'demo-fr-2', line: 'STENA', vessel: 'Stena Ebba', depIso: at('20:00'), delayedIso: null, status: 'ZAPLANOWANY', onBoard: 0,
       sea: { risk: 'podwyższone', waveM: 2.4, gustKn: 31, thrWaveM: 3.8, thrGustKn: 40, at: at('08:15') } },
+  ];
+}
+
+/**
+ * BN9-c3 — pogoda morska demo dla pięciu przepraw (Ryzyka › Pogoda, Kokpit). Wartości wymyślone (G-09), oznaczone jako
+ * przykład w źródłach; PL–SE zgodne z wierszami promów powyżej (Polferries: sztorm 3,2 m / 42 kn, Stena: 2,4 m / 31 kn).
+ */
+export function demoMarineRows(nowIso: string): MarineConditionRow[] {
+  const day = demoFerryDay(nowIso);
+  const at = (hh: string) => new Date(Date.parse(wallLocalToIso(`${day}T${hh}`, TZ_OPS)!)).toISOString();
+  const row = (corridor: MarineConditionRow['corridor'], wave: number, gust: number, risk: MarineConditionRow['risk'], hh: string, sources: string): MarineConditionRow => ({
+    corridor, maxWaveM: wave, maxGustKn: gust, risk, waveThrM: 3.8, gustThrKn: 40,
+    sources: `${sources} (przykład)`, attribution: 'Dane: FMI / DMI / SMHI (CC BY 4.0)', observedAt: at(hh), windowFrom: null, windowTo: null,
+  });
+  return [
+    row('BALTIC_GDN_NYN', 3.2, 42, 'wysokie', '11:16', 'FMI WAM · FMI HARMONIE · DMI'),
+    row('BALTIC_GDY_KAA', 2.4, 31, 'podwyższone', '08:15', 'FMI WAM · FMI HARMONIE · SMHI'),
+    row('BALTIC_GULF_FI', 1.3, 24, 'niskie', '11:00', 'FMI WAM · FMI HARMONIE'),
+    row('BALTIC_PLD_KPS', 2.8, 35, 'podwyższone', '11:00', 'FMI WAM · FMI HARMONIE · SMHI'),
+    row('BALTIC_TLL_STO', 1.9, 29, 'niskie', '11:00', 'FMI WAM · FMI HARMONIE · DMI'),
   ];
 }
 
