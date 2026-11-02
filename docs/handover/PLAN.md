@@ -2489,7 +2489,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 02.11.2026 00:45 | BN5 cz.1 (#714): **0375** + mapowanie korytarzy bałtyckich + job 5×; #720 w §4; bez F7 jeszcze | pętla / BN5 |
 | 02.11.2026 01:20 | PR #721 CI zielone `acd96196`; decyzja **82-C** wpisana §4/#720 + §5; czekam F7 | pętla / BN5 |
 | 02.11.2026 01:45 | BN5 cz.2 (#714/#721): snow1g + NaN WAM + DMI 429 regresja; dalej cz.3 FERRY_ICE | pętla / BN5 |
-| 02.11.2026 02:15 | BN5 cz.3 (#714/#721): FERRY_ICE Digitraffic; DP-145/146 z F7 #721; CI cz.2 zielone `156cd5e9` — bez F7 (nowy commit); dalej pkt 4 / F7 | pętla / BN5 |
+| 02.11.2026 02:15 | #721 SCALONE `a56d022f` (cz.1+cz.2); start BN5 cz.3 `pakiet/bn5-ferry-ice` FERRY_ICE; DP-145/146 z F7 #721 | pętla / BN5 |
 | 31.10.2026 — | Decyzja 73: TLLA-HEL ETA−150 min / HELA-TLL ETD+160 min (fixture Cargo; nocny 165 min OK). Decyzja 74: `sailings.source_ref` 0359; Digitraffic `digitraffic:portcall:<id>:<route>`; HTML/RECZNIE/DANE_STARTOWE wygrywają; #685-b RPC zastępuje digitraffic:% w ±3 h | F7 #688 r1–r4 |
 | 31.10.2026 — | F7 #683 nieblokujące (osobna poprawka): Scheduler grudzień + „on 2 January” → rok bieżący, ciche wygaśnięcie; Alert INFO bez ryzyka/historii — świadomie | F7 #683 r7 |
 | 31.10.2026 — | F7 #683 r8 nieblokujące (osobno): Alert poza Schedulerem obok Schedulera; sprzeczne bloki (resume→cofnięcie auto); rok przy długim oknie Schedulera; mutanty M10/M15–M17/M22 świadomie bez testów | F7 #683 r8 |
