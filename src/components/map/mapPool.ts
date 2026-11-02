@@ -60,9 +60,9 @@ export type PoolEntry = {
   chunkFails: number;
   /** Miejsce, które ostatnio wzięło mapę (do zgłoszenia awarii). */
   slot: MapSlot;
-  /** BN9-c5: zakres linii tras narysowany teraz (karta transportu / Mapa i Kokpit) i numer rysowania (wyścigi). */
+  /** BN9-c5: zakres linii tras narysowany teraz (karta transportu / Mapa i Kokpit), wczytane legi i przeprawy z HERE (po wczytaniu rysowany jest zakres z chwili zakończenia). */
   lines: {
-    spec: LinesSpec; seq: number; legs: { leg: string; line: readonly LatLng[] }[] | null; routeLegs: RouteLegRow[];
+    spec: LinesSpec; legs: { leg: string; line: readonly LatLng[] }[] | null; routeLegs: RouteLegRow[];
     /** Przeprawy z HERE (PROD, `loadFerryLines`), gdy przeszły sprawdzenie. */
     ferries: { leg: string; line: readonly LatLng[] }[];
   };
@@ -168,6 +168,16 @@ export function corridorPadding(map: L.Map): { paddingTopLeft: L.PointTuple; pad
   } catch {
     /* mapa bez kontenera */
   }
+  /* F7 #740 D2: niska mapa (telefon) — nakładki przycięte tak, żeby na trasę zostało ≥ 80 px; inaczej margines większy
+     od mapy daje nieskończone przybliżenie w `getScaleZoom` (szara mapa) */
+  let h = 0;
+  try { h = map.getContainer().clientHeight || map.getSize().y; } catch { h = 0; }
+  const room = Math.max(0, h - 2 * CORRIDOR_PADDING - 80);
+  if (h > 0 && top + extra > room) {
+    const k = room / (top + extra);
+    top = Math.floor(top * k);
+    extra = Math.floor(extra * k);
+  }
   return { paddingTopLeft: [CORRIDOR_PADDING, CORRIDOR_PADDING + top], paddingBottomRight: [CORRIDOR_PADDING, CORRIDOR_PADDING + extra] };
 }
 /** Widok całej trasy dla bieżącego rozmiaru mapy (bez ruszania mapy). */
@@ -223,7 +233,7 @@ function build(pooled: boolean, root: HTMLElement): PoolEntry {
     layers: { tiles, route, ferryLeg, detour, geofences, poi, fleet, situations, ais },
     health: { state: 'loading', tries: 0, via: 'fallback', reported: false, cause: 'tiles' },
     healthSubs: new Set(), unwatch: null, chunkFails: 0, slot: 'map',
-    lines: { spec: BASELINE_LINES, seq: 0, legs: null, routeLegs: [], ferries: [] },
+    lines: { spec: BASELINE_LINES, legs: null, routeLegs: [], ferries: [] },
   };
   /* #667 A / BN9-c5: drogi (demo: linie przykładowe; PROD: legi z `map_display_state`) i tory — od razu rdzeń
      Polska–Szwecja; CorridorMap przerysowuje zakres widoku (karta transportu, Mapa, Kokpit) */
@@ -240,6 +250,8 @@ const HERE_FERRY_TRACK: Readonly<Record<string, WaterTrackId>> = { 'FERRY-GDN-NY
 
 /** Warstwa promu od nowa: przeprawy z HERE z zakresu (PROD) i stałe tory zakresu bez nich (DP-7, DP-76). */
 function paintHereFerries(e: PoolEntry, scope: CorridorScope): void {
+  /* F7 #740 D4: HERE podaje dziś odcinki promowe tylko dla GDN-NYN i GDY-KAA (`FerryLeg`); przeprawy bałtyckie zostają
+     na stałych torach (`WATER_TRACKS_EXTRA`) — `drawFerryLanes` niżej */
   const { ferryLeg } = e.layers;
   ferryLeg.clearLayers();
   /* DP-76: styl torów z motywu (`ferryLaneOptions`); zmianę motywu na żywo przerysowuje `ensureBasemap` */
@@ -260,7 +272,6 @@ function paintHereFerries(e: PoolEntry, scope: CorridorScope): void {
  * zakresu widoku (późniejszy widok wygrywa).
  */
 export function drawCorridorLines(e: PoolEntry, spec: LinesSpec, load: boolean): Promise<void> {
-  e.lines.seq += 1;
   e.lines.spec = spec;
   const pre = scopeOfSpec(spec, e.lines.routeLegs);
   fitTracks.set(e.map, pre.tracks);

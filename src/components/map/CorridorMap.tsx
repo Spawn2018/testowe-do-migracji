@@ -1,4 +1,4 @@
-import { Suspense, lazy, useCallback, useEffect, useRef, useState, type CSSProperties } from 'react';
+import { Suspense, lazy, useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
 import { activeDriver } from '../../lib/activeDriver';
 import L from 'leaflet';
 
@@ -19,7 +19,7 @@ import { isServerId } from '../../data/registry';
 import { transportLabel } from '../../lib/transportName';
 import { SUPABASE_AUTH_ENABLED } from '../../auth/config';
 import { h6Requests } from '../../lib/map/draw';
-import { corridorScope, routeOfLoad, sessionDemoRoutes } from '../../lib/map/routeLegs';
+import { corridorScope, routeOfLoad, sailingIndex, sessionDemoRoutes } from '../../lib/map/routeLegs';
 import { filterLoadsForRole } from '../../lib/permissions';
 import { trackingPhase } from '../../lib/stageTiles';
 import { routeOfVessel, vesselKeyOf } from '../../lib/vesselGroups';
@@ -224,29 +224,37 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
   /*
    * BN9-c5 (#718 BN7 §4): linie tras w zakresie widoku. Karta transportu (Przegląd) — trasa transportu panelu (legi jego
    * rodziny i tor wodny; trasa nieznana — rdzeń). Mapa i Kokpit — rdzeń Polska–Szwecja i trasy aktywnych transportów
-   * (okno śledzenia, transporty firmy). Powroty bez linii (Q-18).
+   * (okno śledzenia, transporty firmy). Powroty bez linii (Q-18). F7 #740 W3: liczone tylko przy zmianie danych
+   * (transporty, rola, rejsy, statki, transport panelu) i co minutę (okno śledzenia), rejsy z indeksu.
    */
-  const linesSpec: LinesSpec = (() => {
+  const linesMinute = Math.floor(Date.parse(getNowIso()) / 60_000);
+  const sailIdx = useMemo(() => sailingIndex(sailings), [sailings]);
+  const linesSpec: LinesSpec = useMemo(() => {
     const over = demoRoutes();
     const card = slot === 'drawer';
     if (card) {
-      const r = panelLoad ? routeOfLoad(panelLoad, sailings, vessels, over) : null;
+      const r = panelLoad ? routeOfLoad(panelLoad, sailIdx, vessels, over) : null;
       return { routes: r ? [r] : [], baseline: false };
     }
-    const nowIso = getNowIso();
+    const nowIso = new Date(linesMinute * 60_000).toISOString();
     const routes = new Set<string>();
     for (const l of filterLoadsForRole(allLoads, role)) {
       if (trackingPhase(l, nowIso) !== 'on') continue;
-      const r = routeOfLoad(l, sailings, vessels, over);
+      const r = routeOfLoad(l, sailIdx, vessels, over);
       if (r) routes.add(r);
     }
     return { routes: [...routes].sort(), baseline: true };
-  })();
+  }, [slot, panelLoad, allLoads, role, sailIdx, vessels, linesMinute]);
   const linesKey = `${linesSpec.baseline ? 'b' : 'r'}:${linesSpec.routes.join(',')}`;
   const linesSpecRef = useRef(linesSpec);
   linesSpecRef.current = linesSpec;
+  const linesScope = useMemo(() => corridorScope(linesSpec.routes, [], linesSpec.baseline), [linesSpec]);
+  /* tory zakresu (kadr): zmiana zbioru torów = nowy kadr (F7 #740 W2) */
+  const tracksKey = [...linesScope.tracks].sort().join(',');
   /* dopisek przy linii bałtyckiej (BN7 §7 pkt 1) */
-  const balticLine = corridorScope(linesSpec.routes, [], linesSpec.baseline).baltic;
+  const balticLine = linesScope.baltic;
+  /* tory, dla których był ostatni kadr (pierwszy kadr robi `acquireMap` z zakresem widoku) */
+  const fitTracksRef = useRef<string | null>(null);
   const onMarkerRef = useRef(onMarker);
   onMarkerRef.current = onMarker;
   /* wyglad/P9-e: otwarta lista grupy (klucz) i widoki grup z ostatniego rysowania */
@@ -372,6 +380,7 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
     if (!containerRef.current || mapRef.current) return;
     /* AUD-01e: jedna mapa na sesję — wpinana do kontenera widoku, przy zamknięciu odkładana (nie niszczona). */
     const pooled = acquireMap(containerRef.current, slot, linesSpecRef.current);
+    fitTracksRef.current = tracksKey;
     const { map } = pooled;
     entryRef.current = pooled;
     layersRef.current = pooled.layers;
@@ -486,7 +495,11 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
     if (!mapReady || !pooled) return;
     const load = import.meta.env.VITE_AUTH_MODE !== 'supabase' || basemapReady;
     void drawCorridorLines(pooled, linesSpecRef.current, load);
-    /* kadr z torami zakresu (pkt 4 i 7): Kokpit i Mapa zawsze; Przegląd — tylko gdy pokazuje całą trasę (bez pozycji) */
+    /* kadr z torami zakresu (pkt 4 i 7) — F7 #740 W2: tylko przy zmianie zbioru torów (nie po samym podkładzie ani
+       zmianie tras w tych samych torach) i tylko gdy użytkownik nie ruszał mapy; Przegląd — gdy pokazuje całą trasę */
+    if (fitTracksRef.current === tracksKey) return;
+    fitTracksRef.current = tracksKey;
+    if (userMovedRef.current) return;
     if (slot !== 'drawer' || followedIdRef.current === '-') {
       programmaticRef.current = true;
       try { fitCorridor(mapReady); } finally { programmaticRef.current = false; }

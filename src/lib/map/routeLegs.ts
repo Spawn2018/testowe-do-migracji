@@ -17,6 +17,9 @@ import type { LatLng } from './draw';
 /** Legi BN7 (0355/0381, `map_group='bn7'`). */
 export const BN7_LEGS: ReadonlySet<string> = new Set(['PL-TLL', 'PL-MUU', 'PL-PLD', 'FI-HEL', 'FI-VUO', 'SE-STO', 'SE-KPS']);
 
+/** Legi rdzenia Polska–Szwecja (mapy bez transportu — strefy, edytor strefy). */
+export const CORE_LEGS: ReadonlySet<string> = new Set(['PL-GDN', 'PL-GDY', 'SE-NYN', 'SE-KAA', 'SE-KAA-INLAND']);
+
 /** Tory rdzenia Polska–Szwecja (rysowane jak dotąd na Mapie, w Kokpicie i na mapach stref). */
 export const CORE_TRACKS: readonly WaterTrackId[] = ['GDN-NYN', 'GDY-KAA'];
 
@@ -79,7 +82,8 @@ export function baselineScope(routeLegs: readonly RouteLegRow[] = []): CorridorS
 
 /**
  * Zakres linii dla tras. `baseline` — rdzeń zawsze (Mapa, Kokpit, mapy stref); bez rdzenia (karta transportu) — tylko
- * trasy z listy, a gdy żadna nie jest znana — rdzeń (dzisiejszy rysunek).
+ * trasy z listy. Zapas „rdzeń” tylko dla pustej listy (trasa transportu nieznana — dzisiejszy rysunek); trasa znana,
+ * ale powrotna albo spoza katalogu — pusty zakres (F7 #740 W1, Q-18: bez dróg i torów).
  */
 export function corridorScope(
   routes: Iterable<string | null | undefined>,
@@ -88,14 +92,17 @@ export function corridorScope(
 ): CorridorScope {
   const legs: string[] = [];
   const tracks: WaterTrackId[] = [];
+  let known = 0;
   for (const route of routes) {
-    if (!route || !isOutbound(route)) continue;
+    if (!route) continue;
+    known += 1;
+    if (!isOutbound(route)) continue;
     const track = waterTrackOf(route);
     if (!track) continue;
     legs.push(...legsOfRoute(route, routeLegs));
     tracks.push(track);
   }
-  if (baseline || tracks.length === 0) {
+  if (baseline || known === 0) {
     const core = baselineScope(routeLegs);
     legs.push(...core.legs);
     tracks.push(...core.tracks);
@@ -117,12 +124,26 @@ export function linesInScope<T extends { leg: string; line: readonly LatLng[] }>
 
 /** Mapy bez transportu (strefy, edytor strefy): bez legów BN7 (nawet gdy serwer je poda po `cron_fetch`). */
 export function coreLegsOnly<T extends { leg: string }>(legs: readonly T[]): T[] {
-  return legs.filter((l) => !BN7_LEGS.has(l.leg));
+  /* F7 #740 D3: lista dozwolonych (rdzeń), nie zakazanych — nowy leg z bazy nie trafi tu sam */
+  return legs.filter((l) => CORE_LEGS.has(l.leg));
 }
 
 /* ---------- trasa transportu ---------- */
 
 type SailingLike = { id: string; vessel: string; route: string; departureAt: string };
+
+/** F7 #740 W3: indeks rejsów (po id oraz statek + odejście) — bez `sailings.find` na każdy transport. */
+export type SailingIndex = { byId: ReadonlyMap<string, SailingLike>; byVesselDep: ReadonlyMap<string, SailingLike> };
+export function sailingIndex(sailings: readonly SailingLike[]): SailingIndex {
+  const byId = new Map<string, SailingLike>();
+  const byVesselDep = new Map<string, SailingLike>();
+  for (const s of sailings) {
+    if (!byId.has(s.id)) byId.set(s.id, s);
+    const k = `${s.vessel}|${s.departureAt}`;
+    if (!byVesselDep.has(k)) byVesselDep.set(k, s);
+  }
+  return { byId, byVesselDep };
+}
 type LoadLike = { code?: string; sailingId?: string | null; ferry: { vessel: string | null; departureAt: string | null } };
 
 /**
@@ -132,20 +153,21 @@ type LoadLike = { code?: string; sailingId?: string | null; ferry: { vessel: str
  */
 export function routeOfLoad(
   l: LoadLike | null | undefined,
-  sailings: readonly SailingLike[],
+  sailings: readonly SailingLike[] | SailingIndex,
   vessels?: readonly VesselGroup[],
   override?: ReadonlyMap<string, string>,
 ): string | null {
   if (!l) return null;
+  const idx = Array.isArray(sailings) ? sailingIndex(sailings) : (sailings as SailingIndex);
   const o = l.code ? override?.get(l.code) : undefined;
   if (o) return o;
   if (l.sailingId) {
-    const s = sailings.find((x) => x.id === l.sailingId);
+    const s = idx.byId.get(l.sailingId);
     if (s?.route) return s.route;
   }
   const v = l.ferry.vessel;
   if (!v) return null;
-  const same = sailings.find((x) => x.vessel === v && !!l.ferry.departureAt && x.departureAt === l.ferry.departureAt);
+  const same = l.ferry.departureAt ? idx.byVesselDep.get(`${v}|${l.ferry.departureAt}`) : undefined;
   if (same?.route) return same.route;
   return routeOfVessel(v, vessels);
 }

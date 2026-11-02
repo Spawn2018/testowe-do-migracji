@@ -37,7 +37,7 @@ const { useTowerStore } = await import('../src/store/useTowerStore');
 const { CorridorMap } = await import('../src/components/map/CorridorMap');
 const { default: ZonesMap } = await import('../src/components/zones/ZonesMap');
 const {
-  __poolEntryForTests, __resetMapPool, acquireMap, corridorBoundsOf, drawCorridorLines, releaseMap,
+  __poolEntryForTests, __resetMapPool, acquireMap, corridorBoundsOf, corridorPadding, drawCorridorLines, releaseMap,
 } = await import('../src/components/map/mapPool');
 const { __resetRoadLinesCacheForTests } = await import('../src/components/map/applyBasemap');
 const { ORANGE_ROAD_STYLE } = await import('../src/components/map/orangeRoads');
@@ -104,8 +104,15 @@ describe('BN9-c5 · reguła legów trasy (czysta)', () => {
   it('Q-18: trasy powrotne bez linii (legi, tor); nieznana trasa — pusto', () => {
     for (const r of ['HEL-TLL', 'KAA-GDY', 'NYN-GDN', 'KPS-PLD', 'STO-TLL', 'VUO-MUU']) {
       expect(legsOfRoute(r), r).toEqual([]);
-      expect([...corridorScope([r], [], false).tracks], r).toEqual(['GDN-NYN', 'GDY-KAA']); /* karta → rdzeń */
+      /* F7 #740 W1: karta na trasie powrotnej — pusty zakres (bez dróg i torów), nie rdzeń */
+      const sc = corridorScope([r], [], false);
+      expect([...sc.legs], r).toEqual([]);
+      expect([...sc.tracks], r).toEqual([]);
     }
+    /* zapas „rdzeń” tylko dla trasy nieznanej (null) */
+    expect([...corridorScope([null], [], false).tracks]).toEqual(['GDN-NYN', 'GDY-KAA']);
+    expect([...corridorScope([], [], false).tracks]).toEqual(['GDN-NYN', 'GDY-KAA']);
+    expect([...corridorScope(['XXX-YYY'], [], false).tracks]).toEqual([]);
     expect(legsOfRoute(null)).toEqual([]);
     expect(legsOfRoute('XXX-YYY')).toEqual([]);
   });
@@ -131,6 +138,8 @@ describe('BN9-c5 · reguła legów trasy (czysta)', () => {
   it('mapy stref: `coreLegsOnly` odcina wszystkie 7 legów BN7', () => {
     const rows = [...BN7_LEGS, 'PL-GDN', 'SE-NYN', 'PL-GDY', 'SE-KAA', 'SE-KAA-INLAND'].map((leg) => ({ leg }));
     expect(coreLegsOnly(rows).map((r) => r.leg)).toEqual(['PL-GDN', 'SE-NYN', 'PL-GDY', 'SE-KAA', 'SE-KAA-INLAND']);
+    /* F7 #740 D3: lista dozwolonych — nowy, nieznany leg też poza mapą stref */
+    expect(coreLegsOnly([{ leg: 'LT-NEW' }, { leg: 'PL-GDN' }]).map((r) => r.leg)).toEqual(['PL-GDN']);
   });
   it('trasa transportu: rejs przypisany, statek o godzinie rejsu, armator statku; demo — trasa z adresu', () => {
     const sailings = [{ id: 's1', vessel: 'Finlandia', route: 'TLL-HEL', departureAt: '2026-09-23T08:00:00Z' }];
@@ -142,6 +151,26 @@ describe('BN9-c5 · reguła legów trasy (czysta)', () => {
     expect([...over]).toEqual([['SG-11', 'TLL-HEL'], ['SG-17', 'PLD-KPS']]);
     expect(routeOfLoad({ code: 'SG-11', ferry: { vessel: 'M/F Wawel', departureAt: null } }, [], undefined, over)).toBe('TLL-HEL');
   });
+  it('F7 #740 D2: niska mapa z wysokimi nakładkami — marginesy przycięte (zostaje ≥ 80 px na trasę)', () => {
+    host = document.createElement('div');
+    host.className = 'corridor-map-root';
+    host.style.cssText = 'width:360px;height:150px;position:relative';
+    document.body.appendChild(host);
+    const e = acquireMap(host, 'drawer');
+    const note = document.createElement('div');
+    note.setAttribute('data-map-bottom', '');
+    host.appendChild(note);
+    Object.defineProperty(host, 'clientHeight', { configurable: true, value: 150 });
+    Object.defineProperty(e.el, 'clientHeight', { configurable: true, value: 150 });
+    Object.defineProperty(note, 'offsetHeight', { configurable: true, value: 120 });
+    Object.defineProperty(note, 'offsetTop', { configurable: true, value: 20 });
+    Object.defineProperty(note, 'offsetParent', { configurable: true, value: host });
+    const pad = corridorPadding(e.map);
+    const v = pad.paddingTopLeft[1] + pad.paddingBottomRight[1];
+    expect(v).toBeLessThanOrEqual(150 - 80);
+    releaseMap(e, 'drawer');
+  });
+
   it('kadr: bez tras bałtyckich bez zmian; z TLL-HEL obejmuje tor i drogę FI (Jyväskylä), PLD-KPS — Paldiski', () => {
     const core = corridorBoundsOf();
     expect(corridorBoundsOf(new Set(['GDN-NYN', 'GDY-KAA']))).toBe(core);
@@ -221,6 +250,59 @@ describe('BN9-c5 · karta transportu i Mapa (demo, CorridorMap)', () => {
     expect(routeFirsts()).toEqual([DEMO_ROAD_LINES[0][0], DEMO_ROAD_LINES[1][0]]);
     expect(laneFirsts()).toEqual([[WATER_GDN_NYN[0][1], WATER_GDN_NYN[0][0]]]);
     expect(host!.querySelector('[data-route-note]')).toBeNull();
+  });
+
+  it('F7 #740 W1: karta na trasie powrotnej (HEL-TLL) — bez dróg i torów; kadr jak rdzeń (nie szara mapa)', async () => {
+    const { planned } = demoLoads();
+    window.history.replaceState(null, '', `/#/?demoRoute=${planned.code}:HEL-TLL`);
+    __resetDemoRoutesForTests();
+    useTowerStore.setState({ selectedLoadId: planned.id });
+    mount();
+    await act(async () => { root!.render(createElement(CorridorMap, { loads: [], embedded: true, slot: 'drawer' })); });
+    await wait(50);
+    window.history.replaceState(null, '', '/');
+    expect(routeFirsts()).toEqual([]);
+    expect(laneFirsts()).toEqual([]);
+    expect(host!.querySelector('[data-route-note]')).toBeNull();
+    const z = __poolEntryForTests()!.map.getZoom();
+    expect(Number.isFinite(z)).toBe(true);
+  });
+
+  it('F7 #740 W2: ręczny zoom nie jest nadpisywany przy zmianie tras w tych samych torach; nowy tor bez ruchu użytkownika — kadr', async () => {
+    const { loads, active } = demoLoads();
+    /* jsdom bez układu: mapa 0×0 daje przybliżenie 19 i przycięcie do maxZoom podkładu (`setMaxZoom` → zoomstart, jak
+       ruch użytkownika) — rozmiar jak w przeglądarce */
+    const cw = vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockReturnValue(900);
+    const ch = vi.spyOn(HTMLElement.prototype, 'clientHeight', 'get').mockReturnValue(600);
+    mount();
+    await act(async () => { root!.render(createElement(CorridorMap, { loads: [], slot: 'map' })); });
+    await wait(50);
+    const map = __poolEntryForTests()!.map;
+    const fit = vi.spyOn(map, 'fitBounds');
+    /* ta sama rodzina torów (GDN-NYN) — inna lista transportów: bez kadru */
+    await act(async () => { useTowerStore.setState({ loads: loads.filter((l) => l.id !== active.id) }); });
+    await wait(20);
+    expect(fit).not.toHaveBeenCalled();
+    /* nowy tor (TLL-HEL) bez ruchu użytkownika — kadr */
+    await act(async () => {
+      useTowerStore.setState({
+        loads: loads.map((l) => (l.id === active.id ? { ...l, sailingId: 'bn7-w2' } : l)),
+        sailings: [...useTowerStore.getState().sailings, {
+          id: 'bn7-w2', vessel: 'Finlandia', route: 'TLL-HEL', departureAt: '2026-09-24T08:00:00Z', arrivalAt: '2026-09-24T10:00:00Z',
+          delayedDepartureAt: null, delayedArrivalAt: null, status: 'ZAPLANOWANY', source: 'ECKERO',
+        }],
+      });
+    });
+    await wait(20);
+    expect(fit).toHaveBeenCalledTimes(1);
+    /* użytkownik przybliżył mapę — zmiana torów nie kadruje */
+    act(() => { map.fire('zoomstart'); });
+    await act(async () => { useTowerStore.setState({ loads }); });
+    await wait(20);
+    expect(fit).toHaveBeenCalledTimes(1);
+    fit.mockRestore();
+    cw.mockRestore();
+    ch.mockRestore();
   });
 
   it('Mapa bez aktywnych bałtyckich: rdzeń jak dotąd (3 linie demo, 2 tory), brak torów bałtyckich i dopisku', async () => {
