@@ -9,6 +9,10 @@ import type { Locale } from '../../types';
 import type { RoadImpact } from '../../lib/p6Route';
 import { rt } from '../../i18n/p6';
 
+/** Liczba nie odrywa się od jednostki w tekście ze źródła („50 km/h”, „2 h”, „12 t”) — spacja nierozdzielająca (jak `keepUnits` w HelpPanel). */
+const keepUnits = (x: string): string =>
+  x.replace(/(\d) (?=(?:km|m|h|min|t|dni|%)(?![\p{L}\p{N}]))/gu, '$1\u00a0');
+
 export interface RoadRowProps {
   locale: Locale;
   phone: boolean;
@@ -40,7 +44,7 @@ export function RoadRow({
     <li className={className} {...attrs}>
       <span className="rk-box">{box}</span>
       <span className="rk-road-tx">
-        <span className="rk-road-t" title={titleTip}>{title}</span>
+        <span className="rk-road-t" title={titleTip}>{typeof title === 'string' ? keepUnits(title) : title}</span>
         <span className="rk-road-s">
           <span className={`rk-alert ${impact === 'VERY_HIGH' ? 'is-red' : impact === 'HIGH' ? 'is-amber' : 'is-plain'}`}>
             {rt(locale, `p6_imp_${impact}`)}
@@ -50,7 +54,7 @@ export function RoadRow({
         </span>
         {extra}
         {pending && !phone ? <span className="rk-road-n" data-road-note="pending">{rt(locale, 'p6_road_pending')}</span>
-          : note && !phone ? <span className="rk-road-n" data-road-note={noteKind}>{note}</span> : null}
+          : note && !phone ? <span className="rk-road-n" data-road-note={noteKind}>{keepUnits(note)}</span> : null}
         {original && !phone ? (
           <details className="rk-orig">
             <summary>{rt(locale, 'p6_road_original')}</summary>

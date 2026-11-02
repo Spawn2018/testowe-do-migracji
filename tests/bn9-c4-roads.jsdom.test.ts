@@ -420,6 +420,10 @@ describe('BN9-c4 — Ryzyka › Drogi: sekcje krajów', () => {
     expect(el.querySelectorAll('[data-panel="road-fi"] [data-baltic-road]').length).toBe(3);
     expect(el.querySelector('[data-panel="road-fi"] [data-limit="WEIGHT"]')).not.toBeNull();
     expect(sampleBalticRoadRisksOf(NOW).every((r) => /przykład/.test(r.road?.source ?? ''))).toBe(true);
+    /* BN9-c4b: liczba nie odrywa się od jednostki w opisie ze źródła (etap6-ui „50 km” przy 1280) */
+    const notes = [...el.querySelectorAll('[data-panel="road-fi"] [data-road-note="baltic"]')].map((n) => n.textContent ?? '');
+    expect(notes.some((t) => t.includes('50\u00a0km/h'))).toBe(true);
+    expect(notes.join(' ')).not.toMatch(/\d (?:km|h|t|min|m)(?![\p{L}\p{N}])/u);
   });
   it('telefon 390 px: te same sekcje i wiersze, bez opisu; dopisek limitu zostaje; długie teksty łamią się w CSS', () => {
     const risks = [road('a', 'FI', { titleKey: 'rk_road_baltic_weight_check', titleParams: { country: 'FI', event: 'Kelirikko', limit: 12 } }, { weight_limit_t: 12 }), road('b', 'FI')];
