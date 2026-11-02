@@ -155,7 +155,8 @@ describe('BN6 road-lt — eismoinfo', () => {
     expect(ev.length).toBe(5);
     const w = ev.find((e) => e.id === 'bn6-lt-weight-panevezys')!;
     expect(w.weightLimitT).toBe(40);
-    expect(w.severity).toBe('HIGH');
+    /* DP-168 N3: limit masy z liczbą → MEDIUM w parserze. */
+    expect(w.severity).toBe('MEDIUM');
     expect(w.unknownCodes).toEqual(['LD', 'SVKD']);
     const closed = ev.find((e) => e.id === 'bn6-lt-closed-marijampole')!;
     expect(closed.heightLimitM).toBe(4);

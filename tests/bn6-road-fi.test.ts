@@ -156,9 +156,10 @@ describe('BN6 road-fi — Digitraffic', () => {
     expect(fiSeverity('road work', 'Tie 4 suljettu', null).severity).toBe('HIGH');
   });
 
-  it('F7 #732 B1: kelirikko bez liczby → MEDIUM; nie spowalnia ETA', () => {
+  it('F7 #732 B1 / DP-168 N3: kelirikko bez/z liczbą → MEDIUM; nie spowalnia ETA', () => {
     expect(fiSeverity('weight restriction', 'kelirikko VT4', null).severity).toBe('MEDIUM');
     expect(fiSeverity('weight', 'painorajoitus ilman lukua', null).severity).toBe('MEDIUM');
+    expect(fiSeverity('weight restriction', 'painorajoitus 12 t', 12).severity).toBe('MEDIUM');
     const kel: BalticRoadEvent = {
       id: 'KEL', title: 'limit masy', detail: 'kelirikko VT4', severity: 'MEDIUM',
       lat: 65.0, lon: 25.5, kind: 'weight', start: null, end: null,

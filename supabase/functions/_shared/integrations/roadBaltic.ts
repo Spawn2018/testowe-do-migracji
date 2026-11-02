@@ -264,10 +264,10 @@ export function fiSeverity(
   const blob = `${situationType} ${titleFi}`.toLowerCase();
   const roadClosed = /closed|suljet|tien sulku|tie suljet|carriageway.?blocked|ajorata\s*suljet/.test(blob);
   const hasDetour = /kiertotie|kierretään|detour|rerout|objazd/.test(blob);
-  /* F7 #732 B1: liczba → HIGH (weightLimitRisk obniży bez masy ładunku);
-   * sam tekst kelirikko/painorajoitus → MEDIUM, nigdy HIGH (nie spowalnia ETA). */
+  /* DP-168 N3: limit masy z liczbą → MEDIUM w parserze (weightLimitRisk → HIGH tylko przy ładunku > limit).
+   * Sam tekst kelirikko/painorajoitus → MEDIUM, nigdy HIGH (nie spowalnia ETA). */
   if (weightT != null) {
-    return { severity: 'HIGH', roadClosed, hasDetour };
+    return { severity: 'MEDIUM', roadClosed, hasDetour };
   }
   if (/weight|painoraj|kelirikko/.test(blob)) {
     return { severity: 'MEDIUM', roadClosed, hasDetour };
@@ -964,7 +964,8 @@ function ltSeverity(
   if (meta.roadClosed) return 'HIGH';
   const sub = (subtype ?? '').toLowerCase();
   if (sub.includes('flood')) return 'HIGH';
-  if (meta.weightLimitT != null) return 'HIGH';
+  /* DP-168 N3: limit masy z liczbą → MEDIUM w parserze. */
+  if (meta.weightLimitT != null) return 'MEDIUM';
   if (
     meta.heightLimitM != null
     || meta.widthLimitM != null
@@ -1350,6 +1351,83 @@ export async function probeBalticHost(
 }
 
 /**
+ * DP-168 / F7 #733 r2 — wspólne limity pobierania LV/EE (i dalsze kraje).
+ * Ciało czytać strumieniowo (bez `arrayBuffer` całości); Content-Length > limitu → too_large.
+ */
+export const BALTIC_FEED_MAX_BYTES = 5 * 1024 * 1024;
+export const BALTIC_FEED_TIMEOUT_MS = 10_000;
+export const BALTIC_FEED_BUDGET_MS = 65_000;
+
+export type BalticFeedBodyResult =
+  | { ok: true; text: string }
+  | { ok: false; reason: 'too_large' };
+
+/** Odczyt ciała odpowiedzi z limitem bajtów (strumień + wcześniejszy Content-Length). */
+export async function readBalticFeedBody(
+  res: Response,
+  maxBytes: number = BALTIC_FEED_MAX_BYTES,
+): Promise<BalticFeedBodyResult> {
+  const clRaw = res.headers.get('content-length');
+  const cl = clRaw != null ? Number(clRaw) : NaN;
+  if (Number.isFinite(cl) && cl > maxBytes) {
+    return { ok: false, reason: 'too_large' };
+  }
+  const body = res.body;
+  if (body == null) {
+    const text = await res.text();
+    const bytes = new TextEncoder().encode(text).byteLength;
+    if (bytes > maxBytes) return { ok: false, reason: 'too_large' };
+    return { ok: true, text };
+  }
+  const reader = body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (value == null || value.byteLength === 0) continue;
+      total += value.byteLength;
+      if (total > maxBytes) {
+        try { await reader.cancel(); } catch { /* ignore */ }
+        return { ok: false, reason: 'too_large' };
+      }
+      chunks.push(value);
+    }
+  } catch {
+    try { await reader.cancel(); } catch { /* ignore */ }
+    throw new Error('read body failed');
+  }
+  const buf = new Uint8Array(total);
+  let off = 0;
+  for (const c of chunks) {
+    buf.set(c, off);
+    off += c.byteLength;
+  }
+  return {
+    ok: true,
+    text: new TextDecoder('utf-8', { fatal: false }).decode(buf),
+  };
+}
+
+/**
+ * DP-168 — szablon obserwacji `<kraj>_<usługa>=ok:<rekordy>:<pominięte>:<format>:<swapped>`.
+ * Wartość (`ok:…`) osobno; klucz składa caller (`lv_roadworks`, `ee_srti_accident`).
+ */
+export function balticFeedObsOk(
+  records: number,
+  skipped: number,
+  format: string,
+  swapped: number,
+): string {
+  return `ok:${records}:${skipped}:${format}:${swapped}`;
+}
+
+export function balticFeedObsKey(country: string, service: string): string {
+  return `${country.toLowerCase()}_${service.toLowerCase()}`;
+}
+
+/**
  * Bboxy ±0,25° wokół odcinków CORRIDOR_LV (F7 #730 B7 — zwężenie vs ~85 km).
  */
 export function lvCorridorBboxes(): FiBbox[] {
@@ -1433,11 +1511,28 @@ function lvIsWeatherCode(code: string): boolean {
 }
 
 /**
- * F7 #730 r2 B5 — lód/śnieg tylko na polach treści (granice słowa), nie na surowym XML
- * (unikaj „ice” w policeForces / „led” w scheduled).
+ * DP-168 / F7 #733 r2 — wspólna lista słów lodowych/śniegowych per język (bez duplikatu „jäide”).
+ * Regex budowany raz; granice słowa z flagą `u` (Litera Unicode).
  */
-const LV_ICY_CONTENT_RE =
-  /(?:^|[^a-zāčēģīķļņšūžA-ZĀČĒĢĪĶĻŅŠŪŽ])(?:ledus|ledu|sliden\w*|apled\w*|go[lł]oled\w*|szron\w*|aizsal\w*|salna|riepoj\w*|glaz\w*|snieg\w*|black\s*ice|\bice\b|\bsnow\b|frost)(?:[^a-zāčēģīķļņšūžA-ZĀČĒĢĪĶĻŅŠŪŽ]|$)/i;
+export const BALTIC_ICY_WORDS = {
+  lv: [
+    'ledus', 'ledu', 'sliden\\w*', 'apled\\w*', 'aizsal\\w*', 'salna',
+    'riepoj\\w*', 'glaz\\w*', 'snieg\\w*', 'szron\\w*',
+  ],
+  ee: ['jäide', 'libedus', 'lumi', 'lörts', 'härmatis'],
+  common: ['go[lł]oled\\w*', 'black\\s*ice', 'ice', 'snow', 'frost'],
+} as const;
+
+export type BalticIcyLang = keyof typeof BALTIC_ICY_WORDS;
+
+export function buildBalticIcyContentRe(langs: BalticIcyLang[]): RegExp {
+  const words = [...new Set(langs.flatMap((l) => [...BALTIC_ICY_WORDS[l]]))];
+  const alts = words.join('|');
+  return new RegExp(`(?:^|[^\\p{L}])(?:${alts})(?=[^\\p{L}]|$)`, 'iu');
+}
+
+/** F7 #730 r2 B5 — lód/śnieg tylko na polach treści (nie surowy XML). */
+export const LV_ICY_CONTENT_RE = buildBalticIcyContentRe(['lv', 'common']);
 
 /** Kody DATEX zjawisk lodowych / śniegu (zamiast regexu po całym rekordzie). */
 const LV_ICY_DATEX_TYPE_RE =
@@ -1897,12 +1992,12 @@ export function parseLvWeightDimGeoJson(
     const cls = props.restrictionClass == null ? '' : String(props.restrictionClass);
     const title = [cls, street].filter(Boolean).join(' · ') || 'limit masy/wymiarów';
     const road = extractBalticRoadRef(street) ?? extractBalticRoadRef(title);
-    /* N6: bez „severity HIGH” dla samych wymiarów — masa osobno, reszta MEDIUM. */
+    /* N6 + DP-168 N3: wymiary i masa z liczbą → MEDIUM w parserze (nie HIGH). */
     out.push({
       id,
       title,
       detail: [cls, street, props.start != null ? `km ${props.start}` : ''].filter(Boolean).join(' · '),
-      severity: weight != null && Number.isFinite(weight) ? 'HIGH' : 'MEDIUM',
+      severity: 'MEDIUM',
       lat: pt[0],
       lon: pt[1],
       kind: code,
@@ -2240,11 +2335,10 @@ function eeParseHeightLimitM(rec: string): number | null {
 }
 
 /**
- * F7 #733 B5 — est. lód/śnieg/szron (granice słowa, flaga u); nie „märg”.
+ * F7 #733 B5 / DP-168 — est. lód/śnieg/szron (wspólny builder; nie „märg”).
  * Tylko pola treści, nie surowy XML.
  */
-export const EE_ICY_CONTENT_RE =
-  /(?:^|[^\p{L}])(?:jäide|libedus|lumi|lörts|härmatis|jäide)(?=[^\p{L}]|$)/iu;
+export const EE_ICY_CONTENT_RE = buildBalticIcyContentRe(['ee', 'common']);
 
 function eeParseWidthLimitM(rec: string): number | null {
   const raw = rec.match(/<(?:\w+:)?widthCharacteristic\b[\s\S]*?<(?:\w+:)?vehicleWidth\b[^>]*>([^<]+)</i)?.[1]
@@ -2256,7 +2350,7 @@ function eeParseWidthLimitM(rec: string): number | null {
 
 /**
  * Decyzja 85 jak LV: zwykłe roboty → LOW; HIGH tylko zamknięcie / blokada / wypadek z blokadą;
- * limit masy z liczbą → HIGH (caller: weightLimitRisk → MEDIUM bez masy ładunku);
+ * DP-168 N3: limit masy z liczbą → MEDIUM w parserze (weightLimitRisk → HIGH przy ładunku > limit);
  * F7 #733 B5: WEATHER HIGH tylko lód/śnieg/szron / widoczność < 200 m.
  */
 export function eeSeverityForRecord(
@@ -2271,7 +2365,7 @@ export function eeSeverityForRecord(
 ): RiskSeverity {
   const sig = opts.signals ?? lvRecordSignals(recOrText);
   const content = opts.contentText ?? '';
-  if (opts.weightLimitT != null) return 'HIGH';
+  if (opts.weightLimitT != null) return 'MEDIUM';
   if (sig.hasDimLimit && !sig.roadClosed && !sig.carriagewayBlocked) return 'MEDIUM';
   /* F7 #733 N1 — Accident tylko z pól treści / kodu, nie z surowego JSON.stringify(rec). */
   const accidentHit = code === 'SRTI_ACCIDENT'

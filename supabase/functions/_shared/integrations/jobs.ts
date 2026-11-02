@@ -102,13 +102,15 @@ import {
   FI_ANNOUNCEMENTS_URL, FI_ATTRIBUTION, FI_ROADWORKS_URL, FI_WEIGHT_URL,
   LT_ATTRIBUTION, LT_RESTRICTIONS_URL, LT_UA, LT_WEATHER_URL,
   LV_ATTRIBUTION, LV_NAP_CODES, LV_NAP_KEY_HEADER, LV_SOURCE_REF, LV_UA,
-  applyBalticCorridorRoadFilter, applyFiCorridorRoadFilter, balticKeyMeta, balticNetWarning,
-  balticRoadRisk, balticSlowdownMult, balticUrlKind, balticWarnHost, capBalticRiskSeverity,
-  classifyBalticNetError, dedupeLvSlippery, eeDatexApiKeyMeta, eeDatexFeedUrl, fiCorridorBboxes,
-  fiTrafficUrl, filterInEeBboxes, filterInFiBboxes, filterInLvBboxes, dimensionLimitRisk,
-  filterInLtBboxes, isDimensionLimitEvent, isFiWeightLimitLike, ltWeatherToSlowdownEvents,
-  lvNapKeyEnv, lvNapUrlEnv, lvWeatherToSlowdownEvents, parseEeFeedBody, parseFiTrafficMessages,
-  parseLtRestrictions, parseLtWeather, parseLvFeedBody, probeBalticHost, weightLimitRisk,
+  BALTIC_FEED_BUDGET_MS, BALTIC_FEED_TIMEOUT_MS,
+  applyBalticCorridorRoadFilter, applyFiCorridorRoadFilter, balticFeedObsOk, balticKeyMeta,
+  balticNetWarning, balticRoadRisk, balticSlowdownMult, balticUrlKind, balticWarnHost,
+  capBalticRiskSeverity, classifyBalticNetError, dedupeLvSlippery, eeDatexApiKeyMeta,
+  eeDatexFeedUrl, fiCorridorBboxes, fiTrafficUrl, filterInEeBboxes, filterInFiBboxes,
+  filterInLvBboxes, dimensionLimitRisk, filterInLtBboxes, isDimensionLimitEvent,
+  isFiWeightLimitLike, ltWeatherToSlowdownEvents, lvNapKeyEnv, lvNapUrlEnv,
+  lvWeatherToSlowdownEvents, parseEeFeedBody, parseFiTrafficMessages, parseLtRestrictions,
+  parseLtWeather, parseLvFeedBody, probeBalticHost, readBalticFeedBody, weightLimitRisk,
   type BalticKeyMeta, type BalticRoadEvent, type LvNapCode,
 } from './roadBaltic.ts';
 import { buildTrafficIncidentsUrl, parseHereTrafficIncidents } from '../here/trafficIncidents.ts';
@@ -3925,13 +3927,10 @@ async function roadLtFailStreak(deps: JobDeps): Promise<number> {
 
 /**
  * BN6 (#716) cz.3 / #589 — drogi LV (22 zbiory LV_NAP_*_KEY/URL).
- * F7 #730: równolegle limit 6, timeout 10 s, budżet ~65 s, limit 5 MB;
+ * F7 #730 / DP-168: wspólny fetch (5 MB strumień / 10 s / 65 s); równolegle limit 6;
  * fetchedOk dopiero po rozpoznanym formacie; resolveStale tylko przy komplecie;
  * SOURCE_DOWN po 3× fetched_ok===0 gdy configured>0 (N3: bez sekretów nie liczy streak).
  */
-const LV_FEED_TIMEOUT_MS = 10_000;
-const LV_FEED_BUDGET_MS = 65_000;
-const LV_FEED_MAX_BYTES = 5 * 1024 * 1024;
 const LV_FEED_CONCURRENCY = 6;
 
 function lvDiagObservations(
@@ -3991,7 +3990,7 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
   const started = Date.now();
   const parseStats = { parsed: 0, skipped: 0, swapped: 0 };
   const parts = await mapPoolLimit(configured, LV_FEED_CONCURRENCY, async ({ code, url, key }) => {
-    if (Date.now() - started > LV_FEED_BUDGET_MS) {
+    if (Date.now() - started > BALTIC_FEED_BUDGET_MS) {
       return {
         code,
         ok: false as const,
@@ -4009,7 +4008,7 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
       [LV_NAP_KEY_HEADER]: key,
     };
     const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), LV_FEED_TIMEOUT_MS);
+    const timer = setTimeout(() => ctrl.abort(), BALTIC_FEED_TIMEOUT_MS);
     try {
       const res = await deps.fetch(url, { headers, signal: ctrl.signal });
       if (!res.ok) {
@@ -4020,10 +4019,9 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
           skipped: 0, swapped: 0,
         };
       }
-      /* F7 #730 r2: Content-Length przed pobraniem ciała, gdy jest. */
-      const clRaw = res.headers.get('content-length');
-      const cl = clRaw != null ? Number(clRaw) : NaN;
-      if (Number.isFinite(cl) && cl > LV_FEED_MAX_BYTES) {
+      /* DP-168: wspólny odczyt strumieniowy 5 MB. */
+      const body = await readBalticFeedBody(res);
+      if (!body.ok) {
         return {
           code, ok: false as const,
           warning: `nieczytelna odpowiedź ${code}`,
@@ -4032,17 +4030,7 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
         };
       }
       const localStats = { parsed: 0, skipped: 0, swapped: 0 };
-      const buf = await res.arrayBuffer();
-      if (buf.byteLength > LV_FEED_MAX_BYTES) {
-        return {
-          code, ok: false as const,
-          warning: `nieczytelna odpowiedź ${code}`,
-          per: 'too_large', format: 'unknown', events: [] as BalticRoadEvent[],
-          skipped: 0, swapped: 0,
-        };
-      }
-      const text = new TextDecoder('utf-8', { fatal: false }).decode(buf);
-      const parsed = parseLvFeedBody(text, code, localStats);
+      const parsed = parseLvFeedBody(body.text, code, localStats);
       parseStats.parsed += localStats.parsed;
       parseStats.skipped += localStats.skipped;
       parseStats.swapped += localStats.swapped;
@@ -4057,10 +4045,12 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
           skipped: localStats.skipped, swapped: localStats.swapped,
         };
       }
-      /* F7 #730 r2 B7 / r3 B2: lv_<kod>=ok:<rekordy>:<pominięte>:<format>:<swapped> */
+      /* DP-168 / F7 #730: lv_<kod>=ok:<rekordy>:<pominięte>:<format>:<swapped> */
       return {
         code, ok: true as const, warning: null as string | null,
-        per: `ok:${parsed.events.length}:${localStats.skipped}:${parsed.format}:${localStats.swapped}`,
+        per: balticFeedObsOk(
+          parsed.events.length, localStats.skipped, parsed.format, localStats.swapped,
+        ),
         format: parsed.format, events: parsed.events,
         skipped: localStats.skipped, swapped: localStats.swapped,
       };
@@ -4227,11 +4217,8 @@ async function roadLvFailStreak(deps: JobDeps): Promise<number> {
 /**
  * BN6 (#716) cz.4 — drogi EE (Tark Tee DATEX, klucz X-DATEX-API-KEY).
  * Sekrety: TARKTEE_DATEX_TOKEN (pierwszy), potem TARKTEE_DATEX_PASSWORD (F7 #733 N5).
- * F7 #733 B6: timeout 10 s, budżet 65 s, limit 5 MB (jak LV). SOURCE_DOWN po 3× fetched_ok===0.
+ * DP-168 / F7 #733 B6: wspólny fetch 5 MB / 10 s / 65 s. SOURCE_DOWN po 3× fetched_ok===0.
  */
-const EE_FEED_TIMEOUT_MS = 10_000;
-const EE_FEED_BUDGET_MS = 65_000;
-const EE_FEED_MAX_BYTES = 5 * 1024 * 1024;
 const EE_FEED_CONCURRENCY = 4;
 
 type EeFeedPart = {
@@ -4256,7 +4243,7 @@ async function fetchEeFeedPart(
     weatherBlocks: number; weatherNoSite: number;
   },
 ): Promise<EeFeedPart> {
-  if (Date.now() - started > EE_FEED_BUDGET_MS) {
+  if (Date.now() - started > BALTIC_FEED_BUDGET_MS) {
     return {
       code: feed.code, ok: false,
       warning: `niepobrany ${feed.code} (budżet czasu)`,
@@ -4272,9 +4259,9 @@ async function fetchEeFeedPart(
     [EE_DATEX_KEY_HEADER]: apiKey,
   };
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), EE_FEED_TIMEOUT_MS);
+  const timer = setTimeout(() => ctrl.abort(), BALTIC_FEED_TIMEOUT_MS);
   try {
-    if (Date.now() - started > EE_FEED_BUDGET_MS) {
+    if (Date.now() - started > BALTIC_FEED_BUDGET_MS) {
       return {
         code: feed.code, ok: false,
         warning: `niepobrany ${feed.code} (budżet czasu)`,
@@ -4289,29 +4276,20 @@ async function fetchEeFeedPart(
         per: `http_${res.status}`, format: '', events: [],
       };
     }
-    const clRaw = res.headers.get('content-length');
-    const cl = clRaw != null ? Number(clRaw) : NaN;
-    if (Number.isFinite(cl) && cl > EE_FEED_MAX_BYTES) {
+    /* DP-168: wspólny odczyt strumieniowy 5 MB. */
+    const body = await readBalticFeedBody(res);
+    if (!body.ok) {
       return {
         code: feed.code, ok: false,
         warning: `nieczytelna odpowiedź ${feed.code}`,
         per: 'too_large', format: 'unknown', events: [],
       };
     }
-    const buf = await res.arrayBuffer();
-    if (buf.byteLength > EE_FEED_MAX_BYTES) {
-      return {
-        code: feed.code, ok: false,
-        warning: `nieczytelna odpowiedź ${feed.code}`,
-        per: 'too_large', format: 'unknown', events: [],
-      };
-    }
-    const text = new TextDecoder('utf-8', { fatal: false }).decode(buf);
     const localStats = {
       parsed: 0, skipped: 0, swapped: 0, roadFromPole: 0, roadFromOpis: 0,
       weatherBlocks: 0, weatherNoSite: 0,
     };
-    const parsed = parseEeFeedBody(text, feed.code, feed.format, localStats, sites);
+    const parsed = parseEeFeedBody(body.text, feed.code, feed.format, localStats, sites);
     parseStats.parsed += localStats.parsed;
     parseStats.skipped += localStats.skipped;
     parseStats.swapped += localStats.swapped;
@@ -4327,10 +4305,12 @@ async function fetchEeFeedPart(
         per: `bad:${parsed.format}`, format: parsed.format, events: [],
       };
     }
-    /* F7 #733 B8 — ok:<rekordy>:<pominięte>:<format>:<swapped> */
+    /* DP-168 / F7 #733 B8 — ok:<rekordy>:<pominięte>:<format>:<swapped> */
     return {
       code: feed.code, ok: true, warning: null,
-      per: `ok:${parsed.events.length}:${localStats.skipped}:${parsed.format}:${localStats.swapped}`,
+      per: balticFeedObsOk(
+        parsed.events.length, localStats.skipped, parsed.format, localStats.swapped,
+      ),
       format: parsed.format,
       events: parsed.events,
       sites: parsed.sites,
