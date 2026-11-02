@@ -9,7 +9,7 @@
 import type { RiskInput, RiskSeverity } from './sync.ts';
 import { describeCondition, describeDeviation } from '../../../../src/lib/pl/describe.ts';
 
-type LatLon = [number, number];
+export type LatLon = [number, number];
 /** E4 Nynäshamn → Boden (punkty węzłowe trasy). */
 export const CORRIDOR_SE: LatLon[] = [
   [58.9045, 17.9562], [59.3293, 18.0686], [59.8586, 17.6389], [60.6749, 17.1413], [61.7274, 17.1056],

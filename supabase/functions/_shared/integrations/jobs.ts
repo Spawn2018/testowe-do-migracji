@@ -97,6 +97,11 @@ import {
   parseTrafikverketSituations, parseTrafikverketWeather, roadConditionRisk, roadRisk, seRoadSlowdownMult, trafikverketResultError,
   trafikverketRoadConditionQuery, trafikverketSituationQuery, trafikverketWeatherQuery, weatherRisk, TRAFIKVERKET_URL,
 } from './road.ts';
+import {
+  CORRIDOR_FI, FI_ANNOUNCEMENTS_URL, FI_ATTRIBUTION, FI_ROADWORKS_URL, FI_WEIGHT_URL,
+  balticRoadRisk, balticSlowdownMult, fiCorridorBboxes, fiTrafficUrl, filterNearCorridor,
+  parseFiTrafficMessages, weightLimitRisk, type BalticRoadEvent,
+} from './roadBaltic.ts';
 import { buildTrafficIncidentsUrl, parseHereTrafficIncidents } from '../here/trafficIncidents.ts';
 import { HERE_BILLING_DEFAULTS } from '../here/billing.ts';
 import {
@@ -334,7 +339,9 @@ export interface SyncStore {
   ): Promise<string | null>;
   /** II-6: współczynnik spowolnienia SE (E4) dla silnika ETA II-7 */
   saveCorridorCondition?(row: {
-    corridor: 'SE_E4' | 'SE_E22'; slowdownMult: number; reason: string | null; detail: unknown; observedAt: string;
+    corridor: 'SE_E4' | 'SE_E22' | 'ROAD_LT' | 'ROAD_LV' | 'ROAD_EE' | 'ROAD_FI';
+    slowdownMult: number; reason: string | null; detail: unknown; observedAt: string;
+    source?: string;
   }): Promise<void>;
   /** II-6: parametr % spowolnienia (domyślnie 15) — opcjonalne */
   seSlowdownPct?(): Promise<number>;
@@ -3618,6 +3625,118 @@ export async function runRoadPl(deps: JobDeps): Promise<JobResult> {
   return runRoadPlKpd(deps, now, kpdUrl);
 }
 
+/**
+ * BN6 (#716) cz.1 — drogi FI (Digitraffic tie, bez klucza).
+ * Bufor 2 km od CORRIDOR_FI; SOURCE_DOWN:ROAD_FI po 3 kolejnych błędach (integration_runs).
+ */
+export async function runRoadFi(deps: JobDeps): Promise<JobResult> {
+  const now = deps.now().toISOString();
+  const headers = {
+    'Accept-Encoding': 'gzip',
+    'Digitraffic-User': DIGITRAFFIC_USER,
+  };
+  const bboxes = fiCorridorBboxes();
+  const warnings: string[] = [];
+  let fetchedOk = 0;
+  const byId = new Map<string, BalticRoadEvent>();
+
+  const fetchKind = async (base: string): Promise<void> => {
+    for (const b of bboxes) {
+      let url: string;
+      try {
+        url = fiTrafficUrl(base, b);
+      } catch (e) {
+        warnings.push(e instanceof Error ? e.message : String(e));
+        continue;
+      }
+      const r = await readText(deps, url, { headers });
+      if (!r.ok) {
+        warnings.push(r.warning);
+        continue;
+      }
+      fetchedOk++;
+      try {
+        const parsed = parseFiTrafficMessages(JSON.parse(r.text));
+        for (const e of parsed) {
+          if (!byId.has(e.id)) byId.set(e.id, e);
+        }
+      } catch {
+        warnings.push(`FI Digitraffic: nieczytelna odpowiedź (${base})`);
+      }
+    }
+  };
+
+  await fetchKind(FI_ROADWORKS_URL);
+  await fetchKind(FI_ANNOUNCEMENTS_URL);
+  await fetchKind(FI_WEIGHT_URL);
+
+  if (fetchedOk === 0) {
+    const streak = await roadFiFailStreak(deps);
+    if (streak >= 3) {
+      await deps.store.raiseRisk(sourceDownRisk('ROAD_FI', warnings, now, FI_ROADWORKS_URL));
+      return {
+        job: 'road-fi', mode: 'LIVE', ok: false, risks: 1, warnings,
+        observations: { road_fi_fail_streak: streak, source: 'digitraffic_tie' },
+      };
+    }
+    return {
+      job: 'road-fi', mode: 'LIVE', ok: false, risks: 0, warnings,
+      observations: { road_fi_fail_streak: streak, source: 'digitraffic_tie' },
+    };
+  }
+
+  await deps.store.resolveRisks('SOURCE_DOWN:ROAD_FI:');
+  const near = filterNearCorridor([...byId.values()], CORRIDOR_FI, 2);
+  let risks = 0;
+  const keep: string[] = [];
+  for (const e of near) {
+    const risk = e.weightLimitT != null
+      ? weightLimitRisk('FI', e, null, FI_ROADWORKS_URL, FI_ATTRIBUTION)
+      : balticRoadRisk('FI', e, FI_ROADWORKS_URL, FI_ATTRIBUTION);
+    keep.push(risk.dedup);
+    if (await deps.store.raiseRisk(risk)) risks++;
+  }
+  if (deps.store.resolveStaleRisks) await deps.store.resolveStaleRisks('ROAD_FI:', keep);
+
+  const slow = balticSlowdownMult(near);
+  if (deps.store.saveCorridorCondition) {
+    await deps.store.saveCorridorCondition({
+      corridor: 'ROAD_FI',
+      slowdownMult: slow.mult,
+      reason: slow.reason,
+      observedAt: now,
+      detail: {
+        events: near.length,
+        zrodlo: FI_ATTRIBUTION,
+        note: 'LT: źródło nie podaje wypadków — dotyczy innych krajów BN6',
+      },
+    });
+  }
+
+  return {
+    job: 'road-fi', mode: 'LIVE', ok: warnings.length === 0,
+    risks, warnings,
+    observations: {
+      source: 'digitraffic_tie',
+      fetched_ok: fetchedOk,
+      events_raw: byId.size,
+      events_near: near.length,
+    },
+  };
+}
+
+/** Streak błędów road-fi z integration_runs (jak Tallink Alert incomplete). */
+async function roadFiFailStreak(deps: JobDeps): Promise<number> {
+  let streak = 1; // bieżący przebieg już jest błędem
+  if (!deps.store.recentJobResults) return streak;
+  const rows = await deps.store.recentJobResults('road-fi', 5);
+  for (const row of rows) {
+    if (row.ok === true) break;
+    streak++;
+  }
+  return streak;
+}
+
 const HERE_TRAFFIC_ATTR = 'https://www.here.com/docs/bundle/traffic-api-developer-guide-v7';
 
 async function runRoadPlKpd(deps: JobDeps, now: string, url: string): Promise<JobResult> {
@@ -4991,7 +5110,7 @@ export const JOBS = {
   'ferry-ais-listen': runFerryAisListen,
   'ferry-portnet': runFerryPortnet,
   'ferry-weather': runFerryWeather,
-  'road-se': runRoadSe, 'road-pl': runRoadPl, 'traffic-flow': runTrafficFlow,
+  'road-se': runRoadSe, 'road-pl': runRoadPl, 'road-fi': runRoadFi, 'traffic-flow': runTrafficFlow,
   'here-roads': runHereRoads,
   'emtrack-web': runEmtrackWeb,
   'rio-links': runRioLinks,
@@ -5006,7 +5125,7 @@ export const MIN_INTERVAL_MIN: Record<JobName, number> = {
   'ferry-schedule': 60, 'ferry-status': 10, 'ferry-ais': 3, 'ferry-ais-listen': 0,
   'ferry-portnet': 15, 'ferry-weather': 60,
   // #667 F7 r2: 1380 min — dzienny cron (ran_at po zakończeniu) nie pomija kolejnego dnia.
-  'road-se': 15, 'road-pl': 10, 'traffic-flow': 15, 'here-roads': 1380,
+  'road-se': 15, 'road-pl': 10, 'road-fi': 15, 'traffic-flow': 15, 'here-roads': 1380,
   'emtrack-web': 2, 'rio-links': 2,
   'safefleet-poll': 2, 'route-hazards': 60,
   'translate-retry': 5,

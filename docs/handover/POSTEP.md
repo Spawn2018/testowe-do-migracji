@@ -1,10 +1,18 @@
 
-## 2026-11-02 04:00 — #725 DP-149+150+151 CI zielone; czekam F7
+## 2026-11-02 04:20 — #725 SCALONE; BN6 cz.1 road-fi (Digitraffic)
 
-- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #714/#716/#718/#720 w planie. #723 BN9-c3 (wygląd) bez F7 „gotowe”.
-- Scalanie: brak „F7: gotowe do scalenia” na #725; CI @ `68f7efbb` unit/db/visual ✔.
-- **Krok:** prośba o F7 na #725 (DP-149 NaN horyzont; DP-150 DMI 1×korytarz/cache 3 h/timeout 8 s; DP-151 `detail` w select).
-- **Dalej:** po F7 scalenie → BN6 (#716).
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. #723 BN9-c3 (wygląd) bez F7.
+- Scalanie: **#725 SCALONE** `571aff01` (F7: gotowe @ `68f7efbb`). **DP-152** (horyzont FMI per korytarz) w rejestrze — z BN6 / osobno.
+- **Krok:** BN6 cz.1 na `pakiet/bn6-roads-lt-lv-ee-fi` — **0376** ROAD_LT/LV/EE/FI + corridor_conditions; job `road-fi` Digitraffic (bbox, bufor 2 km, limity masy); vitest bn6-road-fi.
+- **Dalej:** push → CI → F7. Potem LT/LV/EE + DP-152.
+- Bez push na main.
+
+## 2026-11-02 04:20 — #725 SCALONE; start BN6 cz.1 (FI + 0376)
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. #723 BN9-c3 bez F7.
+- Scalanie: **#725 SCALONE** `571aff01` (F7: gotowe @ `68f7efbb`; CI unit/db/visual ✔). DP-152 wpisane do rejestru (F7 #725 nieblokujące).
+- **Krok:** BN6 cz.1 — migracja **0376** (`ROAD_LT/LV/EE/FI`, corridor_conditions, cron `road-fi`); Digitraffic FI parser/job; vitest `bn6-road-fi`.
+- **Dalej:** push → CI → F7. Potem BN6 cz.2 LT → LV → EE.
 - Bez push na main.
 
 ## 2026-11-02 03:40 — #724 SCALONE; start DP-149+150+151

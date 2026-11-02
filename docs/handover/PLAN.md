@@ -1245,9 +1245,10 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-146 | Cursor | Niestabilny visual telefon: `e8-phone-gate.spec.ts:2477` karty faktur SCX = 0 (raz padł, ponowienie OK); nie wyłączać — ustalić przyczynę | F7 #721 | visual / SCX | w kolejce |
 | DP-147 | Cursor | `ferryRouteFamilies` bez `must()` — błąd odczytu nie używa must (jawny throw) | F7 #722 | BN5 / ferry-weather | SCALONE #724 `17707bf9` |
 | DP-148 | Cursor | `runFerryWeather`: catch awarii słownika → zapas mapa w kodzie + ostrzeżenie (job nie pada) | F7 #722 | BN5 / ferry-weather | SCALONE #724 (z DP-147) |
-| DP-149 | Cursor | Ostrzeżenie „NaN poza siatką” tylko gdy wszystkie NaN; przytnij okno do horyzontu modelu | F7 #724 / #714 | BN5 / ferry-weather | W TOKU `pakiet/dp149-151-marine-nan-dmi-detail` |
-| DP-150 | Cursor | DMI: 1 punkt/korytarz, szeregowo z odstępem, cache 3 h, krótszy timeout | F7 #724 / #714 | BN5 / ferry-weather | W TOKU (z DP-149) |
-| DP-151 | Cursor | `fetchMarineConditions` — `detail` w `select` (status / warnings / ice) | F7 #724 / #714 | BN5 / front | W TOKU (z DP-149) |
+| DP-149 | Cursor | Ostrzeżenie „NaN poza siatką” tylko gdy wszystkie NaN; przytnij okno do horyzontu modelu | F7 #724 / #714 | BN5 / ferry-weather | SCALONE #725 `571aff01` |
+| DP-150 | Cursor | DMI: 1 punkt/korytarz, szeregowo z odstępem, cache 3 h, krótszy timeout | F7 #724 / #714 | BN5 / ferry-weather | SCALONE #725 (z DP-149) |
+| DP-151 | Cursor | `fetchMarineConditions` — `detail` w `select` (status / warnings / ice) | F7 #724 / #714 | BN5 / front | SCALONE #725 (z DP-149) |
+| DP-152 | Cursor | `fHorizonTo` bierze najkrótszy horyzont ze wszystkich punktów; punkt przybrzeżny skraca okno DMI/`window_to` wszystkim — licz per korytarz albo maksimum ważnych | F7 #725 | BN5 / ferry-weather | w kolejce (z BN6 albo osobno) |
 | DP-122 | Cursor | `viking_schedule_imports` (0360) brak w kopii 01.11 01:30 — koordynator #697: **nie wymaga zmian** (0360 po kopii 00:30; kontrola kopii 02.11) | #697 | backup | bez zmian (koord. 01.11) |
 | DP-117 | Cursor | `route-check/index.ts` `loads` `.limit(500)` bez sortu/filtra statusu — przy >500 transportach losowy dobór | F7 #693 r1 | ferry / route-check | w kolejce |
 | DP-118 | Cursor | `store.resolveStaleRisks` — `risk_signals` bez limitu (`max_rows`) → część nieaktualnych ryzyk niezamknięta | F7 #693 r1 | BN3 / ryzyka | w kolejce |
@@ -1327,7 +1328,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 5. ~~**DP-21**~~ przeniesione do #666 (decyzja 63b) — parser pliku właściciela (F7 #680).
 6. ~~**BN3**~~ — **SCALONE** (wycinki + #699 RSS ERR `40141ff4`) — poniżej; DP kolejka / ATD wiarygodne dalej.
 7. ~~**#685** decyzja 63~~ — SCALONE (poniżej).
-8. ~~**BN4**~~ — SCALONE (#701…#708 / **0363–0368**); ~~pkt 8 cz.2~~ SCALONE (#708 `cb28f06f` / **0368**); ~~BN9-c2 Cursor~~ SCALONE (#709 `7db16a87`); ~~**DP-133**~~ SCALONE (#710 `ebd92f55` / **0369**); ~~**DP-134/135**~~ SCALONE (#711 `ac81bdd7` / **0370**); ~~**DP-136**~~ SCALONE (#712 `4b9384dd` / **0371**); ~~**DP-137+138**~~ SCALONE (#715 `c02ac887` / **0372**+**0373**); ~~BN9-c2 wygląd~~ SCALONE (#717 `ae308fce`); ~~**DP-139**~~ SCALONE (#719 `eddc4bae` / **0374**; flota MMSI w DP-139). ~~**BN5**~~ SCALONE (#721+#722 / **0375**). ~~**DP-147+148**~~ SCALONE (#724 `17707bf9`). **W TOKU:** **DP-149+150+151** → **BN6** (#716) → **BN7** (#718) → **BN8** (#720 BN8a/BN8b) → BN9…BN10 jak #573. **DP-140** w kolejce.
+8. ~~**BN4**~~ — SCALONE (#701…#708 / **0363–0368**); ~~pkt 8 cz.2~~ SCALONE (#708 `cb28f06f` / **0368**); ~~BN9-c2 Cursor~~ SCALONE (#709 `7db16a87`); ~~**DP-133**~~ SCALONE (#710 `ebd92f55` / **0369**); ~~**DP-134/135**~~ SCALONE (#711 `ac81bdd7` / **0370**); ~~**DP-136**~~ SCALONE (#712 `4b9384dd` / **0371**); ~~**DP-137+138**~~ SCALONE (#715 `c02ac887` / **0372**+**0373**); ~~BN9-c2 wygląd~~ SCALONE (#717 `ae308fce`); ~~**DP-139**~~ SCALONE (#719 `eddc4bae` / **0374**; flota MMSI w DP-139). ~~**BN5**~~ SCALONE (#721+#722 / **0375**). ~~**DP-147+148**~~ SCALONE (#724 `17707bf9`). ~~**DP-149+150+151**~~ SCALONE (#725 `571aff01`). **W TOKU:** **BN6** (#716) → **BN7** (#718) → **BN8** (#720 BN8a/BN8b) → BN9…BN10 jak #573. **DP-140**/ **DP-152** w kolejce.
 
 ### BN3 · Opóźnienia i odwołania nowych armatorów — SCALONE (po wycinkach 1–3; ~~#685~~ / ~~#691~~ / ~~#692~~ / ~~#694~~ / ~~#695~~ / ~~#696~~ / ~~#686~~ / ~~#699~~; DP kolejka / ATD wiarygodne dalej)
 Źródło: #573 + komentarze BN3 31.10 (spec + decyzje 57–61). Po #667; DP-21 → #666 (63b).
@@ -1357,7 +1358,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 5. ~~**DP-128**~~ SCALONE (#703 `d8708766` / **0363**) — ATA/ATD AIS×geofence (pas 3–4 km pomijany); korekta XPRS HELA-TLL.
 6. ~~**DP-130**~~ SCALONE (#704 `68421fbb` / **0364**) — trigger nie cofa jawnego DOPLYNAL przy ATA null; migracja 23+ rejsów W_REJSIE; testy status + vitest.
 7. ~~**DP-131**~~ SCALONE (#705 `aa6ab71c` / **0365**) — ryzyko HIGH gdy FERRY a GPS ≤3 km od portu wyjścia po ATD/ATA; dedup; bez zmiany statusu; cron `tower-prom-opoznienie`.
-8. ~~**cz.1**~~ SCALONE (#706 `3c0b76ee` / **0366**). ~~Hotfix~~ SCALONE (#707 `bc7998ff` / **0367**). ~~**cz.2**~~ SCALONE (#708 `cb28f06f` / **0368**): FI+STO/KPS arrival backup; outbound+PL↔SE; brzeg FI; Kapellskär; status **544**. ~~BN9-c2 Cursor~~ SCALONE (#709). ~~**DP-133**~~ SCALONE (#710 / **0369**). ~~**DP-134/135**~~ SCALONE (#711 / **0370**). ~~**DP-136**~~ SCALONE (#712 / **0371**). ~~**DP-137+138**~~ SCALONE (#715 `c02ac887` / **0372**+**0373**). ~~BN9-c2 wygląd~~ SCALONE (#717). ~~**DP-139**~~ SCALONE (#719 / **0374**). ~~**BN5**~~ SCALONE (#721+#722 / **0375**). ~~**DP-147+148**~~ SCALONE (#724). **Dalej:** DP-149+150+151 → BN6 (#716) → BN7 (#718) → BN8 (#720).
+8. ~~**cz.1**~~ SCALONE (#706 `3c0b76ee` / **0366**). ~~Hotfix~~ SCALONE (#707 `bc7998ff` / **0367**). ~~**cz.2**~~ SCALONE (#708 `cb28f06f` / **0368**): FI+STO/KPS arrival backup; outbound+PL↔SE; brzeg FI; Kapellskär; status **544**. ~~BN9-c2 Cursor~~ SCALONE (#709). ~~**DP-133**~~ SCALONE (#710 / **0369**). ~~**DP-134/135**~~ SCALONE (#711 / **0370**). ~~**DP-136**~~ SCALONE (#712 / **0371**). ~~**DP-137+138**~~ SCALONE (#715 `c02ac887` / **0372**+**0373**). ~~BN9-c2 wygląd~~ SCALONE (#717). ~~**DP-139**~~ SCALONE (#719 / **0374**). ~~**BN5**~~ SCALONE (#721+#722 / **0375**). ~~**DP-147+148**~~ SCALONE (#724). ~~**DP-149+150+151**~~ SCALONE (#725). **Dalej:** BN6 (#716) → BN7 (#718) → BN8 (#720).
 
 ### #713 · STAŁE ZASADY od 01.11 — W TOKU (pierwsze zastosowanie: DP-137+138 w #715)
 Źródło: #713 (Spawn2018, `dla-cursora`; właściciel 01.11 22:24). Nie przerywa bieżącej. Wpis też w `ZASADY_CIAGLEJ_PRACY.md`.
@@ -1365,7 +1366,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 2. **Unikalne fixture w `status.sh`:** własny vessel + UUID z numerem DP; po insert — `count(*)`; komentarz zajętych `L xx` / vesseli; bez `alter` CHECK schematu.
 3. **Start etapu od specyfikacji koordynatora** (kod od razu; pytania w issue).
 4. **Praca równoległa koordynatora** (`wyglad/*`, spec) bez kolizji ścieżek.
-5. ~~`wyglad/BN9-c2`~~ SCALONE (#717); ~~DP-139~~ SCALONE (#719); ~~BN5 (#714)~~ SCALONE (#721+#722); ~~DP-147+148~~ SCALONE (#724); **DP-149+150+151** W TOKU; BN6 (#716), BN7 (#718), BN8 (#720).
+5. ~~`wyglad/BN9-c2`~~ SCALONE (#717); ~~DP-139~~ SCALONE (#719); ~~BN5 (#714)~~ SCALONE (#721+#722); ~~DP-147+148~~ SCALONE (#724); ~~DP-149+150+151~~ SCALONE (#725); **BN6 (#716)** W TOKU; BN7 (#718), BN8 (#720).
 
 ### #714 · BN5 — pogoda bałtycka — SCALONE (#721 `a56d022f` / **0375** + #722 `52f370ef`)
 Źródło: #714 (Spawn2018). Spec w treści zgłoszenia (korytarze `BALTIC_GULF_FI` / `PLD_KPS` / `TLL_STO`, FMI/DMI/SMHI, lód Digitraffic, bez domyślnego GDN-NYN). Ekrany BN9-c3 — koordynator.
@@ -1373,10 +1374,14 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 2. ~~**cz.2**~~ — SCALONE (#721): SMHI snow1g (zapas wiatru gdy Harmonie bez próbek; nie pmp3g); NaN WAM → ostrzeżenie w `detail` (nie zero); DMI 429 bez SOURCE_DOWN gdy FMI OK.
 3. ~~**cz.3**~~ — SCALONE (#722 `52f370ef`): Digitraffic → `FERRY_ICE`; B1 Vuosaari=`FIHEL`; **DP-145** `ferryRouteFamilies()`; gzip + Digitraffic-User; atrybucja Fintraffic; pusto = OK.
 4. ~~Testy ryzyka per korytarz~~ — SCALONE (#722): fala 4 m na `GULF_MID` → `FERRY_WEATHER` TLL-HEL/MUU-VUO, nie GDN-NYN.
-**Po BN5 (F7 #722):** ~~DP-145~~ SCALONE; ~~DP-147+148~~ SCALONE (#724); **DP-149+150+151** (NaN horyzont / DMI 1×korytarz / detail) → potem BN6 (#716).
+**Po BN5 (F7 #722):** ~~DP-145~~ SCALONE; ~~DP-147+148~~ SCALONE (#724); ~~DP-149+150+151~~ SCALONE (#725 `571aff01`); **BN6** (#716) W TOKU; DP-152 w kolejce (F7 #725).
 
-### #716 · BN6 — drogi LT/LV/EE/FI: specyfikacja — W KOLEJCE (po DP-149+150+151)
-Źródło: #716 (Spawn2018). Spec w treści zgłoszenia (Digitraffic FI, eismoinfo LT, LVC LV, Tark Tee EE; `ROAD_LT/LV/EE/FI`; bufor 2 km; limity masy). Ekrany BN9-c4 — koordynator.
+### #716 · BN6 — drogi LT/LV/EE/FI — W TOKU (`pakiet/bn6-roads-lt-lv-ee-fi` / **0376**)
+Źródło: #716 (Spawn2018). Spec w treści zgłoszenia (Digitraffic FI, eismoinfo LT, LVC LV, Tark Tee EE; `ROAD_LT/LV/EE/FI`; bufor 2 km; limity masy). Ekrany BN9-c4 — koordynator. **Wybór:** 4 osobne rodzaje (spójne z Ryzyka › Drogi per kraj).
+1. **cz.1 FI + baza** — W TOKU: enum `ROAD_LT/LV/EE/FI`; `corridor_conditions`; audience WSZYSCY; job `road-fi` Digitraffic (roadworks/announcements/weight, bbox, bufor 2 km, SOURCE_DOWN po 3); vitest `bn6-road-fi`.
+2. **cz.2 LT** — eismoinfo restrictions + weather (bez wypadków w źródle).
+3. **cz.3 LV** — LVC DATEX / GeoJSON 44751 + dedup śliskości.
+4. **cz.4 EE** — Tark Tee DATEX (klucz `X-DATEX-API-KEY`).
 
 ### #718 · BN7 — trasy HERE i linie na mapie: specyfikacja — W KOLEJCE (po BN6)
 Źródło: #718 (Spawn2018, `dla-cursora`; 02.11 ~00:20). Spec w treści zgłoszenia (legi BN7, via, `cron_fetch`, OSM corridor, ETA segmenty, filtr tras; `cron_fetch=true` dopiero po froncie koordynatora). Ekrany BN9-c5 — koordynator.
@@ -2502,6 +2507,8 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 02.11.2026 03:10 | #722 SCALONE `52f370ef` (F7: gotowe @ d877ffe1); start DP-147+148 soft-fail `ferryRouteFamilies` | pętla / F7 #722 |
 | 02.11.2026 03:40 | #724 SCALONE `17707bf9` (F7: gotowe @ 07175c91); DP-149/150/151 z F7 #724; start `pakiet/dp149-151-marine-nan-dmi-detail` | pętla / F7 #724 |
 | 02.11.2026 04:00 | #725 CI zielone @ `68f7efbb` (DP-149+150+151); czekam F7; potem BN6 (#716) | pętla / DP-149 |
+| 02.11.2026 04:10 | #725 SCALONE `571aff01` (F7: gotowe @ 68f7efbb); DP-152 w rejestrze; start BN6 `pakiet/bn6-roads-lt-lv-ee-fi` | pętla / F7 #725 |
+| 02.11.2026 04:20 | BN6 cz.1: **0376** + road-fi Digitraffic (parser/job/testy); push → CI → F7 | pętla / BN6 |
 | 31.10.2026 — | Decyzja 73: TLLA-HEL ETA−150 min / HELA-TLL ETD+160 min (fixture Cargo; nocny 165 min OK). Decyzja 74: `sailings.source_ref` 0359; Digitraffic `digitraffic:portcall:<id>:<route>`; HTML/RECZNIE/DANE_STARTOWE wygrywają; #685-b RPC zastępuje digitraffic:% w ±3 h | F7 #688 r1–r4 |
 | 31.10.2026 — | F7 #683 nieblokujące (osobna poprawka): Scheduler grudzień + „on 2 January” → rok bieżący, ciche wygaśnięcie; Alert INFO bez ryzyka/historii — świadomie | F7 #683 r7 |
 | 31.10.2026 — | F7 #683 r8 nieblokujące (osobno): Alert poza Schedulerem obok Schedulera; sprzeczne bloki (resume→cofnięcie auto); rok przy długim oknie Schedulera; mutanty M10/M15–M17/M22 świadomie bez testów | F7 #683 r8 |

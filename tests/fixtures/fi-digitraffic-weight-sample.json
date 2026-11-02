@@ -1,0 +1,58 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [25.48, 65.015]
+      },
+      "properties": {
+        "situationId": "GUID-WEIGHT-BN6",
+        "situationType": "weight restriction",
+        "versionTime": "2026-10-28T09:58:00.146Z",
+        "announcements": [
+          {
+            "language": "fi",
+            "title": "Kelirikko 12 t",
+            "timeAndDuration": {
+              "startTime": "2026-10-27T22:00:00.000Z",
+              "endTime": "2026-11-09T21:59:59.999Z"
+            },
+            "features": [
+              {
+                "name": "Ajoneuvon suurin sallittu massa",
+                "quantity": 12,
+                "unit": "t"
+              },
+              {
+                "name": "Kelirikko"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Point",
+        "coordinates": [20.5, 60.2]
+      },
+      "properties": {
+        "situationId": "GUID-FAR-BN6",
+        "situationType": "road work",
+        "versionTime": "2026-10-28T09:58:00.146Z",
+        "announcements": [
+          {
+            "language": "fi",
+            "title": "Far from corridor",
+            "timeAndDuration": {
+              "startTime": "2026-10-27T22:00:00.000Z"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
