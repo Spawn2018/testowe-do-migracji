@@ -11,12 +11,12 @@
 - **Dalej:** push → CI → F7. Po F7 / dalej: cz.3 FERRY_ICE → BN6 (#716).
 - Bez push na main.
 
-## 2026-11-02 01:20 — BN5 #721 CI zielone `acd96196`; decyzja 82-C w planie
+## 2026-11-02 01:50 — BN5 cz.2 (snow1g/NaN) + 82-C w #721
 
-- Skrzynka: #720 decyzja **82-C** wpisana §4/#720 + §5; #550 WSTRZYMANE. Bez `pilne`.
-- Scalanie: brak F7 „gotowe do scalenia”. CI #721: unit ✔, db ✔ (13m31s), visual ✔.
-- **Krok:** docs — 82-C (PORT_CHECKIN EE = 2 h założenie); komentarz #720; PR #721 gotowe do F7 @ `acd96196` (**0375** + mapowanie).
-- **Dalej:** czekam F7. Po F7: cz.2 SMHI snow1g/NaN → cz.3 FERRY_ICE → BN6 (#716).
+- Skrzynka: #720 decyzja **82-C** wpisana §4/§5; #550 WSTRZYMANE. Bez `pilne`.
+- Scalanie: brak F7 „gotowe do scalenia”.
+- **Krok:** PR #721 — cz.2: SMHI snow1g zapas wiatru; FMI NaN → ostrzeżenie; DMI 429 bez SOURCE_DOWN przy FMI OK; mocki `forecast::wam`; docs 82-C.
+- **Dalej:** push → CI → F7. Po F7: cz.3 FERRY_ICE → BN6 (#716).
 - Bez push na main.
 
 ## 2026-11-02 00:55 — BN5 cz.1 PR #721 (`87561edc` / **0375**)
