@@ -44,7 +44,7 @@ afterEach(() => {
 });
 
 describe('DP-13 · mapa Stref: tory promów ze wspólnego źródła', () => {
-  it('mode=all: tory Polska–Szwecja i 4 przeprawy bałtyckie (przerywane) + drogi; mode=one: bez torów', async () => {
+  it('mode=all: tory Polska–Szwecja (przerywane, BN9-c5: bez bałtyckich) + drogi; mode=one: bez torów', async () => {
     useTowerStore.setState({ theme: 'day' });
     const { default: L } = await import('leaflet');
     const lines = vi.spyOn(L, 'polyline');
@@ -63,7 +63,8 @@ describe('DP-13 · mapa Stref: tory promów ze wspólnego źródła', () => {
     });
     const dashed = () => [...host.querySelectorAll('.leaflet-overlay-pane path')].filter((p) => p.getAttribute('stroke-dasharray') === '6 6');
     const solid = () => [...host.querySelectorAll('.leaflet-overlay-pane path')].filter((p) => p.getAttribute('stroke-dasharray') !== '6 6');
-    expect(ferryLaneLines().length).toBeGreaterThan(2);
+    /* BN9-c5 (#718 BN7 §4 pkt 3): mapa stref nie dotyczy transportu — sam rdzeń */
+    expect(ferryLaneLines().length).toBe(2);
     expect(dashed()).toHaveLength(ferryLaneLines().length);
     expect(solid().length).toBeGreaterThanOrEqual(DEMO_ROAD_LINES.length);
     await act(async () => { root.render(createElement(ZonesMap, { mode: 'one', label: 'one', zone: { lat: 60, lng: 18, radiusM: 500 } })); });
@@ -173,8 +174,9 @@ describe('DP-33 · DP-7 i DP-8 — zachowanie zamiast tekstu kodu', () => {
   });
   it('DP-7: mapa korytarza i pula map korzystają z drawFerryLanes (podłączenie — lekka asercja źródła)', async () => {
     const { readFileSync } = await import('node:fs');
-    expect(readFileSync('src/components/map/CorridorMap.tsx', 'utf8')).toMatch(/drawFerryLanes\(layers\.ferryLeg/);
-    expect(readFileSync('src/components/map/mapPool.ts', 'utf8')).toMatch(/drawFerryLanes\(ferryLeg\)/);
+    /* BN9-c5: CorridorMap rysuje linie zakresu przez pulę (`drawCorridorLines` → `drawFerryLanes`) */
+    expect(readFileSync('src/components/map/CorridorMap.tsx', 'utf8')).toMatch(/drawCorridorLines\(pooled, /);
+    expect(readFileSync('src/components/map/mapPool.ts', 'utf8')).toMatch(/drawFerryLanes\(ferryLeg, /);
   });
   it('DP-8: w paczce demo brak loadera bazy; formularz pokazuje listę zapasową wszystkich armatorów', async () => {
     const { vesselsLoader } = await import('../src/lib/vesselsLoad');

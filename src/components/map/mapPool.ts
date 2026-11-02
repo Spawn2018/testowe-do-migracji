@@ -11,9 +11,14 @@
 import L from 'leaflet';
 import { CORRIDOR_REF_COORDS } from '../../lib/corridor';
 import { SITES } from '../../lib/status';
-import { DEMO_ROAD_LINES } from '../../data/roadLinesDemo';
-import { WATER_GDN_NYN, WATER_GDY_KAA, type ThemeName } from '../../lib/map/draw';
-import { ferryLaneLines, ferryLaneOptions, restyleFerryLanes } from '../../lib/map/ferryLanes';
+import { DEMO_ROAD_LEGS } from '../../data/roadLinesDemo';
+import { WATER_GDN_NYN, WATER_GDY_KAA, type LatLng, type ThemeName } from '../../lib/map/draw';
+import { CORE_LANE_TRACKS, ferryLaneLines, ferryLaneOptions, restyleFerryLanes } from '../../lib/map/ferryLanes';
+import { WATER_TRACKS_EXTRA } from '../../lib/map/ferryLines';
+import { corridorScope, FAMILY_EXTENT, linesInScope, networkScope, type CorridorScope, type RouteLegRow } from '../../lib/map/routeLegs';
+import { programmatic } from './programmaticMove';
+import type { WaterTrackId } from '../../lib/ferryCatalog';
+import { paintRoadLegs } from './orangeRoads';
 import { useTowerStore } from '../../store/useTowerStore';
 import { reportBasemapFailure } from '../../lib/p9aSource';
 import { TILE_RETRY_MS, TILE_TRIES, tileVia, watchTiles, type TileHealth, type TileVia } from './tileHealth';
@@ -56,7 +61,23 @@ export type PoolEntry = {
   chunkFails: number;
   /** Miejsce, które ostatnio wzięło mapę (do zgłoszenia awarii). */
   slot: MapSlot;
+  /** BN9-c5: zakres linii tras narysowany teraz (karta transportu / Mapa i Kokpit), wczytane legi i przeprawy z HERE (po wczytaniu rysowany jest zakres z chwili zakończenia). */
+  lines: {
+    spec: LinesSpec; legs: { leg: string; line: readonly LatLng[] }[] | null; routeLegs: RouteLegRow[];
+    /** Przeprawy z HERE (PROD, `loadFerryLines`), gdy przeszły sprawdzenie. */
+    ferries: { leg: string; line: readonly LatLng[] }[];
+  };
 };
+
+/**
+ * BN9-c5 (#718 BN7 §4): co rysuje mapa — trasy (kody rejsów) i czy z rdzeniem Polska–Szwecja czy bez (karta transportu:
+ * tylko trasa transportu; trasa nieznana — rdzeń). `network` — decyzja 88: Mapa i Kokpit, cała sieć (rdzeń, wszystkie
+ * legi BN7 i tory bałtyckie) niezależnie od transportów.
+ */
+export type LinesSpec = { routes: readonly string[]; baseline: boolean; network?: boolean };
+export const BASELINE_LINES: LinesSpec = { routes: [], baseline: true };
+/** Decyzja 88: Mapa i Kokpit — cała sieć zawsze. */
+export const NETWORK_LINES: LinesSpec = { routes: [], baseline: true, network: true };
 
 /** wyglad/P9-a (E24-1): stan podkładu na mapie z puli. `reported` = zgłoszenie zapisane dla HHL (p9aSource). */
 export type BasemapHealth = TileHealth & { via: TileVia; reported: boolean; cause: 'tiles' | 'chunk' };
@@ -76,17 +97,38 @@ const POINTS = [SITES.loading, SITES.portOut, SITES.portIn, SITES.site];
 /**
  * wyglad/P9-d (E1, zdecydowane 07.10): Kokpit i Mapa — kadr całej trasy (droga, promy, Śrem i Boden), margines 24 px,
  * krok przybliżenia 0,25; przy każdym wejściu i zmianie rozmiaru, bez zapamiętywania przesunięcia, bez „Cała trasa”.
+ * BN9-c5 (#718 BN7 §4 pkt 4 i 7): z trasami bałtyckimi w zakresie mapy kadr obejmuje też ich tory wodne i drogi (punkty
+ * via legów, `FAMILY_EXTENT`); bez tras bałtyckich — kadr Polska–Szwecja bez zmian. Decyzja 88: Mapa i Kokpit mają
+ * w zakresie wszystkie tory — kadr domyślny to cała sieć (Gdańsk/Śrem – Boden z Bałtykiem).
  */
 let corridorBounds: L.LatLngBounds | null = null;
-export function corridorBoundsOf(): L.LatLngBounds {
-  if (corridorBounds) return corridorBounds;
-  const pts: L.LatLngExpression[] = [
-    ...CORRIDOR_REF_COORDS.map(([lng, lat]) => [lat, lng] as L.LatLngTuple),
-    ...[...WATER_GDN_NYN, ...WATER_GDY_KAA].map(([lng, lat]) => [lat, lng] as L.LatLngTuple),
-    ...POINTS.map((p) => [p.lat, p.lng] as L.LatLngTuple),
-  ];
-  corridorBounds = L.latLngBounds(pts);
-  return corridorBounds;
+const balticBounds = new Map<string, L.LatLngBounds>();
+export function corridorBoundsOf(tracks: ReadonlySet<WaterTrackId> = CORE_LANE_TRACKS): L.LatLngBounds {
+  if (!corridorBounds) {
+    const pts: L.LatLngExpression[] = [
+      ...CORRIDOR_REF_COORDS.map(([lng, lat]) => [lat, lng] as L.LatLngTuple),
+      ...[...WATER_GDN_NYN, ...WATER_GDY_KAA].map(([lng, lat]) => [lat, lng] as L.LatLngTuple),
+      ...POINTS.map((p) => [p.lat, p.lng] as L.LatLngTuple),
+    ];
+    corridorBounds = L.latLngBounds(pts);
+  }
+  const extra = (Object.keys(WATER_TRACKS_EXTRA) as WaterTrackId[]).filter((id) => tracks.has(id));
+  if (extra.length === 0) return corridorBounds;
+  const key = extra.join(',');
+  const hit = balticBounds.get(key);
+  if (hit) return hit;
+  const b = L.latLngBounds(corridorBounds.getSouthWest(), corridorBounds.getNorthEast());
+  for (const id of extra) {
+    for (const [lat, lng] of WATER_TRACKS_EXTRA[id as keyof typeof WATER_TRACKS_EXTRA]) b.extend([lat, lng]);
+    for (const [lat, lng] of FAMILY_EXTENT[id] ?? []) b.extend([lat, lng]);
+  }
+  balticBounds.set(key, b);
+  return b;
+}
+/** Tory w zakresie mapy (do kadru) — ustawiane przy rysowaniu linii (`drawCorridorLines`) i przy wzięciu mapy z puli. */
+const fitTracks = new WeakMap<L.Map, ReadonlySet<WaterTrackId>>();
+function boundsFor(map: L.Map): L.LatLngBounds {
+  return corridorBoundsOf(fitTracks.get(map));
 }
 export const CORRIDOR_PADDING = 24;
 /**
@@ -104,12 +146,19 @@ export function attributionOf(map: L.Map): HTMLElement | null {
 }
 export function corridorPadding(map: L.Map): { paddingTopLeft: L.PointTuple; paddingBottomRight: L.PointTuple } {
   let extra = 0;
+  let top = 0;
   try {
-    /* legenda Mapy i dopisek Przeglądu (wyglad/P9-f) leżą na dole mapy */
-    const over = map.getContainer().closest('.corridor-map-root')?.querySelectorAll<HTMLElement>('.mapkey, [data-map-bottom]') ?? [];
+    /* legenda Mapy i dopisek Przeglądu (wyglad/P9-f) leżą na dole mapy; BN9-c5: dopisek trasy bałtyckiej (`.bn7-note`)
+       i dopisek Przeglądu na telefonie leżą u góry — wtedy margines górny (wcześniej dopisek u góry liczony był jak dolny,
+       na wysokość całej mapy, i kadr spadał do najmniejszego przybliżenia) */
+    const over = map.getContainer().closest('.corridor-map-root')?.querySelectorAll<HTMLElement>('.mapkey, [data-map-bottom], .bn7-note') ?? [];
     for (const key of over) {
       if (!(key.offsetHeight > 0)) continue;
       const root = key.offsetParent as HTMLElement | null;
+      if (root && key.offsetTop + key.offsetHeight / 2 < root.clientHeight / 2) {
+        top = Math.max(top, Math.round(key.offsetTop + key.offsetHeight));
+        continue;
+      }
       const fromBottom = root ? root.clientHeight - key.offsetTop : key.offsetHeight;
       extra = Math.max(extra, Math.round(fromBottom));
     }
@@ -124,11 +173,21 @@ export function corridorPadding(map: L.Map): { paddingTopLeft: L.PointTuple; pad
   } catch {
     /* mapa bez kontenera */
   }
-  return { paddingTopLeft: [CORRIDOR_PADDING, CORRIDOR_PADDING], paddingBottomRight: [CORRIDOR_PADDING, CORRIDOR_PADDING + extra] };
+  /* F7 #740 D2: niska mapa (telefon) — nakładki przycięte tak, żeby na trasę zostało ≥ 80 px; inaczej margines większy
+     od mapy daje nieskończone przybliżenie w `getScaleZoom` (szara mapa) */
+  let h = 0;
+  try { h = map.getContainer().clientHeight || map.getSize().y; } catch { h = 0; }
+  const room = Math.max(0, h - 2 * CORRIDOR_PADDING - 80);
+  if (h > 0 && top + extra > room) {
+    const k = room / (top + extra);
+    top = Math.floor(top * k);
+    extra = Math.floor(extra * k);
+  }
+  return { paddingTopLeft: [CORRIDOR_PADDING, CORRIDOR_PADDING + top], paddingBottomRight: [CORRIDOR_PADDING, CORRIDOR_PADDING + extra] };
 }
 /** Widok całej trasy dla bieżącego rozmiaru mapy (bez ruszania mapy). */
 export function corridorView(map: L.Map): { center: L.LatLng; zoom: number } {
-  const b = corridorBoundsOf();
+  const b = boundsFor(map);
   /* ten sam rachunek co `fitBounds` (środek w rzucie mapy, nie średnia stopni) — powrót bez zmiany widoku = zero kafelków */
   const m = map as unknown as { _getBoundsCenterZoom?: (bb: L.LatLngBounds, o: L.FitBoundsOptions) => { center: L.LatLng; zoom: number } };
   if (typeof m._getBoundsCenterZoom === 'function') {
@@ -142,7 +201,8 @@ export function corridorView(map: L.Map): { center: L.LatLng; zoom: number } {
 export function fitCorridor(map: L.Map): void {
   try {
     if (!map.getPane('mapPane')) return;
-    map.fitBounds(corridorBoundsOf(), { ...corridorPadding(map), animate: false });
+    /* F7 r2 #740 R2-W1: kadr to ruch programowy (zdarzenia Leaflet synchronicznie — znacznik obejmuje cały łańcuch) */
+    programmatic(map, () => map.fitBounds(boundsFor(map), { ...corridorPadding(map), animate: false }));
   } catch {
     /* mapa usunięta albo bez rozmiaru */
   }
@@ -158,25 +218,9 @@ function build(pooled: boolean, root: HTMLElement): PoolEntry {
   L.control.zoom({ position: 'topright' }).addTo(map);
   const tiles = L.layerGroup().addTo(map);
   const route = L.layerGroup().addTo(map);
-  /* Bramka przez import.meta.env (nie PROD_BUILD), żeby Vite wyciął applyBasemap z paczki demo (I-2). */
-  if (import.meta.env.VITE_AUTH_MODE !== 'supabase') {
-    /* audyt D-07 (E45, E1): demo — odcinki lądowe; #667: ten sam paintOrangeRoads co PROD. */
-    void import('./orangeRoads').then(({ paintOrangeRoads }) => {
-      paintOrangeRoads(route, DEMO_ROAD_LINES.map((l) => [...l]));
-    }).catch(() => undefined);
-  } else {
-    /* #667 A: warstwa route w PROD (Kokpit / Mapa / karta / telefon) — loadRoadLines; CorridorMap odświeża. */
-    void Promise.all([
-      import('./applyBasemap'),
-      import('./orangeRoads'),
-    ]).then(([{ loadRoadLines }, { paintOrangeRoads }]) =>
-      loadRoadLines().then((lines) => { paintOrangeRoads(route, lines); }),
-    ).catch(() => undefined);
-  }
   const ferryLeg = L.layerGroup().addTo(map);
   /* DP-76: tory w bieżącym motywie (domyślny motyw `drawFerryLanes`) — zapamiętany w `lanesTheme` */
   const lanesTheme = useTowerStore.getState().theme;
-  drawFerryLanes(ferryLeg);
   const detour = L.layerGroup().addTo(map);
   const geofences = L.layerGroup().addTo(map);
   const poi = L.layerGroup().addTo(map);
@@ -190,12 +234,82 @@ function build(pooled: boolean, root: HTMLElement): PoolEntry {
   }
   if (pooled) poolStats.created += 1;
   else poolStats.oneOff += 1;
-  return {
+  const e: PoolEntry = {
     map, el, pooled, tilesTheme: null, lanesTheme, tilesLoaded: false, basemapSeq: 0, views: new Map(),
     layers: { tiles, route, ferryLeg, detour, geofences, poi, fleet, situations, ais },
     health: { state: 'loading', tries: 0, via: 'fallback', reported: false, cause: 'tiles' },
     healthSubs: new Set(), unwatch: null, chunkFails: 0, slot: 'map',
+    lines: { spec: BASELINE_LINES, legs: null, routeLegs: [], ferries: [] },
   };
+  /* #667 A / BN9-c5: drogi (demo: linie przykładowe; PROD: legi z `map_display_state`) i tory — od razu rdzeń
+     Polska–Szwecja; CorridorMap przerysowuje zakres widoku (karta transportu, Mapa, Kokpit) */
+  void drawCorridorLines(e, BASELINE_LINES, true);
+  return e;
+}
+
+/** Zakres linii dla specyfikacji (legi z `route_legs`, gdy już wczytane). */
+export function scopeOfSpec(spec: LinesSpec, routeLegs: readonly RouteLegRow[] = []): CorridorScope {
+  if (spec.network) return networkScope(routeLegs);
+  return corridorScope(spec.routes, routeLegs, spec.baseline);
+}
+
+const HERE_FERRY_TRACK: Readonly<Record<string, WaterTrackId>> = { 'FERRY-GDN-NYN': 'GDN-NYN', 'FERRY-GDY-KAA': 'GDY-KAA' };
+
+/** Warstwa promu od nowa: przeprawy z HERE z zakresu (PROD) i stałe tory zakresu bez nich (DP-7, DP-76). */
+function paintHereFerries(e: PoolEntry, scope: CorridorScope): void {
+  /* F7 #740 D4: HERE podaje dziś odcinki promowe tylko dla GDN-NYN i GDY-KAA (`FerryLeg`); przeprawy bałtyckie zostają
+     na stałych torach (`WATER_TRACKS_EXTRA`) — `drawFerryLanes` niżej */
+  const { ferryLeg } = e.layers;
+  ferryLeg.clearLayers();
+  /* DP-76: styl torów z motywu (`ferryLaneOptions`); zmianę motywu na żywo przerysowuje `ensureBasemap` */
+  const theme = useTowerStore.getState().theme;
+  const mine = e.lines.ferries.filter((f) => scope.tracks.has(HERE_FERRY_TRACK[f.leg]));
+  const laneOpts = ferryLaneOptions(theme);
+  for (const f of mine) L.polyline(f.line.map(([lat, lng]) => L.latLng(lat, lng)), laneOpts).addTo(ferryLeg);
+  /* DP-7: przeprawa bez odcinka z HERE i tory bałtyckie zakresu — to samo rysowanie co przy tworzeniu mapy */
+  drawFerryLanes(ferryLeg, new Set(mine.map((f) => f.leg)), theme, scope.tracks);
+  e.lanesTheme = theme;
+}
+
+/**
+ * BN9-c5 (#718 BN7 §4): linie tras na mapie z puli — legi drogowe (`#E5A544`) i tory wodne (`ferryLaneOptions`) tylko
+ * z zakresu `spec`. Tory i legi już wczytane — od razu (wspólna mapa przechodzi między widokami bez starych linii);
+ * `load` — wczytanie legów (demo: linie przykładowe; PROD: `loadRoadLines` + `loadRoadLegs`, przeprawy z HERE).
+ * Po wczytaniu rysuje zakres z chwili zakończenia (`e.lines.spec`), więc rysowanie z tworzenia mapy nie nadpisze
+ * zakresu widoku (późniejszy widok wygrywa).
+ */
+export function drawCorridorLines(e: PoolEntry, spec: LinesSpec, load: boolean): Promise<void> {
+  e.lines.spec = spec;
+  const pre = scopeOfSpec(spec, e.lines.routeLegs);
+  fitTracks.set(e.map, pre.tracks);
+  const { route } = e.layers;
+  paintHereFerries(e, pre);
+  if (e.lines.legs) paintRoadLegs(route, linesInScope(e.lines.legs, pre).map((l) => l.line));
+  if (!load) return Promise.resolve();
+  /* Bramka przez import.meta.env (nie PROD_BUILD), żeby Vite wyciął applyBasemap z paczki demo (I-2). */
+  if (import.meta.env.VITE_AUTH_MODE !== 'supabase') {
+    /* audyt D-07 (E45, E1): demo — odcinki lądowe; BN9-c5: legi przykładowe z kodem, ten sam filtr co PROD */
+    e.lines.legs = DEMO_ROAD_LEGS.map((l) => ({ leg: l.leg, line: l.line }));
+    paintRoadLegs(route, linesInScope(e.lines.legs, pre).map((l) => l.line));
+    return Promise.resolve();
+  }
+  return import('./applyBasemap').then(async ({ loadRoadLines, loadRoadLegs, loadFerryLines }) => {
+    /* #667: `loadRoadLines` dociąga brakujące legi rdzenia (here-roads); legi z kodem z tego samego odczytu stanu */
+    await loadRoadLines();
+    const { legs, routeLegs } = await loadRoadLegs();
+    e.lines.legs = legs;
+    e.lines.routeLegs = routeLegs;
+    /* zakres z chwili zakończenia (widok mógł się zmienić w trakcie wczytywania) — późniejszy widok wygrywa */
+    const scope = scopeOfSpec(e.lines.spec, routeLegs);
+    fitTracks.set(e.map, scope.tracks);
+    paintRoadLegs(route, linesInScope(legs, scope).map((l) => l.line));
+    /* E45 pkt 1 (L56): przeprawy według HERE, gdy serwer je poda; inaczej zostają stałe tory wodne */
+    const { lines: ferries, summary } = await loadFerryLines();
+    /* L56: na TEST widać, czy przeprawa jest z HERE, czy został stały tor — i dlaczego */
+    if (summary) e.el.dataset.ferries = summary;
+    e.lines.ferries = ferries;
+    paintHereFerries(e, scopeOfSpec(e.lines.spec, routeLegs));
+  }).catch(() => undefined);
 }
 
 function setHealth(e: PoolEntry, next: BasemapHealth): void {
@@ -239,10 +353,11 @@ function safeInvalidate(map: L.Map): void {
 }
 
 /** Wpina mapę do kontenera widoku. Ten sam widok co ostatnio w tym miejscu → bez `setView` (zero nowych kafelków). */
-export function acquireMap(root: HTMLElement, slot: MapSlot): PoolEntry {
+export function acquireMap(root: HTMLElement, slot: MapSlot, spec?: LinesSpec): PoolEntry {
   if (inUse) {
     const one = build(false, root);
     one.slot = slot;
+    if (spec) void drawCorridorLines(one, spec, false);
     if (slot !== 'drawer') fitCorridor(one.map);
     return one;
   }
@@ -250,12 +365,15 @@ export function acquireMap(root: HTMLElement, slot: MapSlot): PoolEntry {
   if (!entry) {
     entry = build(true, root);
     entry.slot = slot;
+    if (spec) void drawCorridorLines(entry, spec, false);
     if (slot !== 'drawer') fitCorridor(entry.map);
     return entry;
   }
   poolStats.reused += 1;
   const e = entry;
   e.slot = slot;
+  /* BN9-c5: zakres linii widoku od razu (tory, legi już wczytane, kadr) — bez linii poprzedniego widoku */
+  if (spec) void drawCorridorLines(e, spec, false);
   root.appendChild(e.el);
   safeInvalidate(e.map);
   const saved = e.views.get(slot);
@@ -270,7 +388,7 @@ export function acquireMap(root: HTMLElement, slot: MapSlot): PoolEntry {
   // Powrót do tego samego miejsca bez zmiany rozmiaru i widoku → nic (zero nowych kafelków). Inaczej widok ustawiany
   // od nowa (`reset`) — piksel w piksel jak świeżo utworzona mapa (wzorce wizualne), kafelki z pamięci przeglądarki.
   if (!untouched) {
-    e.map.setView(target?.center ?? L.latLng(DEFAULT_CENTER), target?.zoom ?? DEFAULT_ZOOM, { reset: true } as L.ZoomPanOptions);
+    programmatic(e.map, () => e.map.setView(target?.center ?? L.latLng(DEFAULT_CENTER), target?.zoom ?? DEFAULT_ZOOM, { reset: true } as L.ZoomPanOptions));
     // Warstwy wektorowe od nowa w tej samej kolejności (obcięcie linii i wzór kresek jak w świeżej mapie). Bez kafelków.
     const { route, ferryLeg, detour, geofences, poi, fleet, situations, ais } = e.layers;
     const on = [route, ferryLeg, detour, geofences, poi, fleet, situations, ais].filter((l) => e.map.hasLayer(l));
@@ -383,6 +501,11 @@ export function ensureBasemap(e: PoolEntry, theme: ThemeName): Promise<L.Layer> 
   }, onChunkFail);
 }
 
+/** Tylko testy: wspólna mapa (warstwy linii tras). */
+export function __poolEntryForTests(): PoolEntry | null {
+  return entry;
+}
+
 /** Tylko testy. */
 export function __resetMapPool(): void {
   entry = null;
@@ -410,7 +533,8 @@ export function drawFerryLanes(
   layer: L.LayerGroup,
   skipLegs: ReadonlySet<string> = new Set(),
   theme: ThemeName = useTowerStore.getState().theme,
+  tracks: ReadonlySet<WaterTrackId> = CORE_LANE_TRACKS,
 ): void {
   const opts = ferryLaneOptions(theme);
-  for (const line of ferryLaneLines(skipLegs)) L.polyline(line.map(([lat, lng]) => L.latLng(lat, lng)), opts).addTo(layer);
+  for (const line of ferryLaneLines(skipLegs, tracks)) L.polyline(line.map(([lat, lng]) => L.latLng(lat, lng)), opts).addTo(layer);
 }
