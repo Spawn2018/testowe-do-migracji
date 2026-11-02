@@ -3712,10 +3712,17 @@ export async function runFerryWeather(deps: JobDeps): Promise<JobResult> {
   const thr = deps.store.opsThresholds
     ? await deps.store.opsThresholds()
     : { waveM: 3.8, gustKn: 40 };
-  /* DP-145: family_key ze słownika ferry_routes; brak → zapas w marineWeather. */
-  const familyByCode = deps.store.ferryRouteFamilies
-    ? await deps.store.ferryRouteFamilies()
-    : null;
+  /* DP-145: family_key ze słownika; DP-148: awaria odczytu → zapas w kodzie + ostrzeżenie (nie przerywa joba). */
+  let familyByCode: Record<string, string> | null = null;
+  if (deps.store.ferryRouteFamilies) {
+    try {
+      familyByCode = await deps.store.ferryRouteFamilies();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      warnings.push(`Słownik ferry_routes niedostępny (${msg}) — używam mapy w kodzie`);
+      familyByCode = null;
+    }
+  }
   const fromIso = new Date(now.getTime() - 3 * 3600_000).toISOString();
   const toIso = new Date(now.getTime() + 72 * 3600_000).toISOString();
   const sailings = await deps.store.sailingsSince(fromIso);
