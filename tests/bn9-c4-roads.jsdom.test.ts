@@ -16,6 +16,7 @@ import {
 } from '../src/lib/bn9c4Roads';
 import { isRouteOnly, isTodoRisk, routeRisks } from '../src/lib/todoRules';
 import { sampleBalticRoadRisksOf } from '../src/lib/p6Source';
+import { todoQueue } from '../src/lib/cockpitE9';
 import { BN9C4_EN, I18N_ALL } from '../src/i18n/messages';
 import type { Load, Risk, Sailing } from '../src/types';
 
@@ -64,6 +65,11 @@ function panel(p: Partial<PanelProps> = {}, width = 1440): HTMLElement {
     role: 'HHL', locale: 'pl', phone: false, nowIso: NOW, loads: [], risks: [], sailings: [], marine: [], corridor: null,
     seSituations: [], seDemo: false, showDemoMarks: true, parts: ['ferry', 'roads'], withHead: false, ...p,
   })), width);
+}
+/** rozwiń sekcje krajów (domyślnie zwinięte) */
+function expand(el: HTMLElement): HTMLElement {
+  for (const b of [...el.querySelectorAll<HTMLButtonElement>('[data-baltic-toggle]')]) act(() => { b.click(); });
+  return el;
 }
 const panels = (el: HTMLElement) => [...el.querySelectorAll('.rk-route-parts > [data-panel]')].map((s) => s.getAttribute('data-panel'));
 const SAILS = [sailing('s-hel', 'TLLA-HEL'), sailing('s-kps', 'PLD-KPS'), sailing('s-sto', 'TLL-STO'), sailing('s-nyn', 'GDN-NYN'), sailing('s-vuo', 'VUO-MUU')];
@@ -127,8 +133,11 @@ describe('BN9-c4 — Ryzyka › Drogi: sekcje krajów', () => {
     expect(el.querySelector('[data-panel="road-fi"] h3')!.textContent).toBe('Drogi FI');
     expect(el.querySelector('[data-panel="road-lt"] [data-empty="road-lt"]')!.textContent).toBe('Brak utrudnień na korytarzu.');
     expect(el.querySelector('[data-panel="road-ee"] [data-empty="road-ee"]')).not.toBeNull();
+    /* zwinięte domyślnie: sam licznik */
+    expect(el.querySelectorAll('[data-baltic-road]').length).toBe(0);
+    expect(el.querySelector('[data-panel="road-fi"] [data-baltic-sum]')!.textContent).toBe('Finlandia · 1 utrudnienie · 0 wysokich');
+    expand(el);
     expect(el.querySelectorAll('[data-panel="road-fi"] [data-baltic-road]').length).toBe(1);
-    expect(el.querySelector('[data-panel="road-fi"] .rk-sec-sub')!.textContent).toBe('1 utrudnienie');
   });
   it('transport PLD-KPS: LT, LV, EE; FI tylko gdy ma ryzyka (poza trasą — bez „brak utrudnień”)', () => {
     const only = panel({ loads: [load('L-kps', 's-kps')], sailings: SAILS });
@@ -149,6 +158,7 @@ describe('BN9-c4 — Ryzyka › Drogi: sekcje krajów', () => {
       loads, sailings: SAILS,
       risks: [road('a', 'FI', { severity: 'MEDIUM' }), road('b', 'FI', { severity: 'CRITICAL' }), road('c', 'FI', { severity: 'HIGH' })],
     });
+    expand(el);
     const rows = [...el.querySelectorAll('[data-panel="road-fi"] [data-baltic-road]')];
     expect(rows.map((r) => r.getAttribute('data-baltic-road'))).toEqual(['b', 'c', 'a']);
     expect(rows[0].querySelector('.rk-box')!.textContent).toBe('FI');
@@ -170,6 +180,7 @@ describe('BN9-c4 — Ryzyka › Drogi: sekcje krajów', () => {
     const plain = road('p1', 'FI');
     const height = road('h1', 'EE', {}, { height_limit_m: 4.2 });
     const el = panel({ loads, sailings: SAILS, risks: [plain, check, over, height] });
+    expand(el);
     const w1 = el.querySelector('[data-baltic-road="w1"]') as HTMLElement;
     expect(w1.getAttribute('data-limit')).toBe('WEIGHT');
     expect(w1.querySelector('[data-limit-tag]')!.textContent).toBe('Limit masy 12 t');
@@ -219,6 +230,7 @@ describe('BN9-c4 — Ryzyka › Drogi: sekcje krajów', () => {
   });
   it('demo: przykładowe drogi FI/LT/LV oznaczone, Estonia „brak utrudnień”; źródła z dopiskiem przykładu', () => {
     const el = panel({ balticDemo: true });
+    expand(el);
     expect(panels(el).filter((p) => /^road-(lt|lv|ee|fi)$/.test(p!))).toEqual(['road-lt', 'road-lv', 'road-ee', 'road-fi']);
     expect(el.querySelector('[data-panel="road-fi"]')!.getAttribute('data-demo')).toBe('baltic-roads');
     expect(el.querySelector('[data-empty="road-ee"]')).not.toBeNull();
@@ -229,13 +241,53 @@ describe('BN9-c4 — Ryzyka › Drogi: sekcje krajów', () => {
   it('telefon 390 px: te same sekcje i wiersze, bez opisu; dopisek limitu zostaje; długie teksty łamią się w CSS', () => {
     const risks = [road('a', 'FI', { titleKey: 'rk_road_baltic_weight_check', titleParams: { country: 'FI', event: 'Kelirikko', limit: 12 } }, { weight_limit_t: 12 }), road('b', 'FI')];
     const el = panel({ phone: true, loads, sailings: SAILS, risks }, 390);
+    expand(el);
     expect(panels(el).filter((p) => /^road-/.test(p!))).toEqual(['road-pl', 'road-se', 'road-lt', 'road-lv', 'road-ee', 'road-fi']);
     expect(el.querySelectorAll('[data-panel="road-fi"] [data-baltic-road]').length).toBe(2);
     expect(el.querySelector('[data-road-note="baltic"]')).toBeNull();
     expect(el.querySelector('[data-limit-check]')).not.toBeNull();
     const css = readFileSync('src/components/risks/risks.css', 'utf8');
-    expect(css).toContain('[data-baltic] .rk-road-t,[data-baltic] .rk-road-n,.rk-road-attr{overflow-wrap:anywhere}');
+    expect(css).toContain('[data-baltic] .rk-road-t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}');
+    expect(css).toContain('[data-baltic] .rk-road-n,.rk-road-attr{overflow-wrap:anywhere}');
     expect(readFileSync('src/components/risks/BalticRoads.tsx', 'utf8')).not.toMatch(/style=\{|width:\s*\d/);
+  });
+  it('produkcja: 146 × ROAD_FI MEDIUM (fińskie tytuły) — zwinięte z licznikiem, 5 pozycji + „Pokaż wszystkie”, LOW zwinięte, wielokropek z pełnym tytułem', () => {
+    const many = Array.from({ length: 146 }, (_, i) => road(`m${String(i).padStart(3, '0')}`, 'FI', {
+      severity: 'MEDIUM', titleParams: { country: 'FI', event: `Tie 50, eli Kehä III, Vantaa. Tietyö <${i}> & "x"` },
+    }));
+    const lows = [road('low1', 'FI', { severity: 'LOW' }), road('low2', 'FI', { severity: 'LOW' })];
+    const hi = road('hi', 'FI', { severity: 'HIGH' });
+    const el = panel({ loads, sailings: SAILS, risks: [...many, ...lows, hi] });
+    const sec = el.querySelector('[data-panel="road-fi"]') as HTMLElement;
+    expect(sec.getAttribute('data-open')).toBe('0');
+    expect(sec.querySelector('[data-baltic-sum]')!.textContent).toBe('Finlandia · 149 utrudnień · 1 wysokie');
+    expect(sec.querySelectorAll('[data-baltic-road]').length).toBe(0);
+    const t = sec.querySelector('[data-baltic-toggle]') as HTMLButtonElement;
+    expect(t.getAttribute('aria-expanded')).toBe('false');
+    act(() => { t.click(); });
+    expect(t.getAttribute('aria-expanded')).toBe('true');
+    const visible = () => [...sec.querySelectorAll('.rk-baltic-list > ul [data-baltic-road]')].map((x) => x.getAttribute('data-baltic-road'));
+    expect(visible()).toHaveLength(5);
+    expect(visible()[0]).toBe('hi');
+    const all = sec.querySelector('[data-baltic-all]') as HTMLButtonElement;
+    expect(all.textContent).toBe('Pokaż wszystkie 147');
+    act(() => { all.click(); });
+    expect(visible()).toHaveLength(147);
+    expect(visible()).not.toContain('low1');
+    const low = sec.querySelector('details[data-baltic-low]') as HTMLDetailsElement;
+    expect(low.open).toBe(false);
+    expect(low.querySelector('summary')!.textContent).toBe('2 informacje o niskim wpływie');
+    expect(low.querySelectorAll('[data-baltic-road]').length).toBe(2);
+    /* pełny tytuł w podpowiedzi; znaki specjalne jako tekst (bez HTML) */
+    const t0 = sec.querySelector('[data-baltic-road="m000"] .rk-road-t') as HTMLElement;
+    expect(t0.getAttribute('title')).toBe('Tie 50, eli Kehä III, Vantaa. Tietyö <0> & "x"');
+    expect(t0.querySelector('*')).toBeNull();
+  });
+  it('Kokpit i menu: 146 × ROAD_FI bez transportu nie zmienia liczby „Do zrobienia”', () => {
+    const base = [risk({ id: 'a', loadId: 'L1', title: 'Brak kierowcy' }), risk({ id: 'b', title: 'Brak polisy' })];
+    const many = Array.from({ length: 146 }, (_, i) => road(`m${i}`, 'FI'));
+    expect(todoQueue('HHL', [...base, ...many])).toEqual(todoQueue('HHL', base));
+    expect(todoQueue('SCX', [...base, ...many])).toEqual(todoQueue('SCX', base));
   });
   it('sekcje z modułu: bez krajów na trasie → pusta lista', () => {
     expect(balticRoadSections([road('f', 'FI')], new Set())).toEqual([]);

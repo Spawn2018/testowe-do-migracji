@@ -116,7 +116,10 @@
 /* BN9-c4: ograniczenie masy / wymiarów na drogach LT/LV/EE/FI — etykieta i dopisek „Sprawdź zezwolenie / trasę.” */
 .rk-limit-tag{display:inline-block;margin-right:6px;padding:0 5px;border:1.5px solid var(--amber-ink);color:var(--amber-ink);font-family:var(--font-cond);font-weight:700;font-size:13px;letter-spacing:.02em;line-height:1.4;vertical-align:1px}
 .rk-road-n.rk-limit-check{color:var(--amber-ink)}
-[data-baltic] .rk-road-t,[data-baltic] .rk-road-n,.rk-road-attr{overflow-wrap:anywhere}
+[data-baltic] .rk-road-tx{flex:1 1 auto}
+[data-baltic] .rk-road-t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+[data-baltic] .rk-road-n,.rk-road-attr{overflow-wrap:anywhere}
+.rk-baltic-low>summary{color:var(--ink-3)}
 .rk-alert{font-family:var(--font-cond);font-weight:700;font-size:14px;letter-spacing:.02em}
 .rk-alert.is-red{color:var(--red)}
 .rk-alert.is-amber{color:var(--amber-ink)}

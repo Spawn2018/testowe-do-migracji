@@ -312,7 +312,7 @@ test.describe('BN9-c3 visual — Ryzyka KSH (pl 1440)', () => {
 
 /* BN9-c4 (#573 „Ekrany po BN6”) — Ryzyka › Drogi: „Drogi LT”, „Drogi LV”, „Drogi EE”, „Drogi FI” pod „Drogi PL” i „Drogi SE”.
    Demo: przykładowa trasa transportu Tallinn – Helsinki, zdarzenia wymyślone (G-09), limit masy wyróżniony, Estonia bez
-   zdarzeń („Brak utrudnień na korytarzu”). Migawka obszaru czterech sekcji, komputer 1440 i telefon 390 (zakładka „Na trasie”). */
+   zdarzeń („Brak utrudnień na korytarzu”); sekcje rozwinięte kliknięciem (domyślnie zwinięte z licznikiem). Migawka obszaru czterech sekcji, komputer 1440 i telefon 390 (zakładka „Na trasie”). */
 test.describe('BN9-c4 visual — drogi LT/LV/EE/FI (HHL pl)', () => {
   test.describe.configure({ mode: 'serial' })
 
@@ -327,6 +327,8 @@ test.describe('BN9-c4 visual — drogi LT/LV/EE/FI (HHL pl)', () => {
       if (width < 769) await page.locator('[data-rk-tab="route"]').click()
       const secs = page.locator('[data-baltic]')
       await expect(secs).toHaveCount(4)
+      /* sekcje zwinięte domyślnie (licznik) — rozwinięte do migawki */
+      for (const t of await page.locator('[data-baltic-toggle]').all()) await t.click()
       await expect(page.locator('[data-panel="road-fi"] [data-limit="WEIGHT"]')).toHaveCount(1)
       await expect(page.locator('[data-empty="road-ee"]')).toBeVisible()
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
