@@ -1,4 +1,12 @@
 
+## 2026-11-02 18:45 — #738 BN7: poprawka bramy db (i2/bmapa)
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. Brak F7 „gotowe”.
+- Scalanie: brak (CI db FAIL @ `0cf93159`; unit/visual ✔).
+- **Krok:** przepisanie asercji pod **0381** — `i2` ETA 12→29 + korytarze 5→9; `bmapa` podpis `here_store_road` 6-arg; +12 asercji BN7 (dict/cron_fetch/OSM/FK/route_legs/ETA); EXPECTED bmapa **192**.
+- **Dalej:** push → CI → F7. Po F7: BN9-c5 (koordynator) → cron_fetch=true → BN8 (#720).
+- Bez push na main.
+
 ## 2026-11-02 18:05 — #737 SCALONE; start BN7 (#718) cz.1
 
 - Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. #735 otwarte (krok 2 po prod).

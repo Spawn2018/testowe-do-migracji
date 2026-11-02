@@ -2545,6 +2545,8 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 02.11.2026 15:05 | #733 SCALONE `f363b7fc`; start DP-166+167 (`pakiet/dp166-167-fi-road-raise` / **0380**): FI `\d{1,5}` + raise update open | pętla / DP-166+167 |
 | 02.11.2026 16:21 | #734 SCALONE `3291d59c` (F7: gotowe @ 4621ed82); start DP-165+169 (`pakiet/dp165-road-lv-net-error`): klasa błędu sieci LV/EE + diagnoza lokalna | pętla / DP-165+169 |
 | 02.11.2026 17:20 | #736 SCALONE `78725265` (F7: gotowe @ dbedbb07); start DP-168 (`pakiet/dp168-road-baltic-shared`): wspólny fetch/obs/icy + N3 MEDIUM | pętla / DP-168 |
+| 02.11.2026 18:05 | #737 SCALONE `4cee7bad`; start BN7 (#718) PR #738 / **0381** `cron_fetch=false` | pętla / BN7 |
+| 02.11.2026 18:45 | #738 db FAIL i2/bmapa → ETA 29 + korytarze 9 + asercje BN7; EXPECTED bmapa 192 | pętla / BN7 |
 | 31.10.2026 — | Decyzja 73: TLLA-HEL ETA−150 min / HELA-TLL ETD+160 min (fixture Cargo; nocny 165 min OK). Decyzja 74: `sailings.source_ref` 0359; Digitraffic `digitraffic:portcall:<id>:<route>`; HTML/RECZNIE/DANE_STARTOWE wygrywają; #685-b RPC zastępuje digitraffic:% w ±3 h | F7 #688 r1–r4 |
 | 31.10.2026 — | F7 #683 nieblokujące (osobna poprawka): Scheduler grudzień + „on 2 January” → rok bieżący, ciche wygaśnięcie; Alert INFO bez ryzyka/historii — świadomie | F7 #683 r7 |
 | 31.10.2026 — | F7 #683 r8 nieblokujące (osobno): Alert poza Schedulerem obok Schedulera; sprzeczne bloki (resume→cofnięcie auto); rok przy długim oknie Schedulera; mutanty M10/M15–M17/M22 świadomie bez testów | F7 #683 r8 |
