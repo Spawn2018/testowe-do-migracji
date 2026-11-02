@@ -141,6 +141,26 @@ async function navTo(page: Page, dataView: string) {
   await page.waitForTimeout(200)
 }
 
+/* DP-161: Ryzyka na komputerze — dwie kolumny obok siebie, „Sytuacja na trasie” ≥ 360 px, „Do zrobienia” szersza od trasy,
+   bez nakładania i bez przewijania strony w bok (inaczej migawka utrwaliłaby ściśnięty układ). */
+async function expectTwoRiskColumns(page: Page) {
+  const m = await page.evaluate(() => {
+    const box = (s: string) => document.querySelector(s)?.getBoundingClientRect() ?? null
+    const todo = box('.rk-grid > .rk-todo')
+    const route = box('.rk-grid > .rk-route')
+    return {
+      todo: todo && { left: todo.left, right: todo.right, width: todo.width },
+      route: route && { left: route.left, right: route.right, width: route.width },
+      overflow: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+    }
+  })
+  expect(m.todo && m.route, 'Ryzyka: brak kolumn .rk-todo / .rk-route').toBeTruthy()
+  expect(m.route!.width).toBeGreaterThanOrEqual(360)
+  expect(m.todo!.width).toBeGreaterThan(m.route!.width)
+  expect(m.todo!.right).toBeLessThanOrEqual(m.route!.left)
+  expect(m.overflow).toBeLessThanOrEqual(0)
+}
+
 test.describe('C2.4 visual smoke (HHL pl 1920)', () => {
   test.describe.configure({ mode: 'serial' })
 
@@ -268,11 +288,14 @@ test.describe('BN9-c3 visual — pogoda na przeprawach (HHL pl)', () => {
       await page.evaluate(async () => {
         if (document.fonts?.ready) await document.fonts.ready
       })
-      /* dolny pasek telefonu (E8) przykrywa treść — poza migawką sekcji; wyższe okno, cała sekcja w kadrze */
-      await page.addStyleTag({ content: 'nav.tower-nav{display:none !important}' })
+      /* dolny pasek telefonu (E8) przykrywa treść — poza migawką sekcji; wyższe okno, cała sekcja w kadrze.
+         DP-161: tylko telefon — na komputerze `nav.tower-nav` to menu boczne; ukryte przesuwało treść do kolumny menu (186 px)
+         i migawka 1440 utrwalała ściśnięty układ (kolumna trasy 318 px, „Do zrobienia” po jednym znaku w wierszu). */
+      if (width < 769) await page.addStyleTag({ content: 'nav.tower-nav{display:none !important}' })
       await page.setViewportSize({ width, height: width < 769 ? 3400 : 2200 })
       await sec.scrollIntoViewIfNeeded()
       await page.waitForTimeout(300)
+      if (width >= 769) await expectTwoRiskColumns(page)
       await expect(sec).toHaveScreenshot(file, {
         maxDiffPixels: 60,
         threshold: 0.28,
@@ -313,12 +336,12 @@ test.describe('BN9-c3 visual — Ryzyka KSH (pl 1440)', () => {
 /* BN9-c4 (#573 „Ekrany po BN6”) — Ryzyka › Drogi: „Drogi LT”, „Drogi LV”, „Drogi EE”, „Drogi FI” pod „Drogi PL” i „Drogi SE”.
    Demo: przykładowa trasa transportu Tallinn – Helsinki, zdarzenia wymyślone (G-09), limit masy wyróżniony, Estonia bez
    zdarzeń („Brak utrudnień na korytarzu”, świeży odczyt źródła); sekcje rozwinięte kliknięciem (domyślnie zwinięte z licznikiem).
-   Migawka obszaru czterech sekcji, telefon 390 (zakładka „Na trasie”). Komputer 1440 pokrywa `ryzyka-ksh-pl-1440-light.png`
-   (F7 r1 B1: układ HHL 1440 — osobne DP-161). */
+   Migawka obszaru czterech sekcji: telefon 390 (zakładka „Na trasie”) i — DP-161 — komputer 1440 HHL (prawa kolumna
+   „Sytuacja na trasie” obok „Do zrobienia”, menu boczne widoczne). Układ KSH 1440 pokrywa `ryzyka-ksh-pl-1440-light.png`. */
 test.describe('BN9-c4 visual — drogi LT/LV/EE/FI (HHL pl)', () => {
   test.describe.configure({ mode: 'serial' })
 
-  for (const width of [390]) {
+  for (const width of [1440, 390]) {
     const file = `drogi-baltyckie__hhl__pl__${width}__light.png`
     test(file, async ({ page }) => {
       await page.emulateMedia({ reducedMotion: 'reduce' })
@@ -338,11 +361,13 @@ test.describe('BN9-c4 visual — drogi LT/LV/EE/FI (HHL pl)', () => {
       await page.evaluate(async () => {
         if (document.fonts?.ready) await document.fonts.ready
       })
-      await page.addStyleTag({ content: 'nav.tower-nav{display:none !important}' })
+      /* DP-161: dolny pasek ukryty tylko na telefonie (na komputerze to menu boczne) */
+      if (width < 769) await page.addStyleTag({ content: 'nav.tower-nav{display:none !important}' })
       await page.setViewportSize({ width, height: width < 769 ? 4200 : 2600 })
       await page.evaluate(() => window.scrollTo(0, 0))
       await page.waitForTimeout(300)
-      /* telefon: obszar od „Drogi LT” do „Drogi FI” (sekcje stoją jedna pod drugą) */
+      if (width >= 769) await expectTwoRiskColumns(page)
+      /* obszar od „Drogi LT” do „Drogi FI” (sekcje stoją jedna pod drugą; na komputerze w prawej kolumnie) */
       const clip = await page.evaluate(() => {
         const els = [...document.querySelectorAll('[data-baltic]')].map((e) => e.getBoundingClientRect())
         const x = Math.min(...els.map((r) => r.left))
