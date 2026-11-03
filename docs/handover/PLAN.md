@@ -1442,7 +1442,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 ### #762 · Kolejka drobnych poprawek Cursora — pakiety C1–C5 (do wydania 1.0)
 Źródło: #762 (Spawn2018; 03.11). Po #760 → #756 (DP-187/188) → C1…. Koordynator: pakiety DP-A/B/C (front) — nie brać.
 1. **C1 — Korytarz bałtycki:** ~~DP-179~~ DONE; ~~143/144~~ DONE; ~~DP-146~~ SCALONE (#769 `1a523a5f`); ~~152~~ SCALONE (#768 `0abe9a8f`); ~~155/156~~ SCALONE (#766 `272e0afc` / **0388**); ~~157/158~~ DONE (LT/LV/EE/FI etykiety, szum FI; przed BN10).
-2. **C2 — telematyka / ETA:** **DP-193+194** W TOKU (#770 / **0389**; F7 r1 → OSM alarm SE_E4, DP-197); dalej DP-197, 119, 120, 121, 123, 124, 126, 129, 132, 140.
+2. **C2 — telematyka / ETA:** **DP-193+194** W TOKU (#770 / **0389**; CI ✔ @ `e1f7e29b`, czekam F7; OSM alarm SE_E4, DP-197); dalej DP-197, 119, 120, 121, 123, 124, 126, 129, 132, 140.
 3. **C3 — stare pozycje backendu:** DP-2, 10, 12, 22, 24, 29–32, 38–40, 43, 46, 47, 53–58 (+ **DP-195** tor KAA po #764).
 4. **C4 — reszta:** DP-69, 70, 81–83, 90–93, 97, 99–103, 105–109, 111, 112.
 5. **C5 — warunkowe:** DP-186 (decyzja 04.11 ~07:00 po 24 h odbioru #753).
@@ -2627,6 +2627,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 03.11.2026 14:40 | #769 SCALONE `1a523a5f` (DP-146; F7 @ 554401d5); start C2 DP-193+194 **0389** (`pakiet/c2-dp-193-194-eta-corridor`); status **637**, h4 **23** | pętla / C2 |
 | 03.11.2026 15:45 | #770 F7 r1 niegotowe → decyzja 97: SE_E4 alarm OSM; DP-197; testy OSM+obs HERE; DP-193 behawioralne; status **640**, h4 **26** | pętla / C2 F7 |
 | 03.11.2026 16:15 | #770 CI db: DP-193 chk `exists::text` → expected `true` (nie `t`); status **640** | pętla / C2 CI |
+| 03.11.2026 16:40 | #770 CI unit/db/visual ✔ @ `e1f7e29b`; czekam F7: gotowe do scalenia; potem DP-197 | pętla / C2 |
 | 31.10.2026 — | Decyzja 73: TLLA-HEL ETA−150 min / HELA-TLL ETD+160 min (fixture Cargo; nocny 165 min OK). Decyzja 74: `sailings.source_ref` 0359; Digitraffic `digitraffic:portcall:<id>:<route>`; HTML/RECZNIE/DANE_STARTOWE wygrywają; #685-b RPC zastępuje digitraffic:% w ±3 h | F7 #688 r1–r4 |
 | 31.10.2026 — | F7 #683 nieblokujące (osobna poprawka): Scheduler grudzień + „on 2 January” → rok bieżący, ciche wygaśnięcie; Alert INFO bez ryzyka/historii — świadomie | F7 #683 r7 |
 | 31.10.2026 — | F7 #683 r8 nieblokujące (osobno): Alert poza Schedulerem obok Schedulera; sprzeczne bloki (resume→cofnięcie auto); rok przy długim oknie Schedulera; mutanty M10/M15–M17/M22 świadomie bez testów | F7 #683 r8 |
