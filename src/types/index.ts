@@ -373,6 +373,8 @@ export interface Load {
   etaReasons: string[];
   etaMethod: string;
   etaUpdatedAt: string;
+  /** DP-192: czas ostatniego obliczenia ETA w bazie (`eta_computed_at` / `eta_basis.computed_at`); brak = ETA jeszcze nieliczone. */
+  etaComputedAt?: string | null;
   /** ETA-PRE-LOAD: przed wyjazdem ze Śremu pole ETA to sam „–”, bez tekstu. */
   etaPreLoad?: boolean;
   /** I-2d: ETA v1 z bazy — pasmo ± minut (eta_confidence_min); null = ETA liczone w kliencie (demo). */
