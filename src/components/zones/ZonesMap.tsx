@@ -16,6 +16,7 @@ import { DEMO_ROAD_LINES } from '../../data/roadLinesDemo';
 import { ferryLaneLines, ferryLaneOptions, restyleFerryLanes } from '../../lib/map/ferryLanes';
 import { coreLegsOnly } from '../../lib/map/routeLegs';
 import { p8ct } from '../../i18n/p8c';
+import { fitWithLabels, LABEL_BOX, LABEL_PLACE, labelOffset, type LabelPlace } from './zoneLabels';
 
 type Circle = { lat: number; lng: number; radiusM: number };
 /* stałe puste listy — nowa pusta tablica przy każdym renderze przerysowywałaby mapę */
@@ -51,7 +52,7 @@ const tok = (name: string, fallback: string): string => {
 };
 
 /** Miejsca na mapie trasy: zbiory stref przy jednym miejscu. */
-function clusters(zones: readonly ZoneRow[]): { name: string; lat: number; lng: number; n: number; left: boolean; down: boolean }[] {
+function clusters(zones: readonly ZoneRow[]): { name: string; lat: number; lng: number; n: number; place: LabelPlace }[] {
   const key = (z: ZoneRow) => {
     const g = groupOf(z);
     if (g === 'gdansk' || g === 'gdynia') return 'Gdańsk i Gdynia';
@@ -71,8 +72,7 @@ function clusters(zones: readonly ZoneRow[]): { name: string; lat: number; lng: 
       lat: pts.reduce((s, z) => s + z.lat, 0) / pts.length,
       lng: pts.reduce((s, z) => s + z.lng, 0) / pts.length,
       n: zs.length,
-      left: name === 'Karlskrona' || name === 'Nynäshamn',
-      down: name === 'Śrem',
+      place: LABEL_PLACE[name] ?? 'right',
     };
   });
 }
@@ -95,7 +95,8 @@ export default function ZonesMap({ mode, zones = NO_ZONES, zone, prev, draft, ne
   useEffect(() => {
     const el = box.current;
     if (!el || mapRef.current) return;
-    const map = L.map(el, { zoomControl: true, attributionControl: true, scrollWheelZoom: false });
+    /* DP-74: krok przybliżenia 0,25 — kadr wszystkich stref z etykietami bez skoku o cały poziom */
+    const map = L.map(el, { zoomControl: true, attributionControl: true, scrollWheelZoom: false, zoomSnap: 0.25 });
     map.setView([60, 18], 4);
     map.on('click', (e) => onMoveRef.current?.(e.latlng.lat, e.latlng.lng));
     /* P11 (e34): mapa wszystkich stref z trasą — droga (demo: stałe odcinki lądowe; produkcja: trasy HERE z serwera)
@@ -193,25 +194,36 @@ export default function ZonesMap({ mode, zones = NO_ZONES, zone, prev, draft, ne
         if (z.radiusM >= 10_000) continue;
         L.circle([z.lat, z.lng], { radius: z.radiusM, color: z.active ? sea : plan, weight: 1, fillOpacity: 0.15, interactive: false }).addTo(g);
       }
+      const items: Parameters<typeof fitWithLabels>[1][number][] = [];
       for (const c of clusters(zones)) {
         const word = plPlural(c.n, 'strefa', 'strefy', 'stref');
         L.circleMarker([c.lat, c.lng], { radius: 7, color: ink, weight: 2, fillColor: ink, fillOpacity: 1, interactive: false }).addTo(g);
-        L.marker([c.lat, c.lng], {
+        const label = L.marker([c.lat, c.lng], {
           interactive: false,
           keyboard: false,
-          /* Nynäshamn i Karlskrona po lewej (jak na obrazie), reszta po prawej — etykiety blisko siebie się nie nakładają */
           icon: L.divIcon({
-            className: `zm-label${c.left ? ' is-left' : ''}`,
+            className: `zm-label${c.place.startsWith('left') ? ' is-left' : ''}`,
             html: textNode([{ t: c.name, bold: true }, { t: `${c.n} ${word}` }]),
             iconSize: undefined,
-            /* Nynäshamn nad punktem, Karlskrona pod nim — przy małym przybliżeniu punkty są blisko siebie */
-            iconAnchor: c.name === 'Nynäshamn' ? [118, 34] : c.name === 'Karlskrona' ? [118, 5] : c.down ? [-12, -6] : [-12, 14],
           }),
         }).addTo(g);
+        /* DP-74: położenie z rozmiaru etykiety (zmierzonej po wstawieniu; zapas LABEL_BOX) — bez nachodzenia na miasta */
+        const elL = label.getElement();
+        const w = elL?.offsetWidth || LABEL_BOX.w;
+        const h = elL?.offsetHeight || LABEL_BOX.h;
+        const [dx, dy] = labelOffset(c.place, w, h);
+        if (elL) elL.style.marginLeft = `${dx}px`;
+        if (elL) elL.style.marginTop = `${dy}px`;
+        if (elL) elL.dataset.labelPlace = c.place;
+        items.push({ lat: c.lat, lng: c.lng, place: c.place, w, h });
         bounds.extend([c.lat, c.lng]);
       }
       const k = `all:${zones.length}`;
-      if (bounds.isValid() && fitKey.current !== k) { map.fitBounds(bounds, { paddingTopLeft: [30, 30], paddingBottomRight: padEnd, animate: false }); fitKey.current = k; }
+      if (bounds.isValid() && fitKey.current !== k) {
+        /* lewy margines na przyciski „+ / −” (lewy górny róg), dolny na podpis podkładu */
+        fitWithLabels(map, items, { top: 12, left: 48, right: 12, bottom: padEnd[1] });
+        fitKey.current = k;
+      }
       return;
     }
     if (prev) {

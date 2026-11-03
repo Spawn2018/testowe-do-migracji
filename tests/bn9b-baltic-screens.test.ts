@@ -60,8 +60,7 @@ describe('BN9-b — ekrany Korytarza bałtyckiego', () => {
     expect(waterTrackOf('TLLA-HEL')).toBe('TLL-HEL');
     expect(extraWaterTracksFor(['TLLA-HEL']).map((x) => x.id)).toEqual(['TLL-HEL']);
     const pool = readFileSync('src/components/map/mapPool.ts', 'utf8');
-    /* DP-7: tory z jednego źródła (`ferryLaneLines`) */
-    expect(pool).toMatch(/drawFerryLanes\(ferryLeg, /);
+    /* DP-7: tory z jednego źródła (`ferryLaneLines`) — DP-41: zachowanie w tests/dp-a-mapy.jsdom.test.ts */
     /* BN9-c5 (#718 BN7 §4): tory bałtyckie z `extraWaterTracksFor` dla torów zakresu (nie „zawsze”) */
     expect(readFileSync('src/lib/map/ferryLanes.ts', 'utf8')).toMatch(/extraWaterTracksFor\(extra\)/);
     /* linie drogowe (pomarańczowe) — poza BN9-b */
