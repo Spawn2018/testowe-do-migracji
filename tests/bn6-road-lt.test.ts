@@ -212,7 +212,8 @@ describe('BN6 road-lt — eismoinfo', () => {
     const r = dimensionLimitRisk('LT', height, LT_RESTRICTIONS_URL, LT_ATTRIBUTION);
     expect(r.severity).toBe('MEDIUM');
     expect(r.titleKey).toBe('rk_road_baltic_dim_check');
-    expect(r.title).toMatch(/wysokość/);
+    expect(r.title).toMatch(/sprawdź wysokość|wysokość/);
+    expect(r.title).toMatch(/^Warunki drogowe /);
     expect(balticSlowdownMult([height]).mult).toBe(1);
   });
 
@@ -442,14 +443,9 @@ describe('BN6 runRoadLt', () => {
     const constr = stOk.risks.find((x) => x.dedup === 'ROAD_LT:v2:bn6-lt-construction-kaunas');
     expect(constr?.severity).toBe('LOW');
     expect(stOk.risks.some((x) => x.dedup === 'ROAD_LT:v2:bn6-lt-far-vilnius-east')).toBe(false);
-    const weightRisk = stOk.risks.find((x) => x.dedup === 'ROAD_LT:v2:bn6-lt-weight-panevezys');
-    /* DP-172: kody w `kody`; off-corridor bez oryginal/pending. */
-    expect(weightRisk?.detail?.kody).toBe('LD,SVKD');
-    expect(weightRisk?.detail?.oryginal).toBeUndefined();
-    expect(weightRisk?.detail?.uwaga_wypadki).toMatch(/nie podaje wypadkow/);
-    /* DP-164: A2 poza listą korytarza → maks. LOW (było MEDIUM z weightLimitRisk). */
-    expect(weightRisk?.severity).toBe('LOW');
-    expect(weightRisk?.detail?.korytarz_droga).toBe('off');
+    /* DP-203: A2 Panevėžys off → bez ryzyka (wcześniej LOW); licznik lt_off_corridor. */
+    expect(stOk.risks.some((x) => x.dedup === 'ROAD_LT:v2:bn6-lt-weight-panevezys')).toBe(false);
+    expect(Number(rOk.observations?.lt_off_corridor)).toBeGreaterThan(0);
     const heightRisk = stOk.risks.find((x) => x.dedup === 'ROAD_LT:v2:bn6-lt-height-only-kaunas');
     expect(heightRisk?.severity).toBe('MEDIUM');
     expect(heightRisk?.titleKey).toBe('rk_road_baltic_dim_check');

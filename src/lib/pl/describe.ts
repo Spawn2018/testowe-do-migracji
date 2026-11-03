@@ -117,17 +117,32 @@ export function describeCondition(code: number | null, rawText: string, _road: s
   };
 }
 
-export function unknownCodeRiskInput(codeKey: string, day: string): {
-  kind: 'ROAD_SE'; severity: 'LOW'; title: string; titleKey: string;
+/**
+ * DP-203: luka słownika Trafikverket → jeden sygnał HHL (`RESOURCE_MISSING`),
+ * nie ROAD_SE dla wszystkich (wcześniej 131× „Nieznany kod…”).
+ */
+export function unknownCodeRiskInput(codes: string | string[], day: string): {
+  kind: 'RESOURCE_MISSING'; severity: 'LOW'; title: string; titleKey: string;
   params: Record<string, string | number>; detail: Record<string, unknown>; dedup: string;
 } {
+  const list = (Array.isArray(codes) ? codes : [codes])
+    .map((c) => String(c).trim())
+    .filter(Boolean);
+  const uniq = [...new Set(list)].slice(0, 40);
   return {
-    kind: 'ROAD_SE',
+    kind: 'RESOURCE_MISSING',
     severity: 'LOW',
-    title: 'Nieznany kod źródła drogowego — w panelu: zdarzenie drogowe',
-    titleKey: 'rk_tv_unknown_code',
-    params: {},
-    detail: { kod: codeKey, zrodlo: 'Trafikverket', panel: PANEL_FALLBACK },
-    dedup: `ROAD_SE:TV_CODE:${codeKey}:${day}`,
+    title: uniq.length <= 1
+      ? `Słownik Trafikverket: brak kodu ${uniq[0] ?? '(pusty)'} — uzupełnij codes.ts`
+      : `Słownik Trafikverket: brak ${uniq.length} kodów — uzupełnij codes.ts`,
+    titleKey: 'rk_tv_unknown_code_hhl',
+    params: { n: uniq.length },
+    detail: {
+      kody: uniq.join(','),
+      zrodlo: 'Trafikverket',
+      panel: PANEL_FALLBACK,
+      audience: 'HHL',
+    },
+    dedup: `RESOURCE_MISSING:TV_CODE:${day}`,
   };
 }

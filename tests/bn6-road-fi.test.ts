@@ -199,7 +199,7 @@ describe('BN6 road-fi — Digitraffic', () => {
     expect(extractFiRoadRef('Tie 8, Vaasa')).toBe('8');
     expect(fiRoadOnCorridor(extractFiRoadRef('Tie 8, Vaasa'))).toBe('off');
     expect(fiRoadOnCorridor(extractFiRoadRef('Tie 75'))).toBe('off');
-    /* DP-166: lokalne 5-cyfrowe — nie unknown (≤3 km → on). */
+    /* DP-166: lokalne 5-cyfrowe → off (nie unknown); DP-203: bez awansu unknown→on po km. */
     expect(extractFiRoadRef('Tie 19511, Espoo. Tietyö.')).toBe('19511');
     expect(fiRoadOnCorridor(extractFiRoadRef('Tie 19511, Espoo. Tietyö.'))).toBe('off');
     expect(extractFiRoadRef('Tie 8155')).toBe('8155');

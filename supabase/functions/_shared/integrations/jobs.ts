@@ -109,7 +109,8 @@ import {
   EE_RESTRICTIONS_TIMEOUT_MS,
   applyBalticCorridorRoadFilter, applyFiCorridorRoadFilter, balticFeedObsOk, balticFeedShapeObs,
   balticJsonErrorSnippet, balticKeyMeta,
-  balticNetWarning, balticRoadRisk, balticSlowdownMult, balticUrlKind, balticWarnHost,
+  balticNetWarning, balticRoadRisk, balticShouldRaiseRisk, balticSlowdownMult, balticUrlKind,
+  balticWarnHost,
   capBalticRiskSeverity, classifyBalticNetError, dedupeLvSlippery, eeDatexApiKeyMeta,
   eeDatexFeedUrl, fiCorridorBboxes, fiTrafficUrl, filterInEeBboxes, filterInFiBboxes,
   filterInLvBboxes, dimensionLimitRisk, filterInLtBboxes, getEeHeavyFeedCache, getEeSitesCache,
@@ -3559,12 +3560,15 @@ export async function runRoadSe(deps: JobDeps): Promise<JobResult> {
   }
   if (situationsStatus === 'ok' && deps.store.resolveStaleRisks) {
     await deps.store.resolveStaleRisks('ROAD_SE:SIT:', situations.map((e) => `ROAD_SE:SIT:${e.id}`));
+    /* DP-203: zamknij stare ROAD_SE „Nieznany kod…” (per-kod) — luka słownika → RESOURCE_MISSING HHL. */
+    await deps.store.resolveStaleRisks('ROAD_SE:TV_CODE:', []);
   }
-  for (const e of situations) {
-    for (const code of e.unknownCodes ?? []) {
-      const extra = unknownCodeRiskInput(code, now.slice(0, 10));
-      if (await deps.store.raiseRisk(extra)) risks++;
-    }
+  const unknownSeCodes = [
+    ...new Set(situations.flatMap((e) => e.unknownCodes ?? [])),
+  ];
+  if (unknownSeCodes.length) {
+    const extra = unknownCodeRiskInput(unknownSeCodes, now.slice(0, 10));
+    if (await deps.store.raiseRisk(extra)) risks++;
   }
   try { await polishRoadFreeText(deps, situations, now); }
   catch { /* DeepL nie przerywa odczytu drogi */ }
@@ -3778,21 +3782,28 @@ export async function runRoadFi(deps: JobDeps): Promise<JobResult> {
   const complete = fetchedOk === expectedFetches;
   let risks = 0;
   const keep: string[] = [];
+  let fiOffCorridor = 0;
   for (const e of near) {
-    /* DP-157(c)/F7 #732: tylko corridorMatch=on w keep (off/unknown → resolveStale). */
-    if (e.corridorMatch !== 'on') continue;
+    /* DP-203: tylko on albo unknown ≤300 m (LOW); off → licznik. */
+    const raise = balticShouldRaiseRisk('FI', e);
+    if (!raise) {
+      if (e.corridorMatch === 'off') fiOffCorridor++;
+      continue;
+    }
     const src = byId.get(e.id)?.sourceUrl ?? FI_ROADWORKS_URL;
     /* F7 #732 B1: kelirikko/painorajoitus bez liczby → weightLimitRisk(limit=null) MEDIUM. */
     const raw = isFiWeightLimitLike(e)
       ? weightLimitRisk('FI', e, null, src, FI_ATTRIBUTION)
       : balticRoadRisk('FI', e, src, FI_ATTRIBUTION);
-    const risk = capBalticRiskSeverity(raw, e.corridorMatch);
+    const risk = raise === 'unknown-near'
+      ? { ...raw, severity: 'LOW' as const, title: raw.title.replace(/: /, ': sprawdź — ') }
+      : capBalticRiskSeverity(raw, e.corridorMatch);
     if (e.corridorMatch) {
       (risk.detail as Record<string, unknown>).korytarz_droga = e.corridorMatch;
     }
+    if (e.road) (risk.detail as Record<string, unknown>).droga = e.road;
     /* DP-158: params.event = etykieta PL; surowy fiński w detail.opis. */
     if (risk.params && typeof risk.params === 'object') {
-      (risk.params as Record<string, unknown>).event = e.title;
       (risk.params as Record<string, unknown>).type_pl = e.title;
     }
     keep.push(risk.dedup);
@@ -3829,6 +3840,7 @@ export async function runRoadFi(deps: JobDeps): Promise<JobResult> {
       complete: complete ? '1' : '0',
       events_raw: String(byId.size),
       events_near: String(near.length),
+      fi_off_corridor: String(fiOffCorridor),
     },
   };
 }
@@ -3919,15 +3931,23 @@ export async function runRoadLt(deps: JobDeps): Promise<JobResult> {
   const complete = fetchedOk === expectedFetches;
   let risks = 0;
   const keep: string[] = [];
+  let ltOffCorridor = 0;
   for (const e of near) {
-    /* DP-172: poza korytarzem bez freeText → bez pending (tłumaczymy tylko on). */
-    const ev = e.corridorMatch === 'on' ? e : { ...e, freeText: null, note: null };
+    /* DP-203: tylko on / unknown ≤300 m; off → bez ryzyka. */
+    const raise = balticShouldRaiseRisk('LT', e);
+    if (!raise) {
+      if (e.corridorMatch === 'off') ltOffCorridor++;
+      continue;
+    }
+    const ev = raise === 'on' ? e : { ...e, freeText: null, note: null };
     const raw = ev.weightLimitT != null
       ? weightLimitRisk('LT', ev, null, LT_RESTRICTIONS_URL, LT_ATTRIBUTION)
       : isDimensionLimitEvent(ev)
         ? dimensionLimitRisk('LT', ev, LT_RESTRICTIONS_URL, LT_ATTRIBUTION)
         : balticRoadRisk('LT', ev, LT_RESTRICTIONS_URL, LT_ATTRIBUTION);
-    const risk = capBalticRiskSeverity(raw, e.corridorMatch);
+    const risk = raise === 'unknown-near'
+      ? { ...raw, severity: 'LOW' as const, title: raw.title.replace(/: /, ': sprawdź — ') }
+      : capBalticRiskSeverity(raw, e.corridorMatch);
     /* F7 #727 N2: jedna uwaga o braku wypadków w ryzyku (nie w każdym detail zdarzenia). */
     if (risk.detail && typeof risk.detail === 'object') {
       (risk.detail as Record<string, unknown>).uwaga_wypadki =
@@ -3960,6 +3980,7 @@ export async function runRoadLt(deps: JobDeps): Promise<JobResult> {
         complete,
         note: 'zrodlo LT nie podaje wypadkow',
         dp164: 'filtr A5/A8/A10/E67+A1 Kaunas',
+        lt_off_corridor: ltOffCorridor,
       },
     });
   }
@@ -3975,6 +3996,7 @@ export async function runRoadLt(deps: JobDeps): Promise<JobResult> {
       events_raw: String(restrictionEvents.length),
       events_near: String(near.length),
       weather_adverse: String(weatherSlow.length),
+      lt_off_corridor: String(ltOffCorridor),
     },
   };
 }
@@ -4327,14 +4349,23 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
   const complete = fetchedOk === expectedFetches;
   let risks = 0;
   const keep: string[] = [];
+  let lvOffCorridor = 0;
   for (const e of near) {
-    const ev = e.corridorMatch === 'on' ? e : { ...e, freeText: null, note: null };
+    /* DP-202/203: tylko on / unknown ≤300 m; off (A6/P/V…) → bez ryzyka. */
+    const raise = balticShouldRaiseRisk('LV', e);
+    if (!raise) {
+      if (e.corridorMatch === 'off') lvOffCorridor++;
+      continue;
+    }
+    const ev = raise === 'on' ? e : { ...e, freeText: null, note: null };
     const raw = ev.weightLimitT != null
       ? weightLimitRisk('LV', ev, null, LV_SOURCE_REF, LV_ATTRIBUTION)
       : isDimensionLimitEvent(ev)
         ? dimensionLimitRisk('LV', ev, LV_SOURCE_REF, LV_ATTRIBUTION)
         : balticRoadRisk('LV', ev, LV_SOURCE_REF, LV_ATTRIBUTION);
-    const risk = capBalticRiskSeverity(raw, e.corridorMatch);
+    const risk = raise === 'unknown-near'
+      ? { ...raw, severity: 'LOW' as const, title: raw.title.replace(/: /, ': sprawdź — ') }
+      : capBalticRiskSeverity(raw, e.corridorMatch);
     if (risk.detail && typeof risk.detail === 'object') {
       if (e.road) (risk.detail as Record<string, unknown>).droga = e.road;
       if (e.corridorMatch) {
@@ -4368,6 +4399,7 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
         dedup_ver: 'v2',
         dp164: 'filtr A7/E67+A1/A4/A5 + ≤3 km',
         lv_mode: 'rest_snapshot',
+        lv_off_corridor: lvOffCorridor,
       },
     });
   }
@@ -4390,6 +4422,7 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
       header: LV_NAP_KEY_HEADER,
       records_skipped: String(parseStats.skipped),
       lv_swapped: String(parseStats.swapped),
+      lv_off_corridor: String(lvOffCorridor),
       ...diag,
       ...lvPerObs,
     },
@@ -4786,15 +4819,22 @@ export async function runRoadEe(deps: JobDeps): Promise<JobResult> {
   const complete = fetchedOk === expectedFetches && !weatherIncomplete;
   let risks = 0;
   const keep: string[] = [];
+  let eeOffCorridor = 0;
   for (const e of near) {
-    /* Tylko zdarzenia na korytarzu / przy porcie — poza listą bez raise (jak FI DP-157). */
-    if (e.corridorMatch !== 'on') continue;
+    /* DP-203: tylko on / unknown ≤300 m; off → bez ryzyka. */
+    const raise = balticShouldRaiseRisk('EE', e);
+    if (!raise) {
+      if (e.corridorMatch === 'off') eeOffCorridor++;
+      continue;
+    }
     const raw = e.weightLimitT != null
       ? weightLimitRisk('EE', e, null, EE_SOURCE_REF, EE_ATTRIBUTION)
       : isDimensionLimitEvent(e)
         ? dimensionLimitRisk('EE', e, EE_SOURCE_REF, EE_ATTRIBUTION)
         : balticRoadRisk('EE', e, EE_SOURCE_REF, EE_ATTRIBUTION);
-    const risk = capBalticRiskSeverity(raw, e.corridorMatch);
+    const risk = raise === 'unknown-near'
+      ? { ...raw, severity: 'LOW' as const, title: raw.title.replace(/: /, ': sprawdź — ') }
+      : capBalticRiskSeverity(raw, e.corridorMatch);
     if (risk.detail && typeof risk.detail === 'object') {
       if (e.road) (risk.detail as Record<string, unknown>).droga = e.road;
       (risk.detail as Record<string, unknown>).korytarz_droga = e.corridorMatch;
@@ -4843,6 +4883,7 @@ export async function runRoadEe(deps: JobDeps): Promise<JobResult> {
       key_env_first: 'TARKTEE_DATEX_TOKEN',
       records_skipped: String(parseStats.skipped),
       ee_swapped: String(parseStats.swapped),
+      ee_off_corridor: String(eeOffCorridor),
       ee_road_from: `pole:${parseStats.roadFromPole},opis:${parseStats.roadFromOpis}`,
       measurement_sites: String(sites.size),
       ...diag,

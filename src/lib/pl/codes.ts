@@ -39,6 +39,9 @@ const messageCode: Record<string, string> = {
   accident: 'wypadek',
   secondaryAccident: 'wypadek wtórny',
   accidentInvolvingHazardousMaterials: 'wypadek z materiałami niebezpiecznymi',
+  /* DP-203: luki z prod (131× „Nieznany kod”) */
+  accidentInvolvingHeavyLorries: 'wypadek z udziałem ciężarówek',
+  maintenanceWork: 'prace utrzymaniowe',
   vehicleOnFire: 'pojazd w ogniu',
   overturnedVehicle: 'przewrócony pojazd',
   brokenDownVehicle: 'unieruchomiony pojazd',
@@ -148,6 +151,11 @@ const restriction: Record<string, string> = {
   noOvertaking: 'zakaz wyprzedzania',
   noEntry: 'zakaz wjazdu',
   followDiversion: 'objazd',
+  /* DP-203: frazy szwedzkie z TrafficRestrictionType na prod */
+  'Körfält blockerade': 'pasy zablokowane',
+  'Väg blockerad': 'droga zablokowana',
+  'Körfält avstängt': 'pas zamknięty',
+  'Vägen avstängd': 'droga zamknięta',
 };
 
 const direction: Record<string, string> = {
@@ -174,6 +182,11 @@ const direction: Record<string, string> = {
   '0': 'w obu kierunkach',
   '1': 'w kierunku rosnącego kilometrażu',
   '2': 'w kierunku malejącego kilometrażu',
+  /* DP-203: frazy szwedzkie z AffectedDirection na prod */
+  'Båda riktningarna': 'oba kierunki',
+  'En riktning': 'jeden kierunek',
+  'båda riktningarna': 'oba kierunki',
+  'en riktning': 'jeden kierunek',
 };
 
 /** RoadCondition.ConditionCode — skala Trafikverket (1 = norma). */
