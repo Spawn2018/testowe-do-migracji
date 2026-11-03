@@ -112,6 +112,7 @@ import {
   balticNetWarning, balticRoadRisk, balticShouldRaiseRisk, balticSlowdownMult, balticUrlKind,
   balticWarnHost,
   capBalticRiskSeverity, markBalticOffRoute, classifyBalticNetError, dedupeLvSlippery, eeDatexApiKeyMeta,
+  resolveBalticEventType,
   eeDatexFeedUrl, fiCorridorBboxes, fiTrafficUrl, filterInEeBboxes, filterInFiBboxes,
   filterInLvBboxes, dimensionLimitRisk, filterInLtBboxes, getEeHeavyFeedCache, getEeSitesCache,
   isDimensionLimitEvent, isEeHeavyFeedCode,
@@ -143,7 +144,8 @@ import {
   WIND_GUST_MS_THRESHOLD, gustExceedsThreshold, windRiskTitle,
   seWeekendBanHit, plSundayBanHit, banRiskTitle,
 } from '../here/windAndBans.ts';
-import { unknownCodeRiskInput } from '../../../../src/lib/pl/describe.ts';
+import { applyPendingRoadTitle, humanizeRoadCode } from '../../../../src/lib/pl/describe.ts';
+import { PANEL_FALLBACK } from '../../../../src/lib/pl/codes.ts';
 import {
   deeplTranslate, textHash, translateFreeText, usageLevel, DEEPL_MONTHLY_LIMIT,
   deeplSourceForBalticCountry,
@@ -3491,6 +3493,7 @@ async function polishRoadFreeText(
 /**
  * DP-172 + decyzja 99: DeepL dla wszystkich pokazywanych (także „obok trasy”),
  * nie tylko corridorMatch=on.
+ * F7 #780 r3: nieznany typ (resolveBalticEventType) → freeText z oryginału typu.
  */
 async function polishBalticCorridorEvents(
   deps: JobDeps,
@@ -3498,6 +3501,15 @@ async function polishBalticCorridorEvents(
   events: BalticRoadEvent[],
   nowIso: string,
 ): Promise<void> {
+  for (const e of events) {
+    if (!balticShouldRaiseRisk(country, e)) continue;
+    const resolved = resolveBalticEventType(e);
+    if (resolved.known || !resolved.raw) continue;
+    const humRaw = humanizeRoadCode(resolved.raw);
+    if (!humRaw) continue;
+    if (!e.freeText) e.freeText = humRaw;
+    else if (!e.freeText.includes(humRaw)) e.freeText = `${humRaw}. ${e.freeText}`;
+  }
   const toPolish = events.filter((e) => e.freeText && balticShouldRaiseRisk(country, e));
   if (!toPolish.length) return;
   try {
@@ -3580,25 +3592,34 @@ export async function runRoadSe(deps: JobDeps): Promise<JobResult> {
   }
   if (situationsStatus === 'ok' && deps.store.resolveStaleRisks) {
     await deps.store.resolveStaleRisks('ROAD_SE:SIT:', situations.map((e) => `ROAD_SE:SIT:${e.id}`));
-    /* DP-203: zamknij stare ROAD_SE „Nieznany kod…” (per-kod) — luka słownika → RESOURCE_MISSING HHL. */
+    /* DP-203 / F7 #780 r3: zamknij stare „Nieznany kod…” i RESOURCE_MISSING:TV_CODE (bez nowych). */
     await deps.store.resolveStaleRisks('ROAD_SE:TV_CODE:', []);
-    /* F7 #780 r2: jeden RESOURCE_MISSING:TV_CODE:<dzień> — zamknij wczorajsze. */
-    const tvDay = `RESOURCE_MISSING:TV_CODE:${now.slice(0, 10)}`;
-    await deps.store.resolveStaleRisks('RESOURCE_MISSING:TV_CODE:', [tvDay]);
+    await deps.store.resolveStaleRisks('RESOURCE_MISSING:TV_CODE:', []);
   }
+  /* F7 #780 r3: nieznane kody → humanize → translateFreeText (pamięć/DeepL), nie RESOURCE_MISSING. */
   const unknownSeCodes = [
     ...new Set(situations.flatMap((e) => e.unknownCodes ?? [])),
   ];
-  if (unknownSeCodes.length) {
-    const extra = unknownCodeRiskInput(unknownSeCodes, now.slice(0, 10));
-    if (await deps.store.raiseRisk(extra)) risks++;
+  for (const e of situations) {
+    if (!e.unknownCodes?.length) continue;
+    const hum = e.unknownCodes.map((c) => humanizeRoadCode(c)).filter(Boolean).join('. ');
+    if (!hum) continue;
+    if (!e.freeText) e.freeText = hum;
+    else if (!e.freeText.includes(hum)) e.freeText = `${hum}. ${e.freeText}`;
   }
   try { await polishRoadFreeText(deps, situations, now); }
   catch { /* DeepL nie przerywa odczytu drogi */ }
   for (const e of situations) {
+    const pending = Boolean(e.freeText && !e.note);
+    e.title = applyPendingRoadTitle(e.title, { note: e.note, pending });
+    if (e.note) e.detail = e.note;
+    else if (pending && e.detail.includes(PANEL_FALLBACK)) {
+      e.detail = applyPendingRoadTitle(e.detail, { pending: true });
+    }
     const risk = roadRisk('SE', e, 'https://www.trafikverket.se/trafikinformation/');
     risk.dedup = `ROAD_SE:SIT:${e.id}`;
     if (e.note) risk.detail = { ...risk.detail, opis: e.note };
+    else if (pending) risk.detail = { ...risk.detail, pending: true, oryginal: e.original ?? e.freeText };
     if (await deps.store.raiseRisk(risk)) risks++;
   }
   const pct = deps.store.seSlowdownPct ? await deps.store.seSlowdownPct() : 15;
@@ -3652,6 +3673,8 @@ export async function runRoadSe(deps: JobDeps): Promise<JobResult> {
       situations: String(situationsStatus === 'ok' ? situations.length : 'blad'),
       slowdown: slow ? String(slow.mult) : 'bez_zmiany',
       reason: slow?.reason ?? 'norma',
+      /* F7 #780 r3: luki słownika TV — auto DeepL, bez zadania HHL. */
+      tv_codes_auto: String(unknownSeCodes.length),
     },
   };
 }

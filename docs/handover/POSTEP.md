@@ -1,4 +1,11 @@
 
+## 2026-11-03 23:50 — #780 F7 r3: auto DeepL zamiast RESOURCE_MISSING:TV_CODE
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
+- Scalanie: brak „F7: gotowe” po `0cdd8dec`. **#780 F7 r2 OK w przeglądzie; r3** (właściciel 23:31/23:34) — bez sygnału HHL na luki słownika.
+- **Krok F7 r3:** nieznane kody SE / typy bałtyckie → `translateFreeText` (pamięć→DeepL→pamięć); zamknięcie starych `RESOURCE_MISSING:TV_CODE:` / `ROAD_SE:TV_CODE:`; `tv_codes_auto`; migracja **0393** `deepl_usage_view.memory_auto_24h` + kafelek DeepL; e21 diakrytyki bałtyckie; testy pl-data/integrations/security. Bez push na main.
+- **Dalej:** push → CI (unit/db/visual) → F7. Potem C2: 121….
+
 ## 2026-11-03 23:20 — #780 F7 r2 niegotowe → 0392 + front
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.

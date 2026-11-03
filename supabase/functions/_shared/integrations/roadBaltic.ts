@@ -473,49 +473,56 @@ export function balticRoadLabel(
 }
 
 /**
- * DP-202/203: typ zdarzenia po polsku (słownik LT/LV/EE/FI + kody LVC).
- * Nieznany → „zdarzenie drogowe” (kod w obserwacjach / detail.kody).
+ * DP-202/203 + F7 #780 r3: typ zdarzenia po polsku.
+ * `known: false` → oryginał typu idzie przez pamięć/DeepL (nie stały fallback w UI).
  */
-export function balticEventTypePl(e: BalticRoadEvent): string {
+export function resolveBalticEventType(e: BalticRoadEvent): {
+  pl: string; known: boolean; raw: string;
+} {
   const raw = `${e.kind ?? ''} ${e.title ?? ''}`.trim();
   const blob = raw.toLowerCase();
+  const ok = (pl: string) => ({ pl, known: true as const, raw });
   if (e.roadClosed || /roadclosed|carriageway|uždaryt|eismas\s+draudžiamas|closed/i.test(raw)) {
-    return 'zamknięcie drogi';
+    return ok('zamknięcie drogi');
   }
   if (e.weightLimitT != null || /massrestriction|weight|painoraj|kelirikko|virtualmass/i.test(blob)) {
-    return e.weightLimitT != null
+    return ok(e.weightLimitT != null
       ? `Ograniczenie masy ${e.weightLimitT} t`
-      : 'Ograniczenie masy (wartość w źródle)';
+      : 'Ograniczenie masy (wartość w źródle)');
   }
   if (e.widthLimitM != null || /widthrestriction/i.test(blob)) {
-    return e.widthLimitM != null
+    return ok(e.widthLimitM != null
       ? `Ograniczenie szerokości ${e.widthLimitM} m`
-      : 'Ograniczenie szerokości (wartość w źródle)';
+      : 'Ograniczenie szerokości (wartość w źródle)');
   }
   if (e.heightLimitM != null || /heightrestriction/i.test(blob)) {
-    return e.heightLimitM != null
+    return ok(e.heightLimitM != null
       ? `sprawdź wysokość ${e.heightLimitM} m`
-      : 'sprawdź wysokość';
+      : 'sprawdź wysokość');
   }
   /* LT */
   if (/kelio\s+remontas|construction|roadwork|vägarbete|teetöö|remont/i.test(blob)) {
-    return 'roboty drogowe';
+    return ok('roboty drogowe');
   }
   if (/eismo\s+ribojimas|traffic\s*restriction|ribojim/i.test(blob)) {
-    return 'ograniczenie ruchu';
+    return ok('ograniczenie ruchu');
   }
   /* F7 #780 r2: LT „Eismo įvykis” → zdarzenie drogowe (nie zawsze wypadek). */
-  if (/eismo\s+įvykis/i.test(blob)) return 'zdarzenie drogowe';
-  if (/accident|olycka|wypadek/i.test(blob)) return 'wypadek';
-  if (/hinder|przeszkod|obstruction|vehicleobstruction/i.test(blob)) return 'przeszkoda';
-  if (/slippery|sliden|halka|ślisk|ice|ledo|gołoled/i.test(blob)) return 'śliska nawierzchnia';
-  if (/weather|pogoda|exc_weather|poor_road/i.test(blob)) return 'warunki pogodowe';
-  if (/maintenancework|maintenance|utrzymani/i.test(blob)) return 'prace utrzymaniowe';
+  if (/eismo\s+įvykis/i.test(blob)) return ok('zdarzenie drogowe');
+  if (/accident|olycka|wypadek/i.test(blob)) return ok('wypadek');
+  if (/hinder|przeszkod|obstruction|vehicleobstruction/i.test(blob)) return ok('przeszkoda');
+  if (/slippery|sliden|halka|ślisk|ice|ledo|gołoled/i.test(blob)) return ok('śliska nawierzchnia');
+  if (/weather|pogoda|exc_weather|poor_road/i.test(blob)) return ok('warunki pogodowe');
+  if (/maintenancework|maintenance|utrzymani/i.test(blob)) return ok('prace utrzymaniowe');
   /* FI już często po PL w title */
   if (/roboty drogowe|wypadek|zamknięcie|przeszkoda|ograniczenie/i.test(e.title ?? '')) {
-    return String(e.title).trim();
+    return ok(String(e.title).trim());
   }
-  return 'zdarzenie drogowe';
+  return { pl: 'zdarzenie drogowe', known: false, raw };
+}
+
+export function balticEventTypePl(e: BalticRoadEvent): string {
+  return resolveBalticEventType(e).pl;
 }
 
 /**
@@ -528,7 +535,14 @@ export function formatBalticRoadTitle(
   typePl?: string,
   opts?: { offRoute?: boolean },
 ): { title: string; typePl: string; roadLabel: string; off: string; eventBody: string } {
-  const type = typePl ?? balticEventTypePl(e);
+  const resolved = resolveBalticEventType(e);
+  /* F7 #780 r3: nieznany typ — note (DeepL) albo „Tłumaczenie w toku”, nigdy oryginał LT/LV/ET/FI. */
+  let type = typePl ?? resolved.pl;
+  if (typePl == null && !resolved.known) {
+    const note = (e.note ?? '').trim();
+    if (note) type = note;
+    else if ((e.freeText ?? '').trim()) type = 'Tłumaczenie w toku';
+  }
   const roadLabel = balticRoadLabel(country, e.road);
   const from = balticWarsawDt(e.start);
   const to = balticWarsawDt(e.end);

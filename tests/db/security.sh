@@ -1525,6 +1525,8 @@ echo "$B9_VIEW" | grep -q 'queued_active' && { ok=$((ok+1)); echo "  OK    B9: d
   || { fail=$((fail+1)); echo "  FAIL  B9 view: $B9_VIEW"; }
 echo "$B9_VIEW" | grep -q 'oldest_age_min' && { ok=$((ok+1)); echo "  OK    B9: deepl_usage_view ma oldest_age_min"; } \
   || { fail=$((fail+1)); echo "  FAIL  B9 view oldest: $B9_VIEW"; }
+echo "$B9_VIEW" | grep -q 'memory_auto_24h' && { ok=$((ok+1)); echo "  OK    F7 #780 r3: deepl_usage_view ma memory_auto_24h"; } \
+  || { fail=$((fail+1)); echo "  FAIL  F7 #780 r3 memory_auto_24h: $B9_VIEW"; }
 
 # F7: warn przy wpisie >15 min (nie dla odrzucone); zrzut par w audit_log
 sys "insert into translation_queue (source_hash, source_text, source_lang, reason, created_at)

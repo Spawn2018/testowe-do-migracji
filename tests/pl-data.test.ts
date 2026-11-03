@@ -1,7 +1,10 @@
 import { readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
 import { PANEL_FALLBACK, trafikverketApiCodes, translateTvCode } from '../src/lib/pl/codes';
-import { describeCondition, describeDeviation } from '../src/lib/pl/describe';
+import {
+  applyPendingRoadTitle, describeCondition, describeDeviation, humanizeRoadCode,
+} from '../src/lib/pl/describe';
+import { textHits } from './e21Rules';
 import { deeplTranslate, isPublicRoadText, textHash, translateFreeText, usageLevel } from '../src/lib/pl/deepl';
 import { formatGustPl, formatMarinePl, windDirectionPl } from '../src/lib/pl/weatherPl';
 import { aisNavStatusPl, ferryPortPl, ferryStatusPl } from '../src/lib/ferryStatusPl';
@@ -67,6 +70,58 @@ describe('PL-DATA', () => {
     expect(pl.title).not.toMatch(/ZzzNytt|nieznanyKodX|vägen/);
     expect(pl.unknownCodes.length).toBeGreaterThan(0);
     expect(pl.freeText).toBeTruthy();
+  });
+
+  it('F7 #780 r3: humanize + auto DeepL; 2. przebieg z pamięci; tytuł PL bez RESOURCE_MISSING', async () => {
+    expect(humanizeRoadCode('messageCode:accidentInvolvingHeavyLorries'))
+      .toBe('accident Involving Heavy Lorries');
+    expect(humanizeRoadCode('Båda riktningarna')).toBe('Båda riktningarna');
+    expect(applyPendingRoadTitle(`Warunki drogowe E4: ${PANEL_FALLBACK}`, { pending: true }))
+      .toContain('Tłumaczenie w toku');
+    expect(applyPendingRoadTitle(`Warunki drogowe E4: ${PANEL_FALLBACK}`, { note: 'oba kierunki' }))
+      .toContain('oba kierunki');
+
+    const memory = new Map<string, string>();
+    let deeplN = 0;
+    const raw = 'Båda riktningarna';
+    const first = await translateFreeText({
+      text: raw, source: 'SV', used: 0,
+      memoryGet: (h) => memory.get(h) ?? null,
+      memoryPut: (h, _s, pl) => { memory.set(h, pl); },
+      enqueue: () => {},
+      addUsage: (n) => n,
+      deepl: async (text) => {
+        deeplN += 1;
+        expect(text).toBe(raw);
+        return { text: 'oba kierunki', billed: text.length };
+      },
+    });
+    expect(first.from).toBe('deepl');
+    expect(first.pl).toBe('oba kierunki');
+    expect(deeplN).toBe(1);
+    const second = await translateFreeText({
+      text: raw, source: 'SV', used: first.used,
+      memoryGet: (h) => memory.get(h) ?? null,
+      memoryPut: () => { throw new Error('nie wolno drugi DeepL'); },
+      enqueue: () => {},
+      deepl: async () => { deeplN += 1; return { text: 'x', billed: 1 }; },
+    });
+    expect(second.from).toBe('memory');
+    expect(second.pl).toBe('oba kierunki');
+    expect(deeplN).toBe(1);
+    const title = applyPendingRoadTitle(`Warunki drogowe E4: ${PANEL_FALLBACK}`, { note: second.pl });
+    expect(title).toBe('Warunki drogowe E4: oba kierunki');
+    expect(textHits(title, 'road-se-title')).toEqual([]);
+    expect(title).not.toMatch(/RESOURCE_MISSING|TV_CODE|Nieznany kod/);
+  });
+
+  it('F7 #780 r3: tytuły ROAD_* z fixture bez diakrytyków bałtyckich / szwedzkich', () => {
+    const sit = JSON.parse(readFileSync('tests/fixtures/trafikverket-situation-sample.json', 'utf8'));
+    const parsed = parseTrafikverketSituations(sit);
+    for (const e of parsed) {
+      const hits = textHits(`Warunki drogowe ${e.road}: ${e.title}`, 'fixture-se');
+      expect(hits, hits.join('; ')).toEqual([]);
+    }
   });
 
   it('HERE pyta o pl-PL, flagi zostają wyłączone w adresie (sam język)', () => {

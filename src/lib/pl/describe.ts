@@ -118,8 +118,26 @@ export function describeCondition(code: number | null, rawText: string, _road: s
 }
 
 /**
- * DP-203: luka słownika Trafikverket → jeden sygnał HHL (`RESOURCE_MISSING`),
- * nie ROAD_SE dla wszystkich (wcześniej 131× „Nieznany kod…”).
+ * F7 #780 r3: nieznany kod TV → tekst do łańcucha pamięć/DeepL (nie RESOURCE_MISSING).
+ * `messageCode:accidentInvolvingHeavyLorries` → `accident Involving Heavy Lorries`.
+ */
+export function humanizeRoadCode(raw: string): string {
+  let s = String(raw ?? '').trim();
+  if (!s) return '';
+  const colon = s.indexOf(':');
+  if (colon > 0 && /^[A-Za-z_]+$/.test(s.slice(0, colon))) s = s.slice(colon + 1).trim();
+  s = s
+    .replace(/([a-z\d])([A-Z])/g, '$1 $2')
+    .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2')
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return s;
+}
+
+/**
+ * F7 #780 r3 (właściciel 03.11 23:34): bez sygnału HHL — zostawione tylko do zamknięcia starych
+ * `RESOURCE_MISSING:TV_CODE:*` / testów historycznych. Nowe luki → translateFreeText + tv_codes_auto.
  */
 export function unknownCodeRiskInput(codes: string | string[], day: string): {
   kind: 'RESOURCE_MISSING'; severity: 'LOW'; title: string; titleKey: string;
@@ -146,4 +164,15 @@ export function unknownCodeRiskInput(codes: string | string[], day: string): {
     },
     dedup: `RESOURCE_MISSING:TV_CODE:${day}`,
   };
+}
+
+/** F7 #780 r3: po DeepL wstaw PL w miejsce „zdarzenie drogowe”; bez tłumaczenia → „Tłumaczenie w toku”. */
+export function applyPendingRoadTitle(
+  title: string,
+  opts: { note?: string | null; pending?: boolean },
+): string {
+  if (!title.includes(PANEL_FALLBACK)) return title;
+  if (opts.note?.trim()) return title.replace(PANEL_FALLBACK, opts.note.trim());
+  if (opts.pending) return title.replace(PANEL_FALLBACK, 'Tłumaczenie w toku');
+  return title;
 }

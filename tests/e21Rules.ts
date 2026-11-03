@@ -22,6 +22,8 @@ export const RULES: [string, RegExp][] = [
   ['sekundy', /(?<!\d)\d{1,2}:\d{2}:\d{2}(?!\d)/g],
   ['data bez zera', /(?<![\d.])\d\.\d{1,2}\.\d{4}\b|(?<![\d.])\d{1,2}\.\d\.\d{4}\b/g],
   ['szwedzki', /(?<![\p{L}])(från|till|mellan|båda|riktningarna|riktning|län|kommun|vägarbete|olycka|körfält|avstängd)(?![\p{L}])/giu],
+  /* F7 #780 r3: diakrytyki LT/LV/ET/FI/SV spoza alfabetu PL (bez ą/ę — wspólne z PL) */
+  ['bałtycki', /[āčēėģīķļņõšūųžäöüå]/giu],
   ['pusta wartość', /\b(undefined|null|NaN|Invalid Date)\b|\[object Object\]/g],
   /* F7 #301 r2 P3: także po minusie i twardej spacji; 4 cyfry bez groszy przed walutą („4500 PLN”; kwoty mają odstęp tysięcy także przy 4 cyfrach, a „1050 km” — nie musi) */
   ['kwota bez odstępu tysięcy', /(?<![\d/.,])\d{4,},\d{1,2}(?!\d)|(?<![\d/.,])\d{4,}(?=[ \u00a0](?:PLN|EUR|SEK)\b)|(?<![\d/.,])\d{5,}(?=[ \u00a0](?:km|kg)\b)/g],
