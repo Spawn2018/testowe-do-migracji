@@ -102,14 +102,17 @@ import {
   FI_ANNOUNCEMENTS_URL, FI_ATTRIBUTION, FI_ROADWORKS_URL, FI_WEIGHT_URL,
   LT_ATTRIBUTION, LT_RESTRICTIONS_URL, LT_UA, LT_WEATHER_URL,
   LV_ATTRIBUTION, LV_NAP_BASE, LV_NAP_CODES, LV_NAP_KEY_HEADER, LV_SOURCE_REF, LV_UA,
-  BALTIC_FEED_BUDGET_MS, BALTIC_FEED_TIMEOUT_MS,
+  BALTIC_FEED_BUDGET_MS, BALTIC_FEED_TIMEOUT_MS, EE_RESTRICTIONS_MAX_BYTES,
   EE_FEED_BUDGET_MS, EE_FEED_TIMEOUT_MS,
-  applyBalticCorridorRoadFilter, applyFiCorridorRoadFilter, balticFeedObsOk, balticKeyMeta,
+  applyBalticCorridorRoadFilter, applyFiCorridorRoadFilter, balticFeedObsOk, balticFeedShapeObs,
+  balticKeyMeta,
   balticNetWarning, balticRoadRisk, balticSlowdownMult, balticUrlKind, balticWarnHost,
   capBalticRiskSeverity, classifyBalticNetError, dedupeLvSlippery, eeDatexApiKeyMeta,
   eeDatexFeedUrl, fiCorridorBboxes, fiTrafficUrl, filterInEeBboxes, filterInFiBboxes,
   filterInLvBboxes, dimensionLimitRisk, filterInLtBboxes, getEeSitesCache, isDimensionLimitEvent,
-  isFiWeightLimitLike, ltWeatherToSlowdownEvents, lvNapKeyEnv, lvNapUrlEnv, normalizeLvNapUrl,
+  isFiWeightLimitLike, ltWeatherToSlowdownEvents, lvMetadataDataUrl, lvNapKeyAllowedForUrl,
+  lvNapKeyEnv, lvNapUrlEnv,
+  normalizeLvNapUrl,
   lvWeatherToSlowdownEvents, parseEeFeedBody, parseFiTrafficMessages, parseLtRestrictions,
   parseLtWeather, parseLvFeedBody, probeBalticHost, probeEeDatexApi, readBalticFeedBody,
   setEeSitesCache, weightLimitRisk,
@@ -4067,48 +4070,120 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
 
   const started = Date.now();
   const parseStats = { parsed: 0, skipped: 0, swapped: 0 };
-  const parts = await mapPoolLimit(configured, LV_FEED_CONCURRENCY, async ({ code, url, key }) => {
+  type LvFeedPart = {
+    code: string;
+    ok: boolean;
+    warning: string | null;
+    per: string;
+    format: string;
+    events: BalticRoadEvent[];
+    skipped: number;
+    swapped: number;
+    shape?: string;
+    /** F7 #748: host drugiego fetchu (bez ścieżki). */
+    dataHost?: string;
+  };
+  const parts = await mapPoolLimit(configured, LV_FEED_CONCURRENCY, async ({ code, url, key }): Promise<LvFeedPart> => {
     if (Date.now() - started > BALTIC_FEED_BUDGET_MS) {
       return {
         code,
-        ok: false as const,
+        ok: false,
         warning: `niepobrany ${code} (budżet czasu)`,
         per: 'budget',
-        format: '' as string,
-        events: [] as BalticRoadEvent[],
+        format: '',
+        events: [],
         skipped: 0,
         swapped: 0,
       };
     }
-    const headers: Record<string, string> = {
+    const baseHeaders: Record<string, string> = {
       'User-Agent': LV_UA,
       Accept: 'application/json, application/xml, text/xml, */*',
-      [LV_NAP_KEY_HEADER]: key,
     };
-    const ctrl = new AbortController();
-    const timer = setTimeout(() => ctrl.abort(), BALTIC_FEED_TIMEOUT_MS);
+    const fetchOnce = async (
+      fetchUrl: string,
+      withKey: boolean,
+    ): Promise<{
+      res: Response;
+      body: Awaited<ReturnType<typeof readBalticFeedBody>> | null;
+      ct: string | null;
+    }> => {
+      const headers: Record<string, string> = { ...baseHeaders };
+      if (withKey) headers[LV_NAP_KEY_HEADER] = key;
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), BALTIC_FEED_TIMEOUT_MS);
+      try {
+        const res = await deps.fetch(fetchUrl, { headers, signal: ctrl.signal });
+        const ct = res.headers.get('content-type');
+        if (!res.ok) return { res, body: null, ct };
+        const body = await readBalticFeedBody(res);
+        return { res, body, ct };
+      } finally {
+        clearTimeout(timer);
+      }
+    };
     try {
-      const res = await deps.fetch(url, { headers, signal: ctrl.signal });
-      if (!res.ok) {
+      let { res, body, ct } = await fetchOnce(url, true);
+      if (!res.ok || body == null) {
         return {
-          code, ok: false as const,
+          code, ok: false,
           warning: `LV ${code}: HTTP ${res.status}`,
-          per: `http_${res.status}`, format: '', events: [] as BalticRoadEvent[],
+          per: `http_${res.status}`, format: '', events: [],
           skipped: 0, swapped: 0,
         };
       }
-      /* DP-168: wspólny odczyt strumieniowy 5 MB. */
-      const body = await readBalticFeedBody(res);
       if (!body.ok) {
+        const shape = balticFeedShapeObs(res.status, ct, body.bytes, '');
         return {
-          code, ok: false as const,
+          code, ok: false,
           warning: `nieczytelna odpowiedź ${code}`,
-          per: 'too_large', format: 'unknown', events: [] as BalticRoadEvent[],
-          skipped: 0, swapped: 0,
+          per: 'too_large', format: 'unknown', events: [],
+          skipped: 0, swapped: 0, shape,
         };
+      }
+      let text = body.text;
+      let bytes = body.bytes;
+      let shape = balticFeedShapeObs(res.status, ct, bytes, text);
+      let dataHost: string | undefined;
+      /* DP-178 / F7 #748: metadane JSON → plik; klucz tylko na host NAP. */
+      if (text.trim().startsWith('{')) {
+        try {
+          const meta = JSON.parse(text) as unknown;
+          const dataUrl = lvMetadataDataUrl(meta);
+          if (dataUrl && dataUrl !== url) {
+            dataHost = balticWarnHost(dataUrl);
+            const allowKey = lvNapKeyAllowedForUrl(dataUrl);
+            const second = await fetchOnce(dataUrl, allowKey);
+            if (!allowKey && (second.res.status === 401 || second.res.status === 403)) {
+              return {
+                code, ok: false,
+                warning: `nieczytelna odpowiedź ${code}`,
+                per: `bad:meta-obcy-host`, format: 'unknown', events: [],
+                skipped: 0, swapped: 0,
+                shape: `meta:obcy-host:${dataHost}`,
+                dataHost,
+              };
+            }
+            if (second.res.ok && second.body && second.body.ok) {
+              res = second.res;
+              ct = second.ct;
+              text = second.body.text;
+              bytes = second.body.bytes;
+              shape = balticFeedShapeObs(res.status, ct, bytes, text);
+            } else if (second.res.ok && second.body && !second.body.ok) {
+              shape = balticFeedShapeObs(second.res.status, second.ct, second.body.bytes, '');
+              return {
+                code, ok: false,
+                warning: `nieczytelna odpowiedź ${code}`,
+                per: 'too_large', format: 'unknown', events: [],
+                skipped: 0, swapped: 0, shape, dataHost,
+              };
+            }
+          }
+        } catch { /* nie JSON obiektu — idź w parseLv */ }
       }
       const localStats = { parsed: 0, skipped: 0, swapped: 0 };
-      const parsed = parseLvFeedBody(body.text, code, localStats);
+      const parsed = parseLvFeedBody(text, code, localStats);
       parseStats.parsed += localStats.parsed;
       parseStats.skipped += localStats.skipped;
       parseStats.swapped += localStats.swapped;
@@ -4116,44 +4191,47 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
         || parsed.format === 'datex-json'
         || parsed.format === 'geojson';
       if (!recognized) {
+        /* DP-178: html → host bramy inny (OpenAPI za logowaniem); shape w obs. */
         return {
-          code, ok: false as const,
+          code, ok: false,
           warning: `nieczytelna odpowiedź ${code}`,
-          per: `bad:${parsed.format}`, format: parsed.format, events: [] as BalticRoadEvent[],
-          skipped: localStats.skipped, swapped: localStats.swapped,
+          per: `bad:${parsed.format}`, format: parsed.format, events: [],
+          skipped: localStats.skipped, swapped: localStats.swapped, shape, dataHost,
         };
       }
       /* DP-168 / F7 #730: lv_<kod>=ok:<rekordy>:<pominięte>:<format>:<swapped> */
       return {
-        code, ok: true as const, warning: null as string | null,
+        code, ok: true, warning: null,
         per: balticFeedObsOk(
           parsed.events.length, localStats.skipped, parsed.format, localStats.swapped,
         ),
         format: parsed.format, events: parsed.events,
-        skipped: localStats.skipped, swapped: localStats.swapped,
+        skipped: localStats.skipped, swapped: localStats.swapped, dataHost,
       };
     } catch (e) {
       /* DP-165: klasa błędu + host bez ścieżki (klucz nie w warnings). */
       const klass = classifyBalticNetError(e);
       return {
-        code, ok: false as const,
+        code, ok: false,
         warning: balticNetWarning(`LV ${code}`, url, e),
         per: klass === 'timeout' ? 'timeout' : `error:${klass}`,
-        format: '', events: [] as BalticRoadEvent[],
+        format: '', events: [],
         skipped: 0, swapped: 0,
       };
-    } finally {
-      clearTimeout(timer);
     }
   });
 
   let fetchedOk = 0;
   const allEvents: BalticRoadEvent[] = [];
   const perCode: Record<string, string> = {};
+  const perShape: Record<string, string> = {};
+  const perDataHost: Record<string, string> = {};
   const formats: Record<string, string> = {};
   for (const p of parts) {
     perCode[p.code] = p.per;
     if (p.format) formats[p.code] = p.format;
+    if (p.shape) perShape[p.code] = p.shape;
+    if (p.dataHost) perDataHost[p.code] = p.dataHost;
     if (p.warning) warnings.push(p.warning);
     if (p.ok) {
       fetchedOk++;
@@ -4277,6 +4355,10 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
       lv_swapped: String(parseStats.swapped),
       ...diag,
       ...Object.fromEntries(Object.entries(perCode).map(([k, v]) => [`lv_${k.toLowerCase()}`, v])),
+      ...Object.fromEntries(Object.entries(perShape).map(([k, v]) => [`lv_${k.toLowerCase()}_shape`, v])),
+      ...Object.fromEntries(
+        Object.entries(perDataHost).map(([k, v]) => [`lv_${k.toLowerCase()}_data_host`, v]),
+      ),
     },
   };
 }
@@ -4313,6 +4395,8 @@ type EeFeedPart = {
   sites?: Map<string, [number, number]>;
   /** DP-171 — czas pobrania [ms]. */
   ms: number;
+  /** DP-178 — kształt nieczytelnej odpowiedzi (bez treści/URL). */
+  shape?: string;
 };
 
 async function fetchEeFeedPart(
@@ -4356,6 +4440,7 @@ async function fetchEeFeedPart(
       };
     }
     const res = await deps.fetch(url, { headers, signal: ctrl.signal });
+    const ct = res.headers.get('content-type');
     if (!res.ok) {
       return {
         code: feed.code, ok: false,
@@ -4364,14 +4449,18 @@ async function fetchEeFeedPart(
         ms: Math.max(0, Date.now() - t0),
       };
     }
-    /* DP-168: wspólny odczyt strumieniowy 5 MB. */
-    const body = await readBalticFeedBody(res);
+    /* DP-168: strumień 5 MB; DP-178: RESTRICTIONS do 20 MB (brak bbox w Tark Tee DATEX). */
+    const maxBytes = feed.code === 'RESTRICTIONS'
+      ? EE_RESTRICTIONS_MAX_BYTES
+      : undefined;
+    const body = await readBalticFeedBody(res, maxBytes);
     if (!body.ok) {
+      const shape = balticFeedShapeObs(res.status, ct, body.bytes, '');
       return {
         code: feed.code, ok: false,
         warning: `nieczytelna odpowiedź ${feed.code}`,
         per: 'too_large', format: 'unknown', events: [],
-        ms: Math.max(0, Date.now() - t0),
+        ms: Math.max(0, Date.now() - t0), shape,
       };
     }
     const localStats = {
@@ -4388,11 +4477,13 @@ async function fetchEeFeedPart(
     parseStats.weatherNoSite += localStats.weatherNoSite ?? 0;
     const recognized = parsed.format === 'datex-xml' || parsed.format === 'datex-json';
     if (!recognized) {
+      /* DP-178: kształt nieczytelnej odpowiedzi (bez treści/URL). */
+      const shape = balticFeedShapeObs(res.status, ct, body.bytes, body.text);
       return {
         code: feed.code, ok: false,
         warning: `nieczytelna odpowiedź ${feed.code}`,
         per: `bad:${parsed.format}`, format: parsed.format, events: [],
-        ms: Math.max(0, Date.now() - t0),
+        ms: Math.max(0, Date.now() - t0), shape,
       };
     }
     /* DP-168 / F7 #733 B8 — ok:<rekordy>:<pominięte>:<format>:<swapped> */
@@ -4527,10 +4618,13 @@ export async function runRoadEe(deps: JobDeps): Promise<JobResult> {
   const allEvents: BalticRoadEvent[] = [];
   const perCode: Record<string, string> = {};
   const perMs: Record<string, string> = {};
+  const perShape: Record<string, string> = {};
   for (const p of parts) {
     perCode[p.code] = p.per;
     /* DP-171: ee_<usługa>_ms */
     perMs[p.code] = String(p.ms);
+    /* DP-178: ee_<usługa>_shape przy nieczytelnej odpowiedzi */
+    if (p.shape) perShape[p.code] = p.shape;
     if (p.warning) warnings.push(p.warning);
     if (p.ok) {
       fetchedOk++;
@@ -4541,6 +4635,7 @@ export async function runRoadEe(deps: JobDeps): Promise<JobResult> {
   const eePerObs = {
     ...Object.fromEntries(Object.entries(perCode).map(([k, v]) => [`ee_${k.toLowerCase()}`, v])),
     ...Object.fromEntries(Object.entries(perMs).map(([k, v]) => [`ee_${k.toLowerCase()}_ms`, v])),
+    ...Object.fromEntries(Object.entries(perShape).map(([k, v]) => [`ee_${k.toLowerCase()}_shape`, v])),
     ee_sites_source: sitesSource,
   };
 

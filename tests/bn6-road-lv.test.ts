@@ -705,6 +705,53 @@ describe('BN6 runRoadLv F7 #730', () => {
   });
 });
 
+describe('F7 #748 r1 — LV meta drugi fetch bez klucza poza NAP', () => {
+  it('obcy host: drugi fetch bez nagłówka klucza; 401 → meta:obcy-host; data_host', async () => {
+    const st = new MemStore();
+    const meta = JSON.stringify({
+      files: [{ field_source_url: 'https://cdn.obcy.example/lv/roadworks.xml' }],
+    });
+    const { d, headerCalls } = deps(st, {
+      'nap.example/lv/roadworks': meta,
+      'cdn.obcy.example/lv/roadworks.xml': 401,
+      'nap.example/lv/slippery-wm': slipWm,
+      'nap.example/lv/slippery-ti': slipTi,
+      'nap.example/lv/weight-dim': JSON.stringify(weightJson),
+    }, MOCK_ENV);
+    const r = await runRoadLv(d);
+    const second = headerCalls.find((c) => c.url.includes('cdn.obcy.example'));
+    expect(second).toBeTruthy();
+    expect(second!.headers[LV_NAP_KEY_HEADER]).toBeUndefined();
+    expect(r.observations?.lv_roadworks_shape).toBe('meta:obcy-host:cdn.obcy.example');
+    expect(r.observations?.lv_roadworks_data_host).toBe('cdn.obcy.example');
+    expect(headerCalls.some((c) =>
+      c.url.includes('cdn.obcy.example') && c.headers[LV_NAP_KEY_HEADER],
+    )).toBe(false);
+  });
+
+  it('host NAP: drugi fetch z kluczem + data_host', async () => {
+    const st = new MemStore();
+    const meta = JSON.stringify({
+      field_source_url: 'https://www.transportdata.gov.lv/api/pull/data/rw',
+    });
+    const { d, headerCalls } = deps(st, {
+      'nap.example/lv/roadworks': meta,
+      'www.transportdata.gov.lv/api/pull/data/rw': rwXml,
+      'nap.example/lv/slippery-wm': slipWm,
+      'nap.example/lv/slippery-ti': slipTi,
+      'nap.example/lv/weight-dim': JSON.stringify(weightJson),
+    }, MOCK_ENV);
+    const r = await runRoadLv(d);
+    const second = headerCalls.find((c) =>
+      c.url.includes('www.transportdata.gov.lv/api/pull/data/rw'),
+    );
+    expect(second).toBeTruthy();
+    expect(second!.headers[LV_NAP_KEY_HEADER]).toBe('k-rw-secret-value');
+    expect(r.observations?.lv_roadworks_data_host).toBe('www.transportdata.gov.lv');
+    expect(String(r.observations?.lv_roadworks ?? '')).toMatch(/^ok:\d+:\d+:datex-xml:\d+$/);
+  });
+});
+
 describe('DP-165/169 classifyBalticNetError', () => {
   it('mapuje typowe komunikaty i host bez ścieżki', () => {
     expect(classifyBalticNetError(new DOMException('aborted', 'AbortError'))).toBe('timeout');

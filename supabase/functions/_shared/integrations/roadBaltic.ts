@@ -1463,6 +1463,8 @@ export function normalizeLvNapUrl(raw: string | undefined | null): LvNapUrlResol
  * DP-171: EE osobno 30 s / budżet 120 s (probe 13 s; limit 10 s zabijał wszystkie usługi).
  */
 export const BALTIC_FEED_MAX_BYTES = 5 * 1024 * 1024;
+/** DP-178: Tark Tee RESTRICTIONS > 5 MB (brak bbox w API DATEX) — limit tylko tej usługi. */
+export const EE_RESTRICTIONS_MAX_BYTES = 20 * 1024 * 1024;
 export const BALTIC_FEED_TIMEOUT_MS = 10_000;
 export const BALTIC_FEED_BUDGET_MS = 65_000;
 export const EE_FEED_TIMEOUT_MS = 30_000;
@@ -1471,8 +1473,8 @@ export const EE_FEED_BUDGET_MS = 120_000;
 export const EE_SITES_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
 export type BalticFeedBodyResult =
-  | { ok: true; text: string }
-  | { ok: false; reason: 'too_large' };
+  | { ok: true; text: string; bytes: number }
+  | { ok: false; reason: 'too_large'; bytes: number };
 
 /** Odczyt ciała odpowiedzi z limitem bajtów (strumień + wcześniejszy Content-Length). */
 export async function readBalticFeedBody(
@@ -1482,14 +1484,14 @@ export async function readBalticFeedBody(
   const clRaw = res.headers.get('content-length');
   const cl = clRaw != null ? Number(clRaw) : NaN;
   if (Number.isFinite(cl) && cl > maxBytes) {
-    return { ok: false, reason: 'too_large' };
+    return { ok: false, reason: 'too_large', bytes: cl };
   }
   const body = res.body;
   if (body == null) {
     const text = await res.text();
     const bytes = new TextEncoder().encode(text).byteLength;
-    if (bytes > maxBytes) return { ok: false, reason: 'too_large' };
-    return { ok: true, text };
+    if (bytes > maxBytes) return { ok: false, reason: 'too_large', bytes };
+    return { ok: true, text, bytes };
   }
   const reader = body.getReader();
   const chunks: Uint8Array[] = [];
@@ -1502,7 +1504,7 @@ export async function readBalticFeedBody(
       total += value.byteLength;
       if (total > maxBytes) {
         try { await reader.cancel(); } catch { /* ignore */ }
-        return { ok: false, reason: 'too_large' };
+        return { ok: false, reason: 'too_large', bytes: total };
       }
       chunks.push(value);
     }
@@ -1520,7 +1522,129 @@ export async function readBalticFeedBody(
   return {
     ok: true,
     text: new TextDecoder('utf-8', { fatal: false }).decode(buf),
+    bytes: total,
   };
+}
+
+/**
+ * DP-178 — klasa ciała bez treści i bez URL.
+ * `html | json-array-pusty | json-obiekt:<5 kluczy> | xml:<korzeń> | gzip-nierozpakowany | inny`
+ */
+export function classifyBalticFeedClass(text: string, contentType?: string | null): string {
+  const raw = String(text ?? '');
+  const t = raw.trim();
+  const ct = String(contentType ?? '').split(';')[0]!.trim().toLowerCase();
+  if (raw.length >= 2) {
+    const b0 = raw.charCodeAt(0);
+    const b1 = raw.charCodeAt(1);
+    if (b0 === 0x1f && b1 === 0x8b) return 'gzip-nierozpakowany';
+  }
+  if (!t) return 'inny';
+  if (ct.includes('html') || /^<!DOCTYPE\s+html/i.test(t) || /^<html[\s>]/i.test(t)) {
+    return 'html';
+  }
+  const c0 = t[0]!;
+  if (c0 === '[' || c0 === '{') {
+    try {
+      const json = JSON.parse(t) as unknown;
+      if (Array.isArray(json)) {
+        return json.length === 0 ? 'json-array-pusty' : 'inny';
+      }
+      if (json && typeof json === 'object') {
+        const keys = Object.keys(json as object).slice(0, 5).join(',');
+        return `json-obiekt:${keys || '-'}`;
+      }
+      return 'inny';
+    } catch {
+      return 'inny';
+    }
+  }
+  if (c0 === '<') {
+    const root = t.match(/^<\?xml[^>]*\?>\s*<([A-Za-z_][\w:.-]*)/i)?.[1]
+      ?? t.match(/^<([A-Za-z_][\w:.-]*)/)?.[1]
+      ?? '-';
+    return `xml:${root}`;
+  }
+  return 'inny';
+}
+
+/** DP-178: `http:content-type:bajty:klasa` (bez treści/URL). */
+export function balticFeedShapeObs(
+  httpStatus: number,
+  contentType: string | null | undefined,
+  bytes: number,
+  text: string,
+): string {
+  const ct = String(contentType ?? '').split(';')[0]!.trim().toLowerCase() || '-';
+  const klass = classifyBalticFeedClass(text, contentType);
+  return `${httpStatus}:${ct}:${Math.max(0, Math.floor(bytes))}:${klass}`;
+}
+
+const LV_META_URL_KEYS = [
+  'field_source_url', 'source_url', 'download_url', 'downloadUrl',
+  'url', 'href', 'uri', 'link',
+] as const;
+
+/**
+ * F7 #748 r1 — klucz subskrypcji NAP tylko do hosta `LV_NAP_BASE` albo `*.transportdata.gov.lv`.
+ * Obcy CDN/S3: fetch bez nagłówka (plik publiczny).
+ */
+export function lvNapKeyAllowedForUrl(url: string, base: string = LV_NAP_BASE): boolean {
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    const baseHost = new URL(base).hostname.toLowerCase();
+    if (!host) return false;
+    if (host === baseHost) return true;
+    return host === 'transportdata.gov.lv' || host.endsWith('.transportdata.gov.lv');
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * DP-178 pkt 4 — JSON metadanych NAP (files/url/resources) → pierwszy https URL danych.
+ * Bez ścieżek względnych wymagających logowania do ZIP.
+ */
+export function lvMetadataDataUrl(json: unknown): string | null {
+  if (!json || typeof json !== 'object') return null;
+  const seen = new Set<unknown>();
+  const pick = (node: unknown, depth: number): string | null => {
+    if (node == null || depth > 6) return null;
+    if (typeof node === 'string') {
+      const s = node.trim();
+      if (/^https:\/\//i.test(s) && !/\s/.test(s)) return s;
+      return null;
+    }
+    if (typeof node !== 'object' || seen.has(node)) return null;
+    seen.add(node);
+    if (Array.isArray(node)) {
+      for (const x of node) {
+        const u = pick(x, depth + 1);
+        if (u) return u;
+      }
+      return null;
+    }
+    const o = node as Record<string, unknown>;
+    for (const k of LV_META_URL_KEYS) {
+      if (k in o) {
+        const u = pick(o[k], depth + 1);
+        if (u) return u;
+      }
+    }
+    for (const k of ['files', 'resources', 'data', 'distributions', 'links', 'payload']) {
+      if (k in o) {
+        const u = pick(o[k], depth + 1);
+        if (u) return u;
+      }
+    }
+    return null;
+  };
+  const keys = Object.keys(json as object);
+  const looksMeta = keys.some((k) =>
+    /^(files|resources|distributions|field_source|source_url|download)/i.test(k)
+    || LV_META_URL_KEYS.includes(k as typeof LV_META_URL_KEYS[number]));
+  if (!looksMeta && !('url' in (json as object))) return null;
+  return pick(json, 0);
 }
 
 /**
@@ -3038,9 +3162,13 @@ export function parseEeFeedBody(
   if (c0 === '{' || c0 === '[') {
     try {
       const json = JSON.parse(t) as unknown;
-      if (json === null || (Array.isArray(json) && json.length === 0)) {
+      if (json === null) {
         if (stats) stats.skipped += 1;
         return { events: [], format: 'unknown' };
+      }
+      /* DP-178 pkt 3: pusty, poprawny wynik (`[]` / brak sytuacji) = OK 0 rekordów (nadpisuje F7 #733 B4 dla `[]`). */
+      if (Array.isArray(json) && json.length === 0) {
+        return { events: [], format: 'datex-json' };
       }
       if (
         json && typeof json === 'object' && !Array.isArray(json)
