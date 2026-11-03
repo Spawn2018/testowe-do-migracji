@@ -119,7 +119,7 @@ describe('PL-DATA', () => {
     const sit = JSON.parse(readFileSync('tests/fixtures/trafikverket-situation-sample.json', 'utf8'));
     const parsed = parseTrafikverketSituations(sit);
     for (const e of parsed) {
-      const hits = textHits(`Warunki drogowe ${e.road}: ${e.title}`, 'fixture-se');
+      const hits = textHits(`Warunki drogowe ${e.road}: ${e.title}`, 'fixture-se', { balticDiacritics: true });
       expect(hits, hits.join('; ')).toEqual([]);
     }
   });
