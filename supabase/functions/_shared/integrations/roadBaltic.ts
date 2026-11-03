@@ -504,7 +504,9 @@ export function balticEventTypePl(e: BalticRoadEvent): string {
   if (/eismo\s+ribojimas|traffic\s*restriction|ribojim/i.test(blob)) {
     return 'ograniczenie ruchu';
   }
-  if (/eismo\s+įvykis|accident|olycka|wypadek/i.test(blob)) return 'wypadek';
+  /* F7 #780 r2: LT „Eismo įvykis” → zdarzenie drogowe (nie zawsze wypadek). */
+  if (/eismo\s+įvykis/i.test(blob)) return 'zdarzenie drogowe';
+  if (/accident|olycka|wypadek/i.test(blob)) return 'wypadek';
   if (/hinder|przeszkod|obstruction|vehicleobstruction/i.test(blob)) return 'przeszkoda';
   if (/slippery|sliden|halka|ślisk|ice|ledo|gołoled/i.test(blob)) return 'śliska nawierzchnia';
   if (/weather|pogoda|exc_weather|poor_road/i.test(blob)) return 'warunki pogodowe';
@@ -525,7 +527,7 @@ export function formatBalticRoadTitle(
   e: BalticRoadEvent,
   typePl?: string,
   opts?: { offRoute?: boolean },
-): { title: string; typePl: string; roadLabel: string; off: string } {
+): { title: string; typePl: string; roadLabel: string; off: string; eventBody: string } {
   const type = typePl ?? balticEventTypePl(e);
   const roadLabel = balticRoadLabel(country, e.road);
   const from = balticWarsawDt(e.start);
@@ -540,11 +542,13 @@ export function formatBalticRoadTitle(
   const bits = [type, place, when].filter(Boolean);
   const offRoute = opts?.offRoute === true || e.corridorMatch === 'off';
   const off = offRoute ? ' · obok trasy' : '';
+  const eventBody = bits.join(', ');
   return {
-    title: `Warunki drogowe ${roadLabel} (${country})${off}: ${bits.join(', ')}`,
+    title: `Warunki drogowe ${roadLabel} (${country})${off}: ${eventBody}`,
     typePl: type,
     roadLabel,
     off,
+    eventBody,
   };
 }
 
@@ -597,7 +601,8 @@ export function balticRoadRisk(
     params: {
       country,
       road: formatted.roadLabel,
-      event: formatted.typePl,
+      /* F7 #780 r2: event = typ + odcinek + kiedy (pełny tytuł przez riskText). */
+      event: formatted.eventBody || formatted.typePl,
       off: formatted.off,
     },
     detail: {

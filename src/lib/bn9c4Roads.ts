@@ -98,6 +98,8 @@ export interface BalticRoadRow {
   impact: RoadImpact;
   /** klucz tytułu BN6 (zdarzenie / limit masy) */
   titleKey: string | null;
+  /** parametry tytułu (`detail.params`) — droga, kraj, off, event */
+  titleParams: Record<string, unknown>;
   /** nazwa zdarzenia ze źródła (`params.event`), gdy jest */
   event: string | null;
   /** tytuł z bazy (zapas, gdy brak klucza) */
@@ -116,6 +118,8 @@ export interface BalticRoadRow {
   original: string | null;
   /** BN9-c4b: tłumaczenie opisu w toku — zamiast opisu „Tłumaczenie w toku” (jak Drogi SE) */
   pending: boolean;
+  /** Decyzja 99 / F7 #780 r2: poza korytarzem — na końcu listy po „na trasie” */
+  offRoute: boolean;
 }
 
 const IMPACT_RANK: Record<RoadImpact, number> = { VERY_HIGH: 4, HIGH: 3, MEDIUM: 2, LOW: 1 };
@@ -129,13 +133,17 @@ export function balticRoadRow(r: Risk): BalticRoadRow | null {
   const weight = num(p.limit) ?? info?.weightLimitT ?? null;
   const limit: RoadLimit | null = weightKey || info?.weightLimitT != null ? 'WEIGHT'
     : info?.heightLimitM != null ? 'HEIGHT' : info?.widthLimitM != null ? 'WIDTH' : null;
+  const offRoute = info?.offRoute === true
+    || (typeof p.off === 'string' && p.off.includes('obok trasy'))
+    || / · obok trasy/.test(r.title);
   return {
-    id: r.id, country, impact: impactOf(r.severity), titleKey: r.titleKey ?? null, event: str(p.event), title: r.title,
+    id: r.id, country, impact: impactOf(r.severity), titleKey: r.titleKey ?? null,
+    titleParams: p, event: str(p.event), title: r.title,
     note: info?.pending ? null : str(r.detail), from: info?.from ?? null, to: info?.to ?? null, source: info?.source ?? null,
     limit,
     limitValue: limit === 'WEIGHT' ? weight : limit === 'HEIGHT' ? info?.heightLimitM ?? null : limit === 'WIDTH' ? info?.widthLimitM ?? null : null,
     loadT: r.titleKey === KEY_WEIGHT ? num(p.load) : null,
-    original: info?.original ?? null, pending: info?.pending === true,
+    original: info?.original ?? null, pending: info?.pending === true, offRoute,
   };
 }
 
@@ -191,19 +199,22 @@ const phaseOf = (r: BalticRoadRow, now: number) => {
 };
 
 /**
- * Najpierw większy wpływ. Przy równym wpływie (BN9-c4b, decyzja 89 — „najważniejsze i najświeższe”, gdy podano `nowIso`):
+ * Decyzja 99 / F7 #780 r2: najpierw „na trasie”, potem „obok trasy”.
+ * Potem większy wpływ. Przy równym wpływie (BN9-c4b, decyzja 89 — gdy podano `nowIso`):
  * najpierw trwające, od najświeższego początku; potem zaplanowane, od najbliższego; na końcu bez początku; dalej `to`, id.
  * Bez `nowIso` — jak w BN9-c4: `from` rosnąco (brak na końcu), potem `to`, id.
  */
 export function sortBalticRows(rows: readonly BalticRoadRow[], nowIso?: string): BalticRoadRow[] {
   const now = nowIso ? Date.parse(nowIso) : NaN;
+  const byRoute = (a: BalticRoadRow, b: BalticRoadRow) => Number(a.offRoute) - Number(b.offRoute);
   if (!Number.isFinite(now)) {
-    return [...rows].sort((a, b) => IMPACT_RANK[b.impact] - IMPACT_RANK[a.impact] || byTime(a.from, b.from) || byTime(a.to, b.to) || a.id.localeCompare(b.id));
+    return [...rows].sort((a, b) => byRoute(a, b) || IMPACT_RANK[b.impact] - IMPACT_RANK[a.impact]
+      || byTime(a.from, b.from) || byTime(a.to, b.to) || a.id.localeCompare(b.id));
   }
   return [...rows].sort((a, b) => {
     const pa = phaseOf(a, now);
     const pb = phaseOf(b, now);
-    return IMPACT_RANK[b.impact] - IMPACT_RANK[a.impact] || pa - pb
+    return byRoute(a, b) || IMPACT_RANK[b.impact] - IMPACT_RANK[a.impact] || pa - pb
       || (pa === 0 ? byTime(b.from, a.from) : byTime(a.from, b.from)) || byTime(a.to, b.to) || a.id.localeCompare(b.id);
   });
 }

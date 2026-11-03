@@ -3582,6 +3582,9 @@ export async function runRoadSe(deps: JobDeps): Promise<JobResult> {
     await deps.store.resolveStaleRisks('ROAD_SE:SIT:', situations.map((e) => `ROAD_SE:SIT:${e.id}`));
     /* DP-203: zamknij stare ROAD_SE „Nieznany kod…” (per-kod) — luka słownika → RESOURCE_MISSING HHL. */
     await deps.store.resolveStaleRisks('ROAD_SE:TV_CODE:', []);
+    /* F7 #780 r2: jeden RESOURCE_MISSING:TV_CODE:<dzień> — zamknij wczorajsze. */
+    const tvDay = `RESOURCE_MISSING:TV_CODE:${now.slice(0, 10)}`;
+    await deps.store.resolveStaleRisks('RESOURCE_MISSING:TV_CODE:', [tvDay]);
   }
   const unknownSeCodes = [
     ...new Set(situations.flatMap((e) => e.unknownCodes ?? [])),

@@ -1,4 +1,11 @@
 
+## 2026-11-03 23:20 — #780 F7 r2 niegotowe → 0392 + front
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
+- Scalanie: brak „F7: gotowe” po `1a8ce68a`. **#780 F7 r2 niegotowe** — 4 blokery.
+- **Krok F7 r2:** migracja **0392** (`trg_risk_matrix_notify` obok_trasy bez powiadomień + `risk_audience_for` TV_CODE→HHL); front `riskText` + sort na trasie→obok; `resolveStale` `RESOURCE_MISSING:TV_CODE:`; testy c3/status/bn9. Bez push na main.
+- **Dalej:** push → CI (unit/db/visual) → F7. Potem C2: 121….
+
 ## 2026-11-03 22:25 — #780 F7 r1 niegotowe → decyzja 99 (obok trasy + DeepL)
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie; #778+#779 otwarte (DP-202/203). Bez nowego `pilne`.

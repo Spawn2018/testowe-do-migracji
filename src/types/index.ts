@@ -554,6 +554,8 @@ export interface RoadRiskInfo {
   original?: string | null;
   /** BN9-c4b: tłumaczenie opisu jeszcze nie dotarło (`detail.pending` albo oryginał bez polskiego opisu) — „Tłumaczenie w toku” */
   pending?: boolean;
+  /** Decyzja 99 / F7 #780 r2: `detail.obok_trasy` — poza korytarzem (sort + etykieta). */
+  offRoute?: boolean;
 }
 
 export interface RateRule {

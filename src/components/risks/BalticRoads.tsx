@@ -12,6 +12,7 @@ import { FIRST_ROADS } from '../../lib/p6Route';
 import type { Locale } from '../../types';
 import { attributionView, type BalticRoadRow, type BalticRoadSection } from '../../lib/bn9c4Roads';
 import { formatListDateTime, formatPlNumber } from '../../lib/format';
+import { riskText } from '../../i18n/messages';
 import { rt, rtn, rtp } from '../../i18n/p6';
 import { DemoMark } from '../ui/DemoMark';
 import { keepUnits, RoadRow } from './RoadRow';
@@ -36,18 +37,33 @@ function rowWhen(locale: Locale, r: BalticRoadRow): string | null {
   return null;
 }
 
+function rowLabel(locale: Locale, r: BalticRoadRow): string {
+  /* F7 #780 r2: gdy jest numer drogi — riskText (droga + „obok trasy”); inaczej stary event/title. */
+  const road = r.titleParams.road;
+  if (r.titleKey && typeof road === 'string' && road.trim()) {
+    return keepUnits(riskText(locale, r.title, r.titleKey, r.titleParams));
+  }
+  return keepUnits(r.event ?? r.title);
+}
+
 function Row({ r, locale, phone }: { r: BalticRoadRow; locale: Locale; phone: boolean }) {
   const tag = limitLabel(locale, r);
+  const label = rowLabel(locale, r);
   return (
     <RoadRow
       locale={locale}
       phone={phone}
       className={r.limit ? 'rk-road rk-road-limit' : 'rk-road'}
-      attrs={{ 'data-baltic-road': r.id, 'data-risk-id': r.id, 'data-limit': r.limit ?? undefined }}
+      attrs={{
+        'data-baltic-road': r.id,
+        'data-risk-id': r.id,
+        'data-limit': r.limit ?? undefined,
+        'data-off-route': r.offRoute ? '1' : undefined,
+      }}
       box={r.country}
       /* długi tytuł ze źródła — jedna linia z wielokropkiem, pełny tekst w podpowiedzi (React sam koduje znaki) */
-      titleTip={keepUnits([tag, r.event ?? r.title].filter(Boolean).join(' · '))}
-      title={<>{r.limit ? <span className="rk-limit-tag" data-limit-tag>{tag}</span> : null}{keepUnits(r.event ?? r.title)}</>}
+      titleTip={keepUnits([tag, label].filter(Boolean).join(' · '))}
+      title={<>{r.limit ? <span className="rk-limit-tag" data-limit-tag>{tag}</span> : null}{label}</>}
       impact={r.impact}
       when={rowWhen(locale, r)}
       note={r.note}

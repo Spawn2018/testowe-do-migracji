@@ -138,6 +138,7 @@ export function unknownCodeRiskInput(codes: string | string[], day: string): {
     titleKey: 'rk_tv_unknown_code_hhl',
     params: { n: uniq.length },
     detail: {
+      rule: 'TV_CODE',
       kody: uniq.join(','),
       zrodlo: 'Trafikverket',
       panel: PANEL_FALLBACK,

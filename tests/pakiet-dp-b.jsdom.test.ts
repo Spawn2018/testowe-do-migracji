@@ -58,7 +58,8 @@ describe('DP-177 · Drogi bałtyckie: twarda spacja między liczbą a jednostką
     const base = {
       id: 'fi-w', type: 'OPS', severity: 'HIGH', title: 'Trasa FI: limit masy 12 t — sprawdź zezwolenie / trasę', detail: 'opis',
       owner: 'HHL', meta: '', nextAction: '', ageHours: 1, kind: 'ROAD_FI',
-      titleKey: 'rk_road_baltic_weight', titleParams: { country: 'FI', event: 'Kelirikko 4 km', limit: 12, load: 14 },
+      titleKey: 'rk_road_baltic_weight',
+      titleParams: { country: 'FI', road: 'E75', event: 'Kelirikko 4 km', limit: 12, load: 14 },
     } as unknown as Risk;
     const r = withBalticRoad(base, { kind: 'ROAD_FI', detail: { zrodlo: 'Fintraffic', weight_limit_t: 12 } });
     const sections = balticRoadSections([r], new Set(['FI'] as const), null, '2026-11-02T10:00:00Z');
@@ -70,7 +71,8 @@ describe('DP-177 · Drogi bałtyckie: twarda spacja między liczbą a jednostką
     expect(row).not.toBeNull();
     const title = row.querySelector('.rk-road-t') as HTMLElement;
     expect(title.textContent).toContain('12 t');
-    expect(title.textContent).toContain('4 km');
+    expect(title.textContent).toContain('E75');
+    expect(title.textContent).toContain('Warunki drogowe');
     expect(title.textContent).not.toMatch(/\d (?:km|m|h|min|t|dni|%)(?![\p{L}\p{N}])/u);
     expect(row.querySelector('[data-limit-tag]')!.textContent).toBe('Limit masy 12 t');
     expect(title.getAttribute('title')).toContain('12 t');
