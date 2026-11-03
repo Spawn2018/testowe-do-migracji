@@ -1242,13 +1242,13 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-143 | Cursor | Typy frontu: `GeofenceCountry` bez EE/FI; `Geofence.route` jako `FerryOperator` choć zapisane kody tras — ryzyko ekranu Strefy | #720 §6 | BN8 | DONE (BN8 front: EE/FI + route kod/rodzina) |
 | DP-144 | Cursor | `FerryOperator` zamknięta lista — armator tylko w bazie nie trafia do Kokpitu/awizacji (`src/lib`) | #720 §6 | BN8 / front | DONE (BN8 front: `catalogOperators` / RPC) |
 | DP-145 | Cursor | `ROUTE_TO_FAMILY` w kodzie; job `ferry-weather` powinien brać `family_key` ze słownika `ferry_routes` (#714 §2) | F7 #721 / #722 | BN5 | SCALONE #722 `52f370ef` (`ferryRouteFamilies` + zapas w kodzie) |
-| DP-146 | Cursor | Niestabilny visual telefon: `e8-phone-gate.spec.ts:2477` karty faktur SCX = 0 (raz padł, ponowienie OK); nie wyłączać — ustalić przyczynę | F7 #721 | visual / SCX | w kolejce |
+| DP-146 | Cursor | Niestabilny visual telefon: `e8-phone-gate.spec.ts:2477` karty faktur SCX = 0 (raz padł, ponowienie OK); nie wyłączać — ustalić przyczynę | F7 #721 | visual / SCX | W TOKU (wait `.inv-cards [data-bill]` — lazy InvoicesView) |
 | DP-147 | Cursor | `ferryRouteFamilies` bez `must()` — błąd odczytu nie używa must (jawny throw) | F7 #722 | BN5 / ferry-weather | SCALONE #724 `17707bf9` |
 | DP-148 | Cursor | `runFerryWeather`: catch awarii słownika → zapas mapa w kodzie + ostrzeżenie (job nie pada) | F7 #722 | BN5 / ferry-weather | SCALONE #724 (z DP-147) |
 | DP-149 | Cursor | Ostrzeżenie „NaN poza siatką” tylko gdy wszystkie NaN; przytnij okno do horyzontu modelu | F7 #724 / #714 | BN5 / ferry-weather | SCALONE #725 `571aff01` |
 | DP-150 | Cursor | DMI: 1 punkt/korytarz, szeregowo z odstępem, cache 3 h, krótszy timeout | F7 #724 / #714 | BN5 / ferry-weather | SCALONE #725 (z DP-149) |
 | DP-151 | Cursor | `fetchMarineConditions` — `detail` w `select` (status / warnings / ice) | F7 #724 / #714 | BN5 / front | SCALONE #725 (z DP-149) |
-| DP-152 | Cursor | `fHorizonTo` = maksimum lastValid po punktach (nie min) — przybrzeżny nie skraca DMI/`window_to` | F7 #725 | BN5 / ferry-weather | W TOKU (#768; CI ✔; zod 4.6.7 po F7 → ponowne F7) |
+| DP-152 | Cursor | `fHorizonTo` = maksimum lastValid po punktach (nie min) — przybrzeżny nie skraca DMI/`window_to` | F7 #725 | BN5 / ferry-weather | SCALONE (#768 `0abe9a8f`; zod ^4.6.7) |
 | DP-155 | Cursor | ETA: `ROAD_FI` → `slowdown_se` przy `FI_E75` (0385); test ×1.5 FI dłuższy / GDN bez zmian; `yard_drive_quote` bez zmian (tylko SREM/BODEN→PL/SE_E4) | F7 #726 / C1 #762 | BN8b / ETA | SCALONE (#766 `272e0afc` / **0388**) |
 | DP-156 | Cursor | `notify_event_key`: ROAD_LT/LV/EE/FI — z `load_id` jak SE; bez `load_id` tylko HIGH/CRIT → `risk_crit`; HIGH→MEDIUM zamyka dzwonek (F7 #766 r2 / **0388**) | F7 #726 / C1 #762 | BN6 / notify | SCALONE (#766 `272e0afc` / **0388**) |
 | DP-157 | Cursor | road-fi: (a) zwykłe Tietyö bez zamknięcia/objazdu/limitu → LOW; (b) do BN7 filtr numerów dróg korytarza (VT4/E75, VT29/E8, Kehä III 50, Vuosaaren 103 + porty); (c) jednorazowo resolve 146 ROAD_FI poza filtrem (przez job, nie ręcznie) | F7 #727 | BN6 / road-fi | DONE #732 |
@@ -1440,7 +1440,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 
 ### #762 · Kolejka drobnych poprawek Cursora — pakiety C1–C5 (do wydania 1.0)
 Źródło: #762 (Spawn2018; 03.11). Po #760 → #756 (DP-187/188) → C1…. Koordynator: pakiety DP-A/B/C (front) — nie brać.
-1. **C1 — Korytarz bałtycki:** ~~DP-179~~ DONE; ~~143/144~~ DONE; DP-146; ~~152~~ W TOKU (#768; CI ✔ + zod 4.6.7 → ponowne F7); ~~155/156~~ SCALONE (#766 `272e0afc` / **0388**); ~~157/158~~ DONE (LT/LV/EE/FI etykiety, szum FI; przed BN10).
+1. **C1 — Korytarz bałtycki:** ~~DP-179~~ DONE; ~~143/144~~ DONE; DP-146 W TOKU; ~~152~~ SCALONE (#768 `0abe9a8f`); ~~155/156~~ SCALONE (#766 `272e0afc` / **0388**); ~~157/158~~ DONE (LT/LV/EE/FI etykiety, szum FI; przed BN10).
 2. **C2 — telematyka / ETA:** DP-119, 120, 121, 123, 124, 126, 129, 132, 140 (+ **DP-193**, **DP-194** z odbioru 0387).
 3. **C3 — stare pozycje backendu:** DP-2, 10, 12, 22, 24, 29–32, 38–40, 43, 46, 47, 53–58 (+ **DP-195** tor KAA po #764).
 4. **C4 — reszta:** DP-69, 70, 81–83, 90–93, 97, 99–103, 105–109, 111, 112.
