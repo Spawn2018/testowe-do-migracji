@@ -1,4 +1,60 @@
 
+## 2026-11-03 00:45 — BN8a F7 r6 (cleanup load_events replica) + #740 SCALONE
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie.
+- Scalanie: **#740 SCALONE** `4b2c6f08` (F7 @ `7a704062`). **#743** konflikt po #740 — rebase wyglądu u koordynatora. #741 @ `9ecab5a7`: unit/visual ✔; db FAIL — status W5 cleanup `load_events` append-only → ryzyka L820* w risks.sh.
+- **Krok F7 r6:** sprzątanie L820* — `delete load_events` przy `session_replication_role=replica` (i2); DP-175/DP-177 w rejestrze. Po deploy #740: `cron_fetch=true` (osobny krok).
+- **Dalej:** push → CI → F7. Po F7: cron_fetch=true → DP-171 (#735) → DP-172 (#742); front `src/lib` / BN8b.
+- Bez push na main.
+
+## 2026-11-03 00:15 — BN8a F7 r5 (W5 rollback + sprzątanie L820*)
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. #740/#743 wygląd bez F7.
+- Scalanie: brak „F7: gotowe”. #741 @ `98f84c39`: unit/visual ✔; db FAIL risks 44/46 (`rk_off_corridor`); F7 r5: globalne kasowanie title_key zabija strażnik.
+- **Krok F7 r5:** W5a/W5a0/W5b/W5c/W5d w `begin…rollback`; sprzątanie tylko `load_id` L820* (wzorzec #487) + `chk` count risk/loads=0; EXPECTED status **604**.
+- **Dalej:** push → CI → F7. Po F7: DP-171 (#735) → DP-172 (#742); front `src/lib` / BN8b; #740 → cron_fetch=true.
+- Bez push na main.
+
+## 2026-11-02 23:50 — BN8a F7 r4 (W1 2 punkty + W5a0 + risks)
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. #740/#743 wygląd bez F7.
+- Scalanie: brak „F7: gotowe”. #741 @ `ccc7da91`: unit/visual ✔; db FAIL — risks 44/46 (`rk_off_corridor`/`rk_eta_breach`); F7 r4: W1 na historii PL + W5a0 za słaby.
+- **Krok F7 r4:** W1 — `PL_ROAD` tylko gdy oba ostatnie punkty (jak `corridor_progress`) w bbox PL; W5a0 — wcześniejsza pozycja PL + 2× LV; sprzątanie W5: notyfikacje → decyzje po `risk_id` → ryzyka (w tym globalnie `rk_off_corridor`/`rk_eta_breach`); status **603**.
+- **Dalej:** push → CI → F7. Po F7: DP-171 (#735) → DP-172 (#742); front `src/lib` / BN8b; #740 → cron_fetch=true.
+- Bez push na main.
+
+## 2026-11-02 23:20 — BN8a F7 r2 (W1/W2/W4/W5) + CI db FAIL → poprawka
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. #742 DP-172 wpisane (po #741+DP-171). #740 BN9-c5 bez F7.
+- Scalanie: brak „F7: gotowe”. #741 @ `6af33333`: unit/visual ✔; db FAIL — status propose GDN (`f`), risks +`rk_off_corridor`/`rk_eta_breach`.
+- **Krok F7 r2:** W1 — PL_ROAD tylko bbox PL, SE bez trasy → null; W4 — grant tylko `ferry_route`; W2 — `begin…exception` w `process_position`; propose `coalesce(sailing, ferry_route)`; W5a0/c/d + sprzątanie ryzyk; overdue powrót bez „actual” PL; status **603**; DP-171/172 w PLAN.
+- **Dalej:** push → CI → F7. Po F7: DP-171 (#735) → DP-172 (#742); front `src/lib` / BN8b; #740 → cron_fetch=true.
+- Bez push na main.
+
+## 2026-11-02 22:55 — BN8a F7 r1 B3/W2/W5 + CI db
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. #740 BN9-c5 CI ✔, bez F7.
+- Scalanie: brak „F7: gotowe”. #741 @ `1d0a19e6`: unit/visual ✔; db FAIL — status 594/595 (propose GDN), risks 44/46 (`rk_off_corridor`), i2 671/675 (UUID `g-test` w `load_route_family`).
+- **Krok:** **0382** — OFF_CORRIDOR tylko core PL_ROAD/SE_E4/Stena (B3); UUID po regexie w `load_route_family`/`process_position` (W2); propose L640q + `ferry_route=GDN-NYN`; W5a/b/e/f; status **599**; PLAN W3 (zapis ferry_route).
+- **Dalej:** push → CI → F7. Po F7: front `src/lib` / BN8b; #740 → cron_fetch=true.
+- Bez push na main.
+
+## 2026-11-02 21:45 — BN8a CI fix (0382 grant/map/OFF_CORRIDOR)
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. #735 krok 2 po prod. #740 BN9-c5 CI ✔, bez F7.
+- Scalanie: brak „F7: gotowe do scalenia”. #741 @ `607009af`: unit ✔; visual LFS 502 (infra); db status 579/595, nullguard 901/905, i2 670/675.
+- **Krok:** poprawka **0382** — `sailing_mismatch_assign` → `authenticated` (jak 0372); `ferry_sailings_map` przywrócone z 0370 (bez coalesce GDN / bez `fr.active`); OFF_CORRIDOR: bez trasy → `PL_ROAD`/`SE_E4` (II-7); testy BN1 0344 → BN8a EE outbound (propose/assign TLL-HEL).
+- **Dalej:** push → CI → F7. Po F7: front `src/lib` / BN8b.
+- Bez push na main.
+
+## 2026-11-02 21:10 — #739 SCALONE; start BN8a
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. #735 — krok 2 po prod DP-170 (koordynator odczyta `ee_probe_api`/`lv_shape_*`). #740 BN9-c5 wygląd otwarty (CI, bez F7).
+- Scalanie: **#739 SCALONE** `d4214676` (F7: gotowe @ `7af710a5`, CI 8/8). `deploy-main` w toku.
+- **Krok BN8a** (`pakiet/bn8a-ferry-all-routes`): migracja **0382** — `loads.ferry_route` + `load_route_family`; kraje SE/FI; `assume_dep_min`/`overdue_tolerance_min`; OFF_CORRIDOR ze słownika legów; mismatch PL/EE; `eta_record` po trasie; status **595** (+12).
+- **Dalej:** push → CI → F7. Po F7: BN8 front `src/lib` / BN8b; równolegle BN9-c5 → cron_fetch=true.
+- Bez push na main.
+
 ## 2026-11-02 20:40 — #739 merge main po #738 (konflikt docs)
 
 - Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. #735 — krok 2 po prod DP-170.
