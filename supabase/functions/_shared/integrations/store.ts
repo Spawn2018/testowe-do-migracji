@@ -273,7 +273,12 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
   };
   return {
     projectId,
-    async vessels() { return must(await sb.from('vessels').select('id,name,mmsi,imo'), 'vessels') as VesselRow[]; },
+    async vessels() {
+      return must(
+        await sb.from('vessels').select('id,name,mmsi,imo,ice_class'),
+        'vessels',
+      ) as VesselRow[];
+    },
     /** DP-116: stronicowanie — bez tego prod (>1000 rejsów) obcinał rozkład / statusy / pogodę. */
     async sailingsSince(fromIso: string) {
       return fetchSailingsSincePaged(() => sb.from('sailings') as SailingsPageQuery, fromIso, { must });

@@ -22,7 +22,11 @@ export const SOURCE_RANK: Record<SailingSource, number> = {
   RECZNIE: 3,
 };
 
-export interface VesselRow { id: string; name: string; mmsi: number | null; imo?: number | null }
+export interface VesselRow {
+  id: string; name: string; mmsi: number | null; imo?: number | null;
+  /** DP-120 — klasa lodowa fińsko-szwedzka; null = nieznana. */
+  ice_class?: string | null;
+}
 export interface DbSailing {
   id: string; vessel_id: string; route: FerryRoute; departure_at: string; arrival_at: string;
   delayed_departure_at: string | null; delayed_arrival_at: string | null;

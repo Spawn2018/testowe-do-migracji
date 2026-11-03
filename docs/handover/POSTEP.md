@@ -1,4 +1,19 @@
 
+## 2026-11-03 21:35 — #775 SCALONE; DP-120 F7 r1 niegotowe → poprawki seed/IC/dzień przypłynięcia
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
+- Scalanie: **#775 SCALONE** `b4a8dab9` (DP-196 wygląd Armator; F7 @ `e709023e`; CI unit/visual ✔). Bez `supabase/**`. `deploy-main` robi resztę. Bez push na main.
+- **#777 F7 r1 niegotowe** @ `4eca485b`: seed Portnet/Deltamarin (IA / 1C / NULL / Cinderella+Gabriella); I=IC; regex IAS przed IA; port docelowy wg dnia przypłynięcia; untilMs = koniec doby najpóźniejszego arrival; złożone „X / Y”; minDwt>2000 informacyjnie; tytuł za niskiej klasy.
+- **Krok:** poprawki w tym samym PR; vitest bn3-winter + integrations ✔. Dalej: push → CI (unit/db/visual) → F7.
+- **Dalej:** po F7 gotowe → DP-121.
+
+## 2026-11-03 20:50 — #776 SCALONE; start DP-120 (klasa lodowa / dzień rejsu)
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie; #773 zamknięte. Bez nowego `pilne`.
+- Scalanie: **#776 SCALONE** `e023c2ba` (DP-200; F7 @ `dc319c52`; CI unit/db/visual ✔). `deploy-main` robi resztę. Bez push na main.
+- **Krok DP-120** `pakiet/c2-dp-120-winter-ice-class` / **0391**: `vessels.ice_class` + seed ro-pax; FERRY_ICE filtr dnia UTC rejsu; 1A Super spełnia „I 2000” → bez ryzyka; IBNet PL w tytule; `open_until` 72 h. vitest winter/integrations (DP-120) ✔.
+- **Dalej:** push → CI → F7. Potem C2: 121….
+
 ## 2026-11-03 20:20 — #774 SCALONE; start DP-200 (Łotwa REST snapshot)
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720/#773 w planie. Bez nowego `pilne`.
