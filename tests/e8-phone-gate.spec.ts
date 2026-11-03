@@ -2475,13 +2475,16 @@ test.describe('wyglad/P5 Faktury — E4, E4b', () => {
 
   for (const role of ['HHL', 'KSH', 'SCX'] as const) {
     test(`telefon ${role}: kafelki 2 × 2 i karty faktur — 0 w bramie E8`, async ({ page }) => {
+      /* DP-146 (F7 #721 / C1): `.count()` bez auto-wait padało przy leniwym InvoicesView
+         (Suspense fallback=null) — zwykle SCX; ponowienie OK. Czekamy na kartę, potem asercje telefonu. */
       await page.setViewportSize({ width: 390, height: 844 });
       await boot(page, role);
       await openView(page, 'inv');
+      await expect(page.locator('[data-page="invoices"]')).toBeVisible();
+      await expect(page.locator('.inv-cards [data-bill]').first()).toBeVisible({ timeout: 30_000 });
       await expect(page.locator('table.inv-table')).toHaveCount(0);
       await expect(page.locator('[data-inv-flow]')).toHaveCount(0);
       await expect(page.locator('#inv-who-h')).toHaveCount(0);
-      expect(await page.locator('.inv-cards [data-bill]').count()).toBeGreaterThan(0);
       const hits: Hit[] = [];
       for (const width of WIDTHS) {
         await page.setViewportSize({ width, height: 844 });

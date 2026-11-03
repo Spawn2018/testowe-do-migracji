@@ -1,4 +1,11 @@
 
+## 2026-11-03 14:15 — #768 SCALONE; start DP-146
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
+- Scalanie: **#768 SCALONE** `0abe9a8f` (DP-152 `fHorizonTo` max + zod ^4.6.7; F7 @ `aab3d8de`, CI unit×2 visual×5 db ✔). `deploy-main` robi resztę. Bez push na main.
+- **Krok DP-146** PR **#769** (`pakiet/dp-146-inv-cards-scx` @ `fd87439e`): przyczyną flaka było `expect(await …count())` bez auto-wait przy leniwym `InvoicesView` (Suspense `null`) — najpierw wait na `.inv-cards [data-bill]`, potem asercje telefonu.
+- **Dalej:** CI → F7. Potem C1 / C2.
+
 ## 2026-11-03 13:45 — #767 SCALONE; DP-152 CI ✔ + zod 4.6.7
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
