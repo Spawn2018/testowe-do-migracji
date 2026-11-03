@@ -82,16 +82,7 @@ test('#667 F: Kokpit / Mapa / Strefy / geofence — ≥1 pomarańczowa; SE-KAA w
     expect(await orangePathCount(page, '[data-zones-map]'), 'Strefy').toBeGreaterThanOrEqual(1);
   }
 
-  // Edytor geofence (osobny L.map), gdy widok dostępny
-  const gfNav = page.locator('nav [data-view="geo"], nav [data-view="geofence"]').first();
-  if (await gfNav.count()) {
-    await gfNav.click();
-    const gf = page.locator('[data-geofence-map]');
-    if (await gf.count()) {
-      await page.waitForTimeout(1200);
-      expect(await orangePathCount(page, '[data-geofence-map]'), 'geofence').toBeGreaterThanOrEqual(1);
-    }
-  }
+  // DP-80: edytor geofence (osobny L.map) usunięty — formularz strefy rysuje `ZonesMap` mode="one"
 
   const legs = psql(`
     select string_agg(leg, ',' order by leg)

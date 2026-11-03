@@ -1,12 +1,11 @@
 import { existsSync, readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 
-/** #667 A — pomarańczowa trasa drogowa na każdej mapie (mapPool PROD + edytor stref). */
+/** #667 A — pomarańczowa trasa drogowa na każdej mapie (mapPool PROD + mapy stref; DP-80: edytor stref usunięty). */
 describe('#667 pomarańczowe drogi (krok A)', () => {
   const pool = readFileSync('src/components/map/mapPool.ts', 'utf8');
   const orange = readFileSync('src/components/map/orangeRoads.ts', 'utf8');
   const corridor = readFileSync('src/components/map/CorridorMap.tsx', 'utf8');
-  const geofence = readFileSync('src/components/map/GeofenceEditorMap.tsx', 'utf8');
   const zones = readFileSync('src/components/zones/ZonesMap.tsx', 'utf8');
 
   it('mapPool w PROD ładuje drogi przez applyBasemap (nie tylko demo)', () => {
@@ -25,10 +24,8 @@ describe('#667 pomarańczowe drogi (krok A)', () => {
     expect(orange).toMatch(/#E5A544/);
   });
 
-  it('CorridorMap, GeofenceEditorMap i ZonesMap używają paintOrangeRoads; demo ZonesMap bez applyBasemap', () => {
+  it('CorridorMap i ZonesMap używają paintOrangeRoads; demo ZonesMap bez applyBasemap (DP-80: edytor stref usunięty)', () => {
     expect(corridor).toMatch(/drawCorridorLines/);
-    expect(geofence).toMatch(/paintOrangeRoads/);
-    expect(geofence).toMatch(/loadRoadLines/);
     expect(zones).toMatch(/paintOrangeRoads/);
     expect(zones).toMatch(/orangeRoads/);
   });
