@@ -12,8 +12,8 @@ import L from 'leaflet';
 import { CORRIDOR_REF_COORDS } from '../../lib/corridor';
 import { SITES } from '../../lib/status';
 import { DEMO_ROAD_LEGS } from '../../data/roadLinesDemo';
-import { WATER_GDN_NYN, WATER_GDY_KAA, type LatLng, type ThemeName } from '../../lib/map/draw';
-import { CORE_LANE_TRACKS, ferryLaneLines, ferryLaneOptions, restyleFerryLanes } from '../../lib/map/ferryLanes';
+import { WATER_GDN_NYN, type LatLng, type ThemeName } from '../../lib/map/draw';
+import { CORE_LANE_TRACKS, ferryLaneLines, WATER_GDY_KAA_LANE, ferryLaneOptions, restyleFerryLanes } from '../../lib/map/ferryLanes';
 import { WATER_TRACKS_EXTRA } from '../../lib/map/ferryLines';
 import { corridorScope, FAMILY_EXTENT, linesInScope, networkScope, type CorridorScope, type RouteLegRow } from '../../lib/map/routeLegs';
 import { programmatic } from './programmaticMove';
@@ -107,7 +107,7 @@ export function corridorBoundsOf(tracks: ReadonlySet<WaterTrackId> = CORE_LANE_T
   if (!corridorBounds) {
     const pts: L.LatLngExpression[] = [
       ...CORRIDOR_REF_COORDS.map(([lng, lat]) => [lat, lng] as L.LatLngTuple),
-      ...[...WATER_GDN_NYN, ...WATER_GDY_KAA].map(([lng, lat]) => [lat, lng] as L.LatLngTuple),
+      ...[...WATER_GDN_NYN, ...WATER_GDY_KAA_LANE].map(([lng, lat]) => [lat, lng] as L.LatLngTuple),
       ...POINTS.map((p) => [p.lat, p.lng] as L.LatLngTuple),
     ];
     corridorBounds = L.latLngBounds(pts);
@@ -235,6 +235,12 @@ export function fitCorridor(map: L.Map): void {
   }
 }
 
+/** DP-77: promień znaczników miejsc (Śrem, porty, Boden) — przy przybliżeniu < 5,5 mniejszy, żeby nie zakrywał linii. */
+export const POI_RADIUS = { low: 3.5, normal: 6 } as const;
+export function poiRadius(zoom: number): number {
+  return zoom < 5.5 ? POI_RADIUS.low : POI_RADIUS.normal;
+}
+
 /** Mapa tworzona już w kontenerze widoku (rozmiar od początku) — piksel w piksel jak przed AUD-01e. */
 function build(pooled: boolean, root: HTMLElement): PoolEntry {
   const el = document.createElement('div');
@@ -254,11 +260,12 @@ function build(pooled: boolean, root: HTMLElement): PoolEntry {
   const fleet = L.layerGroup().addTo(map);
   const situations = L.layerGroup().addTo(map);
   const ais = L.layerGroup().addTo(map);
-  for (const p of POINTS) {
-    L.circleMarker([p.lat, p.lng], { radius: 6, color: '#080F15', weight: 1, fillColor: '#E5A544', fillOpacity: 1 })
-      .bindTooltip(p.name, { direction: 'top', offset: [0, -8] })
-      .addTo(poi);
-  }
+  const pins = POINTS.map((p) => L.circleMarker([p.lat, p.lng], { radius: poiRadius(map.getZoom()), color: '#080F15', weight: 1, fillColor: '#E5A544', fillOpacity: 1 })
+    .bindTooltip(p.name, { direction: 'top', offset: [0, -8] })
+    .addTo(poi));
+  /* DP-77: przy małym przybliżeniu znaczniki Śrem i Gdańsk zakrywały polski odcinek pomarańczowej linii — mniejsze
+     (dalej klikalne, z podpisem); od przybliżenia 5,5 jak dotąd */
+  map.on('zoomend', () => { const r = poiRadius(map.getZoom()); for (const m of pins) if (m.getRadius() !== r) m.setRadius(r); });
   if (pooled) poolStats.created += 1;
   else poolStats.oneOff += 1;
   const e: PoolEntry = {

@@ -21,14 +21,36 @@ const ROAD_SE_DEMO: DemoRoadLine = [
   [64.95, 21.21], [65.3172, 21.4794], [65.43, 21.7], [65.5848, 22.154], [65.7, 21.95], [65.80539, 21.75914],
 ];
 
-/** SE z Karlskrony: E22 (Kalmar, Västervik, Norrköping) → E4 → Sztokholm, dalej jak z Nynäshamn. */
+/**
+ * SE z Karlskrony: E22 (Kalmar, Västervik, Norrköping) → E4 → Sztokholm, dalej jak z Nynäshamn.
+ * DP-71: z Karlskrony E22 przez Lyckeby, Jämjö i Brömsebro (wcześniej prosta Karlskrona → Söderåkra przez ląd).
+ */
 const ROAD_SE_KAA_DEMO: DemoRoadLine = [
-  [56.161, 15.63], [56.45, 16.07], [56.663, 16.356], [57.04, 16.41], [57.264, 16.448], [57.758, 16.637],
+  [56.161, 15.63], [56.199, 15.654], [56.193, 15.843], [56.3, 16.0], [56.45, 16.07], [56.663, 16.356], [57.04, 16.41], [57.264, 16.448], [57.758, 16.637],
   [57.894, 16.405], [58.203, 16.601], [58.48, 16.32], [58.59, 16.18], [58.665, 16.37], [58.72, 16.47],
   [58.753, 17.008], [58.95, 17.49], [59.196, 17.626], [59.3293, 18.0686],
 ];
 
-export const DEMO_ROAD_LINES: readonly DemoRoadLine[] = [ROAD_PL_DEMO, ROAD_SE_DEMO, ROAD_SE_KAA_DEMO];
+/** DP-72: PL-GDY — Śrem → jak do Gdańska (S5, A1) → Obwodnica Trójmiasta (S6) → Gdynia, terminal promowy. */
+const ROAD_PL_GDY_DEMO: DemoRoadLine = [
+  ...ROAD_PL_DEMO.slice(0, ROAD_PL_DEMO.findIndex(([lat]) => lat === 53.93) + 1),
+  [54.26, 18.63], [54.32, 18.55], [54.4, 18.48], [54.47, 18.49], [54.53321, 18.54425],
+];
+
+/** E4 od Gävle na północ (z linii SE wyżej). */
+const SE_FROM_GAVLE = ROAD_SE_DEMO.slice(ROAD_SE_DEMO.findIndex(([lat]) => lat === 60.6749));
+/**
+ * DP-72: SE-KAA-INLAND — wariant śródlądowy Karlskrona → Boden (jak produkcja, via `ROAD_KAA`): Emmaboda, Vimmerby,
+ * Linköping, Norrköping, Katrineholm, Eskilstuna, Västerås, Sala, Gävle → E4 jak z Nynäshamn.
+ */
+const ROAD_SE_KAA_INLAND_DEMO: DemoRoadLine = [
+  [56.161, 15.63], [56.26, 15.61], [56.63, 15.54], [57.38, 15.8], [57.67, 15.86], [58.41, 15.62], [58.59, 16.18],
+  [58.996, 16.207], [59.37, 16.51], [59.61, 16.54], [59.92, 16.61], ...SE_FROM_GAVLE,
+];
+
+export const DEMO_ROAD_LINES: readonly DemoRoadLine[] = [
+  ROAD_PL_DEMO, ROAD_SE_DEMO, ROAD_SE_KAA_DEMO, ROAD_PL_GDY_DEMO, ROAD_SE_KAA_INLAND_DEMO,
+];
 
 /* ---------- BN9-c5 (#718 BN7): przykładowe linie Korytarza bałtyckiego — PRZYKŁAD (demo), nie geometria HERE ---------- */
 /* Punkty to miasta na drodze (via z BN7 §2), jak linie PL/SE wyżej. W produkcji nigdy: tam legi z `map_display_state`. */
@@ -65,14 +87,16 @@ const ROAD_SE_KPS_DEMO: DemoRoadLine = [[59.721, 19.065], [59.76, 18.7], ...SE_F
 
 /**
  * BN9-c5: linie demo z kodem legu — ten sam filtr co w produkcji (karta transportu: legi jego trasy; Mapa i Kokpit:
- * rdzeń i trasy aktywnych transportów; mapy stref: rdzeń). PL-GDY w demo = ta sama linia co PL-GDN (rysowana raz).
- * Rdzeń (PL-GDN, PL-GDY, SE-NYN, SE-KAA) = dokładnie `DEMO_ROAD_LINES` (dzisiejszy rysunek). Legi BN7 — przykład.
+ * rdzeń i trasy aktywnych transportów; mapy stref: rdzeń). DP-72: PL-GDY (Śrem–Gdynia) i SE-KAA-INLAND (śródlądowa
+ * Karlskrona–Boden) jako osobne linie, jak legi w produkcji.
+ * Rdzeń (PL-GDN, SE-NYN, SE-KAA, PL-GDY, SE-KAA-INLAND) = dokładnie `DEMO_ROAD_LINES`. Legi BN7 — przykład.
  */
 export const DEMO_ROAD_LEGS: readonly { leg: string; line: DemoRoadLine; example?: true }[] = [
   { leg: 'PL-GDN', line: ROAD_PL_DEMO },
-  { leg: 'PL-GDY', line: ROAD_PL_DEMO },
   { leg: 'SE-NYN', line: ROAD_SE_DEMO },
   { leg: 'SE-KAA', line: ROAD_SE_KAA_DEMO },
+  { leg: 'PL-GDY', line: ROAD_PL_GDY_DEMO },
+  { leg: 'SE-KAA-INLAND', line: ROAD_SE_KAA_INLAND_DEMO },
   { leg: 'PL-TLL', line: ROAD_PL_TLL_DEMO, example: true },
   { leg: 'PL-MUU', line: ROAD_PL_MUU_DEMO, example: true },
   { leg: 'PL-PLD', line: ROAD_PL_PLD_DEMO, example: true },

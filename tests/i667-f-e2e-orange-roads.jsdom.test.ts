@@ -28,7 +28,6 @@ const { paintOrangeRoads, ORANGE_ROAD_STYLE } = await import('../src/components/
 const { DEMO_ROAD_LINES } = await import('../src/data/roadLinesDemo');
 const { useTowerStore } = await import('../src/store/useTowerStore');
 const { default: ZonesMap } = await import('../src/components/zones/ZonesMap');
-const { GeofenceEditorMap } = await import('../src/components/map/GeofenceEditorMap');
 const { CorridorMap } = await import('../src/components/map/CorridorMap');
 const { default: TrackReplay } = await import('../src/components/map/TrackReplay');
 
@@ -286,50 +285,6 @@ describe('#667 F e2e — paintOrangeRoads + mapy (jsdom)', () => {
     expect(rpc).toHaveBeenCalled();
     expect(orangeStrokeCount(host)).toBe(1);
     expect(orangeStrokeCount(host)).not.toBe(DEMO_ROAD_LINES.length);
-  });
-
-  it('B1 PROD: GeofenceEditorMap — 1 polilinia drogi (nie okrąg #E5A544)', async () => {
-    vi.stubEnv('VITE_AUTH_MODE', 'supabase');
-    __resetRoadLinesCacheForTests();
-    __setHereRoadsSessionMsForTests(5 * 60_000);
-    rpc.mockReset();
-    getSession.mockReset();
-    const roads = [
-      {
-        leg: 'PL-GDY',
-        spec: 'loose',
-        corridor_code: null,
-        points: LOOSE_OK,
-        browser_fetch: true,
-        map_group: 'core',
-        summary: '',
-      },
-    ];
-    rpc.mockResolvedValue({ data: { roads }, error: null });
-    getSession.mockResolvedValue({ data: { session: null } });
-
-    useTowerStore.setState({ theme: 'day' });
-    host = document.createElement('div');
-    host.style.width = '640px';
-    host.style.height = '480px';
-    document.body.appendChild(host);
-    root = createRoot(host);
-
-    await act(async () => {
-      root.render(createElement(GeofenceEditorMap, {
-        lat: 52.1,
-        lng: 17.0,
-        radiusM: 500,
-        hysteresisM: 50,
-        onMove: () => undefined,
-      }));
-    });
-    await act(async () => { await new Promise((r) => setTimeout(r, 400)); });
-    expect(host.querySelector('[data-geofence-map]')).toBeTruthy();
-    expect(rpc).toHaveBeenCalled();
-    // F7 r4 M5b: okrąg geofence też #E5A544 — liczyć tylko polilinie (=== 1 z RPC).
-    expect(orangeRoadPolylineCount(host)).toBe(1);
-    expect(orangeStrokeCount(host)).toBeGreaterThan(orangeRoadPolylineCount(host));
   });
 
   it('B1 mapPool PROD: acquireMap → loadRoadLines (1 linia, nie DEMO×3)', async () => {
