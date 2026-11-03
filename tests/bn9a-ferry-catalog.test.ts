@@ -159,8 +159,9 @@ describe('BN9-a — najbliższe rejsy: nowi armatorzy tylko z rejsem', () => {
   const pf = S({ id: 'pf', route: 'GDN-NYN', departureAt: '2026-10-26T16:00:00Z', source: 'POLFERRIES' });
   const st = S({ id: 'st', route: 'GDY-KAA', departureAt: '2026-10-26T19:00:00Z', source: 'STENA' });
   it('dzisiejsze dane — tylko Polferries i Stena, kształt jak dotąd', () => {
-    expect(Object.keys(nearestCrossingByOperator([pf, st], NOW))).toEqual(['STENA', 'POLFERRIES']);
-    expect(Object.keys(nearestCrossingByOperator([], NOW))).toEqual(['STENA', 'POLFERRIES']);
+    /* DP-181: kolejność = catalogOperators() (seed POLFERRIES, STENA, …), nie OPERATOR_MATCH_ORDER */
+    expect(Object.keys(nearestCrossingByOperator([pf, st], NOW))).toEqual(['POLFERRIES', 'STENA']);
+    expect(Object.keys(nearestCrossingByOperator([], NOW))).toEqual(['POLFERRIES', 'STENA']);
     expect(nearestCrossingSailings([pf, st], NOW)).toEqual({ polferries: [pf], stena: [st] });
   });
   it('rejs Tallinka dochodzi jako osobna pozycja; powroty i odwołane nie', () => {

@@ -8,8 +8,8 @@ import type { FerryBooking, Load, LoadStatus, Locale, OrgKind, Risk, Sailing, Sa
 import { dictEntry } from '../i18n/messages';
 import { fmtDateTime, TZ_OPS, wallLocalToIso } from './time';
 import {
-  LEGACY_OPERATORS, OPERATOR_MATCH_ORDER, operatorFromText, operatorsForRoute, outboundRoutesOf,
-  isOperatorOutboundRoute, routeByCode, sailingOfOperator, type FerryOperator,
+  LEGACY_OPERATORS, OPERATOR_MATCH_ORDER, catalogOperators, operatorFromText, operatorsForRoute,
+  outboundRoutesOf, isOperatorOutboundRoute, routeByCode, sailingOfOperator, type FerryOperator,
 } from './ferryCatalog';
 
 export const effDeparture = (s: Sailing): string => s.delayedDepartureAt ?? s.departureAt;
@@ -283,9 +283,10 @@ function lineDepartures(
 /** Mapa armator → rejsy; Polferries i Stena zawsze (pusta lista = „Brak danych”), nowi tylko z rejsami. */
 export type CrossingMap = Partial<Record<FerryOperator, Sailing[]>> & Record<'POLFERRIES' | 'STENA', Sailing[]>;
 
+/** DP-181 / F7 #750: armatorzy ze słownika (seed + RPC), nie sztywna `OPERATOR_MATCH_ORDER`. */
 function byOperator(pick: (line: FerryOperator) => Sailing[]): CrossingMap {
   const out = {} as CrossingMap;
-  for (const line of OPERATOR_MATCH_ORDER) {
+  for (const { code: line } of catalogOperators()) {
     const list = pick(line);
     if (list.length || LEGACY_OPERATORS.includes(line)) out[line] = list;
   }
