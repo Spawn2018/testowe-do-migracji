@@ -385,3 +385,9 @@ Z workflowu `visual` (`update=true`, gałąź `wyglad/pakiet-dp-c`, przebieg 416
 - `awizacja-rejs-przed-zaladunkiem-hhl-pl-390-light.png` (nowa, 390×3400): to samo na telefonie — pola w jednej kolumnie, linia DP-48 pod polem „Rejs promem”; okno pełnoekranowe (wysokość okna testu 3400 px, dół pusty).
 Uwaga do wyglądu (bez zmiany w tym pakiecie): na 1440 pole „Armator” w siatce `.am-2` rozciąga się na wysokość kolumny rejsu (dwie linie podpowiedzi) — wysokie pole wyboru.
 Wzorca `shots-baseline` nie zmieniano.
+
+## DP-196 (03.11.2026) — awizacja: pole „Armator” wyrównane do góry (1440)
+Z workflowu `visual` (`update=true`, gałąź `wyglad/dp-196-awizacja-armator`, przebieg 41697051075, commit `cc821f0`, artefakt `visual-artifacts`). Pozostałe 30 migawek w artefakcie jest identycznych co do bajtu (także `awizacja-rejs-przed-zaladunkiem-hhl-pl-390-light.png` — na telefonie `.am-2` ma jedną kolumnę, więc wyrównanie nic nie zmienia; Kokpit, Mapa, karty, Ryzyka, Drogi bałtyckie, pogoda, Rejsy, pasek promu, stany).
+Przyczyna: uwaga z Pakietu DP-C — siatka `.am-2` rozciągała pola na wysokość wiersza, więc „Armator” dostawał wysokość kolumny „Rejs promem” (pole + dwie linie podpowiedzi). Teraz `align-items: start` na `.am-2` (`src/components/drawer/p7.css`); `.am-lock` zostaje `align-self: end`.
+- `awizacja-rejs-przed-zaladunkiem-hhl-pl-1440-light.png` (560×960, bez zmiany rozmiaru): pole „Armator” (Polferries) ma zwykłą wysokość i stoi w jednej linii z polem „Rejs promem”; pod nim pusto, podpowiedzi rejsu („Wybrany rejs odpływa przed planowanym załadunkiem.”, „Rejs można dodać później…”) bez zmian w prawej kolumnie. Reszta okna bez zmian.
+Wzorca `shots-baseline` nie zmieniano.

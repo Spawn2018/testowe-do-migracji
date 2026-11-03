@@ -125,7 +125,7 @@
 .am-all{display:contents;margin:0;padding:0;border:0;min-width:0}
 .am-box{display:flex;flex-direction:column;gap:10px;min-width:0;margin:0;padding:10px 12px 12px;border:1px solid var(--rule)}
 .am-lg{padding:0 4px;font-family:var(--font-cond);font-size:14px;font-weight:700;letter-spacing:.02em;color:var(--ink-2)}
-.am-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 12px}
+.am-2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 12px;align-items:start}
 .am .am-f,.am-2 > *{min-width:0}
 .am select.input{width:100%;min-width:0;max-width:100%}
 .am-tel{display:flex;gap:6px;min-width:0}
