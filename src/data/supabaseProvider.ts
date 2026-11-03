@@ -103,6 +103,69 @@ export async function fetchAllLoadEvents(
   return { data: out, error: null };
 }
 
+/** DP-119 / F7 #693 r1: kolumny dokumentów w zrzucie — stronicowanie `max_rows=1000`. */
+export const DOCUMENT_COLUMNS =
+  'id,load_id,category,file_name,mime_type,size_bytes,valid_until,visible_to,uploaded_at,storage_path,version,superseded_at';
+
+/**
+ * DP-119 / F7 #693 r1: dokumenty stronami po 1000 (`max_rows`). Bez `range` zrzut gubiłby
+ * starsze wersje/PDF powyżej limitu. Kolejność po `id`; dedupe przy przesunięciu między stronami.
+ */
+export async function fetchAllDocuments(
+  sb: SupabaseClient,
+  cap: number = Infinity,
+): Promise<{ data: DocumentRow[] | null; error: { message: string } | null }> {
+  const PAGE = 1000;
+  const seen = new Set<string>();
+  const out: DocumentRow[] = [];
+  for (let from = 0; from < cap; from += PAGE) {
+    const to = Math.min(from + PAGE, cap) - 1;
+    const r = await sb.from('documents').select(DOCUMENT_COLUMNS)
+      .order('id', { ascending: true }).range(from, to);
+    if (r.error) return { data: null, error: r.error };
+    const rows = (r.data ?? []) as unknown as DocumentRow[];
+    for (const row of rows) {
+      const k = String(row.id);
+      if (seen.has(k)) continue;
+      seen.add(k);
+      out.push(row);
+    }
+    if (rows.length < to - from + 1) break;
+  }
+  return { data: out, error: null };
+}
+
+/**
+ * DP-119 / F7 #693 r1: faktury stronami po 1000 (`max_rows`). Zachowana kolejność
+ * `issue_date`↓ + `id`↓; filtr `direction` jak w zrzucie M6.
+ */
+export async function fetchAllInvoices(
+  sb: SupabaseClient,
+  cap: number = Infinity,
+): Promise<{ data: BillRow[] | null; error: { message: string } | null }> {
+  const PAGE = 1000;
+  const seen = new Set<string>();
+  const out: BillRow[] = [];
+  for (let from = 0; from < cap; from += PAGE) {
+    const to = Math.min(from + PAGE, cap) - 1;
+    const r = await sb.from('invoices').select(BILL_COLUMNS)
+      .not('direction', 'is', null)
+      .order('issue_date', { ascending: false }).order('id', { ascending: false })
+      .range(from, to);
+    if (r.error) return { data: null, error: r.error };
+    /* `as unknown` — BILL_COLUMNS to string, typ selectu nie nachodzi na BillRow (jak fetchAllSailings). */
+    const rows = (r.data ?? []) as unknown as BillRow[];
+    for (const row of rows) {
+      const k = String(row.id);
+      if (seen.has(k)) continue;
+      seen.add(k);
+      out.push(row);
+    }
+    if (rows.length < to - from + 1) break;
+  }
+  return { data: out, error: null };
+}
+
 export interface SupabaseProviderOptions {
   now?: () => string;
   eventLimit?: number;
@@ -182,12 +245,13 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
       sb.rpc('list_load_messages_ui'),
       sb.from('v_geofences_circle').select('*').order('sort_order'),
       sb.from('risk_signals').select('id,load_id,kind,severity,title,title_key,detail,detected_at,dedup_key').is('resolved_at', null).order('detected_at', { ascending: false }),
-      sb.from('documents').select('id,load_id,category,file_name,mime_type,size_bytes,valid_until,visible_to,uploaded_at,storage_path,version,superseded_at'),
+      /* DP-119 / F7 #693: documents/invoices ze stronicowaniem (max_rows=1000) */
+      fetchAllDocuments(sb),
       // M2: ceny wyłącznie z widoków rolowych v2 (0010) — koszt: HHL + przewoźnik, przychód: HHL + klient
       selectPriceView('v_load_price_carrier'),
       selectPriceView('v_load_price_client'),
-      // M6: faktury v2 (RLS invoices_read: strony faktury; HHL wszystko)
-      sb.from('invoices').select(BILL_COLUMNS).not('direction', 'is', null).order('issue_date', { ascending: false }),
+      // M6: faktury v2 (RLS invoices_read: strony faktury; HHL wszystko); DP-119: range
+      fetchAllInvoices(sb),
       // M7: centrum powiadomień — własne wiersze IN_APP (RLS notifications_read_own), treść w języku odbiorcy
       notificationsQuery(),
       // M10: rozkład rejsów — widzą wszyscy (sailings_read), zmienia HHL
