@@ -5,6 +5,8 @@
  * Szczegóły (odpoczynek, km, jazda, czekanie) z `load.etaDetail` — wypełnia wykonawca (E15); bez nich blok pokazuje ETA, pasmo i okno.
  * BN9-c6: trasa bałtycka (wyjście z Estonii) bez ETA z bazy (`eta_site` = null do BN8b) — „brak danych” z dopiskiem,
  * zamiast samego „ETA: –”. Polska – Szwecja bez zmian.
+ * DP-192: ETA bałtyckie jest liczone (BN8b) — puste ETA z flagą „brak pozycji GPS” pokazuje prawdziwy powód,
+ * „brak danych” z dopiskiem tylko, gdy transport nie ma żadnej podstawy ETA (`Load.etaComputedAt`).
  */
 import type { Load, Locale } from '../../types';
 import { t, tp } from '../../i18n/messages';
@@ -18,8 +20,14 @@ import { minText, type EtaWx } from '../../lib/e49Wx';
 import { e49wx } from '../../i18n/e49Wx';
 import { pt } from '../../i18n/p7';
 import { isBalticRoute } from './bn9c6Route';
+import { p9m } from '../../i18n/p9c';
 
 const SE = 'Europe/Stockholm';
+
+/** DP-192: flaga „brak pozycji GPS” z `eta_basis.flags` (w `Load.etaReasons`). */
+function etaNoGps(load: Pick<Load, 'etaReasons'>): boolean {
+  return (load.etaReasons ?? []).some((r) => /brak pozycji gps/i.test(r));
+}
 
 function ago(fromIso: string, nowIso: string, locale: Locale): string {
   const m = Math.max(0, Math.round((Date.parse(nowIso) - Date.parse(fromIso)) / 60_000));
@@ -93,10 +101,15 @@ export function EtaBlock({
   const win = kind ? (late ? 'after' : kind === 'before' ? 'before' : 'in') : null;
   const winText = win ? t(locale, `p4b_eta_win_${win}`) : null;
   const osm = (load.etaMethod ?? '').includes('OSM') ? t(locale, 'i2_eta_osm_attr') : null;
-  /* BN9-c6: ETA trasy bałtyckiej jeszcze nieliczona (BN8b) — czytelny stan zamiast pustego pola */
-  const balticPending = !load.etaBoden && isBalticRoute(route);
+  /* BN9-c6 / DP-192: ETA trasy bałtyckiej liczone w bazie (BN8b, 0385). Puste ETA z flagą „brak pozycji GPS”
+     → ten sam stan co Polska – Szwecja („ETA: –” i powód), a „brak danych” z dopiskiem tylko bez żadnej podstawy ETA. */
+  const baltic = !load.etaBoden && isBalticRoute(route);
+  const gpsMissing = !load.etaBoden && etaNoGps(load);
+  const balticPending = baltic && !gpsMissing && !load.etaComputedAt;
   const noEta = balticPending ? pt(locale, 'p7_eta_baltic_val') : t(locale, 'p4b_eta_none');
-  const balticSub = balticPending ? pt(locale, 'p7_eta_baltic_sub') : null;
+  /* powód braku GPS: gdy listy powodów nie widać (są szczegóły ETA) i nie ma czasu ostatniej pozycji */
+  const gpsSub = baltic && gpsMissing && d && !d.lastFixAt ? p9m(locale, 'p9c_drawer_nogps') : null;
+  const balticSub = balticPending ? pt(locale, 'p7_eta_baltic_sub') : gpsSub;
   const balticAttr = balticPending ? { 'data-eta-baltic': 'pending' } : {};
 
   /* B7 / E15 pkt 8; P11 (e15): na promie główna wartość to ETA Boden (ta sama co w tabeli Mapy),

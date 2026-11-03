@@ -387,8 +387,8 @@ test.describe('BN9-c4 visual — drogi LT/LV/EE/FI (HHL pl)', () => {
 
 /* BN9-c5 (#718 BN7 §4) — linie tras BN7. Demo: trasa przykładowa Tallinn – Helsinki z adresu (`demoRoute`, tylko demo;
    dane demo bez zmian) i przykładowe linie dróg BN7 (`roadLinesDemo.ts`, „przykład”). Karta transportu (SG-11, przed oknem
-   śledzenia — cała trasa w kadrze): tylko legi PL-TLL i FI-HEL, tor TLL-HEL, dopisek „Trasa orientacyjna…”, komputer 1440
-   i telefon 390. Mapa (1440): rdzeń Polska–Szwecja i korytarz aktywnego transportu bałtyckiego (SG-17), kadr z Bałtykiem.
+   śledzenia — cała trasa w kadrze): tylko legi PL-TLL i FI-HEL, tor TLL-HEL, komputer 1440 i telefon 390. DP-191
+   (polecenie właściciela 03.11): bez dopisku „Trasa orientacyjna…” — test sprawdza, że go nie ma. Mapa (1440): rdzeń Polska–Szwecja i korytarz aktywnego transportu bałtyckiego (SG-17), kadr z Bałtykiem.
    Decyzja 88 (02.11 22:32): Mapa i Kokpit pokazują całą sieć (wszystkie legi BN7 i tory bałtyckie) zawsze — także bez
    `demoRoute`; parametr zostaje do migawek karty. */
 const BN7_DEMO_ROUTE = 'demoRoute=SG-11:TLL-HEL,SG-17:TLL-HEL'
@@ -410,7 +410,9 @@ test.describe('BN9-c5 visual — karta transportu Tallinn – Helsinki (HHL pl)'
       })
       const map = page.locator('.drawer [data-load-map]')
       await expect(map).toBeVisible()
-      await expect(map.locator('[data-route-note="baltic"]')).toContainText('Trasa orientacyjna (HERE, bez wymiarów ładunku)')
+      /* DP-191: dopisku „Trasa orientacyjna (HERE…)” nie ma */
+      await expect(map.locator('[data-route-note]')).toHaveCount(0)
+      await expect(map).not.toContainText('Trasa orientacyjna')
       await page.evaluate(async () => {
         if (document.fonts?.ready) await document.fonts.ready
       })
@@ -424,7 +426,7 @@ test.describe('BN9-c5 visual — karta transportu Tallinn – Helsinki (HHL pl)'
   }
 })
 
-/* F7 #740: także telefon 390 — dopisek u góry na pełną szerokość (miejsce na „+ / −”), dolny pasek poza migawką */
+/* F7 #740: także telefon 390 — dolny pasek poza migawką. DP-191: bez dopisku „Trasa orientacyjna…” */
 test.describe('BN9-c5 visual — Mapa z aktywnym transportem bałtyckim (HHL pl)', () => {
   test.describe.configure({ mode: 'serial' })
 
@@ -439,7 +441,8 @@ test.describe('BN9-c5 visual — Mapa z aktywnym transportem bałtyckim (HHL pl)
       if (width < 769) await page.addStyleTag({ content: 'nav.tower-nav{display:none !important}' })
       const map = page.locator('[data-page="map"] .corridor-map-root').first()
       await expect(map).toBeVisible()
-      await expect(map.locator('[data-route-note="baltic"]')).toBeVisible()
+      await expect(map.locator('[data-route-note]')).toHaveCount(0)
+      await expect(map).not.toContainText('Trasa orientacyjna')
       await page.waitForTimeout(1200)
       await expect(map).toHaveScreenshot(file, {
         maxDiffPixels: 60,
