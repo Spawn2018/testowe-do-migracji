@@ -1275,10 +1275,10 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-182 | koordynator | armator startowy awizacji po wczytaniu rozkładu | F7 #750 / #751 | BN9-c6 / awizacja | SCALONE (#751 `6c0af746`) |
 | DP-183 | Cursor | 3 legi HERE odrzucone (FI-HEL/FI-VUO/SE-STO): powód w ostrzeżeniu (km/zakres); `min_km`/`max_km` ±10 %; clear `retry_after` → następny cron | #718 odbiór 03.11 / F7 #749 | BN7 / HERE | SCALONE (#752 `ea949a23` / **0386**) |
 | DP-184 | Cursor | po BN8b: `here_road_geometry.geom` (+ `st_simplify` ~20 m) + `n_points`; `here_store_road` / `purge_here_road_geometry` (D-81); świeżość bez `jsonb_array_length`; test 10 km obok `SE_E4_STO`/`SE_E18_KPS` | F7 #749 r3 | BN8b / HERE | SCALONE (#760 `d378b0ce` / **0387**) |
-| DP-185 | koordynator | uproszczenie awizacji (`picked ?? startOperator`), dociąganie `sailingId`, 2 testy | F7 #751 | BN9-c6 / awizacja | w kolejce (koordynator) |
+| DP-185 | koordynator | uproszczenie awizacji (`picked ?? startOperator`), dociąganie `sailingId`, 2 testy | F7 #751 | BN9-c6 / awizacja | SCALONE (#763 `6c053f6c`) |
 | DP-186 | Cursor | EE RESTRICTIONS/SAFETY: kopia w bazie (ostatnia dobra lista + data), gdy `ee_*_source=cache` nie widać w 24 h albo `complete`=0 przez timeouty | F7 #753 (nieblokujące) | BN6 / EE | w kolejce (C5 — decyzja 04.11 ~07:00 po 24 h #753) |
-| DP-187 | Cursor | `runJob`: odstęp od `started_at` (nie `ran_at`); pominięcie → dziennik `skipped_gap_min`; lastRun pomija skipped | #756 odbiór #753 | BN6 / jobs | W TOKU (#756) |
-| DP-188 | Cursor | LV: `lv_<kod>_err` = treść JSON `error` (≤80 znaków, ciało ≤200 B; max 3 kody); bez zmiany URL/proxy | #756 odbiór #753 | BN6 / LV | W TOKU (#756) |
+| DP-187 | Cursor | `runJob`: odstęp od `started_at`; F7 r1 A — bez zapisu pominięć do `integration_runs` (`console.info`); `lastRun`=`started_at` | #756 / F7 #765 | BN6 / jobs | W TOKU (#765) |
+| DP-188 | Cursor | LV: `lv_<kod>_err` = treść JSON `error` (≤80 znaków, ciało ≤200 B; max 3 kody); bez zmiany URL/proxy | #756 odbiór #753 | BN6 / LV | W TOKU (#765) |
 | DP-189 | Cursor | Ryzyka › Drogi LT/LV/EE/FI zawsze widoczne (jak SE); `onRoute` = oznaczenie + kolejność, nie filtr; kolejność makiety LT→LV→EE→FI | #757 / właściciel 03.11 08:43 | BN9-c4 / front | SCALONE (#761 `a9665811`) |
 | DP-190 | Cursor | Jednorazowe pobranie HERE FI-HEL / FI-VUO / SE-STO (zamiast crona 04.11 04:15Z); bez migracji | #757 / właściciel 03.11 | BN7 / HERE | DONE (PROD 03.11 ~08:09Z; 11151/10878/12423 pkt; routing 7→10; spend 0) |
 | DP-191 | koordynator | Usunięty dopisek „Trasa orientacyjna (HERE…)” z map (Mapa/Kokpit/karta) | właściciel 03.11 08:46 / #758 | mapa / front | SCALONE (#758 `d3db3e49`) |
@@ -1443,9 +1443,9 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 5. **C5 — warunkowe:** DP-186 (decyzja 04.11 ~07:00 po 24 h odbioru #753).
 Cel: C1–C4 przed bramą #588 i wydaniem 1.0 (≈ 20–21.11). Pozycja >~50 linii / nowa tabela → osobne zgłoszenie.
 
-### #756 · DP-187/188 — road-ee gap + LV error body — W TOKU
+### #756 · DP-187/188 — road-ee gap + LV error body — W TOKU (#765)
 Źródło: #756 (Spawn2018; odbiór #753). Jednym PR bez migracji.
-1. **DP-187:** `runJob` liczy odstęp od `started_at`; pominięcie w `integration_runs` (`skipped_gap_min`); `lastRun` pomija skipped.
+1. **DP-187:** `runJob` liczy odstęp od `started_at`; F7 r1 **A** — pominięć **nie** w `integration_runs` (`console.info` + `skipped_gap_min` w odpowiedzi); `lastRun` = `started_at` / `limit(1)`.
 2. **DP-188:** `lv_<kod>_err` z JSON `error` (≤80 znaków, ciało ≤200 B; max 3 kody).
 
 ### #687 · DP-114 Tallink HEL–TLL 404 + niepełna pula Alert — SCALONE (`5fc7d4a0` / PR #689)
@@ -2610,6 +2610,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 03.11.2026 09:45 | #759 SCALONE `5f549897` (DP-192); #758 SCALONE `d3db3e49` (DP-191); DP-184 F7 r1 (bash + geom fixtures + negatywne; status **633**) | pętla |
 | 03.11.2026 10:00 | #761 SCALONE `a9665811` (DP-189; F7 @ 09128235); merge main do #760 (konflikt PLAN/POSTEP) → CI→F7 | pętla / DP-184 |
 | 03.11.2026 10:30 | #760 SCALONE `d378b0ce` / **0387** (F7 @ b028bf0a); start DP-187/188 (#756); #762 C1–C5 wpisane §4 | pętla / DP-187 |
+| 03.11.2026 10:50 | #763 SCALONE `6c053f6c` (Pakiet DP-B / DP-185); F7 #765 r1 → wariant A (bez zapisu skipped); push poprawki | pętla / DP-187 |
 | 31.10.2026 — | Decyzja 73: TLLA-HEL ETA−150 min / HELA-TLL ETD+160 min (fixture Cargo; nocny 165 min OK). Decyzja 74: `sailings.source_ref` 0359; Digitraffic `digitraffic:portcall:<id>:<route>`; HTML/RECZNIE/DANE_STARTOWE wygrywają; #685-b RPC zastępuje digitraffic:% w ±3 h | F7 #688 r1–r4 |
 | 31.10.2026 — | F7 #683 nieblokujące (osobna poprawka): Scheduler grudzień + „on 2 January” → rok bieżący, ciche wygaśnięcie; Alert INFO bez ryzyka/historii — świadomie | F7 #683 r7 |
 | 31.10.2026 — | F7 #683 r8 nieblokujące (osobno): Alert poza Schedulerem obok Schedulera; sprzeczne bloki (resume→cofnięcie auto); rok przy długim oknie Schedulera; mutanty M10/M15–M17/M22 świadomie bez testów | F7 #683 r8 |

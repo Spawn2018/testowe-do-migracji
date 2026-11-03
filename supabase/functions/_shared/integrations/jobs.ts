@@ -489,7 +489,10 @@ export interface JobResult {
    * (wolny Tark Tee ~90 s nie pomija następnego crona co 15 min).
    */
   started_at?: string;
-  /** DP-187: przebieg pominięty przez limit częstotliwości (zapis w dzienniku). */
+  /**
+   * DP-187 / F7 #765 A: pominięcie limitem — tylko w odpowiedzi i `console.info`,
+   * bez wiersza w `integration_runs` (seria SOURCE_DOWN i panele stanu).
+   */
   skipped?: boolean;
 }
 
@@ -6267,7 +6270,10 @@ export async function runJob(name: JobName, deps: JobDeps): Promise<JobResult & 
   // 1 min luzu na niedokładność harmonogramu pg_cron
   if (gapMin < MIN_INTERVAL_MIN[name] - 1) {
     const gapRounded = Math.round(gapMin * 10) / 10;
-    const res: JobResult = {
+    // F7 #765 A: bez zapisu do integration_runs — wiersz skipped z ok=true psuje serie
+    // SOURCE_DOWN (roadFi/Lt/Lv/Ee, Tallink) i panele stanu (zielone przy awarii).
+    console.info(JSON.stringify({ job: name, skipped: true, skipped_gap_min: gapRounded }));
+    return {
       job: name,
       mode: 'LIVE',
       ok: true,
@@ -6275,9 +6281,6 @@ export async function runJob(name: JobName, deps: JobDeps): Promise<JobResult & 
       reason: `Poprzedni odczyt ${Math.round(gapMin)} min temu — limit co ${MIN_INTERVAL_MIN[name]} min`,
       observations: { skipped_gap_min: String(gapRounded) },
     };
-    // DP-187: pominięcie w dzienniku (lastRun pomija skipped — kotwica zostaje na starcie ostatniego realnego przebiegu).
-    await deps.store.recordRun(name, true, res);
-    return res;
   }
   const startedAt = deps.now().toISOString();
   let res: JobResult;

@@ -72,12 +72,11 @@ class MemStore implements SyncStore {
     return hit.length;
   }
   async latestPositions() { return this.positions; }
-  /** DP-187: kotwica = started_at ostatniego niepominiętego; skipped nie przesuwa. */
+  /** DP-187 / F7 #765 A: kotwica = started_at (fallback at); pominięć nie zapisujemy. */
   async lastRun(job: string) {
     for (let i = this.runs.length - 1; i >= 0; i--) {
       const r = this.runs[i]!;
       if (r.job !== job) continue;
-      if (r.result?.skipped) continue;
       const started = r.result?.started_at;
       if (typeof started === 'string' && !Number.isNaN(Date.parse(started))) return started;
       return r.at;
@@ -380,7 +379,7 @@ describe('ferry-status — komunikaty (prawdziwa strona 26.09.2026)', () => {
     expect(STENA_IRM_UA).toMatch(/Watch Tower/);
     expect(() => new Headers({ 'User-Agent': USER_AGENT })).not.toThrow();
   });
-  it('runJob: nie częściej niż co 15 min (dziennik przebiegów)', async () => {
+  it('runJob: nie częściej niż co 15 min (bez zapisu pominięć — F7 #765 A)', async () => {
     const st = new MemStore();
     await runJob('ferry-status', deps(st, { 'komunikaty-kursowania': STATUS }).d);
     const early = await runJob('ferry-status', deps(st, { 'komunikaty-kursowania': STATUS }, {}, new Date(NOW.getTime() + 5 * 60000)).d);
@@ -389,28 +388,29 @@ describe('ferry-status — komunikaty (prawdziwa strona 26.09.2026)', () => {
     const later = await runJob('ferry-status', deps(st, { 'komunikaty-kursowania': STATUS }, {}, new Date(NOW.getTime() + 15 * 60000)).d);
     expect(later.skipped).toBeUndefined();
     // #421: po zmianie statusu odświeżany jest też ferry-schedule (zapis przed recordRun statusu).
-    // DP-187: pominięcie też w dzienniku (skipped), ale lastRun go pomija.
-    expect(st.runs.map((r) => r.job)).toEqual(['ferry-schedule', 'ferry-status', 'ferry-status', 'ferry-status']);
-    expect(st.runs.filter((r) => r.job === 'ferry-status' && r.result.skipped)).toHaveLength(1);
+    // F7 #765 A: pominięcie tylko w odpowiedzi / logu — nie w integration_runs.
+    expect(st.runs.map((r) => r.job)).toEqual(['ferry-schedule', 'ferry-status', 'ferry-status']);
+    expect(st.runs.filter((r) => r.result.skipped)).toHaveLength(0);
   });
-  it('DP-187: przebieg 90 s nie pomija następnego crona (kotwica started_at, nie ran_at)', async () => {
+  it('DP-187: lastRun=start+90s, now=start+15min → nie pomija (kotwica started_at)', async () => {
     const st = new MemStore();
     const start = NOW;
     const finished = new Date(start.getTime() + 90_000);
-    // ferry-status MIN=10: od ran_at (=start+90s) przy cronie +10 min gap=8.5 < 9 → skip;
-    // od started_at gap=10 ≥ 9 → nie pomija.
+    // road-ee MIN=15: od ran_at (=start+90s) przy cronie +15 min gap=13.5 < 14 → skip;
+    // od started_at gap=15 ≥ 14 → nie pomija (#756 / F7 #765).
     st.runs.push({
-      job: 'ferry-status',
+      job: 'road-ee',
       at: finished.toISOString(),
       ok: true,
       result: {
-        job: 'ferry-status', mode: 'LIVE', ok: true,
+        job: 'road-ee', mode: 'LIVE', ok: true,
         started_at: start.toISOString(),
       },
     });
-    const atCron = new Date(start.getTime() + 10 * 60_000);
-    expect((atCron.getTime() - finished.getTime()) / 60_000).toBeLessThan(9);
-    const r = await runJob('ferry-status', deps(st, { 'komunikaty-kursowania': STATUS }, {}, atCron).d);
+    const atCron = new Date(start.getTime() + 15 * 60_000);
+    expect((atCron.getTime() - finished.getTime()) / 60_000).toBeLessThan(14);
+    expect((atCron.getTime() - start.getTime()) / 60_000).toBe(15);
+    const r = await runJob('road-ee', deps(st, {}, {}, atCron).d);
     expect(r.skipped).toBeUndefined();
     expect(r.started_at).toBe(atCron.toISOString());
   });
