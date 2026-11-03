@@ -504,7 +504,13 @@ test.describe('DP-67 visual — Awizacja: rejs przed planowanym załadunkiem (HH
         if (!el) throw new Error('brak wiersza SG-11')
         el.click()
       })
-      /* Administrator HHL: ten sam przycisk „Uzupełnij awizację” co SCX, znacznik `data-awiz-fix` */
+      /* Administrator HHL: ten sam przycisk „Uzupełnij / Edytuj awizację” co SCX, znacznik `data-awiz-fix`;
+         na telefonie sekcja Przeglądu jest zwinięta (<details>) — rozwijamy ją przed kliknięciem */
+      await page.locator('.drawer [data-awiz-fix]').first().waitFor({ state: 'attached' })
+      await page.evaluate(() => {
+        const btn = document.querySelector('.drawer [data-awiz-fix]')
+        for (let d = btn?.closest('details'); d; d = d.parentElement?.closest('details') ?? null) d.open = true
+      })
       await page.locator('.drawer [data-awiz-fix]').first().click()
       const modal = page.locator('[data-awiz-modal]')
       await expect(modal).toBeVisible()
