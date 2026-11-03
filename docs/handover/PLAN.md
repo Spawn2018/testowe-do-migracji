@@ -1279,8 +1279,9 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-186 | Cursor | EE RESTRICTIONS/SAFETY: kopia w bazie (ostatnia dobra lista + data), gdy `ee_*_source=cache` nie widać w 24 h albo `complete`=0 przez timeouty | F7 #753 (nieblokujące) | BN6 / EE | w kolejce (C5 — decyzja 04.11 ~07:00 po 24 h #753) |
 | DP-187 | Cursor | `runJob`: odstęp od `started_at`; F7 r1 A — bez zapisu pominięć do `integration_runs` (`console.info`); `lastRun`=`started_at` | #756 / F7 #765 | BN6 / jobs | SCALONE (#765 `c1c8f827`) |
 | DP-188 | Cursor | LV: `lv_<kod>_err` = treść JSON `error` (≤80 znaków, ciało ≤200 B; max 3 kody); bez zmiany URL/proxy | #756 odbiór #753 | BN6 / LV | SCALONE (#765 `c1c8f827`) |
-| DP-193 | Cursor | `eta_basis.flags` w SE: zwinąć powtórzenia „przerwa z GPS” (np. ×58) + limit długości listy | #762 odbiór 0387 | C2 / ETA | W TOKU (#770 / **0389**) |
-| DP-194 | Cursor | SE_E4/`SE-NYN`: rozszerzyć HERE OFF_CORRIDOR poza `v_bn7` (dziś celowo tylko PL_EE_E67/FI_E75/SE_E4_STO/SE_E18_KPS; odpowiedź w #762) | #762 odbiór 0387 | C2 / BN8b | W TOKU (#770 / **0389**; HERE gdy świeży, bez HERE → OSM) |
+| DP-193 | Cursor | `eta_basis.flags` w SE: zwinąć powtórzenia „przerwa z GPS” (np. ×58) + limit długości listy | #762 odbiór 0387 | C2 / ETA | W TOKU (#770 / **0389**; F7 r1) |
+| DP-194 | Cursor | SE_E4/`SE-NYN`: alarm OFF_CORRIDOR zostaje **OSM**; `corridor_geom=here` tylko obserwacja przy świeżym HERE (F7 #770 decyzja 97 — bez fałszywych alarmów na swobodnej trasie HERE) | #762 odbiór 0387; F7 #770 | C2 / BN8b | W TOKU (#770 / **0389**; alarm HERE → DP-197) |
+| DP-197 | Cursor | SE-NYN: kontrola odchyłki od `SE_E4` w here-roads (jak KAA) albo `via` (Sztokholm, Uppsala, Gävle, Sundsvall, Umeå, Luleå); potem alarm OFF_CORRIDOR po HERE + test „postój 3 km od E4 w Sztokholmie → brak alarmu” | F7 #770 decyzja 97 | C2 / BN8b | w kolejce (po #770) |
 | DP-195 | Cursor | `WATER_GDY_KAA`: ujednolicić punkty serwerowe (`_shared/map/draw.ts`) z frontem `WATER_GDY_KAA_LANE` (DP-78 / #764); test wspólnych punktów | #762 po DP-A | C3 / mapa | w kolejce (C3; po #764) |
 | DP-189 | Cursor | Ryzyka › Drogi LT/LV/EE/FI zawsze widoczne (jak SE); `onRoute` = oznaczenie + kolejność, nie filtr; kolejność makiety LT→LV→EE→FI | #757 / właściciel 03.11 08:43 | BN9-c4 / front | SCALONE (#761 `a9665811`) |
 | DP-190 | Cursor | Jednorazowe pobranie HERE FI-HEL / FI-VUO / SE-STO (zamiast crona 04.11 04:15Z); bez migracji | #757 / właściciel 03.11 | BN7 / HERE | DONE (PROD 03.11 ~08:09Z; 11151/10878/12423 pkt; routing 7→10; spend 0) |
@@ -1441,7 +1442,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 ### #762 · Kolejka drobnych poprawek Cursora — pakiety C1–C5 (do wydania 1.0)
 Źródło: #762 (Spawn2018; 03.11). Po #760 → #756 (DP-187/188) → C1…. Koordynator: pakiety DP-A/B/C (front) — nie brać.
 1. **C1 — Korytarz bałtycki:** ~~DP-179~~ DONE; ~~143/144~~ DONE; ~~DP-146~~ SCALONE (#769 `1a523a5f`); ~~152~~ SCALONE (#768 `0abe9a8f`); ~~155/156~~ SCALONE (#766 `272e0afc` / **0388**); ~~157/158~~ DONE (LT/LV/EE/FI etykiety, szum FI; przed BN10).
-2. **C2 — telematyka / ETA:** **DP-193+194** W TOKU (#770 / **0389**); dalej DP-119, 120, 121, 123, 124, 126, 129, 132, 140.
+2. **C2 — telematyka / ETA:** **DP-193+194** W TOKU (#770 / **0389**; F7 r1 → OSM alarm SE_E4, DP-197); dalej DP-197, 119, 120, 121, 123, 124, 126, 129, 132, 140.
 3. **C3 — stare pozycje backendu:** DP-2, 10, 12, 22, 24, 29–32, 38–40, 43, 46, 47, 53–58 (+ **DP-195** tor KAA po #764).
 4. **C4 — reszta:** DP-69, 70, 81–83, 90–93, 97, 99–103, 105–109, 111, 112.
 5. **C5 — warunkowe:** DP-186 (decyzja 04.11 ~07:00 po 24 h odbioru #753).
@@ -2624,6 +2625,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 03.11.2026 11:50 | #764 SCALONE `e3f6c101` (DP-A); #766 F7 r1 → **0389** bałtyk bez load tylko HIGH/CRIT; c3 **45** | pętla / C1 F7 |
 | 03.11.2026 12:40 | #766 F7 r2: e2e + HIGH→MEDIUM close; 0388+0389→**0388**; c3 **51** | pętla / C1 F7 |
 | 03.11.2026 14:40 | #769 SCALONE `1a523a5f` (DP-146; F7 @ 554401d5); start C2 DP-193+194 **0389** (`pakiet/c2-dp-193-194-eta-corridor`); status **637**, h4 **23** | pętla / C2 |
+| 03.11.2026 15:45 | #770 F7 r1 niegotowe → decyzja 97: SE_E4 alarm OSM; DP-197; testy OSM+obs HERE; DP-193 behawioralne; status **640**, h4 **26** | pętla / C2 F7 |
 | 31.10.2026 — | Decyzja 73: TLLA-HEL ETA−150 min / HELA-TLL ETD+160 min (fixture Cargo; nocny 165 min OK). Decyzja 74: `sailings.source_ref` 0359; Digitraffic `digitraffic:portcall:<id>:<route>`; HTML/RECZNIE/DANE_STARTOWE wygrywają; #685-b RPC zastępuje digitraffic:% w ±3 h | F7 #688 r1–r4 |
 | 31.10.2026 — | F7 #683 nieblokujące (osobna poprawka): Scheduler grudzień + „on 2 January” → rok bieżący, ciche wygaśnięcie; Alert INFO bez ryzyka/historii — świadomie | F7 #683 r7 |
 | 31.10.2026 — | F7 #683 r8 nieblokujące (osobno): Alert poza Schedulerem obok Schedulera; sprzeczne bloki (resume→cofnięcie auto); rok przy długim oknie Schedulera; mutanty M10/M15–M17/M22 świadomie bez testów | F7 #683 r8 |

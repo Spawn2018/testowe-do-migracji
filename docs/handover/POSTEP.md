@@ -1,4 +1,11 @@
 
+## 2026-11-03 15:45 — #770 F7 r1: decyzja 97 + DP-193 behawioralne
+
+- Skrzynka: #550 WSTRZYMANE; bez nowego `pilne`. PR do scalenia: brak „F7: gotowe” (r1 niegotowe @ 45fd452).
+- CI na `d2bda3eb` (fix punkt OSM): unit/db/visual ✔ — potem poprawki F7.
+- **Krok F7 #770 r1:** (1) test OSM wierzchołek 17.6389/59.8586 + obok→1 source=OSM; (2) SE_E4 bez HERE → `corridor_geom` null (nie `brak`); (3) wyłączony alarm HERE SE_E4 — zostaje OSM; `corridor_geom=here` tylko obserwacja; **DP-197** w PLAN; (4) DP-193: null/pusta/+N + compute_load_eta (brak GPS, przerwy ×N). status **640**, h4 **26**.
+- **Dalej:** push → CI → odpowiedź punkt po punkcie → F7. Potem C2: DP-197 / 119….
+
 ## 2026-11-03 15:15 — #770 CI db FAIL → fix DP-194 punkt OSM
 
 - Skrzynka: #550 WSTRZYMANE; bez nowego `pilne`. PR do scalenia: brak F7.

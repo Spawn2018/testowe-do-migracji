@@ -1,6 +1,7 @@
--- 0389 DP-193 + DP-194 (#762 C2)
--- DP-193: eta_basis.flags — zwinąć powtórzenia (np. przerwy z GPS ×N), maks. 12 pozycji.
--- DP-194: HERE OFF_CORRIDOR / corridor_geom=here także dla SE_E4 (leg SE-NYN); SE_E22/Stena dual zostaje OSM.
+-- 0389 DP-193 + DP-194 (#762 C2; F7 #770 decyzja 97)
+-- DP-193: eta_basis.flags — zwinąć powtórzenia (np. przerwy z GPS ×N), maks. 12 pozycji (+N przy obcięciu).
+-- DP-194: SE_E4 alarm OFF_CORRIDOR zostaje OSM; corridor_geom=here tylko obserwacja przy świeżym HERE.
+--         Alarm HERE SE-NYN → DP-197 (kontrola przebiegu / via).
 
 select set_config('tower.audit_source', 'migracja 0389 (DP-193 flags + DP-194 SE_E4 HERE)', true);
 
@@ -36,7 +37,11 @@ begin
       v_cnt[idx] := v_cnt[idx] + 1;
     end if;
   end loop;
-  n := least(coalesce(array_length(v_seen, 1), 0), max_n);
+  n := coalesce(array_length(v_seen, 1), 0);
+  -- F7 #770 opcjonalnie: przy obcięciu zostaw miejsce na „+N” (H-4 nie znikają bez śladu).
+  if n > max_n then
+    n := max_n - 1;
+  end if;
   for i in 1..n loop
     if v_cnt[i] > 1 then
       if v_seen[i] = 'przerwa z GPS' then
@@ -49,6 +54,9 @@ begin
     end if;
     v_out := array_append(v_out, label);
   end loop;
+  if coalesce(array_length(v_seen, 1), 0) > max_n then
+    v_out := array_append(v_out, format('+%s', coalesce(array_length(v_seen, 1), 0) - n));
+  end if;
   return v_out;
 end;
 $$;
@@ -56,7 +64,7 @@ $$;
 revoke all on function public.eta_flags_collapse(text[]) from public, anon, authenticated;
 grant execute on function public.eta_flags_collapse(text[]) to service_role;
 comment on function public.eta_flags_collapse(text[]) is
-  'DP-193: unikalne flagi ETA w kolejności pierwszego wystąpienia; powtórzenia jako ×N; maks. 12.';
+  'DP-193: unikalne flagi ETA w kolejności pierwszego wystąpienia; powtórzenia jako ×N; maks. 12 (+N).';
 
 
 create or replace function public.h4_driver_state_from_gps(
@@ -395,14 +403,21 @@ begin
   h_road_eff := h_road * v_slow_se;
   h_se := h_road_eff + h_rest + h_brk;
 
-  -- F7 W5/N3: corridor_geom = here|brak (alarm); postęp ETA nadal OSM — method uczciwie.
-  if v_status = 'IN_TRANSIT_SE' and v_se_corr in ('SE_E4', 'FI_E75', 'SE_E4_STO', 'SE_E18_KPS') then
+  -- F7 W5/N3: corridor_geom = here|brak (alarm BN7); postęp ETA nadal OSM — method uczciwie.
+  -- SE_E4: F7 #770 decyzja 97 — bez 'brak' (alarm działa po OSM); świeży HERE = obserwacja.
+  if v_status = 'IN_TRANSIT_SE' and v_se_corr in ('FI_E75', 'SE_E4_STO', 'SE_E18_KPS') then
     if public.bn8b_here_leg_fresh(v_se_leg) then
       v_corridor_geom := 'here';
       select g.fetched_at into v_here_fetched from public.here_road_geometry g where g.leg = v_se_leg;
       v_method := 'ETA v2 (OSM; HERE tylko alarm)';
     else
       v_corridor_geom := 'brak';
+    end if;
+  elsif v_status = 'IN_TRANSIT_SE' and v_se_corr = 'SE_E4' then
+    if public.bn8b_here_leg_fresh(v_se_leg) then
+      v_corridor_geom := 'here';
+      select g.fetched_at into v_here_fetched from public.here_road_geometry g where g.leg = v_se_leg;
+      -- method bez „HERE tylko alarm” — alarm SE_E4 = OSM do DP-197
     end if;
   elsif v_status in ('IN_TRANSIT_PL', 'AT_PORT_GDANSK', 'READY', 'AT_LOADING')
         and v_pl_corr = 'PL_EE_E67' then
@@ -859,9 +874,8 @@ begin
 
   -- BN8b F7 B1/B2/B3: BN7 po legu HERE (bez kopiowania do corridor_polylines);
   -- corridor_geom dołączamy do r.basis PRZED pierwszym UPDATE.
+  -- DP-194 F7 #770 decyzja 97: SE_E4 NIE w v_bn7 — alarm OSM; HERE alarm → DP-197.
   v_bn7 := v_corr in ('PL_EE_E67', 'FI_E75', 'SE_E4_STO', 'SE_E18_KPS');
-  -- DP-194: SE_E4 (SE-NYN) — HERE gdy świeży; bez HERE zostaje OSM (nie blokuj v_bn7_no_here).
-  v_bn7 := v_bn7 or (v_corr = 'SE_E4' and public.bn8b_here_leg_fresh(v_leg));
   v_bn7_no_here := false;
   if v_bn7 then
     v_here_fresh := public.bn8b_here_leg_fresh(v_leg);
@@ -1037,9 +1051,9 @@ grant execute on function public.h4_driver_state_from_gps(uuid, timestamptz) to 
 revoke all on function public.compute_load_eta(uuid, timestamptz) from public, anon, authenticated;
 grant execute on function public.compute_load_eta(uuid, timestamptz) to service_role;
 comment on function public.compute_load_eta(uuid, timestamptz) is
-  'DP-193 flags collapse; DP-194 SE_E4 HERE alarm; BN8b OSM postęp.';
+  'DP-193 flags collapse; DP-194 SE_E4 corridor_geom=here tylko obserwacja; BN8b OSM postęp.';
 
 revoke all on function public.refresh_load_eta(uuid) from public, anon, authenticated;
 grant execute on function public.refresh_load_eta(uuid) to service_role;
 comment on function public.refresh_load_eta(uuid) is
-  'DP-194: OFF_CORRIDOR HERE także SE_E4 (SE-NYN); Stena dual OSM bez zmian.';
+  'DP-194 F7 #770: SE_E4 OFF_CORRIDOR = OSM (HERE alarm → DP-197); Stena dual OSM bez zmian.';
