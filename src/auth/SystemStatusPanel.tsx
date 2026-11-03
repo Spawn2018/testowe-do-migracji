@@ -87,7 +87,7 @@ export default function SystemStatusPanel() {
     matching_requests?: number; matching_usd?: number; tiles_open?: boolean;
     services?: { service: string; requests: number; pool: number; over_usd: number; pct_pool: number | null }[];
   } | null>(null);
-  const [deepl, setDeepl] = useState<{ characters: number; monthly_limit: number; queued: number; level: string; queued_active?: number | null; oldest_age_min?: number | null } | null>(null);
+  const [deepl, setDeepl] = useState<{ characters: number; monthly_limit: number; queued: number; level: string; queued_active?: number | null; oldest_age_min?: number | null; memory_auto_24h?: number | null } | null>(null);
   const [csp, setCsp] = useState<{ mode: string; until: string; violations_7d: number; hits_7d: number; top: string; level: string } | null>(null);
 
   const refresh = useCallback(async () => {
@@ -219,7 +219,7 @@ export default function SystemStatusPanel() {
           })} />
         <Tile state={deeplState} k={t(locale, 'b6_sys_deepl')} attrs={{ 'data-deepl-usage': deepl?.level ?? 'brak' }}
           v={nf(deepl?.characters)}
-          d={`${tp(locale, 'b6_sys_deepl_d', { limit: nf(deepl?.monthly_limit ?? 1000000), q: String(deepl?.queued_active ?? deepl?.queued ?? 0) })}${deeplWarnText(deepl, locale)}${deepl?.level === 'full' ? ` · ${t(locale, 'pl_deepl_full')}` : ''}`} />
+          d={`${tp(locale, 'b6_sys_deepl_d', { limit: nf(deepl?.monthly_limit ?? 1000000), q: String(deepl?.queued_active ?? deepl?.queued ?? 0) })}${deepl?.memory_auto_24h != null ? ` · ${tp(locale, 'b6_sys_deepl_auto', { n: String(deepl.memory_auto_24h) })}` : ''}${deeplWarnText(deepl, locale)}${deepl?.level === 'full' ? ` · ${t(locale, 'pl_deepl_full')}` : ''}`} />
         <Tile state={cspState} k={t(locale, 'b6_sys_csp')} attrs={{ 'data-csp': csp?.level ?? 'off' }}
           v={csp ? String(csp.violations_7d) : t(locale, 'b6_sys_none')}
           d={csp ? tp(locale, 'b6_sys_csp_d', { until: csp.until || '—', hits: String(csp.hits_7d), top: csp.top || '—' }) : ''} />

@@ -109,8 +109,10 @@ import {
   EE_RESTRICTIONS_TIMEOUT_MS,
   applyBalticCorridorRoadFilter, applyFiCorridorRoadFilter, balticFeedObsOk, balticFeedShapeObs,
   balticJsonErrorSnippet, balticKeyMeta,
-  balticNetWarning, balticRoadRisk, balticSlowdownMult, balticUrlKind, balticWarnHost,
-  capBalticRiskSeverity, classifyBalticNetError, dedupeLvSlippery, eeDatexApiKeyMeta,
+  balticNetWarning, balticRoadRisk, balticShouldRaiseRisk, balticSlowdownMult, balticUrlKind,
+  balticWarnHost,
+  capBalticRiskSeverity, markBalticOffRoute, classifyBalticNetError, dedupeLvSlippery, eeDatexApiKeyMeta,
+  resolveBalticEventType,
   eeDatexFeedUrl, fiCorridorBboxes, fiTrafficUrl, filterInEeBboxes, filterInFiBboxes,
   filterInLvBboxes, dimensionLimitRisk, filterInLtBboxes, getEeHeavyFeedCache, getEeSitesCache,
   isDimensionLimitEvent, isEeHeavyFeedCode,
@@ -142,7 +144,8 @@ import {
   WIND_GUST_MS_THRESHOLD, gustExceedsThreshold, windRiskTitle,
   seWeekendBanHit, plSundayBanHit, banRiskTitle,
 } from '../here/windAndBans.ts';
-import { unknownCodeRiskInput } from '../../../../src/lib/pl/describe.ts';
+import { applyPendingRoadTitle, humanizeRoadCode } from '../../../../src/lib/pl/describe.ts';
+import { PANEL_FALLBACK } from '../../../../src/lib/pl/codes.ts';
 import {
   deeplTranslate, textHash, translateFreeText, usageLevel, DEEPL_MONTHLY_LIMIT,
   deeplSourceForBalticCountry,
@@ -3487,24 +3490,54 @@ async function polishRoadFreeText(
   }
 }
 
-/** DP-172: tłumacz tylko zdarzenia na korytarzu (corridorMatch=on) z wolnym tekstem. */
+/**
+ * DP-172 + decyzja 99: DeepL dla wszystkich pokazywanych (także „obok trasy”),
+ * nie tylko corridorMatch=on.
+ * F7 #780 r3: nieznany typ (resolveBalticEventType) → freeText z oryginału typu.
+ */
 async function polishBalticCorridorEvents(
   deps: JobDeps,
   country: 'LT' | 'LV' | 'EE' | 'FI',
   events: BalticRoadEvent[],
   nowIso: string,
 ): Promise<void> {
-  const onCorridor = events.filter((e) => e.corridorMatch === 'on' && e.freeText);
-  if (!onCorridor.length) return;
+  for (const e of events) {
+    if (!balticShouldRaiseRisk(country, e)) continue;
+    const resolved = resolveBalticEventType(e);
+    if (resolved.known || !resolved.raw) continue;
+    const humRaw = humanizeRoadCode(resolved.raw);
+    if (!humRaw) continue;
+    if (!e.freeText) e.freeText = humRaw;
+    else if (!e.freeText.includes(humRaw)) e.freeText = `${humRaw}. ${e.freeText}`;
+  }
+  const toPolish = events.filter((e) => e.freeText && balticShouldRaiseRisk(country, e));
+  if (!toPolish.length) return;
   try {
     await polishRoadFreeText(
       deps,
-      onCorridor,
+      toPolish,
       nowIso,
       deeplSourceForBalticCountry(country),
       `ROAD_${country}`,
     );
   } catch { /* DeepL nie przerywa odczytu drogi */ }
+}
+
+/** Decyzja 99: on bez zmian; unknown-near → LOW „sprawdź”; off → LOW „obok trasy”. */
+function finalizeBalticRaisedRisk(
+  raw: RiskInput,
+  e: BalticRoadEvent,
+  raise: 'on' | 'unknown-near' | 'off',
+): RiskInput {
+  if (raise === 'off') return markBalticOffRoute(capBalticRiskSeverity(raw, e.corridorMatch ?? 'off'));
+  if (raise === 'unknown-near') {
+    return {
+      ...raw,
+      severity: 'LOW',
+      title: raw.title.replace(/: /, ': sprawdź — '),
+    };
+  }
+  return capBalticRiskSeverity(raw, e.corridorMatch);
 }
 
 export async function runRoadSe(deps: JobDeps): Promise<JobResult> {
@@ -3559,19 +3592,34 @@ export async function runRoadSe(deps: JobDeps): Promise<JobResult> {
   }
   if (situationsStatus === 'ok' && deps.store.resolveStaleRisks) {
     await deps.store.resolveStaleRisks('ROAD_SE:SIT:', situations.map((e) => `ROAD_SE:SIT:${e.id}`));
+    /* DP-203 / F7 #780 r3: zamknij stare „Nieznany kod…” i RESOURCE_MISSING:TV_CODE (bez nowych). */
+    await deps.store.resolveStaleRisks('ROAD_SE:TV_CODE:', []);
+    await deps.store.resolveStaleRisks('RESOURCE_MISSING:TV_CODE:', []);
   }
+  /* F7 #780 r3: nieznane kody → humanize → translateFreeText (pamięć/DeepL), nie RESOURCE_MISSING. */
+  const unknownSeCodes = [
+    ...new Set(situations.flatMap((e) => e.unknownCodes ?? [])),
+  ];
   for (const e of situations) {
-    for (const code of e.unknownCodes ?? []) {
-      const extra = unknownCodeRiskInput(code, now.slice(0, 10));
-      if (await deps.store.raiseRisk(extra)) risks++;
-    }
+    if (!e.unknownCodes?.length) continue;
+    const hum = e.unknownCodes.map((c) => humanizeRoadCode(c)).filter(Boolean).join('. ');
+    if (!hum) continue;
+    if (!e.freeText) e.freeText = hum;
+    else if (!e.freeText.includes(hum)) e.freeText = `${hum}. ${e.freeText}`;
   }
   try { await polishRoadFreeText(deps, situations, now); }
   catch { /* DeepL nie przerywa odczytu drogi */ }
   for (const e of situations) {
+    const pending = Boolean(e.freeText && !e.note);
+    e.title = applyPendingRoadTitle(e.title, { note: e.note, pending });
+    if (e.note) e.detail = e.note;
+    else if (pending && e.detail.includes(PANEL_FALLBACK)) {
+      e.detail = applyPendingRoadTitle(e.detail, { pending: true });
+    }
     const risk = roadRisk('SE', e, 'https://www.trafikverket.se/trafikinformation/');
     risk.dedup = `ROAD_SE:SIT:${e.id}`;
     if (e.note) risk.detail = { ...risk.detail, opis: e.note };
+    else if (pending) risk.detail = { ...risk.detail, pending: true, oryginal: e.original ?? e.freeText };
     if (await deps.store.raiseRisk(risk)) risks++;
   }
   const pct = deps.store.seSlowdownPct ? await deps.store.seSlowdownPct() : 15;
@@ -3625,6 +3673,8 @@ export async function runRoadSe(deps: JobDeps): Promise<JobResult> {
       situations: String(situationsStatus === 'ok' ? situations.length : 'blad'),
       slowdown: slow ? String(slow.mult) : 'bez_zmiany',
       reason: slow?.reason ?? 'norma',
+      /* F7 #780 r3: luki słownika TV — auto DeepL, bez zadania HHL. */
+      tv_codes_auto: String(unknownSeCodes.length),
     },
   };
 }
@@ -3773,26 +3823,29 @@ export async function runRoadFi(deps: JobDeps): Promise<JobResult> {
   const near = applyFiCorridorRoadFilter(
     filterInFiBboxes([...byId.values()].map((x) => x.event)),
   );
-  /* DP-172: DeepL wolnego tekstu FI tylko na korytarzu. */
+  /* DP-172 / decyzja 99: DeepL także „obok trasy”. */
   await polishBalticCorridorEvents(deps, 'FI', near, now);
   const complete = fetchedOk === expectedFetches;
   let risks = 0;
   const keep: string[] = [];
+  let fiOffCorridor = 0;
   for (const e of near) {
-    /* DP-157(c)/F7 #732: tylko corridorMatch=on w keep (off/unknown → resolveStale). */
-    if (e.corridorMatch !== 'on') continue;
+    /* Decyzja 99: off / unknown daleko → LOW „obok trasy”; licznik = obserwacja. */
+    const raise = balticShouldRaiseRisk('FI', e);
+    if (!raise) continue;
+    if (e.corridorMatch === 'off' || raise === 'off') fiOffCorridor++;
     const src = byId.get(e.id)?.sourceUrl ?? FI_ROADWORKS_URL;
     /* F7 #732 B1: kelirikko/painorajoitus bez liczby → weightLimitRisk(limit=null) MEDIUM. */
     const raw = isFiWeightLimitLike(e)
       ? weightLimitRisk('FI', e, null, src, FI_ATTRIBUTION)
       : balticRoadRisk('FI', e, src, FI_ATTRIBUTION);
-    const risk = capBalticRiskSeverity(raw, e.corridorMatch);
+    const risk = finalizeBalticRaisedRisk(raw, e, raise);
     if (e.corridorMatch) {
       (risk.detail as Record<string, unknown>).korytarz_droga = e.corridorMatch;
     }
+    if (e.road) (risk.detail as Record<string, unknown>).droga = e.road;
     /* DP-158: params.event = etykieta PL; surowy fiński w detail.opis. */
     if (risk.params && typeof risk.params === 'object') {
-      (risk.params as Record<string, unknown>).event = e.title;
       (risk.params as Record<string, unknown>).type_pl = e.title;
     }
     keep.push(risk.dedup);
@@ -3829,6 +3882,7 @@ export async function runRoadFi(deps: JobDeps): Promise<JobResult> {
       complete: complete ? '1' : '0',
       events_raw: String(byId.size),
       events_near: String(near.length),
+      fi_off_corridor: String(fiOffCorridor),
     },
   };
 }
@@ -3914,20 +3968,23 @@ export async function runRoadLt(deps: JobDeps): Promise<JobResult> {
   /* DP-164: filtr numerów dróg korytarza (A5/A8/A10/E67 + A1 przy Kownie) do BN7. */
   const near = applyBalticCorridorRoadFilter('LT', filterInLtBboxes(restrictionEvents));
   const weatherOn = applyBalticCorridorRoadFilter('LT', weatherSlow);
-  /* DP-172: DeepL LT tylko na korytarzu. */
+  /* DP-172 / decyzja 99: DeepL także „obok trasy”. */
   await polishBalticCorridorEvents(deps, 'LT', near, now);
   const complete = fetchedOk === expectedFetches;
   let risks = 0;
   const keep: string[] = [];
+  let ltOffCorridor = 0;
   for (const e of near) {
-    /* DP-172: poza korytarzem bez freeText → bez pending (tłumaczymy tylko on). */
-    const ev = e.corridorMatch === 'on' ? e : { ...e, freeText: null, note: null };
-    const raw = ev.weightLimitT != null
-      ? weightLimitRisk('LT', ev, null, LT_RESTRICTIONS_URL, LT_ATTRIBUTION)
-      : isDimensionLimitEvent(ev)
-        ? dimensionLimitRisk('LT', ev, LT_RESTRICTIONS_URL, LT_ATTRIBUTION)
-        : balticRoadRisk('LT', ev, LT_RESTRICTIONS_URL, LT_ATTRIBUTION);
-    const risk = capBalticRiskSeverity(raw, e.corridorMatch);
+    /* Decyzja 99: off zostaje (LOW · obok trasy); DeepL dla wszystkich pokazywanych. */
+    const raise = balticShouldRaiseRisk('LT', e);
+    if (!raise) continue;
+    if (e.corridorMatch === 'off' || raise === 'off') ltOffCorridor++;
+    const raw = e.weightLimitT != null
+      ? weightLimitRisk('LT', e, null, LT_RESTRICTIONS_URL, LT_ATTRIBUTION)
+      : isDimensionLimitEvent(e)
+        ? dimensionLimitRisk('LT', e, LT_RESTRICTIONS_URL, LT_ATTRIBUTION)
+        : balticRoadRisk('LT', e, LT_RESTRICTIONS_URL, LT_ATTRIBUTION);
+    const risk = finalizeBalticRaisedRisk(raw, e, raise);
     /* F7 #727 N2: jedna uwaga o braku wypadków w ryzyku (nie w każdym detail zdarzenia). */
     if (risk.detail && typeof risk.detail === 'object') {
       (risk.detail as Record<string, unknown>).uwaga_wypadki =
@@ -3960,6 +4017,7 @@ export async function runRoadLt(deps: JobDeps): Promise<JobResult> {
         complete,
         note: 'zrodlo LT nie podaje wypadkow',
         dp164: 'filtr A5/A8/A10/E67+A1 Kaunas',
+        lt_off_corridor: ltOffCorridor,
       },
     });
   }
@@ -3975,6 +4033,7 @@ export async function runRoadLt(deps: JobDeps): Promise<JobResult> {
       events_raw: String(restrictionEvents.length),
       events_near: String(near.length),
       weather_adverse: String(weatherSlow.length),
+      lt_off_corridor: String(ltOffCorridor),
     },
   };
 }
@@ -4327,14 +4386,18 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
   const complete = fetchedOk === expectedFetches;
   let risks = 0;
   const keep: string[] = [];
+  let lvOffCorridor = 0;
   for (const e of near) {
-    const ev = e.corridorMatch === 'on' ? e : { ...e, freeText: null, note: null };
-    const raw = ev.weightLimitT != null
-      ? weightLimitRisk('LV', ev, null, LV_SOURCE_REF, LV_ATTRIBUTION)
-      : isDimensionLimitEvent(ev)
-        ? dimensionLimitRisk('LV', ev, LV_SOURCE_REF, LV_ATTRIBUTION)
-        : balticRoadRisk('LV', ev, LV_SOURCE_REF, LV_ATTRIBUTION);
-    const risk = capBalticRiskSeverity(raw, e.corridorMatch);
+    /* Decyzja 99: A6/P/V off → LOW „obok trasy” (nie odrzucane); DeepL też. */
+    const raise = balticShouldRaiseRisk('LV', e);
+    if (!raise) continue;
+    if (e.corridorMatch === 'off' || raise === 'off') lvOffCorridor++;
+    const raw = e.weightLimitT != null
+      ? weightLimitRisk('LV', e, null, LV_SOURCE_REF, LV_ATTRIBUTION)
+      : isDimensionLimitEvent(e)
+        ? dimensionLimitRisk('LV', e, LV_SOURCE_REF, LV_ATTRIBUTION)
+        : balticRoadRisk('LV', e, LV_SOURCE_REF, LV_ATTRIBUTION);
+    const risk = finalizeBalticRaisedRisk(raw, e, raise);
     if (risk.detail && typeof risk.detail === 'object') {
       if (e.road) (risk.detail as Record<string, unknown>).droga = e.road;
       if (e.corridorMatch) {
@@ -4368,6 +4431,7 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
         dedup_ver: 'v2',
         dp164: 'filtr A7/E67+A1/A4/A5 + ≤3 km',
         lv_mode: 'rest_snapshot',
+        lv_off_corridor: lvOffCorridor,
       },
     });
   }
@@ -4390,6 +4454,7 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
       header: LV_NAP_KEY_HEADER,
       records_skipped: String(parseStats.skipped),
       lv_swapped: String(parseStats.swapped),
+      lv_off_corridor: String(lvOffCorridor),
       ...diag,
       ...lvPerObs,
     },
@@ -4773,7 +4838,7 @@ export async function runRoadEe(deps: JobDeps): Promise<JobResult> {
 
   await deps.store.resolveRisks('SOURCE_DOWN:ROAD_EE:');
   const near = applyBalticCorridorRoadFilter('EE', filterInEeBboxes(allEvents));
-  /* DP-172: DeepL EE (ET) tylko na korytarzu. */
+  /* DP-172 / decyzja 99: DeepL EE także „obok trasy”. */
   await polishBalticCorridorEvents(deps, 'EE', near, now);
   /* F7 #733 r2 B2: 0 stacji albo >50% pomiarów bez stacji → pogoda niekompletna. */
   const wxBlocks = parseStats.weatherBlocks ?? 0;
@@ -4786,15 +4851,18 @@ export async function runRoadEe(deps: JobDeps): Promise<JobResult> {
   const complete = fetchedOk === expectedFetches && !weatherIncomplete;
   let risks = 0;
   const keep: string[] = [];
+  let eeOffCorridor = 0;
   for (const e of near) {
-    /* Tylko zdarzenia na korytarzu / przy porcie — poza listą bez raise (jak FI DP-157). */
-    if (e.corridorMatch !== 'on') continue;
+    /* Decyzja 99: off → LOW „obok trasy”. */
+    const raise = balticShouldRaiseRisk('EE', e);
+    if (!raise) continue;
+    if (e.corridorMatch === 'off' || raise === 'off') eeOffCorridor++;
     const raw = e.weightLimitT != null
       ? weightLimitRisk('EE', e, null, EE_SOURCE_REF, EE_ATTRIBUTION)
       : isDimensionLimitEvent(e)
         ? dimensionLimitRisk('EE', e, EE_SOURCE_REF, EE_ATTRIBUTION)
         : balticRoadRisk('EE', e, EE_SOURCE_REF, EE_ATTRIBUTION);
-    const risk = capBalticRiskSeverity(raw, e.corridorMatch);
+    const risk = finalizeBalticRaisedRisk(raw, e, raise);
     if (risk.detail && typeof risk.detail === 'object') {
       if (e.road) (risk.detail as Record<string, unknown>).droga = e.road;
       (risk.detail as Record<string, unknown>).korytarz_droga = e.corridorMatch;
@@ -4843,6 +4911,7 @@ export async function runRoadEe(deps: JobDeps): Promise<JobResult> {
       key_env_first: 'TARKTEE_DATEX_TOKEN',
       records_skipped: String(parseStats.skipped),
       ee_swapped: String(parseStats.swapped),
+      ee_off_corridor: String(eeOffCorridor),
       ee_road_from: `pole:${parseStats.roadFromPole},opis:${parseStats.roadFromOpis}`,
       measurement_sites: String(sites.size),
       ...diag,

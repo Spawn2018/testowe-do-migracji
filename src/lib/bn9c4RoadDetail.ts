@@ -32,6 +32,7 @@ export function roadInfoFromDetail(detail: Record<string, unknown> | null | unde
   return {
     source: str(d.zrodlo), from: str(d.od), to: str(d.do), lat: num(d.lat), lon: num(d.lon),
     weightLimitT: num(d.weight_limit_t), heightLimitM: num(d.height_limit_m), widthLimitM: num(d.width_limit_m),
+    offRoute: d.obok_trasy === true || d.obok_trasy === 'true',
     ...roadTranslationOf(d),
   };
 }

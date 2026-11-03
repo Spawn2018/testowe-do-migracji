@@ -117,17 +117,62 @@ export function describeCondition(code: number | null, rawText: string, _road: s
   };
 }
 
-export function unknownCodeRiskInput(codeKey: string, day: string): {
-  kind: 'ROAD_SE'; severity: 'LOW'; title: string; titleKey: string;
+/**
+ * F7 #780 r3: nieznany kod TV → tekst do łańcucha pamięć/DeepL (nie RESOURCE_MISSING).
+ * `messageCode:accidentInvolvingHeavyLorries` → `accident Involving Heavy Lorries`.
+ */
+export function humanizeRoadCode(raw: string): string {
+  let s = String(raw ?? '').trim();
+  if (!s) return '';
+  const colon = s.indexOf(':');
+  if (colon > 0 && /^[A-Za-z_]+$/.test(s.slice(0, colon))) s = s.slice(colon + 1).trim();
+  s = s
+    .replace(/([a-z\d])([A-Z])/g, '$1 $2')
+    .replace(/([A-Z]+)([A-Z][a-z])/g, '$1 $2')
+    .replace(/[_-]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return s;
+}
+
+/**
+ * F7 #780 r3 (właściciel 03.11 23:34): bez sygnału HHL — zostawione tylko do zamknięcia starych
+ * `RESOURCE_MISSING:TV_CODE:*` / testów historycznych. Nowe luki → translateFreeText + tv_codes_auto.
+ */
+export function unknownCodeRiskInput(codes: string | string[], day: string): {
+  kind: 'RESOURCE_MISSING'; severity: 'LOW'; title: string; titleKey: string;
   params: Record<string, string | number>; detail: Record<string, unknown>; dedup: string;
 } {
+  const list = (Array.isArray(codes) ? codes : [codes])
+    .map((c) => String(c).trim())
+    .filter(Boolean);
+  const uniq = [...new Set(list)].slice(0, 40);
   return {
-    kind: 'ROAD_SE',
+    kind: 'RESOURCE_MISSING',
     severity: 'LOW',
-    title: 'Nieznany kod źródła drogowego — w panelu: zdarzenie drogowe',
-    titleKey: 'rk_tv_unknown_code',
-    params: {},
-    detail: { kod: codeKey, zrodlo: 'Trafikverket', panel: PANEL_FALLBACK },
-    dedup: `ROAD_SE:TV_CODE:${codeKey}:${day}`,
+    title: uniq.length <= 1
+      ? `Słownik Trafikverket: brak kodu ${uniq[0] ?? '(pusty)'} — uzupełnij codes.ts`
+      : `Słownik Trafikverket: brak ${uniq.length} kodów — uzupełnij codes.ts`,
+    titleKey: 'rk_tv_unknown_code_hhl',
+    params: { n: uniq.length },
+    detail: {
+      rule: 'TV_CODE',
+      kody: uniq.join(','),
+      zrodlo: 'Trafikverket',
+      panel: PANEL_FALLBACK,
+      audience: 'HHL',
+    },
+    dedup: `RESOURCE_MISSING:TV_CODE:${day}`,
   };
+}
+
+/** F7 #780 r3: po DeepL wstaw PL w miejsce „zdarzenie drogowe”; bez tłumaczenia → „Tłumaczenie w toku”. */
+export function applyPendingRoadTitle(
+  title: string,
+  opts: { note?: string | null; pending?: boolean },
+): string {
+  if (!title.includes(PANEL_FALLBACK)) return title;
+  if (opts.note?.trim()) return title.replace(PANEL_FALLBACK, opts.note.trim());
+  if (opts.pending) return title.replace(PANEL_FALLBACK, 'Tłumaczenie w toku');
+  return title;
 }

@@ -39,7 +39,10 @@ export const EXCEPT = [
   /[\w.+-]+@[\w-]+(?:\.[\w-]+)+/g, /\b(?:[a-z0-9-]+\.)+(?:pl|se|com|eu|net|org|io)\b/g,
 ]
 
-export function textHits(raw: string, where: string, o: { codesAllowed?: boolean } = {}): string[] {
+/** F7 #780 r3: diakrytyki LT/LV/ET/FI/SV spoza alfabetu PL — tylko tytuły ROAD_* (nie nazwy miejsc w treści). */
+export const BALTIC_DIACRITICS = /[āčēėģīķļņõšūųžäöüå]/giu
+
+export function textHits(raw: string, where: string, o: { codesAllowed?: boolean; balticDiacritics?: boolean } = {}): string[] {
   const out: string[] = []
   let text = raw
   for (const re of EXCEPT) text = text.replace(re, ' ')
@@ -48,6 +51,12 @@ export function textHits(raw: string, where: string, o: { codesAllowed?: boolean
       if (o.codesAllowed && (k === 'kod' || k === 'klucz' || k === 'numer wewnętrzny')) continue /* E21 pkt 3: kody tylko w Stanie systemu */
       re.lastIndex = 0
       for (const m of line.matchAll(re)) out.push(`${where} — ${k}: «${m[0]}» w «${line.trim().slice(0, 90)}»`)
+    }
+    if (o.balticDiacritics) {
+      BALTIC_DIACRITICS.lastIndex = 0
+      for (const m of line.matchAll(BALTIC_DIACRITICS)) {
+        out.push(`${where} — bałtycki: «${m[0]}» w «${line.trim().slice(0, 90)}»`)
+      }
     }
     /* kropka dziesiętna; „07.10” (dzień i miesiąc) to data — chyba że stoi przed walutą lub jednostką */
     for (const m of line.matchAll(/(?<![\d.])(\d+)\.(\d+)(?![\d.])/g)) {

@@ -1,4 +1,32 @@
 
+## 2026-11-03 23:50 — #780 F7 r3: auto DeepL zamiast RESOURCE_MISSING:TV_CODE
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
+- Scalanie: brak „F7: gotowe” po `0cdd8dec`. **#780 F7 r2 OK w przeglądzie; r3** (właściciel 23:31/23:34) — bez sygnału HHL na luki słownika.
+- **Krok F7 r3:** nieznane kody SE / typy bałtyckie → `translateFreeText` (pamięć→DeepL→pamięć); zamknięcie starych `RESOURCE_MISSING:TV_CODE:` / `ROAD_SE:TV_CODE:`; `tv_codes_auto`; migracja **0393** `deepl_usage_view.memory_auto_24h` + kafelek DeepL; e21 diakrytyki bałtyckie; testy pl-data/integrations/security. Bez push na main.
+- **Dalej:** push → CI (unit/db/visual) → F7. Potem C2: 121….
+
+## 2026-11-03 23:20 — #780 F7 r2 niegotowe → 0392 + front
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
+- Scalanie: brak „F7: gotowe” po `1a8ce68a`. **#780 F7 r2 niegotowe** — 4 blokery.
+- **Krok F7 r2:** migracja **0392** (`trg_risk_matrix_notify` obok_trasy bez powiadomień + `risk_audience_for` TV_CODE→HHL); front `riskText` + sort na trasie→obok; `resolveStale` `RESOURCE_MISSING:TV_CODE:`; testy c3/status/bn9. Bez push na main.
+- **Dalej:** push → CI (unit/db/visual) → F7. Potem C2: 121….
+
+## 2026-11-03 22:25 — #780 F7 r1 niegotowe → decyzja 99 (obok trasy + DeepL)
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie; #778+#779 otwarte (DP-202/203). Bez nowego `pilne`.
+- Scalanie: brak „F7: gotowe” po ostatnim SHA. **#780 F7 r1 niegotowe** @ `e8221e69` — stara spec „tylko trasa”; decyzja właściciela 03.11 21:44 + decyzja **99**.
+- **Krok:** off/unknown daleko → LOW „obok trasy” (LT/LV/FI/EE + SE); DeepL dla wszystkich pokazywanych; i18n `{off}`; PL-T `codes`; testy bn6/integrations. Bez migracji. Bez push na main.
+- **Dalej:** commit+push → CI → F7. Potem C2: 121….
+
+## 2026-11-03 22:10 — #777 SCALONE; start DP-202+203 (LV korytarz + tytuły bałtyckie)
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie; #778+#779 (Spawn2018) wpisane jako DP-202/203. Bez nowego `pilne`.
+- Scalanie: **#777 SCALONE** `2a99a8e6` (DP-120 / **0391**; F7 gotowe @ `fecc5f7a`; CI unit/db/visual ✔). `deploy-main` robi resztę. Bez push na main.
+- **Krok DP-202+203** `pakiet/c2-dp-202-203-lv-corridor-titles` (F7 #777: razem): parser LVC `A6_K`→A6; raise tylko `on` / unknown≤300 m; tytuły `Warunki drogowe … (KRAJ)`; SE luki słownika → `RESOURCE_MISSING` HHL + resolveStale `ROAD_SE:TV_CODE:`. Bez migracji. vitest bn6-road-* ✔.
+- **Dalej:** push → CI → F7. Potem C2: 121….
+
 ## 2026-11-03 21:35 — #775 SCALONE; DP-120 F7 r1 niegotowe → poprawki seed/IC/dzień przypłynięcia
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.

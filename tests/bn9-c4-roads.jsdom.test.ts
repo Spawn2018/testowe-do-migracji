@@ -34,9 +34,16 @@ function risk(p: Partial<Risk> & Pick<Risk, 'id'>): Risk {
   return { type: 'OPS', severity: 'MEDIUM', title: 'x', detail: '', owner: 'HHL', meta: '', nextAction: '', ageHours: 1, ...p } as Risk;
 }
 function road(id: string, country: 'LT' | 'LV' | 'EE' | 'FI', p: Partial<Risk> = {}, detail: Record<string, unknown> = {}): Risk {
+  const extra = (p.titleParams ?? {}) as Record<string, unknown>;
+  const roadNo = String(extra.road ?? 'A1');
+  const event = String(extra.event ?? `Roboty ${id}`);
+  const off = detail.obok_trasy === true || detail.obok_trasy === 'true' ? ' · obok trasy' : String(extra.off ?? '');
+  const titleParams = { country, road: roadNo, event, off, ...extra };
+  const title = p.title ?? `Warunki drogowe ${roadNo} (${country})${off}: ${event}`;
+  const { titleParams: _ignore, ...rest } = p;
   const base = risk({
-    id, kind: `ROAD_${country}`, title: `Trasa ${country}: Roboty`, titleKey: 'rk_road_baltic',
-    titleParams: { country, event: `Roboty ${id}` }, detail: `opis ${id}`, ...p,
+    id, kind: `ROAD_${country}`, title, titleKey: 'rk_road_baltic',
+    detail: `opis ${id}`, ...rest, titleParams,
   });
   return withBalticRoad(base, { kind: `ROAD_${country}`, detail: { zrodlo: FI_SRC, od: '2026-11-01T08:00:00Z', do: '2026-11-05T16:00:00Z', ...detail } });
 }
@@ -112,7 +119,7 @@ describe('BN9-c4 — rodzaj i kraje trasy', () => {
   it('detail BN6 → źródło, od/do, limity (bez interpretacji); inne rodzaje bez pola `road`', () => {
     expect(roadInfoFromDetail({ zrodlo: FI_SRC, od: 'a', do: null, weight_limit_t: 12, lat: 65.1, lon: 25.4 })).toEqual({
       source: FI_SRC, from: 'a', to: null, lat: 65.1, lon: 25.4, weightLimitT: 12, heightLimitM: null, widthLimitM: null,
-      original: null, pending: false,
+      original: null, pending: false, offRoute: false,
     });
     const other = withBalticRoad(risk({ id: 'p', kind: 'ROAD_PL' }), { kind: 'ROAD_PL', detail: { zrodlo: 'HERE' } });
     expect(other.road).toBeUndefined();
@@ -133,7 +140,8 @@ describe('BN9-c4 — rodzaj i kraje trasy', () => {
     expect(r.type).toBe('OPS');
     expect(r.road).toEqual({
       source: FI_SRC, from: '2026-11-01T08:00:00Z', to: '2026-11-05T16:00:00Z',
-      lat: 65.01, lon: 25.47, weightLimitT: null, heightLimitM: 4.2, widthLimitM: null, original: null, pending: false,
+      lat: 65.01, lon: 25.47, weightLimitT: null, heightLimitM: 4.2, widthLimitM: null,
+      original: null, pending: false, offRoute: false,
     });
   });
 });
@@ -198,7 +206,8 @@ describe('BN9-c4 — Ryzyka › Drogi: sekcje krajów', () => {
     const rows = [...el.querySelectorAll('[data-panel="road-fi"] [data-baltic-road]')];
     expect(rows.map((r) => r.getAttribute('data-baltic-road'))).toEqual(['b', 'c', 'a']);
     expect(rows[0].querySelector('.rk-box')!.textContent).toBe('FI');
-    expect(rows[0].querySelector('.rk-road-t')!.textContent).toBe('Roboty b');
+    /* F7 #780 r2: tytuł z drogą (riskText), nie sam params.event */
+    expect(rows[0].querySelector('.rk-road-t')!.textContent).toBe('Warunki drogowe A1 (FI): Roboty b');
     expect(rows[0].querySelector('.rk-alert')!.className).toContain('is-red');
     expect(rows[1].querySelector('.rk-alert')!.className).toContain('is-amber');
     expect(rows[2].querySelector('.rk-alert')!.className).toContain('is-plain');
@@ -220,7 +229,9 @@ describe('BN9-c4 — Ryzyka › Drogi: sekcje krajów', () => {
     const w1 = el.querySelector('[data-baltic-road="w1"]') as HTMLElement;
     expect(w1.getAttribute('data-limit')).toBe('WEIGHT');
     expect(w1.querySelector('[data-limit-tag]')!.textContent).toBe('Limit masy 12\u00a0t'); /* DP-177: twarda spacja także w tytule */
-    expect(w1.querySelector('.rk-road-t')!.textContent).toBe('Limit masy 12\u00a0tKelirikko');
+    expect(w1.querySelector('.rk-road-t')!.textContent).toBe(
+      'Limit masy 12\u00a0tWarunki drogowe A1 (FI): Ograniczenie masy 12\u00a0t — sprawdź zezwolenie',
+    );
     expect(w1.querySelector('[data-limit-check]')!.textContent).toBe('Sprawdź zezwolenie / trasę.');
     expect(w1.textContent).not.toMatch(/ładunek/i);
     expect(w1.querySelector('[data-road-note="baltic"]')!.textContent).toBe('opis w1');
@@ -269,6 +280,30 @@ describe('BN9-c4 — Ryzyka › Drogi: sekcje krajów', () => {
     const [fi] = balticRoadSections([t('a', '2026-11-01T00:00:00Z', null), t('n', '2026-11-02T09:00:00Z', null)], new Set(['FI']), FRESH, NOW);
     expect(fi.rows.map((r) => r.id)).toEqual(['n', 'a']);
     expect(sortBalticRows(fi.rows).map((r) => r.id)).toEqual(['a', 'n']);
+  });
+  it('F7 #780 r2 / decyzja 99: tytuł z drogą + „obok trasy”; na trasie przed obok; data-off-route', () => {
+    const on = road('on', 'LT', {
+      severity: 'MEDIUM',
+      titleParams: { country: 'LT', road: 'A5', event: 'roboty drogowe' },
+      title: 'Warunki drogowe A5 (LT): roboty drogowe',
+    });
+    const off = road('off', 'LT', {
+      severity: 'HIGH',
+      titleParams: { country: 'LT', road: '138', event: 'roboty drogowe', off: ' · obok trasy' },
+      title: 'Warunki drogowe 138 (LT) · obok trasy: roboty drogowe',
+    }, { obok_trasy: true });
+    const el = expand(panel({ loads, sailings: SAILS, risks: [off, on] }));
+    const rows = [...el.querySelectorAll('[data-panel="road-lt"] [data-baltic-road]')];
+    expect(rows.map((r) => r.getAttribute('data-baltic-road'))).toEqual(['on', 'off']);
+    expect(rows[0].getAttribute('data-off-route')).toBeNull();
+    expect(rows[1].getAttribute('data-off-route')).toBe('1');
+    expect(rows[0].querySelector('.rk-road-t')!.textContent).toBe('Warunki drogowe A5 (LT): roboty drogowe');
+    expect(rows[1].querySelector('.rk-road-t')!.textContent).toMatch(/Warunki drogowe 138 \(LT\) · obok trasy: roboty drogowe/);
+    expect(roadInfoFromDetail({ obok_trasy: true }).offRoute).toBe(true);
+    expect(sortBalticRows([
+      { ...balticRoadSections([off], new Set(['LT']))[0]!.rows[0]! },
+      { ...balticRoadSections([on], new Set(['LT']))[0]!.rows[0]! },
+    ]).map((r) => r.id)).toEqual(['on', 'off']);
   });
   it('stan źródła bez zdarzeń (decyzja A): świeży ≤ 60 min, starszy z czasem ostatniego odczytu, brak wiersza, błąd odczytu; spowolnienie w nagłówku', () => {
     const rows: BalticCorridorRow[] = [
@@ -467,9 +502,12 @@ describe('BN9-c4 — Ryzyka › Drogi: sekcje krajów', () => {
     act(() => { all.click(); });
     expect(visible()).toHaveLength(149);
     expect(visible().slice(-2)).toEqual(['low1', 'low2']);
-    /* pełny tytuł w podpowiedzi; znaki specjalne jako tekst (bez HTML) */
+    /* F7 #780 r2: tytuł z drogą (riskText); znaki specjalne jako tekst (bez HTML) */
     const t0 = sec.querySelector('[data-baltic-road="m000"] .rk-road-t') as HTMLElement;
-    expect(t0.getAttribute('title')).toBe('Tie 50, eli Kehä III, Vantaa. Tietyö <0> & "x"');
+    expect(t0.getAttribute('title')).toContain('Warunki drogowe A1 (FI)');
+    expect(t0.getAttribute('title')).toContain('Tie 50');
+    expect(t0.getAttribute('title')).toContain('<0>');
+    expect(t0.getAttribute('title')).toContain('& "x"');
     expect(t0.querySelector('*')).toBeNull();
   });
   it('Kokpit i menu: 146 × ROAD_FI bez transportu nie zmienia liczby „Do zrobienia”', () => {

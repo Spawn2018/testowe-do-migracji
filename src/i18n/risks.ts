@@ -191,16 +191,20 @@ const pl: Dict = {
   rk_time_ban: 'Zakaz czasowy {where}: plan {when}',
   rk_road_se: 'E4: {event}',
   rk_tv_unknown_code: 'Nieznany kod źródła drogowego — w panelu: zdarzenie drogowe',
+  /** DP-203: luka słownika SE — tylko HHL (RESOURCE_MISSING), nie panel Ryzyka WSZYSCY */
+  rk_tv_unknown_code_hhl: 'Słownik Trafikverket: brak {n} kodów — uzupełnij codes.ts',
   rk_deepl_usage: 'Tłumaczenia komunikatów drogowych: {used} / {limit} znaków',
   /** B9 / F7 #553 — Edge translate-retry; tekst jak wyglad/W-b9-tlumaczenia */
   rk_translate_wait: 'Komunikat drogowy czeka na tłumaczenie',
   rk_road_pl: 'Trasa PL: {event}',
   rk_road_pl_road: 'Trasa PL {road}: {event}',
-  /** BN6 (#716) — drogi LT/LV/EE/FI */
-  rk_road_baltic: 'Trasa {country}: {event}',
-  rk_road_baltic_weight: 'Trasa {country}: limit masy {limit} t (ładunek {load} t)',
-  rk_road_baltic_weight_check: 'Trasa {country}: limit masy {limit} t — sprawdź zezwolenie / trasę',
-  rk_road_baltic_dim_check: 'Trasa {country}: sprawdź wymiary / trasę',
+  /** BN6 (#716) + DP-203 / decyzja 99 — drogi LT/LV/EE/FI jak SE; `{off}` = ` · obok trasy` albo puste */
+  rk_road_baltic: 'Warunki drogowe {road} ({country}){off}: {event}',
+  rk_road_baltic_weight: 'Warunki drogowe {road} ({country}){off}: Ograniczenie masy {limit} t (ładunek {load} t)',
+  rk_road_baltic_weight_check: 'Warunki drogowe {road} ({country}){off}: Ograniczenie masy {limit} t — sprawdź zezwolenie',
+  rk_road_baltic_dim_check: 'Warunki drogowe {road} ({country}){off}: {event}',
+  /** SE: dopisek decyzji 99 gdy zdarzenie spoza E4/E22 */
+  rk_road_se_off: 'Warunki drogowe {road} · obok trasy: {event}',
   rk_flow_closed: '{code}: droga zamknięta przy pozycji auta',
   rk_flow_slow: '{code}: ruch {kmh} km/h wobec {free} km/h swobodnie przy pozycji auta',
   rk_ais_arrived: 'AIS: {vessel} w porcie Nynäshamn — potwierdzenie przypłynięcia (informacja)',

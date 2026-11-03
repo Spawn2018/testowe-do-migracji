@@ -167,6 +167,22 @@ RID_SE_M=$(sys "insert into risk_signals (project_id, kind, severity, title, tit
 sval "DP-156 e2e: SE MEDIUM bez load → 0 notif" "select count(*) from notifications where payload->>'risk_id'='$RID_SE_M'" 0
 sys "update risk_signals set severity='MEDIUM' where id='$RID_FI_H'" >/dev/null
 sval "DP-156 e2e: HIGH→MEDIUM zamyka dzwonek" "select (count(*) filter (where read_at is null)=0)::text from notifications where channel='IN_APP' and payload->>'risk_id'='$RID_FI_H'" true
+# DP-203 F7 #780 r2 / decyzja 99: obok_trasy + load_id → 0 powiadomień (risk_route by nie poszedł).
+sys "update notification_matrix set in_app=true, push=true where event_key='risk_route' and role='HHL_ADMIN'" >/dev/null
+sys "delete from user_notify_pref where user_id='$HHLU' and event_key='risk_route' and channel in ('bell','push')" >/dev/null
+RID_OFF=$(sys "insert into risk_signals (project_id, load_id, kind, severity, title, title_key, detail, dedup_key)
+  values ('$P','$L','ROAD_LT','LOW','Warunki drogowe A5 (LT) · obok trasy: roboty','rk_road_baltic',
+    jsonb_build_object('obok_trasy', true, 'params', jsonb_build_object('road','A5','country','LT','off',' · obok trasy','event','roboty')),
+    'c3-dp203-off-'||gen_random_uuid()::text)
+  returning id" | grep -E '^[0-9a-f-]{36}$' | tail -1 | tr -d '\r')
+sval "DP-203 F7: LT obok_trasy + load → 0 notif" "select count(*) from notifications where payload->>'risk_id'='$RID_OFF'" 0
+RID_SE_OFF=$(sys "insert into risk_signals (project_id, load_id, kind, severity, title, title_key, detail, dedup_key)
+  values ('$P','$L','ROAD_SE','LOW','Warunki drogowe E20 · obok trasy: roboty','rk_road_se_off',
+    jsonb_build_object('obok_trasy', true),
+    'c3-dp203-se-off-'||gen_random_uuid()::text)
+  returning id" | grep -E '^[0-9a-f-]{36}$' | tail -1 | tr -d '\r')
+sval "DP-203 F7: SE obok_trasy + load → 0 notif" "select count(*) from notifications where payload->>'risk_id'='$RID_SE_OFF'" 0
+sval "DP-203: risk_audience_for TV_CODE = HHL" "select public.risk_audience_for('RESOURCE_MISSING', jsonb_build_object('rule','TV_CODE'))::text" HHL
 # F7: poziom firmy — e-mail wyłączony w org_kind → 0 EMAIL także bez prefs osoby.
 sys "delete from user_notify_pref where user_id='$HHLU' and event_key='risk_crit'" >/dev/null
 sys "update notification_matrix set email=true where event_key='risk_crit' and role='HHL_ADMIN'" >/dev/null

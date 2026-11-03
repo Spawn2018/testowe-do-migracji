@@ -13,7 +13,10 @@ import {
 } from '../supabase/functions/_shared/integrations/jobs';
 import type { DbSailing, RiskInput, SailingInsert, SailingPatch } from '../supabase/functions/_shared/integrations/sync';
 import { planSailingSync } from '../supabase/functions/_shared/integrations/sync';
-import { distanceToCorridorKm, CORRIDOR_SE, parseTrafikverketSituations, trafikverketResultError, trafikverketSituationQuery } from '../supabase/functions/_shared/integrations/road';
+import {
+  distanceToCorridorKm, CORRIDOR_SE, parseTrafikverketSituations, roadRisk,
+  seIsOffMainCorridor, trafikverketResultError, trafikverketSituationQuery,
+} from '../supabase/functions/_shared/integrations/road';
 
 const fx = (n: string) => readFileSync(new URL(`./fixtures/${n}`, import.meta.url), 'utf8');
 const CARGO = fx('polferries-cargo-rozklad-2026-09-26.html');
@@ -644,6 +647,15 @@ describe('road-se — Trafikverket (II-6 RoadCondition + WeatherMeasurepoint)', 
     // jedna sytuacja, kilka odchyleń: zostaje wypadek (wyżej niż roboty); info i droga 45 odpadają
     expect(parsed).toHaveLength(1);
     expect(parsed[0]).toMatchObject({ id: 'SE_STA_TRISSID_1_7654321', kind: 'wypadek', road: 'E4', severity: 'HIGH' });
+    /* Decyzja 99: SE poza E4/E22 → LOW „obok trasy” (gdy trafia do ROAD_SE). */
+    const onSe = roadRisk('SE', parsed[0]!, 'https://www.trafikverket.se/');
+    expect(onSe.title).toMatch(/^Warunki drogowe E4:/);
+    expect(onSe.title).not.toMatch(/obok trasy/);
+    expect(seIsOffMainCorridor({ ...parsed[0]!, road: 'E20' })).toBe(true);
+    const offSe = roadRisk('SE', { ...parsed[0]!, road: 'E20', corridorMatch: 'off' }, 'https://www.trafikverket.se/');
+    expect(offSe.severity).toBe('LOW');
+    expect(offSe.title).toMatch(/Warunki drogowe E20 · obok trasy:/);
+    expect(offSe.detail?.obok_trasy).toBe(true);
     const off = JSON.parse(TV_SIT);
     for (const d of off.RESPONSE.RESULT[0].Situation[0].Deviation) d.Geometry.WGS84 = 'POINT (12.694 56.046)';
     expect(parseTrafikverketSituations(off)).toHaveLength(0);
@@ -707,6 +719,60 @@ describe('road-se — Trafikverket (II-6 RoadCondition + WeatherMeasurepoint)', 
     expect(st.risks.some((x) => x.dedup === 'ROAD_SE:SIT:ZOSTAJE')).toBe(true);
     expect((st.corridor?.detail as { situationsStatus?: string }).situationsStatus).toBe('blad');
     expect(r.observations?.slowdown).toBe('1.15');
+  });
+
+  it('F7 #780 r3: nieznany kod TV → DeepL + pamięć; brak RESOURCE_MISSING:TV_CODE; tv_codes_auto', async () => {
+    const sit = JSON.parse(TV_SIT);
+    for (const d of sit.RESPONSE.RESULT[0].Situation[0].Deviation) {
+      d.MessageType = 'ZzzNytt';
+      d.MessageCodeValue = 'accidentInvolvingHeavyLorries';
+      d.Message = 'Tillfällig stängning vid olycka';
+      d.Header = '';
+    }
+    const memory = new Map<string, string>();
+    let deeplN = 0;
+    let used = 0;
+    class TranslateStore extends MemStore {
+      async translationGet(hash: string) { return memory.get(hash) ?? null; }
+      async translationPut(hash: string, _s: string, pl: string) { memory.set(hash, pl); }
+      async translationEnqueue() {}
+      async translationDequeue() {}
+      async deeplUsage() { return { characters: used, limit: 1_000_000 }; }
+      async deeplAddUsage(n: number) { used += n; return used; }
+    }
+    const st = new TranslateStore();
+    st.risks.push({
+      kind: 'RESOURCE_MISSING', severity: 'LOW', title: 'stary TV', titleKey: 'rk_tv_unknown_code_hhl',
+      params: {}, detail: { rule: 'TV_CODE' }, dedup: 'RESOURCE_MISSING:TV_CODE:2026-09-25',
+      sourceUrl: '', validUntil: null,
+    });
+    const bodies = [TV_RC, TV_WX, JSON.stringify(sit)];
+    let n = 0;
+    const { d } = deps(st, {}, { TRAFIKVERKET_API_KEY: 'k', DEEPL_API_KEY: 'dk' });
+    d.fetch = (async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('api-free.deepl.com')) {
+        deeplN += 1;
+        return new Response(JSON.stringify({ translations: [{ text: 'Tymczasowe zamknięcie przy wypadku' }] }), { status: 200 });
+      }
+      if (!url.includes('trafikinfo')) throw new Error(url);
+      return new Response(bodies[n++] ?? TV_SIT_EMPTY, { status: 200 });
+    }) as typeof fetch;
+    const r1 = await runRoadSe(d);
+    expect(Number(r1.observations?.tv_codes_auto ?? 0)).toBeGreaterThan(0);
+    expect(st.risks.some((x) => String(x.dedup).startsWith('RESOURCE_MISSING:TV_CODE:'))).toBe(false);
+    const sitRisk = st.risks.find((x) => String(x.dedup).startsWith('ROAD_SE:SIT:'));
+    expect(sitRisk?.title).toMatch(/^Warunki drogowe E4:/);
+    expect(sitRisk?.title).not.toMatch(/accidentInvolving|Tillfällig|stängning|ZzzNytt|RESOURCE_MISSING/);
+    expect(deeplN).toBeGreaterThanOrEqual(1);
+    /* opis / note z DeepL albo „Tłumaczenie w toku” — nigdy SV w tytule (powyżej) */
+    expect(String(sitRisk?.detail?.opis ?? sitRisk?.title)).toMatch(/Tymczasowe|wypadek|Tłumaczenie|zdarzenie/i);
+    const deeplFirst = deeplN;
+    n = 0;
+    const r2 = await runRoadSe(d);
+    expect(Number(r2.observations?.tv_codes_auto ?? 0)).toBeGreaterThan(0);
+    expect(deeplN).toBe(deeplFirst);
+    expect(st.risks.some((x) => String(x.dedup).startsWith('RESOURCE_MISSING:TV_CODE:'))).toBe(false);
   });
 
 const HERE_TRAFFIC_PL = JSON.stringify({

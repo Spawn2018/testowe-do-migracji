@@ -3722,6 +3722,8 @@ chk "BN6: risk_audience_for ROAD_LV = WSZYSCY" \
   "select public.risk_audience_for('ROAD_LV', '{}'::jsonb)::text" WSZYSCY
 chk "BN6: risk_audience_for ROAD_EE = WSZYSCY" \
   "select public.risk_audience_for('ROAD_EE', '{}'::jsonb)::text" WSZYSCY
+chk "DP-203: risk_audience_for RESOURCE_MISSING TV_CODE = HHL" \
+  "select public.risk_audience_for('RESOURCE_MISSING', '{\"rule\":\"TV_CODE\"}'::jsonb)::text" HHL
 chk "BN6: corridor_conditions ROAD_FI" \
   "select count(*) from corridor_conditions where corridor='ROAD_FI'" 1
 chk "BN6: corridor_conditions ROAD_LT" \

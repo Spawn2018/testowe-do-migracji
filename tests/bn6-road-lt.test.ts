@@ -15,7 +15,9 @@ import {
   applyBalticCorridorRoadFilter,
   balticCapLongDetourClosure,
   balticRoadRisk,
+  balticShouldRaiseRisk,
   balticSlowdownMult,
+  formatBalticRoadTitle,
   dimensionLimitRisk,
   eventInLtBboxes,
   extractBalticRoadRef,
@@ -212,7 +214,8 @@ describe('BN6 road-lt — eismoinfo', () => {
     const r = dimensionLimitRisk('LT', height, LT_RESTRICTIONS_URL, LT_ATTRIBUTION);
     expect(r.severity).toBe('MEDIUM');
     expect(r.titleKey).toBe('rk_road_baltic_dim_check');
-    expect(r.title).toMatch(/wysokość/);
+    expect(r.title).toMatch(/sprawdź wysokość|wysokość/);
+    expect(r.title).toMatch(/^Warunki drogowe /);
     expect(balticSlowdownMult([height]).mult).toBe(1);
   });
 
@@ -288,6 +291,33 @@ describe('BN6 road-lt — eismoinfo', () => {
     /* r2 B2: „eismas draudžiamas” → roadClosed HIGH; limity H/W bez zamknięcia → MEDIUM. */
     expect(parsedRest.some((e) => e.roadClosed === true)).toBe(true);
     expect(parsedRest.some((e) => e.severity === 'MEDIUM')).toBe(true);
+  });
+
+  it('decyzja 99: LT off → LOW „obok trasy”; A5 on bez dopisku', () => {
+    const onA5: BalticRoadEvent = {
+      id: 'a5', title: 'Kelio remontas', detail: 'Kaunas', severity: 'MEDIUM',
+      lat: 54.90, lon: 23.90, kind: 'construction', start: null, end: null,
+      road: 'A5', corridorMatch: 'on', freeText: 'Kelio remontas Kaune',
+    };
+    expect(balticShouldRaiseRisk('LT', onA5)).toBe('on');
+    const onTitle = formatBalticRoadTitle('LT', onA5);
+    expect(onTitle.title).toMatch(/^Warunki drogowe A5 \(LT\): roboty drogowe/);
+    expect(onTitle.off).toBe('');
+    const onRisk = balticRoadRisk('LT', onA5, LT_RESTRICTIONS_URL, LT_ATTRIBUTION);
+    expect(onRisk.severity).not.toBe('LOW');
+    expect(onRisk.title).not.toMatch(/obok trasy/);
+
+    const off138: BalticRoadEvent = {
+      id: '138', title: 'Kelio remontas', detail: 'boczna', severity: 'MEDIUM',
+      lat: 55.1, lon: 24.0, kind: 'construction', start: null, end: null,
+      road: '138', corridorMatch: 'off', freeText: 'Kelio remontas',
+    };
+    expect(balticShouldRaiseRisk('LT', off138)).toBe('off');
+    const offRisk = balticRoadRisk('LT', off138, LT_RESTRICTIONS_URL, LT_ATTRIBUTION);
+    expect(offRisk.severity).toBe('LOW');
+    expect(offRisk.title).toMatch(/Warunki drogowe droga 138 \(LT\) · obok trasy:/);
+    expect(offRisk.params.off).toBe(' · obok trasy');
+    /* bez powiadomień: bałtyk bez load_id + LOW → trg_risk_matrix_notify pomija (0388). */
   });
 
   it('balticSlowdownMult: zamknięcie na A5 spowalnia; height i masa nie; reason zamknięcia', () => {
@@ -442,14 +472,12 @@ describe('BN6 runRoadLt', () => {
     const constr = stOk.risks.find((x) => x.dedup === 'ROAD_LT:v2:bn6-lt-construction-kaunas');
     expect(constr?.severity).toBe('LOW');
     expect(stOk.risks.some((x) => x.dedup === 'ROAD_LT:v2:bn6-lt-far-vilnius-east')).toBe(false);
-    const weightRisk = stOk.risks.find((x) => x.dedup === 'ROAD_LT:v2:bn6-lt-weight-panevezys');
-    /* DP-172: kody w `kody`; off-corridor bez oryginal/pending. */
-    expect(weightRisk?.detail?.kody).toBe('LD,SVKD');
-    expect(weightRisk?.detail?.oryginal).toBeUndefined();
-    expect(weightRisk?.detail?.uwaga_wypadki).toMatch(/nie podaje wypadkow/);
-    /* DP-164: A2 poza listą korytarza → maks. LOW (było MEDIUM z weightLimitRisk). */
-    expect(weightRisk?.severity).toBe('LOW');
-    expect(weightRisk?.detail?.korytarz_droga).toBe('off');
+    /* Decyzja 99: A2 Panevėžys off → LOW „obok trasy” (nie odrzucane); licznik lt_off_corridor. */
+    const panevezys = stOk.risks.find((x) => x.dedup === 'ROAD_LT:v2:bn6-lt-weight-panevezys');
+    expect(panevezys).toBeTruthy();
+    expect(panevezys?.severity).toBe('LOW');
+    expect(panevezys?.title).toMatch(/obok trasy/);
+    expect(Number(rOk.observations?.lt_off_corridor)).toBeGreaterThan(0);
     const heightRisk = stOk.risks.find((x) => x.dedup === 'ROAD_LT:v2:bn6-lt-height-only-kaunas');
     expect(heightRisk?.severity).toBe('MEDIUM');
     expect(heightRisk?.titleKey).toBe('rk_road_baltic_dim_check');
