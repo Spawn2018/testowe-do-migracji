@@ -96,7 +96,8 @@ const PL: Record<string, string> = {
   p7_pin_err_route_ee: 'Ten rejs jest na innej trasie. Przypiąć można tylko rejs z Estonii do Finlandii albo Szwecji (np. Tallinn → Helsinki).',
   /* BN9-c6: wiersz „Rejs” i ETA dla tras bałtyckich */
   p7_eta_baltic_val: 'brak danych',
-  p7_eta_baltic_sub: 'ETA dla trasy z Estonii jeszcze nie jest liczona — pojawi się po uruchomieniu obliczeń dla tej trasy.',
+  /* DP-192: ETA bałtyckie jest liczone (BN8b) — dopisek tylko dla transportu bez żadnego obliczenia ETA */
+  p7_eta_baltic_sub: 'ETA pojawi się po pierwszym obliczeniu dla tej trasy.',
   /* BN9-c6: Kokpit — najbliższy prom na przeprawach bałtyckich (obok kafelka Polferries / Stena) */
   p7_ck_baltic_h: 'Najbliższy prom — przeprawy bałtyckie',
   p7_ck_baltic_desc: '{vessel} {route} · przypłynięcie (ETA) {arr}',

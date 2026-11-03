@@ -331,6 +331,7 @@ export function loadFromRow(row: LoadRow, orgs: OrgRow[], index: number, nowIso:
       etaReasons: row.eta_basis?.pre_load === true ? [] : (row.eta_basis?.flags ?? []),
       etaMethod: row.eta_basis?.method ?? 'ETA v1 (baza)',
       etaUpdatedAt: row.eta_computed_at ?? nowIso,
+      etaComputedAt: row.eta_basis ? (row.eta_computed_at ?? row.eta_basis.computed_at ?? null) : null,
     };
   }
   return {
