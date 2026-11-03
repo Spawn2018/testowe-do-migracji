@@ -106,7 +106,7 @@ import {
   EE_FEED_BUDGET_MS, EE_FEED_TIMEOUT_MS, EE_HEAVY_FEED_CACHE_TTL_MS,
   EE_RESTRICTIONS_TIMEOUT_MS,
   applyBalticCorridorRoadFilter, applyFiCorridorRoadFilter, balticFeedObsOk, balticFeedShapeObs,
-  balticKeyMeta,
+  balticJsonErrorSnippet, balticKeyMeta,
   balticNetWarning, balticRoadRisk, balticSlowdownMult, balticUrlKind, balticWarnHost,
   capBalticRiskSeverity, classifyBalticNetError, dedupeLvSlippery, eeDatexApiKeyMeta,
   eeDatexFeedUrl, fiCorridorBboxes, fiTrafficUrl, filterInEeBboxes, filterInFiBboxes,
@@ -484,6 +484,16 @@ export interface JobResult {
   disabled?: boolean;
   /** F7 #689 R1-B3 / DP-114: niepełna pula Tallink Alert — streak SOURCE_DOWN z integration_runs. */
   tallink_alert_incomplete?: boolean;
+  /**
+   * DP-187: początek przebiegu (ISO) — `runJob` liczy odstęp od startu, nie od `ran_at`
+   * (wolny Tark Tee ~90 s nie pomija następnego crona co 15 min).
+   */
+  started_at?: string;
+  /**
+   * DP-187 / F7 #765 A: pominięcie limitem — tylko w odpowiedzi i `console.info`,
+   * bez wiersza w `integration_runs` (seria SOURCE_DOWN i panele stanu).
+   */
+  skipped?: boolean;
 }
 
 /** F7 #660: limit ścienny odczytu (20 s) — bez zawieszenia joba na martwym źródle. */
@@ -4084,6 +4094,8 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
     shape?: string;
     /** F7 #748: host drugiego fetchu (bez ścieżki). */
     dataHost?: string;
+    /** DP-188: treść JSON `error` (≤80 znaków) — tylko krótkie ciało. */
+    err?: string;
   };
   const parts = await mapPoolLimit(configured, LV_FEED_CONCURRENCY, async ({ code, url, key }): Promise<LvFeedPart> => {
     if (Date.now() - started > BALTIC_FEED_BUDGET_MS) {
@@ -4098,6 +4110,8 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
         swapped: 0,
       };
     }
+    /* DP-188 helper — snippet error tylko przy krótkim JSON. */
+    const errOf = (bodyText: string) => balticJsonErrorSnippet(bodyText) ?? undefined;
     const baseHeaders: Record<string, string> = {
       'User-Agent': LV_UA,
       Accept: 'application/json, application/xml, text/xml, */*',
@@ -4146,6 +4160,7 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
       let text = body.text;
       let bytes = body.bytes;
       let shape = balticFeedShapeObs(res.status, ct, bytes, text);
+      let err = errOf(text);
       let dataHost: string | undefined;
       /* DP-178 / F7 #748: metadane JSON → plik; klucz tylko na host NAP. */
       if (text.trim().startsWith('{')) {
@@ -4163,7 +4178,7 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
                 per: `bad:meta-obcy-host`, format: 'unknown', events: [],
                 skipped: 0, swapped: 0,
                 shape: `meta:obcy-host:${dataHost}`,
-                dataHost,
+                dataHost, err,
               };
             }
             if (second.res.ok && second.body && second.body.ok) {
@@ -4172,13 +4187,14 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
               text = second.body.text;
               bytes = second.body.bytes;
               shape = balticFeedShapeObs(res.status, ct, bytes, text);
+              err = errOf(text);
             } else if (second.res.ok && second.body && !second.body.ok) {
               shape = balticFeedShapeObs(second.res.status, second.ct, second.body.bytes, '');
               return {
                 code, ok: false,
                 warning: `nieczytelna odpowiedź ${code}`,
                 per: 'too_large', format: 'unknown', events: [],
-                skipped: 0, swapped: 0, shape, dataHost,
+                skipped: 0, swapped: 0, shape, dataHost, err,
               };
             }
           }
@@ -4198,7 +4214,7 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
           code, ok: false,
           warning: `nieczytelna odpowiedź ${code}`,
           per: `bad:${parsed.format}`, format: parsed.format, events: [],
-          skipped: localStats.skipped, swapped: localStats.swapped, shape, dataHost,
+          skipped: localStats.skipped, swapped: localStats.swapped, shape, dataHost, err,
         };
       }
       /* DP-168 / F7 #730: lv_<kod>=ok:<rekordy>:<pominięte>:<format>:<swapped> */
@@ -4208,7 +4224,7 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
           parsed.events.length, localStats.skipped, parsed.format, localStats.swapped,
         ),
         format: parsed.format, events: parsed.events,
-        skipped: localStats.skipped, swapped: localStats.swapped, dataHost,
+        skipped: localStats.skipped, swapped: localStats.swapped, dataHost, err,
       };
     } catch (e) {
       /* DP-165: klasa błędu + host bez ścieżki (klucz nie w warnings). */
@@ -4244,13 +4260,19 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
   /*
    * DP-180: perCode / perShape / perDataHost na wszystkich ścieżkach powrotu.
    * Uwaga nazw: lv_shape_<kod> (DP-170: kształt sekretu URL) ≠ lv_<kod>_shape (kształt odpowiedzi).
+   * DP-188: lv_<kod>_err — treść JSON error, max 3 kody (bez puchnięcia obserwacji).
    */
+  const lvErrObs = Object.fromEntries(
+    parts.filter((p) => p.err).slice(0, 3)
+      .map((p) => [`lv_${p.code.toLowerCase()}_err`, p.err!]),
+  );
   const lvPerObs = {
     ...Object.fromEntries(Object.entries(perCode).map(([k, v]) => [`lv_${k.toLowerCase()}`, v])),
     ...Object.fromEntries(Object.entries(perShape).map(([k, v]) => [`lv_${k.toLowerCase()}_shape`, v])),
     ...Object.fromEntries(
       Object.entries(perDataHost).map(([k, v]) => [`lv_${k.toLowerCase()}_data_host`, v]),
     ),
+    ...lvErrObs,
   };
 
   if (fetchedOk === 0) {
@@ -6247,12 +6269,25 @@ export async function runJob(name: JobName, deps: JobDeps): Promise<JobResult & 
   const gapMin = last ? (deps.now().getTime() - Date.parse(last)) / 60000 : Infinity;
   // 1 min luzu na niedokładność harmonogramu pg_cron
   if (gapMin < MIN_INTERVAL_MIN[name] - 1) {
-    return { job: name, mode: 'LIVE', ok: true, skipped: true, reason: `Poprzedni odczyt ${Math.round(gapMin)} min temu — limit co ${MIN_INTERVAL_MIN[name]} min` };
+    const gapRounded = Math.round(gapMin * 10) / 10;
+    // F7 #765 A: bez zapisu do integration_runs — wiersz skipped z ok=true psuje serie
+    // SOURCE_DOWN (roadFi/Lt/Lv/Ee, Tallink) i panele stanu (zielone przy awarii).
+    console.info(JSON.stringify({ job: name, skipped: true, skipped_gap_min: gapRounded }));
+    return {
+      job: name,
+      mode: 'LIVE',
+      ok: true,
+      skipped: true,
+      reason: `Poprzedni odczyt ${Math.round(gapMin)} min temu — limit co ${MIN_INTERVAL_MIN[name]} min`,
+      observations: { skipped_gap_min: String(gapRounded) },
+    };
   }
+  const startedAt = deps.now().toISOString();
   let res: JobResult;
   try { res = await JOBS[name](deps); } catch (e) {
     res = { job: name, mode: 'LIVE', ok: false, reason: e instanceof Error ? e.message : String(e) };
   }
+  res = { ...res, started_at: startedAt };
   await deps.store.recordRun(name, res.ok, res);
   return res;
 }

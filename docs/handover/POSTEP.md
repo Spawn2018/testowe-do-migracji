@@ -1,4 +1,18 @@
 
+## 2026-11-03 10:50 — #763 SCALONE; F7 #765 r1 → wariant A
+
+- Skrzynka: #550 WSTRZYMANE; #716/#718/#720 w planie. Bez nowego `pilne`.
+- Scalanie: **#763 SCALONE** `6c053f6c` (Pakiet DP-B; F7 gotowe @ `3dce7530`, CI unit+visual ✔). `deploy-main` robi resztę. Bez push na main.
+- **Krok F7 #765 r1 (DP-187/188):** wybrany **A** — pominięć limitem **nie** zapisujemy do `integration_runs` (seria SOURCE_DOWN + panele stanu); zostaje kotwica `started_at` + `console.info(skipped_gap_min)`; `lastRun` z powrotem `limit(1)`. Test: lastRun=start+90s, now=start+15min → nie pomija (`road-ee`). DP-188 bez zmian.
+- **Dalej:** push #765 → CI → F7. Potem C1 (#762).
+
+## 2026-11-03 10:30 — #760 SCALONE; start DP-187/188 (#756)
+
+- Skrzynka: #550 WSTRZYMANE; #716/#718/#720 w planie. Bez nowego `pilne`. #756/#762 (Spawn2018) wpisane §4.
+- Scalanie: **#760 SCALONE** `d378b0ce` (DP-184 / **0387**; F7 gotowe @ `b028bf0a`, CI unit/db/visual ✔). `deploy-main` robi resztę. Bez push na main.
+- **Krok DP-187/188** (`pakiet/dp-187-188-ee-gap-lv-err`): `runJob` — kotwica `started_at`, pominięcie w dzienniku (`skipped_gap_min`), `lastRun` pomija skipped; LV `lv_*_err` z JSON `error` (max 3). Testy: integrations DP-187 + bn6-road-lv DP-188. #762 pakiety C1–C5 w PLAN.
+- **Dalej:** push PR → CI → F7. Po F7: C1 (#762).
+
 ## 2026-11-03 10:00 — #761 SCALONE; merge main do #760 (DP-184)
 
 - Skrzynka: #550 WSTRZYMANE; #716/#718/#720 w planie. Bez nowego `pilne`. #757 zamknięte po #761.

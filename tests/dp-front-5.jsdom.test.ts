@@ -158,7 +158,10 @@ describe('DP-52 · oxlint bez starszych ostrzeżeń, zachowanie bez zmian', () =
       'src/components/drawer/AwizacjaModal.tsx',
       'src/components/shell/AccountMenu.tsx',
     ];
-    const r = spawnSync('node_modules/.bin/oxlint', ['-f', 'unix', ...files], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+    /* Windows: node_modules/.bin/oxlint to skrypt sh — spawnSync bez node → ENOENT; CLI przez process.execPath. */
+    const r = spawnSync(process.execPath, ['node_modules/oxlint/bin/oxlint', '-f', 'unix', ...files], {
+      encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'],
+    });
     /* DP-65: oxlint musi się uruchomić (brak programu / awaria = błąd testu, nie cichy sukces); 0 = bez błędów, 1 = błędy lintu */
     expect(r.error, String(r.error ?? '')).toBeUndefined();
     expect([0, 1], `oxlint status=${r.status} ${r.stderr ?? ''}`).toContain(r.status);
