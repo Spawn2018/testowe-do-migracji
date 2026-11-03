@@ -8,7 +8,7 @@ import type { FerryBooking, Load, LoadStatus, Locale, OrgKind, Risk, Sailing, Sa
 import { dictEntry } from '../i18n/messages';
 import { fmtDateTime, TZ_OPS, wallLocalToIso } from './time';
 import {
-  LEGACY_OPERATORS, OPERATOR_MATCH_ORDER, catalogOperators, operatorFromText, operatorsForRoute,
+  LEGACY_OPERATORS, catalogOperators, operatorFromText, operatorsForRoute,
   outboundRoutesOf, isOperatorOutboundRoute, routeByCode, sailingOfOperator, type FerryOperator,
 } from './ferryCatalog';
 
@@ -251,8 +251,9 @@ export const NEAREST_CROSSING_LIMIT = 3;
 export function crossingLine(s: Sailing): FerryOperator | null {
   if (s.source === 'DANE_STARTOWE') return null;
   const named = operatorFromText(s.operator);
-  /* kolejność jak dotąd: Stena (źródło albo nazwa), potem Polferries, potem nowi */
-  for (const line of OPERATOR_MATCH_ORDER) {
+  /* DP-181 / F7 #755: wynik → CrossingMap / UI per armator — seed + RPC (`catalogOperators`), nie sztywna MATCH_ORDER.
+     Kolejność dopasowania tekstu nazwy zostaje w `operatorFromText` (MATCH_ORDER: Stena przed Polferries). */
+  for (const { code: line } of catalogOperators()) {
     if (s.source === line || named === line) return line;
   }
   // Inny armator (np. TT-Line) spoza katalogu — nie dopisujemy go do listy.

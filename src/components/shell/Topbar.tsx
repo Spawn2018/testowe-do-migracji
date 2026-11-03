@@ -16,7 +16,7 @@ import { getNow } from '../../lib/frozenNow';
 import { canSwitchView, PROD_BUILD } from '../../lib/prodFacade';
 import { switchViewRole, usePreviewSwitchBusy } from '../../auth/previewSwitch';
 import { effDeparture, nearestCrossingByOperator, sailingStatusLabel, sailingStatusPill } from '../../lib/sailings';
-import { LEGACY_OPERATORS, OPERATOR_MATCH_ORDER, operatorName } from '../../lib/ferryCatalog';
+import { LEGACY_OPERATORS, catalogOperators, operatorName } from '../../lib/ferryCatalog';
 import { formatListDateTime } from '../../lib/format';
 import { lazyRetry } from '../../lib/lazyRetry';
 
@@ -84,9 +84,9 @@ function buildFerryRows(locale: Locale, now: Date, sailings: Parameters<typeof n
   if (PROD_BUILD || demoAll) {
     /* P7 — produkcja: najbliższa Stena (GDY→KAA) i najbliższy Polferries (GDN→NYN) z bazy. */
     const near = nearestCrossingByOperator(demoAll ? demoAllSailings(nowMs) : sailings, nowMs, 1);
-    /* BN9-a: Stena i Polferries zawsze (bez rejsu — „brak rejsu”); nowi armatorzy z katalogu tylko z rejsem */
+    /* BN9-a / DP-181: Stena i Polferries zawsze (bez rejsu — „brak rejsu”); nowi z catalogOperators (seed+RPC) tylko z rejsem */
     const lines: (readonly [Sailing | undefined, string])[] = [[near.STENA[0], 'Stena'], [near.POLFERRIES[0], 'Polferries']];
-    for (const op of OPERATOR_MATCH_ORDER) {
+    for (const { code: op } of catalogOperators()) {
       if (LEGACY_OPERATORS.includes(op)) continue;
       const first = near[op]?.[0];
       if (first) lines.push([first, operatorName(op)]);

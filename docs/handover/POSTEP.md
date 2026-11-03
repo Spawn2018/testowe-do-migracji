@@ -1,4 +1,11 @@
 
+## 2026-11-03 08:05 — DP-181 F7 #755 r1
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720/#735 w planie.
+- Scalanie: brak F7 „gotowe” (#755 — niegotowe r1 @ `7fb4c064`). Bez push na main.
+- **Krok F7 r1:** Topbar → `catalogOperators()`; `crossingLine` + `reachOf` → `catalogOperators()` (wynik UI); `operatorFromText` zostaje na MATCH_ORDER (dopasowanie tekstu). Test RPC `NEWFERRY` w wierszach paska. Visual zrzuty @ `7fb4c064` ✔ (kolejność POLFERRIES/STENA bez aktualizacji wzorców). Vitest 80 (8 plików).
+- **Dalej:** push → CI → F7. Po F7: DP-184.
+
 ## 2026-11-03 07:40 — #753 SCALONE; start DP-181
 
 - Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720/#735 w planie. DP-186 wpisane (F7 #753 — EE kopia w bazie po odbiorze 24 h).
