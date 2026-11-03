@@ -1,4 +1,11 @@
 
+## 2026-11-03 19:00 — #771 SCALONE; start DP-198 (cron 6 d)
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
+- Scalanie: **#771 SCALONE** `18c05217` (DP-197 / **0390**; F7 @ `a6c802b5` po docs). `deploy-main` robi resztę. Bez push na main.
+- **Krok DP-198** `pakiet/c2-dp-198-here-cron-6d`: `ROAD_CRON_REFRESH_MS` 21→6 d (poniżej świeżości alarmu 7 d); testy i667/orange/e2e. Bez migracji.
+- **Dalej:** push → CI → F7. Potem C2: 119….
+
 ## 2026-11-03 18:35 — #771 CI zielone @ bb86b896 — czekam F7
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`. PR do scalenia: brak „F7: gotowe” (po ostatnim commicie).

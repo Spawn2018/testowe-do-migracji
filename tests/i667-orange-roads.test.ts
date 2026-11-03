@@ -133,8 +133,8 @@ describe('#667 pomarańczowe drogi (krok C cron HERE)', () => {
     expect(e22Pts.length).toBeGreaterThanOrEqual(60);
   });
 
-  it('refreshRoadLegs: próg cron 21 d; job + SOURCE_DOWN HERE_ROADS sticky', () => {
-    expect(refresh).toMatch(/ROAD_CRON_REFRESH_MS = 21 \* 864e5/);
+  it('refreshRoadLegs: próg cron 6 d (DP-198); job + SOURCE_DOWN HERE_ROADS sticky', () => {
+    expect(refresh).toMatch(/ROAD_CRON_REFRESH_MS = 6 \* 864e5/);
     expect(jobs).toMatch(/runHereRoads/);
     expect(jobs).toMatch(/'here-roads': runHereRoads/);
     expect(jobs).toMatch(/'here-roads': 1380/);

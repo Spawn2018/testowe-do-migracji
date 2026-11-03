@@ -45,16 +45,17 @@ function store(rows: RoadGeomRow[], spend = 0): RoadRefreshStore & { stored: str
 }
 
 describe('#667 C refreshRoadLegs', () => {
-  it('ma 5 legów i próg cron 21 d', () => {
+  it('ma 5 legów i próg cron 6 d (DP-198)', () => {
     expect(ROAD_LEGS.map((l) => l.leg)).toEqual([
       'PL-GDN', 'SE-NYN', 'PL-GDY', 'SE-KAA', 'SE-KAA-INLAND',
     ]);
-    expect(ROAD_CRON_REFRESH_MS).toBe(21 * 864e5);
+    expect(ROAD_CRON_REFRESH_MS).toBe(6 * 864e5);
+    expect(ROAD_CRON_REFRESH_MS).toBeLessThan(7 * 864e5);
   });
 
-  it('nie woła HERE gdy wszystkie legi świeższe niż 21 d', async () => {
+  it('nie woła HERE gdy wszystkie legi świeższe niż 6 d', async () => {
     const fetchFn = vi.fn();
-    const s = store(ROAD_LEGS.map((l) => geom(l.leg, 7 * 864e5)));
+    const s = store(ROAD_LEGS.map((l) => geom(l.leg, 3 * 864e5)));
     const r = await refreshRoadLegs(s, {
       fetch: fetchFn as unknown as typeof fetch,
       hereApiKey: 'k',

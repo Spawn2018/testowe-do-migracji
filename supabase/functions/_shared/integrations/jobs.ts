@@ -4885,7 +4885,7 @@ async function runRoadPlKpd(deps: JobDeps, now: string, url: string): Promise<Jo
 
 /**
  * #667 C — odświeżanie geometrii pomarańczowych dróg HERE przed purge 30 d.
- * Próg 21 d; brak punktów → SOURCE_DOWN HERE_ROADS (JOB_FAILURE, sticky).
+ * Próg 6 d (DP-198); brak punktów → SOURCE_DOWN HERE_ROADS (JOB_FAILURE, sticky).
  */
 export async function runHereRoads(deps: JobDeps): Promise<JobResult> {
   const now = deps.now();
