@@ -6,7 +6,7 @@
 import type { Locale } from '../types';
 import { t } from './messages';
 
-const PL: Record<string, string> = {
+export const PL: Record<string, string> = {
   sys_tabs: 'Części Stanu systemu',
   sys_tab_sources: 'Źródła danych',
   sys_tab_errors: 'Błędy aplikacji',

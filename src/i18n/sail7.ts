@@ -6,7 +6,7 @@ import type { Locale } from '../types';
 import { t } from './messages';
 import { SAILINGS_EMPTY_TEXT } from './sailingsEmpty';
 
-const PL: Record<string, string> = {
+export const PL: Record<string, string> = {
   sv_sub: 'Polska → Szwecja oraz Estonia → Finlandia i Szwecja',
   sv_future: 'Przyszłe',
   sv_returns: 'Pokaż powroty',

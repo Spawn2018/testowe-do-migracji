@@ -7,7 +7,7 @@ import type { Locale } from '../types';
 import { t } from './messages';
 import { serverRuleOn, SOON, type ServerRule } from '../lib/serverRules';
 
-const PL: Record<string, string> = {
+export const PL: Record<string, string> = {
   p4c_wf_tab_auto: 'Działa samo',
   p4c_wf_tab_own: 'Własne reguły · {n}',
   p4c_wf_auto_lead: 'Co aplikacja robi bez człowieka. Liczby ustawia się w Opcjach, a tu jest opis i ostatnie działanie.',

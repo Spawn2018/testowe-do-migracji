@@ -6,7 +6,7 @@ import type { Locale } from '../types';
 import { t } from './messages';
 import { SAILINGS_EMPTY_TEXT } from './sailingsEmpty';
 
-const PL: Record<string, string> = {
+export const PL: Record<string, string> = {
   /* nagłówek panelu */
   p7_hd_load: 'Załadunek',
   p7_hd_deliver: 'Dostawa',

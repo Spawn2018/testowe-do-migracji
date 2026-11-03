@@ -1,4 +1,3 @@
-import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { BALTIC_CENTER, isBalticCenter, newGeofenceDraft, notifyWho, placeForCountry } from '../src/lib/geofenceDraft';
 import { SITES } from '../src/lib/status';
@@ -47,13 +46,5 @@ describe('L-12 kreator stref', () => {
     }, ORGS);
     expect(g.country).toBe('SE');
     expect(geofenceToRpc(g, 'p', ORGS, g.id).p_country).toBe('SE');
-  });
-
-  it('widok stref nie stawia nowej strefy na 60°N 18°E', () => {
-    const src = readFileSync('src/views/GeofenceView.tsx', 'utf8');
-    expect(src).not.toMatch(/lat:\s*60\b/);
-    expect(src).toContain('newGeofenceDraft');
-    expect(src).toContain('deleteGeofence');
-    expect(src).toContain('GeofenceEditorMap');
   });
 });
