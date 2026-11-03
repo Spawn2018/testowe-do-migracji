@@ -14,8 +14,10 @@ import {
   EE_DATEX_FEEDS,
   EE_DATEX_KEY_HEADER,
   EE_FEED_TIMEOUT_MS,
+  EE_HEAVY_FEED_CACHE_TTL_MS,
   EE_ICY_CONTENT_RE,
   EE_RESTRICTIONS_MAX_BYTES,
+  EE_RESTRICTIONS_TIMEOUT_MS,
   EE_SOURCE_REF,
   EE_UA,
   LV_ICY_CONTENT_RE,
@@ -30,12 +32,14 @@ import {
   classifyBalticNetError,
   lvMetadataDataUrl,
   lvNapKeyAllowedForUrl,
+  clearEeHeavyFeedCache,
   clearEeSitesCache,
   dimensionLimitRisk,
   EE_PROBE_API_PATH,
   eeDatexApiKey,
   eeDatexApiKeyMeta,
   eeDatexFeedUrl,
+  eeIsDatexPublicationEnvelope,
   eeRoadOnCorridor,
   probeEeDatexApi,
   eeSeverityForRecord,
@@ -242,6 +246,30 @@ describe('BN6 road-ee parsers', () => {
     );
     expect(emptyPub.format).toBe('datex-json');
     expect(emptyPub.events).toHaveLength(0);
+    /* DP-180: pusta koperta DATEX (feedType/…) bez situationRecord = OK 0 rekordów. */
+    const emptyEnvelope = {
+      feedDescription: 'SRTI unprotectedAccident',
+      feedType: 'SRTI',
+      publicationTime: '2026-11-03T03:00:00Z',
+      publicationCreator: { nationalIdentifier: 'EE' },
+      payloadPublicationExtension: {},
+    };
+    expect(eeIsDatexPublicationEnvelope(emptyEnvelope)).toBe(true);
+    expect(hasDatexMarker(JSON.stringify(emptyEnvelope), 'json')).toBe(false);
+    const envParsed = parseEeFeedBody(
+      JSON.stringify(emptyEnvelope),
+      'SRTI_ACCIDENT',
+      'json',
+    );
+    expect(envParsed.format).toBe('datex-json');
+    expect(envParsed.events).toHaveLength(0);
+    const envRoadworks = parseEeFeedBody(
+      JSON.stringify({ ...emptyEnvelope, feedDescription: 'shortTermRoadWorks' }),
+      'SRTI_ROADWORKS',
+      'json',
+    );
+    expect(envRoadworks.format).toBe('datex-json');
+    expect(envRoadworks.events).toHaveLength(0);
   });
 
   it('DP-178: shape obs + LV metadata URL + RESTRICTIONS 20 MB', () => {
@@ -356,6 +384,7 @@ describe('BN6 road-ee parsers', () => {
 describe('BN6 runRoadEe', () => {
   beforeEach(() => {
     clearEeSitesCache();
+    clearEeHeavyFeedCache();
   });
 
   it('bez sekretu: configured:0, ok, bez SOURCE_DOWN', async () => {
@@ -422,6 +451,51 @@ describe('BN6 runRoadEe', () => {
     expect(store.risks.every((r) => r.detail?.zrodlo === EE_ATTRIBUTION)).toBe(true);
     expect(store.corridor?.corridor).toBe('ROAD_EE');
     expect(store.staleCalls.some((s) => s.prefix === 'ROAD_EE:')).toBe(true);
+    expect(EE_RESTRICTIONS_TIMEOUT_MS).toBe(45_000);
+    expect(EE_HEAVY_FEED_CACHE_TTL_MS).toBe(60 * 60 * 1000);
+    expect(res.observations?.ee_restrictions_source).toBe('fetch');
+  });
+
+  it('DP-180: RESTRICTIONS/SAFETY z cache w TTL 60 min; complete OK; source=cache', async () => {
+    const pages: Record<string, string | number> = {
+      'https://tarktee.ee/': '<html>ok</html>',
+    };
+    for (const f of EE_DATEX_FEEDS) {
+      const url = eeDatexFeedUrl(f.path);
+      if (f.code === 'RESTRICTIONS') pages[url] = restXml;
+      else if (f.code === 'SAFETY') {
+        pages[url] = '<?xml version="1.0"?><d2LogicalModel><payloadPublication></payloadPublication></d2LogicalModel>';
+      } else if (f.code === 'MEASUREMENT_SITES') pages[url] = sitesXml;
+      else if (f.code === 'WEATHER') pages[url] = weatherXml;
+      else if (f.code === 'SRTI_ACCIDENT' || f.code === 'SRTI_BLOCKAGE') {
+        pages[url] = JSON.stringify(srtiJson);
+      } else if (f.code.startsWith('SRTI_')) {
+        pages[url] = JSON.stringify({
+          feedType: 'SRTI',
+          publicationTime: '2026-11-03T03:00:00Z',
+          payloadPublicationExtension: {},
+        });
+      } else {
+        pages[url] = '<?xml version="1.0"?><d2LogicalModel><payloadPublication></payloadPublication></d2LogicalModel>';
+      }
+    }
+    const store1 = new MemStore();
+    const { d: d1, headerCalls: h1 } = deps(store1, pages);
+    const r1 = await runRoadEe(d1);
+    expect(r1.observations?.ee_restrictions_source).toBe('fetch');
+    expect(r1.observations?.ee_safety_source).toBe('fetch');
+    const restFetches1 = h1.filter((c) => c.url.includes('/restrictions')).length;
+    expect(restFetches1).toBeGreaterThanOrEqual(1);
+
+    const store2 = new MemStore();
+    const { d: d2, headerCalls: h2 } = deps(store2, pages);
+    const r2 = await runRoadEe(d2);
+    expect(r2.observations?.ee_restrictions_source).toBe('cache');
+    expect(r2.observations?.ee_safety_source).toBe('cache');
+    expect(String(r2.observations?.ee_restrictions ?? '')).toMatch(/^ok:\d+:0:cache:0$/);
+    expect(h2.filter((c) => c.url.includes('/restrictions')).length).toBe(0);
+    expect(h2.filter((c) => c.url.includes('/safetyData')).length).toBe(0);
+    expect(Number(r2.observations?.fetched_ok)).toBe(Number(r2.observations?.expected_fetches));
   });
 
   it('F7 B4: 4× SRTI {"message"} → incomplete, bez resolveStale', async () => {
