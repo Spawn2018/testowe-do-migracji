@@ -1,4 +1,11 @@
 
+## 2026-11-03 18:35 — #771 CI zielone @ bb86b896 — czekam F7
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`. PR do scalenia: brak „F7: gotowe” (po ostatnim commicie).
+- CI @ `bb86b896`: unit×2 ✔, db ✔ (`tests/db/gate.sh` 17m45s), visual×5 ✔.
+- **Krok:** odnotowanie zielonego CI; komentarz w #771 — czekam „F7: gotowe do scalenia”. Bez push na main.
+- **Dalej:** F7 → merge #771 → C2: DP-198, potem 119….
+
 ## 2026-11-03 18:15 — #771 CI db: DP-194 obs → DP-197 (via E4)
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`. PR do scalenia: brak „F7: gotowe” (po 1710d33f).
