@@ -185,15 +185,66 @@ export function corridorPadding(map: L.Map): { paddingTopLeft: L.PointTuple; pad
   }
   return { paddingTopLeft: [CORRIDOR_PADDING, CORRIDOR_PADDING + top], paddingBottomRight: [CORRIDOR_PADDING, CORRIDOR_PADDING + extra] };
 }
+/**
+ * DP-176: miejsce, w którym mapa jest teraz wpięta (`acquireMap`) — Kokpit ma ciaśniejszy kadr całej sieci.
+ * Mapa i karta transportu — kadr jak dotąd (`corridorPadding`).
+ */
+const slotOf = new WeakMap<L.Map, MapSlot>();
+/** DP-176: margines kadru mini-mapy Kokpitu (zamiast 24 px). */
+export const KOKPIT_PADDING = 12;
+type FramePadding = ReturnType<typeof corridorPadding>;
+/**
+ * DP-176: mini-mapa Kokpitu jest szeroka i niska (727 × 360 przy 1920), a sieć (Śrem – Boden) wysoka i wąska — kadr
+ * ogranicza wysokość, a dopisek „Trasa orientacyjna…” u góry z prawej zabierał jeszcze ~60 px wysokości, więc w kadrze
+ * było morze aż po Islandię. W Kokpicie: margines 12 px, a dopisek z prawej liczony jako margines prawy (sieć obok
+ * dopisku, nie pod nim), gdy to daje większe przybliżenie. Telefon (dopisek na całą szerokość) — margines górny jak dotąd.
+ */
+function kokpitPadding(map: L.Map, base: FramePadding): FramePadding {
+  const d = CORRIDOR_PADDING - KOKPIT_PADDING;
+  const tight: FramePadding = {
+    paddingTopLeft: [KOKPIT_PADDING, base.paddingTopLeft[1] - d],
+    paddingBottomRight: [KOKPIT_PADDING, base.paddingBottomRight[1] - d],
+  };
+  let side: FramePadding | null = null;
+  try {
+    const note = map.getContainer().closest('.corridor-map-root')?.querySelector<HTMLElement>('.bn7-note') ?? null;
+    const root = note?.offsetParent as HTMLElement | null | undefined;
+    if (note && root && note.offsetHeight > 0 && note.offsetWidth > 0) {
+      const w = root.clientWidth;
+      const h = root.clientHeight;
+      const noteBottom = note.offsetTop + note.offsetHeight;
+      const atTop = note.offsetTop + note.offsetHeight / 2 < h / 2;
+      const atRight = note.offsetLeft + note.offsetWidth / 2 > w / 2;
+      /* margines górny pochodzi tylko z dopisku (inna nakładka u góry — zostaje jak dotąd) */
+      const onlyNoteOnTop = tight.paddingTopLeft[1] - KOKPIT_PADDING <= noteBottom;
+      const right = Math.max(0, w - note.offsetLeft) + KOKPIT_PADDING;
+      if (atTop && atRight && onlyNoteOnTop && w - KOKPIT_PADDING - right >= 80) {
+        side = { paddingTopLeft: [KOKPIT_PADDING, KOKPIT_PADDING], paddingBottomRight: [right, tight.paddingBottomRight[1]] };
+      }
+    }
+  } catch {
+    side = null;
+  }
+  if (!side) return tight;
+  const b = boundsFor(map);
+  const zoomOf = (p: FramePadding) => map.getBoundsZoom(b, false, L.point(p.paddingTopLeft).add(p.paddingBottomRight));
+  return zoomOf(side) > zoomOf(tight) ? side : tight;
+}
+/** Margines kadru całej trasy dla miejsca mapy: Kokpit — `kokpitPadding` (DP-176), reszta — `corridorPadding`. */
+export function framePadding(map: L.Map): FramePadding {
+  const base = corridorPadding(map);
+  return slotOf.get(map) === 'kokpit' ? kokpitPadding(map, base) : base;
+}
+
 /** Widok całej trasy dla bieżącego rozmiaru mapy (bez ruszania mapy). */
 export function corridorView(map: L.Map): { center: L.LatLng; zoom: number } {
   const b = boundsFor(map);
   /* ten sam rachunek co `fitBounds` (środek w rzucie mapy, nie średnia stopni) — powrót bez zmiany widoku = zero kafelków */
   const m = map as unknown as { _getBoundsCenterZoom?: (bb: L.LatLngBounds, o: L.FitBoundsOptions) => { center: L.LatLng; zoom: number } };
   if (typeof m._getBoundsCenterZoom === 'function') {
-    return m._getBoundsCenterZoom(b, corridorPadding(map));
+    return m._getBoundsCenterZoom(b, framePadding(map));
   }
-  const pad = corridorPadding(map);
+  const pad = framePadding(map);
   const zoom = map.getBoundsZoom(b, false, L.point(pad.paddingTopLeft).add(pad.paddingBottomRight));
   return { center: b.getCenter(), zoom };
 }
@@ -202,7 +253,7 @@ export function fitCorridor(map: L.Map): void {
   try {
     if (!map.getPane('mapPane')) return;
     /* F7 r2 #740 R2-W1: kadr to ruch programowy (zdarzenia Leaflet synchronicznie — znacznik obejmuje cały łańcuch) */
-    programmatic(map, () => map.fitBounds(boundsFor(map), { ...corridorPadding(map), animate: false }));
+    programmatic(map, () => map.fitBounds(boundsFor(map), { ...framePadding(map), animate: false }));
   } catch {
     /* mapa usunięta albo bez rozmiaru */
   }
@@ -357,6 +408,7 @@ export function acquireMap(root: HTMLElement, slot: MapSlot, spec?: LinesSpec): 
   if (inUse) {
     const one = build(false, root);
     one.slot = slot;
+    slotOf.set(one.map, slot);
     if (spec) void drawCorridorLines(one, spec, false);
     if (slot !== 'drawer') fitCorridor(one.map);
     return one;
@@ -365,6 +417,7 @@ export function acquireMap(root: HTMLElement, slot: MapSlot, spec?: LinesSpec): 
   if (!entry) {
     entry = build(true, root);
     entry.slot = slot;
+    slotOf.set(entry.map, slot);
     if (spec) void drawCorridorLines(entry, spec, false);
     if (slot !== 'drawer') fitCorridor(entry.map);
     return entry;
@@ -372,6 +425,7 @@ export function acquireMap(root: HTMLElement, slot: MapSlot, spec?: LinesSpec): 
   poolStats.reused += 1;
   const e = entry;
   e.slot = slot;
+  slotOf.set(e.map, slot);
   /* BN9-c5: zakres linii widoku od razu (tory, legi już wczytane, kadr) — bez linii poprzedniego widoku */
   if (spec) void drawCorridorLines(e, spec, false);
   root.appendChild(e.el);
