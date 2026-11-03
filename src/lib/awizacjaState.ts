@@ -4,19 +4,21 @@
  */
 import type { Load, LoadResources, Sailing } from '../types';
 import {
-  clearanceHoursFor, FERRY_OPERATORS as CATALOG_OPERATORS, sailingOfOperator,
+  catalogOperators, clearanceHoursFor, clearanceHoursForRoute, sailingOfOperator,
   type FerryOperator,
 } from './ferryCatalog';
 import { effDeparture, hasDeparted, selectableSailings } from './sailings';
 import { isAfterDelivery } from './status';
 
-/** Wszyscy armatorzy z katalogu promów (Polferries, Stena, potem nowi). */
-export const FERRY_OPERATORS: readonly { id: FerryOperator; label: string }[] = CATALOG_OPERATORS.map((o) => ({ id: o.code, label: o.name }));
+/** Wszyscy armatorzy z katalogu promów (seed + RPC — DP-144). */
+export const FERRY_OPERATORS: readonly { id: FerryOperator; label: string }[] = catalogOperators().map((o) => ({
+  id: o.code, label: o.name,
+}));
 
 export type FerryOperatorId = FerryOperator;
 
 /**
- * #666 decyzja 55: w awizacji zawsze wszyscy armatorzy ze słownika (Polferries…DFDS),
+ * #666 decyzja 55 / BN8 DP-144: w awizacji wszyscy armatorzy ze słownika (seed + baza),
  * także gdy nie ma jeszcze rejsów w rozkładzie (komunikat w UI).
  * `sailings` / `current` zostają w sygnaturze (kompatybilność wywołań).
  */
@@ -24,10 +26,10 @@ export function awizacjaOperators(
   _sailings?: readonly Sailing[],
   _current?: FerryOperatorId | null,
 ): { id: FerryOperatorId; label: string }[] {
-  return [...FERRY_OPERATORS];
+  return catalogOperators().map((o) => ({ id: o.code, label: o.name }));
 }
 
-/** Godziny: Śrem → port + odprawa (orientacyjnie, do II-7) — z katalogu promów (Gdańsk 14 h, Gdynia 16 h). */
+/** Godziny: Śrem → port + odprawa — z katalogu (Gdańsk 14 h, Gdynia 16 h; EE 2 h — 82-C). */
 export const PORT_CLEARANCE_H = clearanceHoursFor('POLFERRIES');
 export const STENA_PORT_CLEARANCE_H = clearanceHoursFor('STENA');
 
@@ -60,9 +62,23 @@ export function earliestFerryDepartureMs(
   const cands = [fromWindow, fromPlan].map((x) => (x ? Date.parse(x) : NaN)).filter(Number.isFinite);
   const t = cands.length ? Math.max(...cands) : NaN;
   if (!Number.isFinite(t)) return Date.now();
-  /* BN9-a: odprawa portu wyjazdowego armatora z katalogu (Polferries i Stena — te same wartości co dotąd) */
+  /* BN8: odprawa z portu trasy (82-C EE = 2 h); bez trasy — z pierwszej trasy armatora */
   const h = clearanceHoursFor(operator);
   return t + h * 36e5;
+}
+
+/** Jak `earliestFerryDepartureMs`, z odprawą z portu konkretnej trasy (`clearanceHoursForRoute`). */
+export function earliestFerryDepartureMsForRoute(
+  load: Pick<Load, 'plannedLoadDate' | 'awizacja'>,
+  route: string | null | undefined,
+  operator: FerryOperatorId = 'POLFERRIES',
+): number {
+  const fromWindow = load.awizacja.loadWindowEnd ?? load.awizacja.loadWindowStart;
+  const fromPlan = load.plannedLoadDate ? `${load.plannedLoadDate}T06:00:00+02:00` : null;
+  const cands = [fromWindow, fromPlan].map((x) => (x ? Date.parse(x) : NaN)).filter(Number.isFinite);
+  const t = cands.length ? Math.max(...cands) : NaN;
+  if (!Number.isFinite(t)) return Date.now();
+  return t + clearanceHoursForRoute(route, operator) * 36e5;
 }
 
 /**

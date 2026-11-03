@@ -45,9 +45,10 @@ describe('odprawa portu z katalogu', () => {
     expect(earliestFerryDepartureMs(load, 'POLFERRIES')).toBe(t0 + 14 * 36e5);
     expect(earliestFerryDepartureMs(load, 'STENA')).toBe(t0 + 16 * 36e5);
   });
-  it('nowi armatorzy — z portu wyjazdowego w katalogu, nie ze Steny', () => {
+  it('nowi armatorzy — z portu wyjazdowego w katalogu, nie ze Steny (BN8/82-C: EE = 2 h)', () => {
     for (const op of ['TALLINK', 'VIKING', 'ECKERO', 'DFDS'] as const) {
-      expect(earliestFerryDepartureMs(load, op)).toBe(t0 + clearanceHoursFor(op) * 36e5);
+      expect(clearanceHoursFor(op)).toBe(2);
+      expect(earliestFerryDepartureMs(load, op)).toBe(t0 + 2 * 36e5);
     }
   });
 });

@@ -11,7 +11,7 @@ import {
   FERRY_OPERATORS, FERRY_ROUTES, LEGACY_OPERATORS, isOperatorOutboundRoute, portByCode, primaryRouteOf, routeEnds,
   type FerryCountry, type FerryOperator, type FerryPortCode,
 } from './ferryCatalog';
-import { crossingLine, effDeparture, nearestCrossingByOperator, nearestCrossingSailings } from './sailings';
+import { crossingLine, effDeparture, nearestCrossingByOperator } from './sailings';
 import { stageTileOf } from './stageTiles';
 import { corridorOfRoute, isNoReading } from './bn9c3Marine';
 
@@ -130,45 +130,54 @@ function destCountryOf(r: Pick<FerryRowView, 'line' | 'route'>): FerryCountry | 
 }
 
 /**
- * PLAN 8.4 (E7-5, D-45, L-9): odwołanie albo sztorm na jednej przeprawie → najbliższe odejścia drugiej,
- * tylko gdy druga jest bez odwołań i sztormu. Oba zagrożone → bez propozycji. Brak rozkładu drugiej → „Brak danych”.
- * Polferries ⇄ Stena — bez zmian. BN9-b: przeprawy z Estonii — inny armator w ten sam kraj (Finlandia: Tallink,
- * Viking Line, Eckerö; Szwecja: Tallink ⇄ DFDS), pierwszy bez odwołań i sztormu, z najbliższym odejściem.
+ * PLAN 8.4 (E7-5, D-45, L-9) / BN8: odwołanie albo sztorm → najbliższe odejścia innego armatora
+ * w ten sam kraj docelowy, tylko gdy tam bez odwołań i sztormu. Oba zagrożone → bez propozycji.
+ * Brak rozkładu → „Brak danych”. Jedna ścieżka dla PL/SE i Bałtyku (`CrossingMap` ze słownika).
  */
 export function altProposal(rows: readonly FerryRowView[], sailings: readonly Sailing[], nowMs: number): AltProposal | null {
   const isBad = (r: FerryRowView) => ferryAlert(r) === 'CANCELLED' || ferryAlert(r) === 'STORM';
-  const bad = (line: CrossingLine) => rows.find((r) => r.line === line && isBad(r)) ?? null;
-  const pol = bad('POLFERRIES');
-  const sten = bad('STENA');
-  if (pol && sten) return { kind: 'BOTH' };
-  const hit = pol ?? sten;
-  if (hit) {
-    const from = hit.line;
-    const to: CrossingLine = from === 'POLFERRIES' ? 'STENA' : 'POLFERRIES';
-    const reason = ferryAlert(hit) === 'CANCELLED' ? 'CANCELLED' : 'STORM';
-    const near = nearestCrossingSailings(sailings, nowMs);
-    const list = to === 'STENA' ? near.stena : near.polferries;
-    if (!list.length) return { kind: 'NODATA', from, to, reason, vessel: hit.vessel };
-    return { kind: 'ALT', from, to, reason, vessel: hit.vessel, sailings: list };
-  }
-  /* BN9-b: przeprawy z Estonii */
-  const bHit = rows.find((r) => !LEGACY_OPERATORS.includes(r.line) && isBad(r));
-  if (!bHit) return null;
-  const dest = destCountryOf(bHit);
+  const hit = rows.find((r) => isBad(r));
+  if (!hit) return null;
+  const dest = destCountryOf(hit) ?? (LEGACY_OPERATORS.includes(hit.line) ? 'SE' : null);
   if (!dest) return null;
-  const reason = ferryAlert(bHit) === 'CANCELLED' ? 'CANCELLED' : 'STORM';
+  const reason = ferryAlert(hit) === 'CANCELLED' ? 'CANCELLED' : 'STORM';
   const near = nearestCrossingByOperator(sailings, nowMs);
-  const toDest = (s: Sailing) => portByCode(routeEnds(s.route)?.to ?? null)?.country === dest;
-  const cands = FERRY_OPERATORS.map((o) => o.code).filter((op) => op !== bHit.line && !LEGACY_OPERATORS.includes(op)
-    && FERRY_ROUTES.some((r) => r.outbound && r.operators.includes(op) && portByCode(r.to)?.country === dest));
+  const rowDest = (r: FerryRowView) => destCountryOf(r) ?? (LEGACY_OPERATORS.includes(r.line) ? 'SE' : null);
+  const toDest = (s: Sailing) => {
+    const c = portByCode(routeEnds(s.route)?.to ?? null)?.country;
+    return c === dest || (dest === 'SE' && !c && LEGACY_OPERATORS.includes(crossingLine(s) ?? hit.line));
+  };
+  /* Najpierw armatorzy już na liście wierszy (ten sam kraj) — BOTH gdy wszystkie widoczne alternatywy też złe. */
+  const visible = FERRY_OPERATORS.map((o) => o.code).filter(
+    (op) => op !== hit.line && rows.some((r) => r.line === op && rowDest(r) === dest),
+  );
+  const catalog = FERRY_OPERATORS.map((o) => o.code).filter((op) => {
+    if (op === hit.line) return false;
+    if (LEGACY_OPERATORS.includes(hit.line) && LEGACY_OPERATORS.includes(op)) return true;
+    return FERRY_ROUTES.some((r) => r.outbound && r.operators.includes(op) && portByCode(r.to)?.country === dest);
+  });
+  const cands = visible.length ? visible : catalog;
   if (!cands.length) return null;
-  const okCands = cands.filter((op) => !rows.some((r) => r.line === op && isBad(r) && destCountryOf(r) === dest));
-  if (!okCands.length) return { kind: 'BOTH', dest };
+  const okCands = cands.filter((op) => !rows.some((r) => r.line === op && isBad(r) && rowDest(r) === dest));
+  const bothDest = LEGACY_OPERATORS.includes(hit.line) && cands.every((op) => LEGACY_OPERATORS.includes(op))
+    ? {}
+    : { dest };
+  if (!okCands.length) return { kind: 'BOTH', ...bothDest };
   for (const op of okCands) {
     const list = (near[op] ?? []).filter(toDest);
-    if (list.length) return { kind: 'ALT', from: bHit.line, to: op, reason, vessel: bHit.vessel, sailings: list, dest };
+    if (list.length) {
+      const omitDest = LEGACY_OPERATORS.includes(hit.line) && LEGACY_OPERATORS.includes(op);
+      return {
+        kind: 'ALT', from: hit.line, to: op, reason, vessel: hit.vessel, sailings: list,
+        ...(omitDest ? {} : { dest }),
+      };
+    }
   }
-  return { kind: 'NODATA', from: bHit.line, to: okCands[0], reason, vessel: bHit.vessel, dest };
+  const omitDest = LEGACY_OPERATORS.includes(hit.line) && LEGACY_OPERATORS.includes(okCands[0]);
+  return {
+    kind: 'NODATA', from: hit.line, to: okCands[0], reason, vessel: hit.vessel,
+    ...(omitDest ? {} : { dest }),
+  };
 }
 
 /* ---------- drogi ---------- */

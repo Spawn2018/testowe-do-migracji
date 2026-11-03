@@ -440,7 +440,7 @@ export interface GeofenceRow {
   route?: string | null;
 }
 const GEO_KINDS: GeofenceType[] = ['LOADING', 'PORT_OUT', 'PRE_PORT', 'PORT_IN', 'CHECKPOINT', 'PRE_ARRIVAL', 'SITE', 'REST'];
-const GEO_COUNTRIES = ['PL', 'SE', 'LT', 'DE'] as const;
+const GEO_COUNTRIES = ['PL', 'SE', 'LT', 'DE', 'EE', 'FI'] as const;
 export function geofenceFromRow(r: GeofenceRow, orgs: OrgRow[]): Geofence {
   const kinds = new Set((r.notify_orgs ?? []).map((id) => orgKindToApp(orgs.find((o) => o.id === id)?.kind ?? '')));
   const country = (r.country ?? '').trim();
@@ -454,8 +454,8 @@ export function geofenceFromRow(r: GeofenceRow, orgs: OrgRow[]): Geofence {
     active: r.active,
     trigger: r.notify_dwell ? 'DWELL_EXCEEDED' : r.notify_exit ? 'EXIT' : 'ENTER',
     ...(GEO_COUNTRIES.includes(country as typeof GEO_COUNTRIES[number]) ? { country: country as typeof GEO_COUNTRIES[number] } : {}),
-    /* BN9-a: trasa portu = armator z katalogu promów */
-    ...(isFerryOperator(route) ? { route } : { route: null }),
+    /* DP-143: Model B armator; Model A kod/rodzina trasy (TLL-HEL) — 0338 */
+    ...(isFerryOperator(route) || isKnownRoute(route) ? { route } : { route: null }),
   };
 }
 export function geofenceToRpc(
@@ -472,7 +472,7 @@ export function geofenceToRpc(
     p_notify_orgs: [...(g.notifyHhl ? orgIds('HHL') : []), ...(g.notifyKsh ? orgIds('KSH') : []), ...(g.notifyScx ? orgIds('SCX') : [])],
     p_active: g.active,
     p_country: g.country ?? null,
-    p_route: port ? (isFerryOperator(g.route) ? g.route : null) : null,
+    p_route: port ? (g.route && (isFerryOperator(g.route) || isKnownRoute(g.route)) ? g.route : null) : null,
     p_reason: reason?.trim() || null,
   };
 }
