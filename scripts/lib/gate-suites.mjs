@@ -55,7 +55,7 @@ export const EXPECTED_LOCAL = {
   e41: 36, // P2 + P2-poprawki; A4 +6 kolumny; A2 +4 (msgs_read + loads_read / drugi SCX, D-0330)
   e25: 93, // A10 F7: +PLANNED bez daty (3) + SCX claims (1) + wahanie trasy STATUS_AUTO (3)
   'c16-push': 18, // C16 N8 + C16-H H5 (D-20261015-1955-01, D-20261016-0100-01)
-  c3: 45, // DP-156 F7 r1: +2 bałtyk bez load MEDIUM→null / z load→route; było 43
+  c3: 51, // DP-156 F7 r2: +6 e2e trigger/HIGH key/zamknięcie; było 45
 };
 
 /**

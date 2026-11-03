@@ -1,4 +1,11 @@
 
+## 2026-11-03 12:40 — #766 F7 r2: pkt 2–4 (e2e, zamknięcie, 0388)
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
+- Scalanie: brak „F7: gotowe” — F7 r2 @ 7413490: pkt 1 przyjęty; brakowało 2–4.
+- **Krok F7 #766 r2:** (2) e2e c3 przez trigger — FI MEDIUM→0, FI HIGH→IN_APP+WEB_PUSH, SE MEDIUM→0, HIGH→risk_crit; (3) HIGH→MEDIUM → `notify_mark_case_closed`; (4) 0388+0389 → jedna **0388**. c3 **51**. Bez push na main.
+- **Dalej:** push #766 → CI → F7. Potem C1 reszta (DP-146, 152) albo C2.
+
 ## 2026-11-03 12:10 — #766 CI db: gate-suites c3 43→45
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.

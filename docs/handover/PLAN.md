@@ -1250,7 +1250,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-151 | Cursor | `fetchMarineConditions` — `detail` w `select` (status / warnings / ice) | F7 #724 / #714 | BN5 / front | SCALONE #725 (z DP-149) |
 | DP-152 | Cursor | `fHorizonTo` bierze najkrótszy horyzont ze wszystkich punktów; punkt przybrzeżny skraca okno DMI/`window_to` wszystkim — licz per korytarz albo maksimum ważnych | F7 #725 | BN5 / ferry-weather | w kolejce (z BN6 albo osobno) |
 | DP-155 | Cursor | ETA: `ROAD_FI` → `slowdown_se` przy `FI_E75` (0385); test ×1.5 FI dłuższy / GDN bez zmian; `yard_drive_quote` bez zmian (tylko SREM/BODEN→PL/SE_E4) | F7 #726 / C1 #762 | BN8b / ETA | W TOKU (#766 C1) |
-| DP-156 | Cursor | `notify_event_key`: ROAD_LT/LV/EE/FI — z `load_id` jak SE; bez `load_id` tylko HIGH/CRIT → `risk_crit` (F7 #766 r1 / **0389**) | F7 #726 / C1 #762 | BN6 / notify | W TOKU (#766 C1 / **0388**+**0389**) |
+| DP-156 | Cursor | `notify_event_key`: ROAD_LT/LV/EE/FI — z `load_id` jak SE; bez `load_id` tylko HIGH/CRIT → `risk_crit`; HIGH→MEDIUM zamyka dzwonek (F7 #766 r2 / **0388**) | F7 #726 / C1 #762 | BN6 / notify | W TOKU (#766 C1 / **0388**) |
 | DP-157 | Cursor | road-fi: (a) zwykłe Tietyö bez zamknięcia/objazdu/limitu → LOW; (b) do BN7 filtr numerów dróg korytarza (VT4/E75, VT29/E8, Kehä III 50, Vuosaaren 103 + porty); (c) jednorazowo resolve 146 ROAD_FI poza filtrem (przez job, nie ręcznie) | F7 #727 | BN6 / road-fi | DONE #732 |
 | DP-158 | Cursor | ROAD_FI tytuły: polska etykieta typu (Tietyö→roboty drogowe, Liikennetiedote→komunikat, painorajoitus→limit masy) w params/title_key; surowy fiński w detail | F7 #727 | BN6 / road-fi | DONE #732 |
 | DP-159 | Cursor | `bn3-tallink-alert`: `finalizeTallinkAlertsForStatus` bez `NOW` → od 02.11 wall-clock psuje decyzję 72 (08:00 Tallinn) | pre-push #727 | BN3 / testy | SCALONE w #727 |
@@ -1447,9 +1447,9 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 Cel: C1–C4 przed bramą #588 i wydaniem 1.0 (≈ 20–21.11). Pozycja >~50 linii / nowa tabela → osobne zgłoszenie.
 
 ### #766 · C1 cz.1 — DP-155 + DP-156 — W TOKU
-Źródło: #762 C1. Gałąź `pakiet/c1-dp-155-road-fi-eta`. Migracje **0388** + **0389** (F7 r1 wolumen).
+Źródło: #762 C1. Gałąź `pakiet/c1-dp-155-road-fi-eta`. Migracja **0388** (F7 r2: 0389 scalona; e2e + zamknięcie po obniżeniu).
 1. **DP-155:** test `ROAD_FI`×1.5 → ETA FI_E75 dłuższa, GDN-NYN bez zmian (logika już w 0385).
-2. **DP-156:** `notify_event_key` + ROAD_LT/LV/EE/FI; F7 r1: bez transportu tylko HIGH/CRIT.
+2. **DP-156:** `notify_event_key` + ROAD_LT/LV/EE/FI; bez transportu tylko HIGH/CRIT; HIGH→MEDIUM → `notify_mark_case_closed`.
 
 ### #756 · DP-187/188 — road-ee gap + LV error body — SCALONE (#765 `c1c8f827`)
 Źródło: #756 (Spawn2018; odbiór #753). Jednym PR bez migracji.
