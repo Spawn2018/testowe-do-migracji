@@ -251,10 +251,13 @@ export const NEAREST_CROSSING_LIMIT = 3;
 export function crossingLine(s: Sailing): FerryOperator | null {
   if (s.source === 'DANE_STARTOWE') return null;
   const named = operatorFromText(s.operator);
-  /* DP-181 / F7 #755: wynik → CrossingMap / UI per armator — seed + RPC (`catalogOperators`), nie sztywna MATCH_ORDER.
-     Kolejność dopasowania tekstu nazwy zostaje w `operatorFromText` (MATCH_ORDER: Stena przed Polferries). */
+  /* DP-181 / F7 #755 r3: wynik → CrossingMap / UI — seed + RPC.
+     Przy sprzeczności source vs nazwa: najpierw `source`, potem `named` (kolejność dopasowania tekstu zostaje w MATCH_ORDER). */
   for (const { code: line } of catalogOperators()) {
-    if (s.source === line || named === line) return line;
+    if (s.source === line) return line;
+  }
+  for (const { code: line } of catalogOperators()) {
+    if (named === line) return line;
   }
   // Inny armator (np. TT-Line) spoza katalogu — nie dopisujemy go do listy.
   if ((s.operator ?? '').trim()) return null;

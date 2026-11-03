@@ -153,6 +153,17 @@ describe('BN9-a — armator rejsu', () => {
     expect(lineOf({ route: 'MUU-VUO' })).toBe('ECKERO');
     expect(lineOf({ route: 'GDY-KAA' })).toBe('STENA');
   });
+  it('crossingLine: przy sprzeczności source vs nazwa wygrywa source (F7 #755 r3)', () => {
+    expect(crossingLine(S({
+      id: 'x1', route: 'GDN-NYN', departureAt: 'x', source: 'STENA', operator: 'Polferries',
+    }))).toBe('STENA');
+    expect(crossingLine(S({
+      id: 'x2', route: 'GDY-KAA', departureAt: 'x', source: 'POLFERRIES', operator: 'Stena Line',
+    }))).toBe('POLFERRIES');
+    expect(crossingLine(S({
+      id: 'x3', route: 'TLL-HEL', departureAt: 'x', source: 'ECKERO', operator: 'Viking Line',
+    }))).toBe('ECKERO');
+  });
 });
 
 describe('BN9-a — najbliższe rejsy: nowi armatorzy tylko z rejsem', () => {

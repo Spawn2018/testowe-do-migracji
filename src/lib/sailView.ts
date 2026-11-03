@@ -5,8 +5,8 @@
  */
 import type { FerryRoute, Load, Sailing } from '../types';
 import {
-  FERRY_ROUTES, catalogOperators, isOutbound as isOutboundRoute, operatorFromText, operatorsForRoute,
-  routeShortLabel, type FerryOperator,
+  FERRY_ROUTES, LEGACY_OPERATORS, catalogOperators, isOutbound as isOutboundRoute, operatorFromText,
+  operatorsForRoute, routeShortLabel, type FerryOperator,
 } from './ferryCatalog';
 import { effArrival, effDeparture } from './sailings';
 import { fmtDate, fmtDateTime } from './time';
@@ -90,7 +90,10 @@ export function sailRows(sailings: Sailing[], loads: Pick<Load, 'code' | 'sailin
 
 export interface Reach { line: SailLine; untilIso: string }
 
-/** Zasięg rozkładów w bazie: ostatnie odejście (bez odwołanych) na armatora — kolejność `catalogOperators` (seed + RPC; DP-181 / F7 #755). */
+/**
+ * Zasięg rozkładów w bazie: ostatnie odejście (bez odwołanych) na armatora.
+ * Kolejność jak makieta E30 / Topbar (F7 #755 r3): Stena, Polferries, potem nowi z `catalogOperators` (bez LEGACY).
+ */
 export function reachOf(sailings: Sailing[]): Reach[] {
   const last = new Map<SailLine, string>();
   for (const s of sailings) {
@@ -100,7 +103,15 @@ export function reachOf(sailings: Sailing[]): Reach[] {
     const cur = last.get(line);
     if (!cur || Date.parse(dep) > Date.parse(cur)) last.set(line, dep);
   }
-  return catalogOperators().flatMap(({ code: line }) => (last.has(line) ? [{ line, untilIso: last.get(line)! }] : []));
+  const pick = (line: SailLine): Reach[] => (last.has(line) ? [{ line, untilIso: last.get(line)! }] : []);
+  /* LEGACY w UI: STENA przed POLFERRIES (makieta E30 pkt 7); seed katalogu ma odwrotnie. */
+  const legacyOrder: readonly FerryOperator[] = ['STENA', 'POLFERRIES'];
+  return [
+    ...legacyOrder.flatMap(pick),
+    ...catalogOperators()
+      .filter(({ code }) => !LEGACY_OPERATORS.includes(code))
+      .flatMap(({ code }) => pick(code)),
+  ];
 }
 
 /** Klucz tekstu źródła (E30: „Stena Line” zamiast „sail_src_STENA”). */

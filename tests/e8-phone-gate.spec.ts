@@ -1212,8 +1212,7 @@ test.describe('wyglad/P7-d Rejsy (E30 pkt 7)', () => {
     expect(await routes()).not.toContain('KAA → GDY');
     await expect(page.locator('[data-sailings]')).not.toContainText('sail_src_');
     await expect(page.locator('[data-sailings]')).not.toContainText('sv_');
-    /* DP-181 / F7 #755: kolejność catalogOperators (POLFERRIES, STENA), nie MATCH_ORDER */
-    await expect(page.locator('[data-sail-reach]')).toHaveText(/^Rozkład w bazie: Polferries do \d\d\.\d\d\.\d{4}, Stena Line do \d\d\.\d\d\.\d{4}\.$/);
+    await expect(page.locator('[data-sail-reach]')).toHaveText(/^Rozkład w bazie: Stena Line do \d\d\.\d\d\.\d{4}, Polferries do \d\d\.\d\d\.\d{4}\.$/);
     /* „Przyszłe” wyłączone pokazuje też minione rejsy */
     const futureN = await page.locator('[data-sailings] tbody tr[data-sailing]').count();
     await page.locator('[data-sail-future]').click();

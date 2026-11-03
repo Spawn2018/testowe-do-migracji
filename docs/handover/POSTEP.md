@@ -1,4 +1,11 @@
 
+## 2026-11-03 08:35 — DP-181 F7 #755 r3
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie.
+- Scalanie: brak F7 „gotowe” (#755 — niegotowe r3 @ `b40d7083`). Bez push na main.
+- **Krok F7 r3:** cofnięty wzorzec e8 (makieta E30); `reachOf` → STENA, POLFERRIES, potem nowi z katalogu; `crossingLine` → najpierw `source`, potem `named` + test sprzeczny; `sail-view` z powrotem Stena→Polferries. Vitest 34 (4 pliki) + awizacja/bn9-c6.
+- **Dalej:** push → CI → F7. Po F7: DP-184.
+
 ## 2026-11-03 08:25 — DP-181 CI visual telefon
 
 - Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie.

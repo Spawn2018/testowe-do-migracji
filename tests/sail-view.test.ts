@@ -61,12 +61,12 @@ describe('E30 pkt 7: Rejsy', () => {
     }
     expect(sv('pl', sourceKey('STENA'))).toBe('Stena Line');
   });
-  it('zasięg rozkładów: catalogOperators (Polferries, Stena); bez odwołanych; rok zawsze (właściciel 16.10.2026)', () => {
-    /* DP-181 / F7 #755: kolejność seeda (POLFERRIES, STENA), nie OPERATOR_MATCH_ORDER */
+  it('zasięg rozkładów: Stena, potem Polferries (makieta E30); bez odwołanych; rok zawsze (właściciel 16.10.2026)', () => {
+    /* DP-181 / F7 #755 r3: kolejność jak makieta / Topbar — STENA, POLFERRIES, potem nowi z katalogu */
     const r = reachOf(all);
-    expect(r.map((x) => x.line)).toEqual(['POLFERRIES', 'STENA']);
-    expect(sailDay(r[0].untilIso)).toBe('09.01.2027');
-    expect(sailDay(r[1].untilIso)).toBe('18.10.2026');
+    expect(r.map((x) => x.line)).toEqual(['STENA', 'POLFERRIES']);
+    expect(sailDay(r[0].untilIso)).toBe('18.10.2026');
+    expect(sailDay(r[1].untilIso)).toBe('09.01.2027');
   });
   it('godziny po polsku: „08.10.2026, 08:00” — rok zawsze, także w bieżącym roku', () => {
     expect(sailTime('2026-10-08T06:00:00Z')).toBe('08.10.2026, 08:00');
