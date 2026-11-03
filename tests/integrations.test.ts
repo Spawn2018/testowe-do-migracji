@@ -72,8 +72,21 @@ class MemStore implements SyncStore {
     return hit.length;
   }
   async latestPositions() { return this.positions; }
-  async lastRun(job: string) { return this.runs.filter((r) => r.job === job).at(-1)?.at ?? null; }
-  async recordRun(job: string, ok: boolean, result: JobResult) { this.runs.push({ job, at: NOW.toISOString(), ok, result }); }
+  /** DP-187: kotwica = started_at ostatniego niepominiętego; skipped nie przesuwa. */
+  async lastRun(job: string) {
+    for (let i = this.runs.length - 1; i >= 0; i--) {
+      const r = this.runs[i]!;
+      if (r.job !== job) continue;
+      if (r.result?.skipped) continue;
+      const started = r.result?.started_at;
+      if (typeof started === 'string' && !Number.isNaN(Date.parse(started))) return started;
+      return r.at;
+    }
+    return null;
+  }
+  async recordRun(job: string, ok: boolean, result: JobResult) {
+    this.runs.push({ job, at: result.started_at ?? NOW.toISOString(), ok, result });
+  }
   vesselPositions: {
     vesselId: string; lat: number; lon: number; observedAt: string;
     source?: string; etaAt?: string | null; sogKn?: number | null;
@@ -372,10 +385,34 @@ describe('ferry-status — komunikaty (prawdziwa strona 26.09.2026)', () => {
     await runJob('ferry-status', deps(st, { 'komunikaty-kursowania': STATUS }).d);
     const early = await runJob('ferry-status', deps(st, { 'komunikaty-kursowania': STATUS }, {}, new Date(NOW.getTime() + 5 * 60000)).d);
     expect(early.skipped).toBe(true);
+    expect(early.observations?.skipped_gap_min).toBeTruthy();
     const later = await runJob('ferry-status', deps(st, { 'komunikaty-kursowania': STATUS }, {}, new Date(NOW.getTime() + 15 * 60000)).d);
     expect(later.skipped).toBeUndefined();
     // #421: po zmianie statusu odświeżany jest też ferry-schedule (zapis przed recordRun statusu).
-    expect(st.runs.map((r) => r.job)).toEqual(['ferry-schedule', 'ferry-status', 'ferry-status']);
+    // DP-187: pominięcie też w dzienniku (skipped), ale lastRun go pomija.
+    expect(st.runs.map((r) => r.job)).toEqual(['ferry-schedule', 'ferry-status', 'ferry-status', 'ferry-status']);
+    expect(st.runs.filter((r) => r.job === 'ferry-status' && r.result.skipped)).toHaveLength(1);
+  });
+  it('DP-187: przebieg 90 s nie pomija następnego crona (kotwica started_at, nie ran_at)', async () => {
+    const st = new MemStore();
+    const start = NOW;
+    const finished = new Date(start.getTime() + 90_000);
+    // ferry-status MIN=10: od ran_at (=start+90s) przy cronie +10 min gap=8.5 < 9 → skip;
+    // od started_at gap=10 ≥ 9 → nie pomija.
+    st.runs.push({
+      job: 'ferry-status',
+      at: finished.toISOString(),
+      ok: true,
+      result: {
+        job: 'ferry-status', mode: 'LIVE', ok: true,
+        started_at: start.toISOString(),
+      },
+    });
+    const atCron = new Date(start.getTime() + 10 * 60_000);
+    expect((atCron.getTime() - finished.getTime()) / 60_000).toBeLessThan(9);
+    const r = await runJob('ferry-status', deps(st, { 'komunikaty-kursowania': STATUS }, {}, atCron).d);
+    expect(r.skipped).toBeUndefined();
+    expect(r.started_at).toBe(atCron.toISOString());
   });
 });
 

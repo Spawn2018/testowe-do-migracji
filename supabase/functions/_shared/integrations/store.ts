@@ -516,9 +516,24 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
       const updated = must(await sb.from('risk_signals').update({ resolved_at: new Date().toISOString() }).in('id', drop).is('resolved_at', null).select('id'), 'risk_signals resolve stale') as unknown[];
       return updated.length;
     },
+    /**
+     * DP-187: kotwica odstępu = `result.started_at` ostatniego niepominiętego przebiegu
+     * (fallback: `ran_at`). Pominięcia `skipped` nie przesuwają kotwicy.
+     */
     async lastRun(job: string) {
-      const r = must(await sb.from('integration_runs').select('ran_at').eq('job', job).order('ran_at', { ascending: false }).limit(1), 'integration_runs') as { ran_at: string }[];
-      return r[0]?.ran_at ?? null;
+      const r = must(
+        await sb.from('integration_runs').select('ran_at, result').eq('job', job)
+          .order('ran_at', { ascending: false }).limit(20),
+        'integration_runs',
+      ) as { ran_at: string; result: Record<string, unknown> | null }[];
+      for (const row of r) {
+        const result = row.result ?? {};
+        if (result.skipped === true || result.skipped === 'true') continue;
+        const started = result.started_at;
+        if (typeof started === 'string' && !Number.isNaN(Date.parse(started))) return started;
+        return row.ran_at;
+      }
+      return null;
     },
     /** F7 #689 R1-B3: ostatnie N wyników (od najnowszego) — streak Tallink Alert bez pamięci modułu. */
     async recentJobResults(job: string, limit: number) {

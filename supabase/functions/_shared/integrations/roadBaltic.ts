@@ -1586,6 +1586,31 @@ export function balticFeedShapeObs(
   return `${httpStatus}:${ct}:${Math.max(0, Math.floor(bytes))}:${klass}`;
 }
 
+/**
+ * DP-188: treść pola `error` z krótkiego JSON (≤ maxBytes) — do 80 znaków.
+ * Bez nagłówków, bez klucza API; tylko gdy ciało to obiekt JSON z `error`.
+ */
+export function balticJsonErrorSnippet(
+  text: string,
+  maxBytes = 200,
+  maxLen = 80,
+): string | null {
+  const raw = String(text ?? '');
+  if (raw.length === 0 || raw.length > maxBytes) return null;
+  try {
+    const json = JSON.parse(raw) as unknown;
+    if (!json || typeof json !== 'object' || Array.isArray(json)) return null;
+    const err = (json as { error?: unknown }).error;
+    if (err == null) return null;
+    const s = typeof err === 'string' ? err : JSON.stringify(err);
+    const trimmed = s.trim();
+    if (!trimmed) return null;
+    return trimmed.length > maxLen ? trimmed.slice(0, maxLen) : trimmed;
+  } catch {
+    return null;
+  }
+}
+
 const LV_META_URL_KEYS = [
   'field_source_url', 'source_url', 'download_url', 'downloadUrl',
   'url', 'href', 'uri', 'link',

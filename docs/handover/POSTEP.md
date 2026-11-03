@@ -1,4 +1,11 @@
 
+## 2026-11-03 10:30 — #760 SCALONE; start DP-187/188 (#756)
+
+- Skrzynka: #550 WSTRZYMANE; #716/#718/#720 w planie. Bez nowego `pilne`. #756/#762 (Spawn2018) wpisane §4.
+- Scalanie: **#760 SCALONE** `d378b0ce` (DP-184 / **0387**; F7 gotowe @ `b028bf0a`, CI unit/db/visual ✔). `deploy-main` robi resztę. Bez push na main.
+- **Krok DP-187/188** (`pakiet/dp-187-188-ee-gap-lv-err`): `runJob` — kotwica `started_at`, pominięcie w dzienniku (`skipped_gap_min`), `lastRun` pomija skipped; LV `lv_*_err` z JSON `error` (max 3). Testy: integrations DP-187 + bn6-road-lv DP-188. #762 pakiety C1–C5 w PLAN.
+- **Dalej:** push PR → CI → F7. Po F7: C1 (#762).
+
 ## 2026-11-03 10:00 — #761 SCALONE; merge main do #760 (DP-184)
 
 - Skrzynka: #550 WSTRZYMANE; #716/#718/#720 w planie. Bez nowego `pilne`. #757 zamknięte po #761.

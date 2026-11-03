@@ -1274,9 +1274,11 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-181 | Cursor | `byOperator` po `catalogOperators()`; `isBeforePlannedLoad` po trasie; F7 #755 r3: `reachOf` STENA→POLFERRIES→nowi (makieta E30); `crossingLine` source przed named | F7 #750 / #755 | BN8 / `src/lib` | SCALONE (#755 `d2842862`) |
 | DP-182 | koordynator | armator startowy awizacji po wczytaniu rozkładu | F7 #750 / #751 | BN9-c6 / awizacja | SCALONE (#751 `6c0af746`) |
 | DP-183 | Cursor | 3 legi HERE odrzucone (FI-HEL/FI-VUO/SE-STO): powód w ostrzeżeniu (km/zakres); `min_km`/`max_km` ±10 %; clear `retry_after` → następny cron | #718 odbiór 03.11 / F7 #749 | BN7 / HERE | SCALONE (#752 `ea949a23` / **0386**) |
-| DP-184 | Cursor | po BN8b: `here_road_geometry.geom` (+ `st_simplify` ~20 m) + `n_points`; `here_store_road` / `purge_here_road_geometry` (D-81); świeżość bez `jsonb_array_length`; test 10 km obok `SE_E4_STO`/`SE_E18_KPS` | F7 #749 r3 | BN8b / HERE | W TOKU (#760 / **0387**; F7 r1 + merge main; status **633**) |
+| DP-184 | Cursor | po BN8b: `here_road_geometry.geom` (+ `st_simplify` ~20 m) + `n_points`; `here_store_road` / `purge_here_road_geometry` (D-81); świeżość bez `jsonb_array_length`; test 10 km obok `SE_E4_STO`/`SE_E18_KPS` | F7 #749 r3 | BN8b / HERE | SCALONE (#760 `d378b0ce` / **0387**) |
 | DP-185 | koordynator | uproszczenie awizacji (`picked ?? startOperator`), dociąganie `sailingId`, 2 testy | F7 #751 | BN9-c6 / awizacja | w kolejce (koordynator) |
-| DP-186 | Cursor | EE RESTRICTIONS/SAFETY: kopia w bazie (ostatnia dobra lista + data), gdy `ee_*_source=cache` nie widać w 24 h albo `complete`=0 przez timeouty | F7 #753 (nieblokujące) | BN6 / EE | w kolejce (po odbiorze 24 h) |
+| DP-186 | Cursor | EE RESTRICTIONS/SAFETY: kopia w bazie (ostatnia dobra lista + data), gdy `ee_*_source=cache` nie widać w 24 h albo `complete`=0 przez timeouty | F7 #753 (nieblokujące) | BN6 / EE | w kolejce (C5 — decyzja 04.11 ~07:00 po 24 h #753) |
+| DP-187 | Cursor | `runJob`: odstęp od `started_at` (nie `ran_at`); pominięcie → dziennik `skipped_gap_min`; lastRun pomija skipped | #756 odbiór #753 | BN6 / jobs | W TOKU (#756) |
+| DP-188 | Cursor | LV: `lv_<kod>_err` = treść JSON `error` (≤80 znaków, ciało ≤200 B; max 3 kody); bez zmiany URL/proxy | #756 odbiór #753 | BN6 / LV | W TOKU (#756) |
 | DP-189 | Cursor | Ryzyka › Drogi LT/LV/EE/FI zawsze widoczne (jak SE); `onRoute` = oznaczenie + kolejność, nie filtr; kolejność makiety LT→LV→EE→FI | #757 / właściciel 03.11 08:43 | BN9-c4 / front | SCALONE (#761 `a9665811`) |
 | DP-190 | Cursor | Jednorazowe pobranie HERE FI-HEL / FI-VUO / SE-STO (zamiast crona 04.11 04:15Z); bez migracji | #757 / właściciel 03.11 | BN7 / HERE | DONE (PROD 03.11 ~08:09Z; 11151/10878/12423 pkt; routing 7→10; spend 0) |
 | DP-191 | koordynator | Usunięty dopisek „Trasa orientacyjna (HERE…)” z map (Mapa/Kokpit/karta) | właściciel 03.11 08:46 / #758 | mapa / front | SCALONE (#758 `d3db3e49`) |
@@ -1430,7 +1432,21 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 Źródło: #720 (Spawn2018, `dla-cursora`; 02.11 ~02:10). Spec w treści: BN8a (statusy, mismatch, overdue, `process_position`, `eta_record_segment_observations`, blokada fałszywego OFF_CORRIDOR, `loads.ferry_route`); BN8b (`compute_load_eta` + OFF_CORRIDOR z korytarzy BN7). Front `src/lib` Cursor; ekrany BN9-c6 — koordynator. DP-143/DP-144 przy BN8.
 **Decyzja 82-C** (właściciel 02.11 00:21, #720): czas zgłoszenia w porcie EE (TLL/MUU/PLD) = **2 h** jako założenie (`PORT_CHECKIN_TLL`/`_MUU`/`_PLD`, `source='założenie — decyzja 82-C…'`); front awizacji wyrównać do tego samego parametru (dziś 14 h) w BN8 `src/lib`.
 **F7 #738 N6/N7 → BN8 (nie BN7):** po 0381 ETA bałtyckie nadal niepełne w `compute_load_eta` (postęp PL po `PL_ROAD`, PORT_OUT z geofence Gdańska, korytarz SE `SE_E4`); PORT_CHECKIN prod 3 h vs 2 h EE — domknięcie w BN8b.
-1. ~~**BN8a**~~ — SCALONE (#741 `f4c4e2ab` / **0382**; F7 r6): `loads.ferry_route` + `load_route_family`; kraje SE/FI; OFF_CORRIDOR tylko core; mismatch PL/EE; `eta_record` po trasie. ~~**DP-171/172**~~ → ~~**`cron_fetch=true`**~~ (#746). ~~**front `src/lib`**~~ SCALONE (#747 `4ce85732`; F7 @ `9fcd6fe2`): 82-C 2 h, `clearanceHoursForRoute`, `altProposal`/`CrossingMap`, DP-143/144. ~~**DP-178**~~ SCALONE (#748 `462af010`). ~~**BN9-c6**~~ SCALONE (#750 `db62c9b9`; DP-175/177). ~~**BN8b**~~ SCALONE (#749 `3b09e130` / **0385**; F7 gotowe @ `7a955bb4`): OFF_CORRIDOR HERE BN7 + `compute_load_eta` bałtyckie; status **629**. ~~**DP-183**~~ SCALONE (#752 `ea949a23` / **0386**). ~~**DP-180**~~ SCALONE (#753 `12beba4b`). ~~**DP-181**~~ SCALONE (#755 `d2842862`). ~~**DP-191**~~ SCALONE (#758). ~~**DP-192**~~ SCALONE (#759). ~~**DP-189/190**~~ SCALONE (#761 `a9665811`; DP-190 DONE PROD). **Dalej:** DP-184 #760 (F7 r1 + merge main → CI→F7; status **633**); DP-186 po odbiorze EE 24 h.
+1. ~~**BN8a**~~ — SCALONE (#741 `f4c4e2ab` / **0382**; F7 r6): `loads.ferry_route` + `load_route_family`; kraje SE/FI; OFF_CORRIDOR tylko core; mismatch PL/EE; `eta_record` po trasie. ~~**DP-171/172**~~ → ~~**`cron_fetch=true`**~~ (#746). ~~**front `src/lib`**~~ SCALONE (#747 `4ce85732`; F7 @ `9fcd6fe2`): 82-C 2 h, `clearanceHoursForRoute`, `altProposal`/`CrossingMap`, DP-143/144. ~~**DP-178**~~ SCALONE (#748 `462af010`). ~~**BN9-c6**~~ SCALONE (#750 `db62c9b9`; DP-175/177). ~~**BN8b**~~ SCALONE (#749 `3b09e130` / **0385**; F7 gotowe @ `7a955bb4`): OFF_CORRIDOR HERE BN7 + `compute_load_eta` bałtyckie; status **629**. ~~**DP-183**~~ SCALONE (#752 `ea949a23` / **0386**). ~~**DP-180**~~ SCALONE (#753 `12beba4b`). ~~**DP-181**~~ SCALONE (#755 `d2842862`). ~~**DP-191**~~ SCALONE (#758). ~~**DP-192**~~ SCALONE (#759). ~~**DP-189/190**~~ SCALONE (#761 `a9665811`; DP-190 DONE PROD). ~~**DP-184**~~ SCALONE (#760 `d378b0ce` / **0387**). **Dalej:** DP-187/188 (#756); potem pakiety C1–C5 (#762); DP-186 = C5 po 24 h #753.
+
+### #762 · Kolejka drobnych poprawek Cursora — pakiety C1–C5 (do wydania 1.0)
+Źródło: #762 (Spawn2018; 03.11). Po #760 → #756 (DP-187/188) → C1…. Koordynator: pakiety DP-A/B/C (front) — nie brać.
+1. **C1 — Korytarz bałtycki:** DP-179, 143, 144, 146, 152–158 (LT/LV/EE/FI etykiety, szum FI, oblodzenie LT; przed BN10).
+2. **C2 — telematyka / ETA:** DP-119, 120, 121, 123, 124, 126, 129, 132, 140 (140 = BN8a — sprawdzić aktualność).
+3. **C3 — stare pozycje backendu:** DP-2, 10, 12, 22, 24, 29–32, 38–40, 43, 46, 47, 53–58 (nieaktualne → zamknąć z uzasadnieniem w PLAN).
+4. **C4 — reszta:** DP-69, 70, 81–83, 90–93, 97, 99–103, 105–109, 111, 112.
+5. **C5 — warunkowe:** DP-186 (decyzja 04.11 ~07:00 po 24 h odbioru #753).
+Cel: C1–C4 przed bramą #588 i wydaniem 1.0 (≈ 20–21.11). Pozycja >~50 linii / nowa tabela → osobne zgłoszenie.
+
+### #756 · DP-187/188 — road-ee gap + LV error body — W TOKU
+Źródło: #756 (Spawn2018; odbiór #753). Jednym PR bez migracji.
+1. **DP-187:** `runJob` liczy odstęp od `started_at`; pominięcie w `integration_runs` (`skipped_gap_min`); `lastRun` pomija skipped.
+2. **DP-188:** `lv_<kod>_err` z JSON `error` (≤80 znaków, ciało ≤200 B; max 3 kody).
 
 ### #687 · DP-114 Tallink HEL–TLL 404 + niepełna pula Alert — SCALONE (`5fc7d4a0` / PR #689)
 Źródło: #687 (Spawn2018, `dla-cursora`). Po #683 prod: `TALLINK_HEL_TLL_URL` `/en/helsinki-tallinn` → HTTP 404; reguła 72 traci połowę puli.
@@ -2593,6 +2609,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 03.11.2026 09:15 | DP-190 DONE (HERE FI-HEL/FI-VUO/SE-STO); start DP-189 front (sekcje zawsze) | pętla / #757 |
 | 03.11.2026 09:45 | #759 SCALONE `5f549897` (DP-192); #758 SCALONE `d3db3e49` (DP-191); DP-184 F7 r1 (bash + geom fixtures + negatywne; status **633**) | pętla |
 | 03.11.2026 10:00 | #761 SCALONE `a9665811` (DP-189; F7 @ 09128235); merge main do #760 (konflikt PLAN/POSTEP) → CI→F7 | pętla / DP-184 |
+| 03.11.2026 10:30 | #760 SCALONE `d378b0ce` / **0387** (F7 @ b028bf0a); start DP-187/188 (#756); #762 C1–C5 wpisane §4 | pętla / DP-187 |
 | 31.10.2026 — | Decyzja 73: TLLA-HEL ETA−150 min / HELA-TLL ETD+160 min (fixture Cargo; nocny 165 min OK). Decyzja 74: `sailings.source_ref` 0359; Digitraffic `digitraffic:portcall:<id>:<route>`; HTML/RECZNIE/DANE_STARTOWE wygrywają; #685-b RPC zastępuje digitraffic:% w ±3 h | F7 #688 r1–r4 |
 | 31.10.2026 — | F7 #683 nieblokujące (osobna poprawka): Scheduler grudzień + „on 2 January” → rok bieżący, ciche wygaśnięcie; Alert INFO bez ryzyka/historii — świadomie | F7 #683 r7 |
 | 31.10.2026 — | F7 #683 r8 nieblokujące (osobno): Alert poza Schedulerem obok Schedulera; sprzeczne bloki (resume→cofnięcie auto); rok przy długim oknie Schedulera; mutanty M10/M15–M17/M22 świadomie bez testów | F7 #683 r8 |

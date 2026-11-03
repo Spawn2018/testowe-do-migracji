@@ -18,6 +18,7 @@ import {
   balticNetWarning,
   balticSlowdownMult,
   balticUrlKind,
+  balticJsonErrorSnippet,
   balticWarnHost,
   classifyBalticNetError,
   dedupeLvSlippery,
@@ -383,6 +384,29 @@ describe('BN6 runRoadLv F7 #730', () => {
     /* lv_shape_roadworks = kształt sekretu URL (DP-170); lv_roadworks_shape = odpowiedź. */
     expect(r.observations?.lv_shape_roadworks).toBe('https');
     expect(r.observations?.lv_roadworks_shape).not.toBe(r.observations?.lv_shape_roadworks);
+  });
+
+  it('DP-188: lv_*_err z JSON {error} (≤200 B), max 3 kody; bez treści przy HTML', async () => {
+    expect(balticJsonErrorSnippet('{"error":"subscription inactive"}')).toBe('subscription inactive');
+    expect(balticJsonErrorSnippet('{"error":"x"}'.padEnd(201, 'y'))).toBeNull();
+    const st = new MemStore();
+    const errBody = '{"error":"gateway: bad subscription key"}';
+    expect(errBody.length).toBeLessThanOrEqual(200);
+    const r = await runRoadLv(deps(st, {
+      'nap.example/lv/roadworks': errBody,
+      'nap.example/lv/slippery-wm': errBody,
+      'nap.example/lv/slippery-ti': errBody,
+      'nap.example/lv/weight-dim': '<!DOCTYPE html><html>SPA</html>',
+    }, MOCK_ENV).d);
+    expect(r.observations?.fetched_ok).toBe('0');
+    expect(String(r.observations?.lv_roadworks_shape ?? '')).toMatch(/json-obiekt:error/);
+    expect(r.observations?.lv_roadworks_err).toBe('gateway: bad subscription key');
+    expect(r.observations?.lv_slippery_wm_err).toBe('gateway: bad subscription key');
+    expect(r.observations?.lv_slippery_ti_err).toBe('gateway: bad subscription key');
+    /* 4. kod bez JSON error → brak lv_weight_dim_err; max 3 i tak. */
+    expect(r.observations?.lv_weight_dim_err).toBeUndefined();
+    const errKeys = Object.keys(r.observations ?? {}).filter((k) => k.endsWith('_err'));
+    expect(errKeys.length).toBeLessThanOrEqual(3);
   });
 
   it('N3: brak sekretów → ok, configured:0, bez SOURCE_DOWN', async () => {
