@@ -796,6 +796,7 @@ describe('ferry-weather — II-8 FMI+DMI+SMHI', () => {
   const FMI_GUST = fx('fmi-harmonie-gust-2026-10-02.xml');
   const FMI_NAN = fx('fmi-wam-nan-offgrid.xml');
   const FMI_HORIZON = fx('fmi-wam-horizon-nan.xml');
+  const FMI_COASTAL = fx('fmi-wam-coastal-short.xml');
   const DMI = fx('dmi-wam-nsb-2026-10-02.json');
   const SMHI = fx('smhi-ocobs-knolls-latest.json');
   const SNOW1G = fx('smhi-snow1g-gulf-mid.json');
@@ -924,6 +925,33 @@ describe('ferry-weather — II-8 FMI+DMI+SMHI', () => {
     const dmiCalls = calls.filter((u) => u.includes('forecastedr/collections/wam_nsb'));
     expect(dmiCalls.length).toBeGreaterThan(0);
     expect(dmiCalls.length).toBeLessThanOrEqual(5);
+  });
+
+  it('DP-152: przybrzeżny krótki horyzont nie skraca endtime DMI (maksimum po punktach)', async () => {
+    const st = new MemStore();
+    const { d, calls } = deps(st, {
+      'forecast::harmonie': FMI_GUST,
+      'forecastedr/collections/wam_nsb': DMI,
+      'ocobs.smhi.se': SMHI,
+    }, {}, WX_NOW);
+    const inner = d.fetch!;
+    d.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      if (url.includes('forecast::wam') && url.includes('54.4')) {
+        return new Response(FMI_COASTAL, { status: 200 });
+      }
+      if (url.includes('forecast::wam')) {
+        return new Response(FMI_WAM, { status: 200 });
+      }
+      return inner(input, init);
+    }) as typeof fetch;
+    const r = await runFerryWeather(d);
+    expect(r.ok).toBe(true);
+    const dmiCalls = calls.filter((u) => u.includes('forecastedr/collections/wam_nsb'));
+    expect(dmiCalls.length).toBeGreaterThan(0);
+    /* Coastal lastValid = 05:00; MID = 12:00. Min skracałby do 05:00; max zostawia ≥12:00. */
+    expect(dmiCalls.every((u) => u.includes('2026-10-02T12%3A00%3A00Z') || u.includes('2026-10-02T12:00:00Z'))).toBe(true);
+    expect(dmiCalls.some((u) => /2026-10-02T05(%3A|:)00/.test(u) && !/2026-10-02T12/.test(u))).toBe(false);
   });
 
   it('BN5 cz.3: EEPLA ograniczenie → FERRY_ICE na PLD-KPS; GDN-NYN bez; gzip + Digitraffic-User', async () => {

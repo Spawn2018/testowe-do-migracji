@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- DP-152: przybrzeżny — ważne tylko do 05:00, potem NaN (krótszy niż MID do 12:00). -->
+<wfs:FeatureCollection
+    timeStamp="2026-10-02T04:00:00Z"
+    numberMatched="1"
+    numberReturned="1"
+    xmlns:wfs="http://www.opengis.net/wfs/2.0"
+    xmlns:gml="http://www.opengis.net/gml/3.2"
+    xmlns:omso="http://inspire.ec.europa.eu/schemas/omso/3.0"
+    xmlns:wml2="http://www.opengis.net/waterml/2.0">
+    <wfs:member>
+        <omso:PointTimeSeriesObservation gml:id="WFS-coastal-SigWaveHeight">
+            <om:result xmlns:om="http://www.opengis.net/om/2.0">
+                <wml2:MeasurementTimeseries gml:id="mts-coastal-SigWaveHeight">
+                    <wml2:point>
+                        <wml2:MeasurementTVP>
+                            <wml2:time>2026-10-02T04:00:00Z</wml2:time>
+                            <wml2:value>1.10</wml2:value>
+                        </wml2:MeasurementTVP>
+                    </wml2:point>
+                    <wml2:point>
+                        <wml2:MeasurementTVP>
+                            <wml2:time>2026-10-02T05:00:00Z</wml2:time>
+                            <wml2:value>1.15</wml2:value>
+                        </wml2:MeasurementTVP>
+                    </wml2:point>
+                    <wml2:point>
+                        <wml2:MeasurementTVP>
+                            <wml2:time>2026-10-02T06:00:00Z</wml2:time>
+                            <wml2:value>NaN</wml2:value>
+                        </wml2:MeasurementTVP>
+                    </wml2:point>
+                    <wml2:point>
+                        <wml2:MeasurementTVP>
+                            <wml2:time>2026-10-02T07:00:00Z</wml2:time>
+                            <wml2:value>nan</wml2:value>
+                        </wml2:MeasurementTVP>
+                    </wml2:point>
+                </wml2:MeasurementTimeseries>
+            </om:result>
+        </omso:PointTimeSeriesObservation>
+    </wfs:member>
+</wfs:FeatureCollection>

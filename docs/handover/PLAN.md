@@ -1238,7 +1238,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-139 | Cursor | MMSI/IMO Victoria I + Sirena Seaways (null w 0347); alias AIS „VICTORIA 1”; analiza floty 0347 (brak dalszych null MMSI) | F7 #715 / F7 #719 | BN4 / vessels | SCALONE #719 `eddc4bae` / **0374** |
 | DP-140 | Cursor | Analiza 28 przeterminowanych rejsów (przypłynięcie > 6 h, status ZAPLANOWANY/OPOZNIONY/W_REJSIE): brak potwierdzenia vs odbyte; wpływ na najbliższy prom/ETA/mapę; propozycja zasady zgodnej z 61b (bez auto-zamykania) | F7 #719 / #713 | BN4 / sailings | w kolejce (nie blokuje BN5; analiza → komentarz / BN8a) |
 | DP-141 | koordynator | Namiar GDN-NYN (BN9-c2) | #717 | BN9-c2 | SCALONE #717 `ae308fce` |
-| DP-142 | Cursor | PDF ferry (osobno od BN9-c2) | #717 | ferry / PDF | w kolejce |
+| DP-142 | Cursor | PDF ferry (osobno od BN9-c2) | #717 / #767 | ferry / PDF | zamknięte nieaktualne (#767: PDF transportu usunięty w #547) |
 | DP-143 | Cursor | Typy frontu: `GeofenceCountry` bez EE/FI; `Geofence.route` jako `FerryOperator` choć zapisane kody tras — ryzyko ekranu Strefy | #720 §6 | BN8 | DONE (BN8 front: EE/FI + route kod/rodzina) |
 | DP-144 | Cursor | `FerryOperator` zamknięta lista — armator tylko w bazie nie trafia do Kokpitu/awizacji (`src/lib`) | #720 §6 | BN8 / front | DONE (BN8 front: `catalogOperators` / RPC) |
 | DP-145 | Cursor | `ROUTE_TO_FAMILY` w kodzie; job `ferry-weather` powinien brać `family_key` ze słownika `ferry_routes` (#714 §2) | F7 #721 / #722 | BN5 | SCALONE #722 `52f370ef` (`ferryRouteFamilies` + zapas w kodzie) |
@@ -1248,9 +1248,9 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-149 | Cursor | Ostrzeżenie „NaN poza siatką” tylko gdy wszystkie NaN; przytnij okno do horyzontu modelu | F7 #724 / #714 | BN5 / ferry-weather | SCALONE #725 `571aff01` |
 | DP-150 | Cursor | DMI: 1 punkt/korytarz, szeregowo z odstępem, cache 3 h, krótszy timeout | F7 #724 / #714 | BN5 / ferry-weather | SCALONE #725 (z DP-149) |
 | DP-151 | Cursor | `fetchMarineConditions` — `detail` w `select` (status / warnings / ice) | F7 #724 / #714 | BN5 / front | SCALONE #725 (z DP-149) |
-| DP-152 | Cursor | `fHorizonTo` bierze najkrótszy horyzont ze wszystkich punktów; punkt przybrzeżny skraca okno DMI/`window_to` wszystkim — licz per korytarz albo maksimum ważnych | F7 #725 | BN5 / ferry-weather | w kolejce (z BN6 albo osobno) |
-| DP-155 | Cursor | ETA: `ROAD_FI` → `slowdown_se` przy `FI_E75` (0385); test ×1.5 FI dłuższy / GDN bez zmian; `yard_drive_quote` bez zmian (tylko SREM/BODEN→PL/SE_E4) | F7 #726 / C1 #762 | BN8b / ETA | W TOKU (#766 C1) |
-| DP-156 | Cursor | `notify_event_key`: ROAD_LT/LV/EE/FI — z `load_id` jak SE; bez `load_id` tylko HIGH/CRIT → `risk_crit`; HIGH→MEDIUM zamyka dzwonek (F7 #766 r2 / **0388**) | F7 #726 / C1 #762 | BN6 / notify | W TOKU (#766 C1 / **0388**) |
+| DP-152 | Cursor | `fHorizonTo` = maksimum lastValid po punktach (nie min) — przybrzeżny nie skraca DMI/`window_to` | F7 #725 | BN5 / ferry-weather | W TOKU (#768; CI ✔; zod 4.6.7 po F7 → ponowne F7) |
+| DP-155 | Cursor | ETA: `ROAD_FI` → `slowdown_se` przy `FI_E75` (0385); test ×1.5 FI dłuższy / GDN bez zmian; `yard_drive_quote` bez zmian (tylko SREM/BODEN→PL/SE_E4) | F7 #726 / C1 #762 | BN8b / ETA | SCALONE (#766 `272e0afc` / **0388**) |
+| DP-156 | Cursor | `notify_event_key`: ROAD_LT/LV/EE/FI — z `load_id` jak SE; bez `load_id` tylko HIGH/CRIT → `risk_crit`; HIGH→MEDIUM zamyka dzwonek (F7 #766 r2 / **0388**) | F7 #726 / C1 #762 | BN6 / notify | SCALONE (#766 `272e0afc` / **0388**) |
 | DP-157 | Cursor | road-fi: (a) zwykłe Tietyö bez zamknięcia/objazdu/limitu → LOW; (b) do BN7 filtr numerów dróg korytarza (VT4/E75, VT29/E8, Kehä III 50, Vuosaaren 103 + porty); (c) jednorazowo resolve 146 ROAD_FI poza filtrem (przez job, nie ręcznie) | F7 #727 | BN6 / road-fi | DONE #732 |
 | DP-158 | Cursor | ROAD_FI tytuły: polska etykieta typu (Tietyö→roboty drogowe, Liikennetiedote→komunikat, painorajoitus→limit masy) w params/title_key; surowy fiński w detail | F7 #727 | BN6 / road-fi | DONE #732 |
 | DP-159 | Cursor | `bn3-tallink-alert`: `finalizeTallinkAlertsForStatus` bez `NOW` → od 02.11 wall-clock psuje decyzję 72 (08:00 Tallinn) | pre-push #727 | BN3 / testy | SCALONE w #727 |
@@ -1343,7 +1343,8 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-64 | Cursor | asercja: `p7.ts` i `sail7.ts` importują `SAILINGS_EMPTY_TEXT` | F7 #678 | po #667 | w kolejce |
 | DP-65 | Cursor | test oxlint w `dp-front-5.jsdom.test.ts` ma padać, gdy oxlint się nie uruchomi | F7 #678 | po #667 | w kolejce |
 | DP-66 | Cursor | `unit.yml`: przypiąć wersję hunspell-pl, `--no-install-recommends` | F7 #678 | po #667 | w kolejce |
-| DP-67 | koordynator | DP-48 zrzutem visual 1440/390 px | F7 #678 | wyglad | w kolejce |
+| DP-67 | koordynator | DP-48 zrzutem visual 1440/390 px | F7 #678 / #767 | wyglad | SCALONE (#767 `b005f5e1`) |
+| DP-79 | koordynator | jeden zegar demo w `getNow()` + „dziś” wykresu; produkcja na czasie rzeczywistym | #767 DP-C | wyglad / demo | SCALONE (#767 `b005f5e1`) |
 | DP-68 | Cursor | ostrzeżenie oxlint `react(globals)` w `dp-front-5.jsdom.test.ts:193` | F7 #678 | po #667 | w kolejce |
 | DP-69 | Cursor | CorridorMap: odświeżenie `paintOrangeRoads` po montażu (rpc 0→1 / spy); komentarz M6 w teście F | F7 #677 r5 | po #667 | w kolejce |
 
@@ -1439,17 +1440,17 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 
 ### #762 · Kolejka drobnych poprawek Cursora — pakiety C1–C5 (do wydania 1.0)
 Źródło: #762 (Spawn2018; 03.11). Po #760 → #756 (DP-187/188) → C1…. Koordynator: pakiety DP-A/B/C (front) — nie brać.
-1. **C1 — Korytarz bałtycki:** ~~DP-179~~ DONE; ~~143/144~~ DONE; DP-146, 152; ~~155/156~~ W TOKU (#766); ~~157/158~~ DONE (LT/LV/EE/FI etykiety, szum FI; przed BN10).
+1. **C1 — Korytarz bałtycki:** ~~DP-179~~ DONE; ~~143/144~~ DONE; DP-146; ~~152~~ W TOKU (#768; CI ✔ + zod 4.6.7 → ponowne F7); ~~155/156~~ SCALONE (#766 `272e0afc` / **0388**); ~~157/158~~ DONE (LT/LV/EE/FI etykiety, szum FI; przed BN10).
 2. **C2 — telematyka / ETA:** DP-119, 120, 121, 123, 124, 126, 129, 132, 140 (+ **DP-193**, **DP-194** z odbioru 0387).
 3. **C3 — stare pozycje backendu:** DP-2, 10, 12, 22, 24, 29–32, 38–40, 43, 46, 47, 53–58 (+ **DP-195** tor KAA po #764).
 4. **C4 — reszta:** DP-69, 70, 81–83, 90–93, 97, 99–103, 105–109, 111, 112.
 5. **C5 — warunkowe:** DP-186 (decyzja 04.11 ~07:00 po 24 h odbioru #753).
 Cel: C1–C4 przed bramą #588 i wydaniem 1.0 (≈ 20–21.11). Pozycja >~50 linii / nowa tabela → osobne zgłoszenie.
 
-### #766 · C1 cz.1 — DP-155 + DP-156 — W TOKU
+### #766 · C1 cz.1 — DP-155 + DP-156 — SCALONE (`272e0afc` / **0388**)
 Źródło: #762 C1. Gałąź `pakiet/c1-dp-155-road-fi-eta`. Migracja **0388** (F7 r2: 0389 scalona; e2e + zamknięcie po obniżeniu).
-1. **DP-155:** test `ROAD_FI`×1.5 → ETA FI_E75 dłuższa, GDN-NYN bez zmian (logika już w 0385).
-2. **DP-156:** `notify_event_key` + ROAD_LT/LV/EE/FI; bez transportu tylko HIGH/CRIT; HIGH→MEDIUM → `notify_mark_case_closed`.
+1. ~~**DP-155**~~ — test `ROAD_FI`×1.5 → ETA FI_E75 dłuższa, GDN-NYN bez zmian.
+2. ~~**DP-156**~~ — `notify_event_key` + ROAD_LT/LV/EE/FI; bez transportu tylko HIGH/CRIT; HIGH→MEDIUM → `notify_mark_case_closed`.
 
 ### #756 · DP-187/188 — road-ee gap + LV error body — SCALONE (#765 `c1c8f827`)
 Źródło: #756 (Spawn2018; odbiór #753). Jednym PR bez migracji.
@@ -2621,6 +2622,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 03.11.2026 10:50 | #763 SCALONE `6c053f6c` (Pakiet DP-B / DP-185); F7 #765 r1 → wariant A (bez zapisu skipped); push poprawki | pętla / DP-187 |
 | 03.11.2026 11:20 | #765 SCALONE `c1c8f827` (DP-187/188; F7 @ 3fd8734b); DP-193/194→C2, DP-195→C3; start C1 DP-155/156 **0388** | pętla / C1 |
 | 03.11.2026 11:50 | #764 SCALONE `e3f6c101` (DP-A); #766 F7 r1 → **0389** bałtyk bez load tylko HIGH/CRIT; c3 **45** | pętla / C1 F7 |
+| 03.11.2026 12:40 | #766 F7 r2: e2e + HIGH→MEDIUM close; 0388+0389→**0388**; c3 **51** | pętla / C1 F7 |
 | 31.10.2026 — | Decyzja 73: TLLA-HEL ETA−150 min / HELA-TLL ETD+160 min (fixture Cargo; nocny 165 min OK). Decyzja 74: `sailings.source_ref` 0359; Digitraffic `digitraffic:portcall:<id>:<route>`; HTML/RECZNIE/DANE_STARTOWE wygrywają; #685-b RPC zastępuje digitraffic:% w ±3 h | F7 #688 r1–r4 |
 | 31.10.2026 — | F7 #683 nieblokujące (osobna poprawka): Scheduler grudzień + „on 2 January” → rok bieżący, ciche wygaśnięcie; Alert INFO bez ryzyka/historii — świadomie | F7 #683 r7 |
 | 31.10.2026 — | F7 #683 r8 nieblokujące (osobno): Alert poza Schedulerem obok Schedulera; sprzeczne bloki (resume→cofnięcie auto); rok przy długim oknie Schedulera; mutanty M10/M15–M17/M22 świadomie bez testów | F7 #683 r8 |
