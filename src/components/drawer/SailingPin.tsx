@@ -4,14 +4,23 @@
  * Przed zapisem — potwierdzenie w karcie (bez okien przeglądarki). Po zapisie dane karty pobierają się z bazy.
  * Po zapisie fokus przechodzi na wiersz „Rejs” (`[data-ferry-row]`, `tabIndex=-1`), bo ostrzeżenie się zamyka.
  * Rodzic montuje komponent z `key={load.id}` — wynik dla jednego transportu nie trafia do karty innego.
+ * BN9-c6: także trasy z Estonii (baza od #741 przyjmuje PL/EE → SE/FI) — kraj przypłynięcia z trasy proponowanego
+ * rejsu (albo trasy transportu): „w Finlandii” zamiast „w Szwecji”; Polska – Szwecja — teksty bez zmian.
  */
 import { useEffect, useRef, useState } from 'react';
 import type { Locale, Sailing } from '../../types';
 import { useTowerStore } from '../../store/useTowerStore';
 import { pt, ptp } from '../../i18n/p7';
 import { pinErrorKey, proposedText, sailingMismatchAssign, sailingMismatchSuggest, type PinSuggest } from '../../lib/sailingPin';
+import { arrivalCountry, isBalticRoute } from './bn9c6Route';
 
-export function SailingPin({ loadId, locale, sailings }: { loadId: string; locale: Locale; sailings: readonly Sailing[] }) {
+export function SailingPin({ loadId, locale, sailings, route = null }: {
+  loadId: string;
+  locale: Locale;
+  sailings: readonly Sailing[];
+  /** BN9-c6: trasa transportu (kraj przypłynięcia, gdy rejsu z propozycji nie ma w pobranym rozkładzie) */
+  route?: string | null;
+}) {
   const pushToast = useTowerStore((s) => s.pushToast);
   const [sug, setSug] = useState<PinSuggest | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -44,6 +53,13 @@ export function SailingPin({ loadId, locale, sailings }: { loadId: string; local
 
   if (!loaded) return null;
   const label = sug ? proposedText(sug, sailings) : null;
+  /* BN9-c6: kraj przypłynięcia — trasa proponowanego rejsu, potem trasa transportu; Finlandia → teksty `_fi` */
+  const pinRoute = (sug?.proposedSailingId ? sailings.find((x) => x.id === sug.proposedSailingId)?.route : null) ?? route;
+  const k = (key: string) => (arrivalCountry(pinRoute) === 'FI' ? `${key}_fi` : key);
+  const errKey = (raw: string | null) => {
+    const key = pinErrorKey(raw);
+    return key === 'p7_pin_err_route' && isBalticRoute(pinRoute) ? 'p7_pin_err_route_ee' : key;
+  };
 
   if (unknown) {
     return <p className="po-set-err" role="alert" data-sail-pin-unknown>{pt(locale, 'p7_pin_err_unknown')}</p>;
@@ -55,7 +71,7 @@ export function SailingPin({ loadId, locale, sailings }: { loadId: string; local
     return err ? <p className="po-set-err" role="alert" data-sail-pin-err>{err}</p> : null;
   }
   if (!sug.proposedSailingId || !label) {
-    return <p className="po-muted" data-sail-pin-none>{pt(locale, 'p7_pin_none')}</p>;
+    return <p className="po-muted" data-sail-pin-none>{pt(locale, k('p7_pin_none'))}</p>;
   }
   const target = sug.proposedSailingId;
 
@@ -95,7 +111,7 @@ export function SailingPin({ loadId, locale, sailings }: { loadId: string; local
     setBusy(false);
     if (!r.ok) {
       sent.current = false;
-      setErr(pt(locale, pinErrorKey(r.error)));
+      setErr(pt(locale, errKey(r.error)));
       return;
     }
     setAsk(false);
@@ -106,10 +122,10 @@ export function SailingPin({ loadId, locale, sailings }: { loadId: string; local
 
   return (
     <div className="po-pin" data-sail-pin>
-      <p className="po-miss" data-sail-pin-lead>{ptp(locale, 'p7_pin_lead', { sailing: label })}</p>
+      <p className="po-miss" data-sail-pin-lead>{ptp(locale, k('p7_pin_lead'), { sailing: label })}</p>
       {ask ? (
         <div role="group" aria-label={pt(locale, 'p7_pin_btn')} data-sail-pin-ask>
-          <p>{ptp(locale, 'p7_pin_ask', { sailing: label })}</p>
+          <p>{ptp(locale, k('p7_pin_ask'), { sailing: label })}</p>
           <div className="po-act">
             <button ref={yesBtn} type="button" className="btn" aria-disabled={busy || undefined} onClick={() => { void confirm(); }} data-sail-pin-yes>
               {pt(locale, busy ? 'p7_pin_busy' : 'p7_pin_yes')}

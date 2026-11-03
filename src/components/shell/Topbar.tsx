@@ -11,7 +11,7 @@ import { hp } from '../../i18n/help';
 import { AccountMenu } from './AccountMenu';
 import { vesselById } from '../../lib/ferry';
 import { nextGdnSailing } from '../../lib/voyage';
-import { portName } from '../../lib/portName';
+import { ferryRouteEnds, portName } from '../../lib/portName';
 import { getNow } from '../../lib/frozenNow';
 import { canSwitchView, PROD_BUILD } from '../../lib/prodFacade';
 import { switchViewRole, usePreviewSwitchBusy } from '../../auth/previewSwitch';
@@ -99,17 +99,22 @@ function buildFerryRows(locale: Locale, now: Date, sailings: Parameters<typeof n
       }
       const depIso = effDeparture(s);
       const mins = Math.max(0, Math.round((Date.parse(depIso) - nowMs) / 60_000));
-      const [from, to] = s.route.split('-');
+      /* BN9-c6: końce trasy ze słownika (`routeEnds`) — „TLLA-HEL” to „Tallinn A → Helsinki”, nie port „TLLA”;
+         kod spoza słownika — jak dotąd (podział po myślniku) */
+      const ends = ferryRouteEnds(locale, s.route);
+      const [fromCode, toCode] = s.route.split('-');
+      const from = ends?.a ?? portName(locale, fromCode);
+      const toName = ends?.b ?? portName(locale, toCode);
       const when = depLabel(depIso, nowIso);
-      const head = `${s.vessel} · ${when} · ${portName(locale, from)}`;
+      const head = `${s.vessel} · ${when} · ${from}`;
       rows.push({
         mins,
         cd: countdown(mins),
-        line: `${head} → ${portName(locale, to)}`,
+        line: `${head} → ${toName}`,
         /* telefon: przycisk ma odliczanie i „Stena 08:00” — data z rokiem nie mieści się w 360 px; pełna data w liście po dotknięciu */
         short: `${op} ${fmtTime(depIso)}`,
         head,
-        to: portName(locale, to),
+        to: toName,
         op,
         status: s.status === 'OPOZNIONY' ? { label: sailingStatusLabel(s.status, locale), pill: sailingStatusPill(s.status) } : undefined,
       });

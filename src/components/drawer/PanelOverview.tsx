@@ -41,6 +41,8 @@ import { itemKindName } from '../../lib/p5Finance';
 import { hhlAdminDates } from '../../lib/adminDates';
 import { canPinSailing, hasOpenMismatch } from '../../lib/sailingPin';
 import { SailingPin } from './SailingPin';
+import { isBalticRoute, transportRoute } from './bn9c6Route';
+import { ferryRouteLabel } from '../../lib/portName';
 
 type Role = 'HHL' | 'KSH' | 'SCX';
 
@@ -430,11 +432,16 @@ export function PanelOverview(p: Props) {
       </div>
     );
   };
+  /* BN9-c6: trasa transportu (rejs przypięty, statek o godzinie rejsu; demo — `demoRoute=`); przy trasie bałtyckiej
+     wiersz „Rejs” ma też trasę („Tallinn → Helsinki”) — Polska – Szwecja bez zmian (statek i godziny jak dotąd) */
+  const route = curSailing?.route ?? transportRoute(load, sailings);
+  const balticRoute = isBalticRoute(route) ? ferryRouteLabel(locale, route) : null;
   const sailingText = curSailing
-    ? `${load.ferry.vessel ?? curSailing.vessel} · ${fmtLocal(effDeparture(curSailing))} → ${fmtLocal(effArrival(curSailing))}${curSailing.status !== 'ZAPLANOWANY' ? ` · ${sailingStatusLabel(curSailing.status, locale)}` : ''}`
+    ? `${load.ferry.vessel ?? curSailing.vessel}${balticRoute ? ` · ${balticRoute}` : ''} · ${fmtLocal(effDeparture(curSailing))} → ${fmtLocal(effArrival(curSailing))}${curSailing.status !== 'ZAPLANOWANY' ? ` · ${sailingStatusLabel(curSailing.status, locale)}` : ''}`
     : null;
   /* F7 (A9): statek z rezerwacji bez wybranego rejsu — to nie jest przypisany rejs; „rejs” jest w brakach do „Gotowy” */
-  const bookedVessel = curSailing ? null : (load.ferry.vessel ?? '').trim() || null;
+  const bookedName = curSailing ? null : (load.ferry.vessel ?? '').trim() || null;
+  const bookedVessel = bookedName && balticRoute ? `${bookedName} · ${balticRoute}` : bookedName;
   /* F7 runda 2: „rejs niewybrany” tylko w przygotowaniu (jak braki do „Gotowy”); na promie i później — sama nazwa statku */
   const sailMissing = !curSailing && READY_PREP.includes(load.status);
   /* „wpisany/brak” (E32 pkt 5) — ten sam stan co pole w oknie Awizacja (E44: zapisany link z serwera albo w zasobach) */
@@ -509,7 +516,7 @@ export function PanelOverview(p: Props) {
       </details>
       {/* E15 pkt 8 (img/e15-after): blok ETA — pod „Planem i ETA”, zawsze widoczny */}
       <div className="po-eta" data-po="eta">
-        <EtaBlock load={load} locale={locale} phone={phone} nowIso={nowIso} deliveredAt={p.deliveredAt} siteSince={p.siteSince} delayMin={p.delayMin} wx={p.wx} />
+        <EtaBlock load={load} locale={locale} phone={phone} nowIso={nowIso} deliveredAt={p.deliveredAt} siteSince={p.siteSince} delayMin={p.delayMin} wx={p.wx} route={route} />
         <div data-eta-howto className="etab-howto">
           <OptionsHowTo locale={locale} k="a6_dr_eta_howto" summaryKey="a6_sch_howto_btn" />
         </div>
@@ -568,7 +575,7 @@ export function PanelOverview(p: Props) {
           ) : bookedVessel ? <span data-content>{bookedVessel}</span>
             : <span className="po-muted">{pt(locale, awiz === 'none' ? 'p7_sail_pick' : 'p7_sail_none')}</span>}
             {canPinSailing({ admin: hhlAdminDates(role), readOnly: isPreviewReadOnly({ viewRole: role }), mismatch: hasOpenMismatch(risks, load.id) })
-              ? <SailingPin key={load.id} loadId={load.id} locale={locale} sailings={sailings} />
+              ? <SailingPin key={load.id} loadId={load.id} locale={locale} sailings={sailings} route={route} />
               : null}</dd>
           {pilotsReq ? (
             <>

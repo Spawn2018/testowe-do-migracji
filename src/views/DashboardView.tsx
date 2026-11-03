@@ -32,6 +32,8 @@ import { useLatestNbp } from '../lib/nbpLive';
 import type { MarineConditionRow } from '../lib/marineWeatherDb';
 import { cockpitCrossings, nearestFerrySeaRow } from '../lib/bn9c3Marine';
 import { MarineCards } from '../components/dash/MarineCards';
+import { BalticFerries } from '../components/dash/BalticFerries';
+import { balticNearest } from '../components/dash/balticNearest';
 
 /* wyglad/J4 (E9; E11/E12 „ocena przewoźnika → Kokpit”): produkcja — odczyt `carrier_scorecard` (chunk leniwy) */
 const CarrierRatingLive = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/CarrierRatingLive'))) : null;
@@ -176,6 +178,11 @@ export function DashboardView() {
     () => cockpitCrossings(mapLoads, sailings, marineRows, mapNowMin * 60_000),
     [mapLoads, sailings, marineRows, mapNowMin],
   );
+  /* BN9-c6: najbliższy prom na przeprawach bałtyckich (ze słownika, tylko armatorzy z rejsem) — obok kafelka PL–SE */
+  const balticFerries = useMemo(
+    () => balticNearest(nearestCrossingByOperator(sailings, nowMinute * 60_000, 1)),
+    [sailings, nowMinute],
+  );
   const tiles = buildCockpit({
     role, locale, nowIso: getNow().toISOString(), loads, documents, bills,
     todo, ferry, margin: marginInfo, siteSince,
@@ -221,8 +228,14 @@ export function DashboardView() {
         footer={footer}
         moneyTags={moneyTags}
         onGo={onGo}
+        /* BN9-c6: najbliższy prom bałtycki (jest tylko z rejsem w rozkładzie) nad pogodą na przeprawach */
         extra={seaCrossings.length ? (
-          <MarineCards locale={locale} crossings={seaCrossings} onGo={() => navigateTo({ view: 'risk', riskFilter: 'FERRY' })} />
+          <>
+            <BalticFerries locale={locale} ferries={balticFerries} onGo={() => navigateTo({ view: 'risk', riskFilter: 'FERRY' })} />
+            <MarineCards locale={locale} crossings={seaCrossings} onGo={() => navigateTo({ view: 'risk', riskFilter: 'FERRY' })} />
+          </>
+        ) : balticFerries.length ? (
+          <BalticFerries locale={locale} ferries={balticFerries} onGo={() => navigateTo({ view: 'risk', riskFilter: 'FERRY' })} />
         ) : null}
       />
 

@@ -3,6 +3,8 @@
  * Stany: przed wyjazdem ze Śremu („ETA: –” + plan dostawy KSH), w trasie (ETA, pasmo ± i słowo pewności, wiek pozycji, km, jazda,
  * okno dostawy), odpoczynek w toku, czeka przed placem, dostarczone. Telefon: „ETA BODEN” + „Dlaczego tyle”.
  * Szczegóły (odpoczynek, km, jazda, czekanie) z `load.etaDetail` — wypełnia wykonawca (E15); bez nich blok pokazuje ETA, pasmo i okno.
+ * BN9-c6: trasa bałtycka (wyjście z Estonii) bez ETA z bazy (`eta_site` = null do BN8b) — „brak danych” z dopiskiem,
+ * zamiast samego „ETA: –”. Polska – Szwecja bez zmian.
  */
 import type { Load, Locale } from '../../types';
 import { t, tp } from '../../i18n/messages';
@@ -14,6 +16,8 @@ import { etaDuration } from '../../lib/etaDuration';
 import { formatDelayPill } from '../ui/StatusPill';
 import { minText, type EtaWx } from '../../lib/e49Wx';
 import { e49wx } from '../../i18n/e49Wx';
+import { pt } from '../../i18n/p7';
+import { isBalticRoute } from './bn9c6Route';
 
 const SE = 'Europe/Stockholm';
 
@@ -34,6 +38,7 @@ export function EtaBlock({
   siteSince,
   delayMin,
   wx = [],
+  route = null,
 }: {
   load: Load;
   locale: Locale;
@@ -45,6 +50,8 @@ export function EtaBlock({
   delayMin: number | null;
   /** wyglad/E49: wiatr, postój przez wiatr, śliskość, zamknięcie i objazd (`etaWxOf`) */
   wx?: readonly EtaWx[];
+  /** BN9-c6: trasa promu transportu (rejs przypięty / statek) — stan „ETA jeszcze nie liczona” dla tras bałtyckich */
+  route?: string | null;
 }) {
   const tile = stageTileOf(load);
   if (tile == null) return null;
@@ -86,6 +93,11 @@ export function EtaBlock({
   const win = kind ? (late ? 'after' : kind === 'before' ? 'before' : 'in') : null;
   const winText = win ? t(locale, `p4b_eta_win_${win}`) : null;
   const osm = (load.etaMethod ?? '').includes('OSM') ? t(locale, 'i2_eta_osm_attr') : null;
+  /* BN9-c6: ETA trasy bałtyckiej jeszcze nieliczona (BN8b) — czytelny stan zamiast pustego pola */
+  const balticPending = !load.etaBoden && isBalticRoute(route);
+  const noEta = balticPending ? pt(locale, 'p7_eta_baltic_val') : t(locale, 'p4b_eta_none');
+  const balticSub = balticPending ? pt(locale, 'p7_eta_baltic_sub') : null;
+  const balticAttr = balticPending ? { 'data-eta-baltic': 'pending' } : {};
 
   /* B7 / E15 pkt 8; P11 (e15): na promie główna wartość to ETA Boden (ta sama co w tabeli Mapy),
      wpłynięcie promu z AIS albo „czeka na pozycję AIS” w podpisie */
@@ -93,10 +105,10 @@ export function EtaBlock({
     const aisEta = d?.ferryEtaAt ?? null;
     const waiting = d?.waitAis || !aisEta;
     return (
-      <div className="etab ferry" data-eta="ferry" data-eta-block>
+      <div className="etab ferry" data-eta="ferry" data-eta-block {...balticAttr}>
         <div className="etab-lbl">{t(locale, 'p4b_eta_ferry_lbl')}</div>
         <div className="etab-val">
-          <span>{load.etaBoden ? dayTime(load.etaBoden, SE) : t(locale, 'p4b_eta_none')}</span>
+          <span>{load.etaBoden ? dayTime(load.etaBoden, SE) : noEta}</span>
           {win ? <span className={`pill ${win === 'after' ? 'p-red' : 'p-go'}`}>{t(locale, `p4b_eta_pill_${win}`)}</span> : null}
         </div>
         <div className="etab-sub">
@@ -104,6 +116,7 @@ export function EtaBlock({
             waiting ? t(locale, 'p4b_eta_ferry_wait_ais') : tp(locale, 'p4b_eta_ferry_in', { at: dayTime(aisEta) }),
             waiting ? t(locale, 'p4b_eta_ferry_wait_sub') : null,
             winText,
+            balticSub,
           ].filter(Boolean).join(' · ')}
         </div>
       </div>
@@ -122,7 +135,7 @@ export function EtaBlock({
   let sub: (string | null)[];
   if (phase === 'REST') {
     lbl = tp(locale, 'p4b_eta_rest_lbl', { at: dayTime(d?.restFrom ?? load.etaUpdatedAt) });
-    value = load.etaBoden ? dayTime(load.etaBoden, SE) : t(locale, 'p4b_eta_none');
+    value = load.etaBoden ? dayTime(load.etaBoden, SE) : noEta;
     pill = { cls: 'p-sea', text: t(locale, 'p4b_eta_rest_pill') };
     sub = [
       d?.restFrom ? tp(locale, 'p4b_eta_rest_from', { from: timeOnly(d.restFrom) }) : null,
@@ -133,6 +146,7 @@ export function EtaBlock({
         : null,
       d?.driveMin != null ? tp(locale, 'p4b_eta_rest_then', { dur: etaDuration(d.driveMin) }) : null,
       osm,
+      balticSub,
     ];
   } else if (phase === 'WAIT_SITE') {
     lbl = tp(locale, 'p4b_eta_wait_lbl', { at: dayTime(load.etaUpdatedAt) });
@@ -150,7 +164,7 @@ export function EtaBlock({
     sub = [tp(locale, 'p4b_eta_wait_window', { day: dayOnly(load.plannedDeliverDate) })];
   } else {
     lbl = phone ? t(locale, 'p4b_eta_phone_lbl') : tp(locale, 'p4b_eta_route_lbl', { at: dayTime(load.etaUpdatedAt) });
-    value = load.etaBoden ? dayTime(load.etaBoden, SE) : t(locale, 'p4b_eta_none');
+    value = load.etaBoden ? dayTime(load.etaBoden, SE) : noEta;
     pill = load.etaBoden
       ? { cls: load.etaConfidence === 'LOW' ? 'p-red' : load.etaConfidence === 'HIGH' ? 'p-go' : 'p-amber', text: band, db: load.etaConfMin != null }
       : null;
@@ -164,6 +178,7 @@ export function EtaBlock({
       winText,
       reasons,
       osm,
+      balticSub,
     ];
   }
   const subText = sub.filter(Boolean).join(' · ');
@@ -192,7 +207,7 @@ export function EtaBlock({
 
   return (
     <>
-      <div className={`etab ${phase === 'DRIVE' ? 'route' : phase === 'REST' ? 'rest' : 'wait'}`} data-eta="value" data-eta-block data-eta-phase={phase}>
+      <div className={`etab ${phase === 'DRIVE' ? 'route' : phase === 'REST' ? 'rest' : 'wait'}`} data-eta="value" data-eta-block data-eta-phase={phase} {...(phase === 'DRIVE' || phase === 'REST' ? balticAttr : {})}>
         <div className="etab-lbl">{lbl}</div>
         <div className="etab-val">
           <span>{value}</span>
