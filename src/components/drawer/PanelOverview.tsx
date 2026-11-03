@@ -432,9 +432,10 @@ export function PanelOverview(p: Props) {
       </div>
     );
   };
-  /* BN9-c6: trasa transportu (rejs przypięty, statek o godzinie rejsu; demo — `demoRoute=`); przy trasie bałtyckiej
+  /* BN9-c6: trasa transportu jak na mapie karty (`routeOfLoad`: rejs przypięty, statek o godzinie rejsu; demo — najpierw
+     `demoRoute=` z adresu, tylko demo); przy trasie bałtyckiej
      wiersz „Rejs” ma też trasę („Tallinn → Helsinki”) — Polska – Szwecja bez zmian (statek i godziny jak dotąd) */
-  const route = curSailing?.route ?? transportRoute(load, sailings);
+  const route = transportRoute(load, sailings);
   const balticRoute = isBalticRoute(route) ? ferryRouteLabel(locale, route) : null;
   const sailingText = curSailing
     ? `${load.ferry.vessel ?? curSailing.vessel}${balticRoute ? ` · ${balticRoute}` : ''} · ${fmtLocal(effDeparture(curSailing))} → ${fmtLocal(effArrival(curSailing))}${curSailing.status !== 'ZAPLANOWANY' ? ` · ${sailingStatusLabel(curSailing.status, locale)}` : ''}`

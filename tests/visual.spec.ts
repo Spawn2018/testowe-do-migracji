@@ -424,6 +424,35 @@ test.describe('BN9-c5 visual — karta transportu Tallinn – Helsinki (HHL pl)'
   }
 })
 
+/* BN9-c6 (BN8 §3 pkt 5) — karta transportu na trasie Tallinn – Helsinki: wiersz „Rejs” ze statkiem, trasą i godzinami.
+   Demo: aktywny SG-17 z trasą przykładową z adresu (`demoRoute`, tylko demo; statek z danych demo bez zmian). */
+test.describe('BN9-c6 visual — karta transportu Tallinn – Helsinki, wiersz Rejs (HHL pl 1440)', () => {
+  test.describe.configure({ mode: 'serial' })
+
+  const file = 'karta-tll-hel-rejs__hhl__pl__1440__light.png'
+  test(file, async ({ page }) => {
+    await page.emulateMedia({ reducedMotion: 'reduce' })
+    await gotoFrozen(page, 1440, BN7_DEMO_ROUTE)
+    await setRole(page, 'HHL')
+    await setTheme(page, 'light', 'dark')
+    await navTo(page, 'sched')
+    await page.evaluate(() => {
+      const el = [...document.querySelectorAll('[data-load]')].find((r) => /\bSG-17\b/.test(r.textContent ?? '')) as HTMLElement | undefined
+      if (!el) throw new Error('brak wiersza SG-17')
+      el.click()
+    })
+    const row = page.locator('.drawer [data-overview] [data-ferry-row]')
+    await expect(row).toContainText('Tallinn → Helsinki')
+    const box = page.locator('.drawer [data-overview] [data-awiz-state]')
+    await box.scrollIntoViewIfNeeded()
+    await page.evaluate(async () => {
+      if (document.fonts?.ready) await document.fonts.ready
+    })
+    await page.waitForTimeout(600)
+    await expect(box).toHaveScreenshot(file, { maxDiffPixels: 60, threshold: 0.28, animations: 'disabled' })
+  })
+})
+
 /* F7 #740: także telefon 390 — dopisek u góry na pełną szerokość (miejsce na „+ / −”), dolny pasek poza migawką */
 test.describe('BN9-c5 visual — Mapa z aktywnym transportem bałtyckim (HHL pl)', () => {
   test.describe.configure({ mode: 'serial' })
