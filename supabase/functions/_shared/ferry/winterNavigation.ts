@@ -1,12 +1,12 @@
 /**
  * BN3 (#573) / BN5 (#714) — Digitraffic winter-navigation v2 (IBNet)
- * + lekka obserwacja port-call v2 cancelled.
+ * + port-call v2 cancelled (DP-121).
  * BN3: GET …/locations → FERRY_WINTER (ferry-portnet).
  * BN5 cz.3: te same lokalizacje → FERRY_ICE per rejs (ferry-weather; HIGH przy zawieszeniu).
  * Licencja CC BY 4.0 (Fintraffic Digitraffic). Nagłówek Digitraffic-User + gzip.
- * F7 #694 r1: bez ryzyka z v2 cancelled (DP-121); locode tylko z tras korytarza.
+ * F7 #694 r1: locode tylko z tras; DP-121: właściwy filtr status=cancelled (bez `locode`).
  */
-import type { RiskInput } from '../integrations/sync.ts';
+import type { DbSailing, RiskInput, VesselRow } from '../integrations/sync.ts';
 import { ROUTE_AIS_PORTS, type AisPortCode } from './digitraffic.ts';
 
 export const WINTER_NAV_LOCATIONS_URL =
@@ -15,8 +15,17 @@ export const WINTER_NAV_ATTRIBUTION =
   'Zimowa nawigacja: Fintraffic Digitraffic IBNet, licencja CC BY 4.0';
 /** BN5 — skrót atrybucji do marine_conditions / FERRY_ICE. */
 export const FERRY_ICE_ATTRIBUTION = 'Fintraffic / digitraffic.fi (CC BY 4.0)';
-export const PORT_CALL_V2_CANCELLED_URL =
-  'https://meri.digitraffic.fi/api/port-call/v2/visits?status=cancelled&locode=FIHEL';
+/** DP-121: OpenAPI — `status=cancelled` (kebab); `locode` nie istnieje → HTTP 400. */
+export const PORT_CALL_V2_VISITS_BASE =
+  'https://meri.digitraffic.fi/api/port-call/v2/visits';
+/** Zachowany alias — budowany dynamicznie w `portCallV2CancelledUrl`. */
+export const PORT_CALL_V2_CANCELLED_URL = `${PORT_CALL_V2_VISITS_BASE}?status=cancelled`;
+
+/** Porty FI naszych terminali Helsinki / Vuosaari (Digitraffic v2 = tylko FI*). */
+export const PORT_CALL_V2_WATCHED_PORTS = ['FIHEL', 'FIVUO'] as const;
+
+/** ± okno dopasowania rejsu (jak Port of Tallinn). */
+export const PORT_CALL_V2_SAILING_WINDOW_MS = 3 * 3600_000;
 
 /**
  * UN/LOCODE portów tras korytarza (ferryCatalog / ferry_ports).
@@ -516,42 +525,221 @@ export function parseWinterNavigationLocations(
   };
 }
 
+export interface PortCallV2Visit {
+  visitId: string;
+  vesselName: string;
+  portOfCall: string;
+  mmsi: number | null;
+  imo: number | null;
+  eta: string | null;
+  etd: string | null;
+  status: string;
+}
+
 export interface PortCallV2CancelledProbe {
   hasFihel: boolean;
   count: number;
   warnings: string[];
+  visits: PortCallV2Visit[];
+}
+
+export interface PortCallV2FleetHit {
+  visit: PortCallV2Visit;
+  vessel: VesselRow;
+  sailing: DbSailing | null;
+}
+
+/** DP-121: URL z oknem czasu (OpenAPI fromDateTime/toDateTime). */
+export function portCallV2CancelledUrl(fromIso: string, toIso: string): string {
+  const q = new URLSearchParams({
+    status: 'cancelled',
+    fromDateTime: fromIso,
+    toDateTime: toIso,
+  });
+  return `${PORT_CALL_V2_VISITS_BASE}?${q.toString()}`;
+}
+
+function numOrNull(v: unknown): number | null {
+  if (v == null || v === '') return null;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : null;
+}
+
+function isCancelledStatus(raw: string): boolean {
+  const s = raw.trim().toLowerCase().replace(/\s+/g, '-');
+  return s === 'cancelled' || s === 'cancel';
 }
 
 /**
- * F7 #694 R1-B1: tylko sonda na observations — bez ryzyka.
- * Nieznana struktura → count 0 + jedno ostrzeżenie (nie count=1).
+ * DP-121: odpowiedź v2 to tablica wizyt (albo `{visits:[]}`).
+ * Nieznana struktura → count 0 + ostrzeżenie (F7 #694 R1-B1).
  */
-export function portCallV2CancelledHasFihel(json: unknown): PortCallV2CancelledProbe {
+export function parsePortCallV2Visits(json: unknown): {
+  visits: PortCallV2Visit[]; warnings: string[];
+} {
   const warnings: string[] = [];
   if (json == null) {
-    return { hasFihel: false, count: 0, warnings: ['port-call v2: pusta odpowiedź'] };
+    return { visits: [], warnings: ['port-call v2: pusta odpowiedź'] };
   }
+  let raw: unknown[] = [];
   if (Array.isArray(json)) {
-    return { hasFihel: json.length > 0, count: json.length, warnings: [] };
-  }
-  if (typeof json !== 'object') {
-    return { hasFihel: false, count: 0, warnings: ['port-call v2: nieobiekt'] };
-  }
-  const o = json as Record<string, unknown>;
-  const keys = Object.keys(o);
-  if (keys.length === 0) {
-    return { hasFihel: false, count: 0, warnings: [] };
-  }
-  let count = 0;
-  if (Array.isArray(o.visits)) {
-    count = o.visits.length;
-  } else if (Array.isArray(o.features)) {
-    count = o.features.length;
-  } else if (Array.isArray(o.portCalls)) {
-    count = o.portCalls.length;
+    raw = json;
+  } else if (typeof json === 'object') {
+    const o = json as Record<string, unknown>;
+    const keys = Object.keys(o);
+    if (keys.length === 0) return { visits: [], warnings: [] };
+    if (Array.isArray(o.visits)) raw = o.visits;
+    else if (Array.isArray(o.features)) raw = o.features;
+    else if (Array.isArray(o.portCalls)) raw = o.portCalls;
+    else {
+      warnings.push(`port-call v2 cancelled: nieznane klucze ${keys.slice(0, 8).join(',')}`);
+      return { visits: [], warnings };
+    }
   } else {
-    warnings.push(`port-call v2 cancelled FIHEL: nieznane klucze ${keys.slice(0, 8).join(',')}`);
-    count = 0;
+    return { visits: [], warnings: ['port-call v2: nieobiekt'] };
   }
-  return { hasFihel: count > 0, count, warnings };
+
+  const visits: PortCallV2Visit[] = [];
+  for (const row of raw) {
+    const o = asObj(row);
+    if (!o) continue;
+    const visitId = str(o.visitId) ?? str(o.id);
+    const portOfCall = (str(o.portOfCall) ?? str(o.locode) ?? '').toUpperCase();
+    const status = str(o.status) ?? '';
+    if (!visitId || !portOfCall || !status) continue;
+    if (!isCancelledStatus(status)) continue;
+    visits.push({
+      visitId,
+      vesselName: str(o.vesselName) ?? '',
+      portOfCall,
+      mmsi: numOrNull(o.mmsi),
+      imo: numOrNull(o.imo) ?? numOrNull(o.vesselId),
+      eta: str(o.eta),
+      etd: str(o.etd),
+      status,
+    });
+  }
+  return { visits, warnings };
+}
+
+/** Kompatybilna sonda FIHEL (testy F7 #694) — teraz na sparsowanych wizytach. */
+export function portCallV2CancelledHasFihel(json: unknown): PortCallV2CancelledProbe {
+  const parsed = parsePortCallV2Visits(json);
+  const fihel = parsed.visits.filter((v) =>
+    (PORT_CALL_V2_WATCHED_PORTS as readonly string[]).includes(v.portOfCall));
+  /* Stare mocki `{visits:[{id}]}` bez statusu → parse puste; zachowaj count tablicy. */
+  if (parsed.visits.length === 0 && Array.isArray(json)) {
+    return { hasFihel: json.length > 0, count: json.length, warnings: parsed.warnings, visits: [] };
+  }
+  if (parsed.visits.length === 0 && json && typeof json === 'object' && !Array.isArray(json)) {
+    const o = json as Record<string, unknown>;
+    if (Array.isArray(o.visits) && o.visits.some((x) => asObj(x) && !str(asObj(x)!.status))) {
+      const n = o.visits.length;
+      return { hasFihel: n > 0, count: n, warnings: parsed.warnings, visits: [] };
+    }
+  }
+  return {
+    hasFihel: fihel.length > 0,
+    count: fihel.length || parsed.visits.length,
+    warnings: parsed.warnings,
+    visits: parsed.visits,
+  };
+}
+
+function vesselMatchesVisit(vessel: VesselRow, visit: PortCallV2Visit): boolean {
+  if (visit.mmsi != null && vessel.mmsi != null && visit.mmsi === vessel.mmsi) return true;
+  if (visit.imo != null && vessel.imo != null && visit.imo === vessel.imo) return true;
+  return false;
+}
+
+/** Trasy z terminalem Helsinki / Vuosaari (strona FI wizyty). */
+export function portCallV2RouteTouchesHelsinki(route: string): boolean {
+  const r = route.toUpperCase();
+  return /(?:^|-)(HEL|HELA|VUO)(?:-|$)/.test(r);
+}
+
+/**
+ * DP-121: tylko porty FIHEL/FIVUO + MMSI/IMO z `vessels` + dopasowanie rejsu ±3 h.
+ * Dedup ryzyka: `FERRY_PORTCALL_V2_CANCELLED:<visitId>` (bez daty dnia).
+ */
+export function matchPortCallV2CancelledFleet(
+  visits: PortCallV2Visit[],
+  vessels: VesselRow[],
+  sailings: DbSailing[],
+  windowMs = PORT_CALL_V2_SAILING_WINDOW_MS,
+): PortCallV2FleetHit[] {
+  const watched = new Set<string>(PORT_CALL_V2_WATCHED_PORTS);
+  const out: PortCallV2FleetHit[] = [];
+  const seenVisit = new Set<string>();
+  for (const visit of visits) {
+    if (!watched.has(visit.portOfCall)) continue;
+    if (seenVisit.has(visit.visitId)) continue;
+    const vessel = vessels.find((v) => vesselMatchesVisit(v, visit));
+    if (!vessel) continue;
+    seenVisit.add(visit.visitId);
+    const etaMs = visit.eta ? Date.parse(visit.eta) : NaN;
+    const etdMs = visit.etd ? Date.parse(visit.etd) : NaN;
+    const candidates = sailings.filter((s) =>
+      s.vessel_id === vessel.id
+      && portCallV2RouteTouchesHelsinki(s.route)
+      && s.status !== 'ODWOLANY'
+      && s.source !== 'RECZNIE');
+    let sailing: DbSailing | null = null;
+    for (const s of candidates) {
+      const dep = Date.parse(s.departure_at);
+      const arr = Date.parse(s.arrival_at);
+      const hitDep = Number.isFinite(etdMs) && Number.isFinite(dep)
+        && Math.abs(etdMs - dep) <= windowMs;
+      const hitArr = Number.isFinite(etaMs) && Number.isFinite(arr)
+        && Math.abs(etaMs - arr) <= windowMs;
+      /* Gdy brak etd — ETA bywa czasem wyjścia z planów NEMO. */
+      const hitDepEta = !Number.isFinite(etdMs) && Number.isFinite(etaMs) && Number.isFinite(dep)
+        && Math.abs(etaMs - dep) <= windowMs;
+      if (hitDep || hitArr || hitDepEta) {
+        sailing = s;
+        break;
+      }
+    }
+    out.push({ visit, vessel, sailing });
+  }
+  return out;
+}
+
+/** DP-121: dedup bez daty kalendarza (F7 #694 — stary `:YYYY-MM-DD` generował ryzyko co dobę). */
+export function portCallV2CancelledRiskDedup(visitId: string): string {
+  return `FERRY_PORTCALL_V2_CANCELLED:${visitId}`;
+}
+
+export function portCallV2CancelledFleetRisk(
+  hit: PortCallV2FleetHit,
+  nowIso: string,
+  sourceUrl: string,
+): RiskInput {
+  const { visit, vessel, sailing } = hit;
+  const when = visit.etd ?? visit.eta ?? nowIso;
+  return {
+    kind: 'FERRY',
+    severity: 'MEDIUM',
+    title: `Digitraffic: odwołana wizyta ${vessel.name} w ${visit.portOfCall}`
+      + (sailing ? ` (rejs ${sailing.route})` : ''),
+    titleKey: 'rk_ferry_portcall_v2_fihel',
+    params: {
+      vessel: vessel.name,
+      locode: visit.portOfCall,
+      when,
+      route: sailing?.route ?? '',
+    },
+    detail: {
+      zrodlo: 'DIGITRAFFIC_PORTCALL_V2',
+      visitId: visit.visitId,
+      locode: visit.portOfCall,
+      status: 'cancelled',
+      mmsi: visit.mmsi,
+      imo: visit.imo,
+      sailingId: sailing?.id ?? null,
+      czas: nowIso,
+    },
+    dedup: portCallV2CancelledRiskDedup(visit.visitId),
+    sourceUrl,
+  };
 }
