@@ -1,4 +1,12 @@
 
+## 2026-11-03 01:45 — DP-171 start (EE 30 s / LV URL) + #741+#743 SCALONE
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720/#735/#742 w planie.
+- Scalanie: **#741 SCALONE** `f4c4e2ab` (BN8a / 0382); **#743 SCALONE** `606eaad0` (BN9-c4b, F7 @ `296ca706`).
+- **Krok DP-171** (`pakiet/dp171-ee-lv-timeout-url`): EE — timeout 30 s, gzip na feedach, budżet 120 s, cache `measurementSites` 24 h, obs `ee_*_ms` / `ee_sites_source`; LV — `normalizeLvNapUrl` + `LV_NAP_BASE=https://www.transportdata.gov.lv` (`/api…`, `https:///…`, host bez kropki), `lv_base`, shape `nie_url`. Vitest bn6 ee+lv **57**.
+- **Dalej:** push → CI → F7. Po F7: DP-172 (#742) → cron_fetch=true → front `src/lib` / BN8b.
+- Bez push na main.
+
 ## 2026-11-03 00:45 — BN8a F7 r6 (cleanup load_events replica) + #740 SCALONE
 
 - Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie.

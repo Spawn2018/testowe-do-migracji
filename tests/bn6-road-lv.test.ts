@@ -8,6 +8,7 @@ import { describe, expect, it } from 'vitest';
 import {
   LT_ICY_RE,
   LV_ATTRIBUTION,
+  LV_NAP_BASE,
   LV_NAP_KEY_HEADER,
   LV_SOURCE_REF,
   LV_UA,
@@ -29,6 +30,7 @@ import {
   lvRoadOnCorridor,
   lvSeverityForRecord,
   lvUrlShape,
+  normalizeLvNapUrl,
   parseLvDatexXml,
   parseLvFeedBody,
   parseLvWeightDimGeoJson,
@@ -629,14 +631,77 @@ describe('BN6 runRoadLv F7 #730', () => {
     });
     expect(r.observations?.lv_shape_roadworks).toBe('https');
     expect(r.observations?.lv_shape_weight_dim).toBe('same_cyfry');
-    expect(r.observations?.lv_shape_slippery_wm).toBe('bez_schematu');
+    /* DP-171: host bez schematu / bez `/` → nie_url, bez fetchu. */
+    expect(r.observations?.lv_shape_slippery_wm).toBe('nie_url');
     expect(r.observations?.lv_shape_slippery_ti).toBe('pusty');
+    expect(r.observations?.lv_base).toBe(balticWarnHost(LV_NAP_BASE));
     const shapes = Object.entries(r.observations ?? {})
       .filter(([k]) => k.startsWith('lv_shape_'))
       .map(([, v]) => String(v));
-    expect(shapes.every((v) => /^(https|http|bez_schematu|same_cyfry|spacje|pusty)$/.test(v))).toBe(true);
+    expect(shapes.every((v) => /^(https|http|bez_schematu|same_cyfry|spacje|pusty|nie_url)$/.test(v))).toBe(true);
     expect(shapes.join('')).not.toContain('44751');
     expect(shapes.join('')).not.toContain('host-bez');
+  });
+
+  it('DP-171: normalizacja /api, https:///api, pełny URL; pusty/spacje bez fetchu', async () => {
+    const base = LV_NAP_BASE.replace(/\/+$/, '');
+    expect(normalizeLvNapUrl('/api/x')).toEqual({
+      url: `${base}/api/x`, shape: 'bez_schematu', kind: balticUrlKind(`${base}/api/x`),
+    });
+    expect(normalizeLvNapUrl('https:///api/x').url).toBe(`${base}/api/x`);
+    expect(normalizeLvNapUrl('https:///api/x').shape).toBe('https');
+    expect(normalizeLvNapUrl('https://api/pull/1').url).toBe(`${base}/api/pull/1`);
+    expect(normalizeLvNapUrl('https://host.example/api/x')).toEqual({
+      url: 'https://host.example/api/x',
+      shape: 'https',
+      kind: balticUrlKind('https://host.example/api/x'),
+    });
+    expect(normalizeLvNapUrl('')).toEqual({ url: null, shape: 'pusty', kind: '' });
+    expect(normalizeLvNapUrl('  ')).toEqual({ url: null, shape: 'spacje', kind: '' });
+    expect(normalizeLvNapUrl('host-bez-schematu')).toEqual({ url: null, shape: 'nie_url', kind: '' });
+
+    const fetched: string[] = [];
+    const st = new MemStore();
+    const r = await runRoadLv({
+      store: st,
+      fetch: (async (input: RequestInfo | URL) => {
+        const u = String(input);
+        fetched.push(u);
+        if (u === 'https://www.transportdata.gov.lv/' || u.endsWith('://www.transportdata.gov.lv/')) {
+          return new Response('<html>ok</html>', { status: 200 });
+        }
+        return new Response(
+          '<?xml version="1.0"?><d2LogicalModel><payloadPublication></payloadPublication></d2LogicalModel>',
+          { status: 200, headers: { 'Content-Type': 'application/xml' } },
+        );
+      }) as typeof fetch,
+      env: {
+        LV_NAP_ROADWORKS_KEY: 'k1',
+        LV_NAP_ROADWORKS_URL: '/api/pull/metadata/1',
+        LV_NAP_CLOSURES_KEY: 'k2',
+        LV_NAP_CLOSURES_URL: 'https:///api/pull/metadata/2',
+        LV_NAP_ACCIDENTS_KEY: 'k3',
+        LV_NAP_ACCIDENTS_URL: 'https://nap.example/lv/accidents',
+        LV_NAP_WEIGHT_DIM_KEY: 'k4',
+        LV_NAP_WEIGHT_DIM_URL: '',
+        LV_NAP_BLOCKAGE_KEY: 'k5',
+        LV_NAP_BLOCKAGE_URL: 'nie-url-bez-slash',
+      },
+      now: () => NOW,
+    });
+    expect(r.observations?.configured).toBe('3');
+    expect(r.observations?.lv_shape_roadworks).toBe('bez_schematu');
+    expect(r.observations?.lv_shape_closures).toBe('https');
+    expect(r.observations?.lv_shape_accidents).toBe('https');
+    expect(r.observations?.lv_shape_weight_dim).toBe('pusty');
+    expect(r.observations?.lv_shape_blockage).toBe('nie_url');
+    expect(r.observations?.lv_url_kind).toBe(balticUrlKind(`${base}/api/pull/metadata/1`));
+    expect(r.observations?.lv_base).toBe('www.transportdata.gov.lv');
+    expect(fetched.some((u) => u === `${base}/api/pull/metadata/1`)).toBe(true);
+    expect(fetched.some((u) => u === `${base}/api/pull/metadata/2`)).toBe(true);
+    expect(fetched.some((u) => u === 'https://nap.example/lv/accidents')).toBe(true);
+    expect(fetched.join('')).not.toContain('nie-url-bez-slash');
+    expect(JSON.stringify(r.observations ?? {})).not.toContain('/api/pull/metadata/1');
   });
 });
 

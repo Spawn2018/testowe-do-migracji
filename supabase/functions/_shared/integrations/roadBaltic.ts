@@ -1352,7 +1352,7 @@ export async function probeBalticHost(
 
 /**
  * DP-170 (#735) — kształt sekretu URL LV bez wartości:
- * https / http / bez_schematu / same_cyfry / spacje / pusty.
+ * https / http / bez_schematu / same_cyfry / spacje / pusty / nie_url (DP-171).
  */
 export type LvUrlShape =
   | 'https'
@@ -1360,7 +1360,8 @@ export type LvUrlShape =
   | 'bez_schematu'
   | 'same_cyfry'
   | 'spacje'
-  | 'pusty';
+  | 'pusty'
+  | 'nie_url';
 
 export function lvUrlShape(raw: string | undefined | null): LvUrlShape {
   const s = raw ?? '';
@@ -1373,12 +1374,81 @@ export function lvUrlShape(raw: string | undefined | null): LvUrlShape {
 }
 
 /**
+ * DP-171 (#735) — host bramy REST NAP LV (produkcja).
+ * Portal SPA i DATEX pull używają origin `www.transportdata.gov.lv` + ścieżki `/api/…`
+ * (OpenAPI ZIP za logowaniem; endpointy w UI: `/api/pull/metadata/<nid>`).
+ */
+export const LV_NAP_BASE = 'https://www.transportdata.gov.lv';
+
+export type LvNapUrlResolved = {
+  /** Pełny URL do fetchu albo null (pusty / nie_url / bez pary). */
+  url: string | null;
+  shape: LvUrlShape;
+  /** `balticUrlKind` po normalizacji; pusty gdy brak URL. */
+  kind: string;
+};
+
+/**
+ * DP-171 — normalizacja sekretu URL LV (właściciel nie zmienia sekretów):
+ * 1. `/…` → `LV_NAP_BASE + wartość`
+ * 2. `https:///…` / `http:///…` (pusty host; też kanoniczne `https://api/…` bez kropki w hoście) → jak (1)
+ * 3. pełny `https://<domena>/…` → bez zmian
+ * 4. inaczej → `nie_url`, bez fetchu
+ */
+export function normalizeLvNapUrl(raw: string | undefined | null): LvNapUrlResolved {
+  const original = raw ?? '';
+  if (original === '') return { url: null, shape: 'pusty', kind: '' };
+  if (/\s/.test(original)) return { url: null, shape: 'spacje', kind: '' };
+  const trimmed = original.trim();
+  if (/^\d+$/.test(trimmed)) return { url: null, shape: 'same_cyfry', kind: '' };
+
+  let pathOrUrl = trimmed;
+  let shape = lvUrlShape(trimmed);
+
+  /* `https:///api/x` → path `/api/x` (zanim URL parser zrobi host=api). */
+  const emptyHost = trimmed.match(/^(https?):\/\/\/+(.*)$/i);
+  if (emptyHost) {
+    const rest = emptyHost[2] ?? '';
+    pathOrUrl = rest.startsWith('/') ? rest : `/${rest}`;
+    shape = 'https';
+  } else if (/^https?:\/\//i.test(trimmed)) {
+    try {
+      const u = new URL(trimmed);
+      /* Kanoniczna forma po sklejeniu `https://`+`/api/…` → host bez kropki (np. `api`). */
+      if (u.hostname && !u.hostname.includes('.')) {
+        pathOrUrl = `/${u.hostname}${u.pathname === '/' ? '' : u.pathname}${u.search}`;
+        shape = /^https:/i.test(trimmed) ? 'https' : 'http';
+      } else if (u.hostname.includes('.')) {
+        return { url: u.href, shape, kind: balticUrlKind(u.href) };
+      } else {
+        return { url: null, shape: 'nie_url', kind: '' };
+      }
+    } catch {
+      return { url: null, shape: 'nie_url', kind: '' };
+    }
+  }
+
+  if (pathOrUrl.startsWith('/')) {
+    const url = `${LV_NAP_BASE.replace(/\/+$/, '')}${pathOrUrl}`;
+    if (shape !== 'https' && shape !== 'http') shape = 'bez_schematu';
+    return { url, shape, kind: balticUrlKind(url) };
+  }
+
+  return { url: null, shape: 'nie_url', kind: '' };
+}
+
+/**
  * DP-168 / F7 #733 r2 — wspólne limity pobierania LV/EE (i dalsze kraje).
  * Ciało czytać strumieniowo (bez `arrayBuffer` całości); Content-Length > limitu → too_large.
+ * DP-171: EE osobno 30 s / budżet 120 s (probe 13 s; limit 10 s zabijał wszystkie usługi).
  */
 export const BALTIC_FEED_MAX_BYTES = 5 * 1024 * 1024;
 export const BALTIC_FEED_TIMEOUT_MS = 10_000;
 export const BALTIC_FEED_BUDGET_MS = 65_000;
+export const EE_FEED_TIMEOUT_MS = 30_000;
+export const EE_FEED_BUDGET_MS = 120_000;
+/** DP-171 — measurementSites raz na dobę (pamięć procesu Edge). */
+export const EE_SITES_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
 
 export type BalticFeedBodyResult =
   | { ok: true; text: string }
@@ -2189,6 +2259,30 @@ export function eeDatexFeedUrl(path: string): string {
  */
 export const EE_PROBE_API_TIMEOUT_MS = 45_000;
 export const EE_PROBE_API_PATH = 'srti/animalObstacle';
+
+/** DP-171 — ostatnia dobra mapa measurementSites (TTL 24 h). */
+let eeSitesCache: { fetchedAt: number; sites: Map<string, [number, number]> } | null = null;
+
+export function clearEeSitesCache(): void {
+  eeSitesCache = null;
+}
+
+export function getEeSitesCache(
+  nowMs: number,
+  ttlMs: number = EE_SITES_CACHE_TTL_MS,
+): Map<string, [number, number]> | null {
+  if (!eeSitesCache || eeSitesCache.sites.size === 0) return null;
+  if (nowMs - eeSitesCache.fetchedAt > ttlMs) return null;
+  return new Map(eeSitesCache.sites);
+}
+
+export function setEeSitesCache(
+  sites: Map<string, [number, number]>,
+  fetchedAt: number,
+): void {
+  if (sites.size === 0) return;
+  eeSitesCache = { fetchedAt, sites: new Map(sites) };
+}
 
 export async function probeEeDatexApi(
   fetchFn: typeof fetch,

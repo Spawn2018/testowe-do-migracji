@@ -4,7 +4,7 @@
  */
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   BALTIC_DETOUR_RE,
   BALTIC_FEED_MAX_BYTES,
@@ -13,6 +13,7 @@ import {
   EE_ATTRIBUTION,
   EE_DATEX_FEEDS,
   EE_DATEX_KEY_HEADER,
+  EE_FEED_TIMEOUT_MS,
   EE_ICY_CONTENT_RE,
   EE_SOURCE_REF,
   EE_UA,
@@ -24,6 +25,7 @@ import {
   balticKeyMeta,
   balticSlowdownMult,
   classifyBalticNetError,
+  clearEeSitesCache,
   dimensionLimitRisk,
   EE_PROBE_API_PATH,
   eeDatexApiKey,
@@ -323,6 +325,10 @@ describe('BN6 road-ee parsers', () => {
 });
 
 describe('BN6 runRoadEe', () => {
+  beforeEach(() => {
+    clearEeSitesCache();
+  });
+
   it('bez sekretu: configured:0, ok, bez SOURCE_DOWN', async () => {
     const store = new MemStore();
     const { d } = deps(store, {}, {});
@@ -359,16 +365,26 @@ describe('BN6 runRoadEe', () => {
     expect(res.observations?.source).toBe('tarktee_datex');
     expect(res.observations?.key_env_first).toBe('TARKTEE_DATEX_TOKEN');
     expect(res.observations?.probe_ee).toMatch(/^200:\d+$/);
-    /* DP-170: sonda API 45 s — animalObstacle + gzip; osobno od 10 s feedów. */
+    /* DP-170: sonda API 45 s — animalObstacle + gzip; DP-171: feedy też 30 s + gzip. */
     expect(res.observations?.ee_probe_api).toMatch(/^200:\d+:\d+$/);
+    expect(EE_FEED_TIMEOUT_MS).toBe(30_000);
     const apiProbeCalls = headerCalls.filter((c) =>
       c.url.includes(EE_PROBE_API_PATH) && c.headers[EE_DATEX_KEY_HEADER] === 'test-ee-key'
       && c.headers['Accept-Encoding'] === 'gzip');
     expect(apiProbeCalls.length).toBeGreaterThanOrEqual(1);
+    const feedGzip = headerCalls.filter((c) =>
+      c.url.includes('/api/v1/datex/')
+      && !c.url.includes(EE_PROBE_API_PATH)
+      && c.headers[EE_DATEX_KEY_HEADER] === 'test-ee-key');
+    expect(feedGzip.length).toBeGreaterThan(0);
+    expect(feedGzip.every((c) => c.headers['Accept-Encoding'] === 'gzip')).toBe(true);
     expect(res.observations?.key_header_sent).toBe('1');
     expect(res.observations?.key_len).toBe(String('test-ee-key'.length));
     expect(res.observations?.key_trimmed).toBe('0');
     expect(Number(res.observations?.fetched_ok)).toBeGreaterThan(0);
+    expect(res.observations?.ee_sites_source).toBe('fetch');
+    expect(res.observations?.ee_restrictions_ms).toMatch(/^\d+$/);
+    expect(res.observations?.ee_measurement_sites_ms).toMatch(/^\d+$/);
     /* F7 B8 — per-usługa z :swapped */
     const restObs = String(res.observations?.ee_restrictions ?? '');
     expect(restObs).toMatch(/^ok:\d+:\d+:datex-xml:\d+$/);

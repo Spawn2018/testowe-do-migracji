@@ -101,17 +101,18 @@ import {
   EE_ATTRIBUTION, EE_DATEX_FEEDS, EE_DATEX_KEY_HEADER, EE_SOURCE_REF, EE_UA,
   FI_ANNOUNCEMENTS_URL, FI_ATTRIBUTION, FI_ROADWORKS_URL, FI_WEIGHT_URL,
   LT_ATTRIBUTION, LT_RESTRICTIONS_URL, LT_UA, LT_WEATHER_URL,
-  LV_ATTRIBUTION, LV_NAP_CODES, LV_NAP_KEY_HEADER, LV_SOURCE_REF, LV_UA,
+  LV_ATTRIBUTION, LV_NAP_BASE, LV_NAP_CODES, LV_NAP_KEY_HEADER, LV_SOURCE_REF, LV_UA,
   BALTIC_FEED_BUDGET_MS, BALTIC_FEED_TIMEOUT_MS,
+  EE_FEED_BUDGET_MS, EE_FEED_TIMEOUT_MS,
   applyBalticCorridorRoadFilter, applyFiCorridorRoadFilter, balticFeedObsOk, balticKeyMeta,
   balticNetWarning, balticRoadRisk, balticSlowdownMult, balticUrlKind, balticWarnHost,
   capBalticRiskSeverity, classifyBalticNetError, dedupeLvSlippery, eeDatexApiKeyMeta,
   eeDatexFeedUrl, fiCorridorBboxes, fiTrafficUrl, filterInEeBboxes, filterInFiBboxes,
-  filterInLvBboxes, dimensionLimitRisk, filterInLtBboxes, isDimensionLimitEvent,
-  isFiWeightLimitLike, ltWeatherToSlowdownEvents, lvNapKeyEnv, lvNapUrlEnv, lvUrlShape,
+  filterInLvBboxes, dimensionLimitRisk, filterInLtBboxes, getEeSitesCache, isDimensionLimitEvent,
+  isFiWeightLimitLike, ltWeatherToSlowdownEvents, lvNapKeyEnv, lvNapUrlEnv, normalizeLvNapUrl,
   lvWeatherToSlowdownEvents, parseEeFeedBody, parseFiTrafficMessages, parseLtRestrictions,
   parseLtWeather, parseLvFeedBody, probeBalticHost, probeEeDatexApi, readBalticFeedBody,
-  weightLimitRisk,
+  setEeSitesCache, weightLimitRisk,
   type BalticKeyMeta, type BalticRoadEvent, type LvNapCode,
 } from './roadBaltic.ts';
 import { buildTrafficIncidentsUrl, parseHereTrafficIncidents } from '../here/trafficIncidents.ts';
@@ -3951,7 +3952,7 @@ function lvDiagObservations(
   };
   if (opts.urlKind) o.lv_url_kind = opts.urlKind;
   if (opts.probe) o.probe_lv = opts.probe;
-  /* DP-170: lv_shape_<kod> = https|http|bez_schematu|same_cyfry|spacje|pusty (bez wartości URL). */
+  /* DP-170/171: lv_shape_<kod> (+ nie_url); bez wartości URL. */
   if (opts.urlShapes) {
     for (const [code, shape] of Object.entries(opts.urlShapes)) {
       o[`lv_shape_${code.toLowerCase()}`] = shape;
@@ -3960,11 +3961,11 @@ function lvDiagObservations(
   return o;
 }
 
-/** DP-170 — kształt URL każdego zbioru LV (raw z env, bez wartości w obs). */
+/** DP-171 — kształt po normalizacji (raw → normalizeLvNapUrl). */
 function lvUrlShapesFromEnv(env: Record<string, string | undefined>): Record<string, string> {
   const out: Record<string, string> = {};
   for (const code of LV_NAP_CODES) {
-    out[code] = lvUrlShape(env[lvNapUrlEnv(code)]);
+    out[code] = normalizeLvNapUrl(env[lvNapUrlEnv(code)]).shape;
   }
   return out;
 }
@@ -3973,16 +3974,25 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
   const now = deps.now().toISOString();
   const warnings: string[] = [];
   const configured: { code: LvNapCode; url: string; key: string; keyMeta: BalticKeyMeta }[] = [];
+  const urlShapes = lvUrlShapesFromEnv(deps.env as Record<string, string | undefined>);
   for (const code of LV_NAP_CODES) {
     const keyMeta = balticKeyMeta(deps.env[lvNapKeyEnv(code)]);
-    const url = (deps.env[lvNapUrlEnv(code)] ?? '').trim();
+    const resolved = normalizeLvNapUrl(deps.env[lvNapUrlEnv(code)]);
     const key = keyMeta.key;
-    if (key && url) configured.push({ code, url, key, keyMeta });
-    else if (key || url) warnings.push(`LV ${code}: niepełna para sekretów KEY/URL`);
+    /* DP-171: pusty / nie_url = nieskonfigurowany (bez ostrzeżenia sieci). */
+    if (key && resolved.url) {
+      configured.push({ code, url: resolved.url, key, keyMeta });
+    } else if (key && !resolved.url && resolved.shape !== 'pusty') {
+      /* Klucz jest, URL bezużyteczny — nie fetch; shape w obs. */
+    } else if (!key && resolved.url) {
+      warnings.push(`LV ${code}: niepełna para sekretów KEY/URL`);
+    } else if (!key && resolved.shape !== 'pusty' && resolved.shape !== 'nie_url') {
+      warnings.push(`LV ${code}: niepełna para sekretów KEY/URL`);
+    }
   }
   const expectedFetches = configured.length;
   const first = configured[0];
-  const urlShapes = lvUrlShapesFromEnv(deps.env as Record<string, string | undefined>);
+  const lvBaseHost = balticWarnHost(LV_NAP_BASE);
   if (expectedFetches === 0) {
     /* F7 #730 N3: configured:0 — nie ok:false, nie streak SOURCE_DOWN. */
     return {
@@ -3994,6 +4004,7 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
         expected_fetches: '0',
         configured: '0',
         header: LV_NAP_KEY_HEADER,
+        lv_base: lvBaseHost,
         ...lvDiagObservations(balticKeyMeta(''), { urlShapes }),
       },
     };
@@ -4006,10 +4017,12 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
     LV_UA,
   );
   const diag = lvDiagObservations(first!.keyMeta, {
+    /* DP-171: lv_url_kind po normalizacji. */
     urlKind: balticUrlKind(first!.url),
     probe: probeLv,
     urlShapes,
   });
+  diag.lv_base = lvBaseHost;
 
   const started = Date.now();
   const parseStats = { parsed: 0, skipped: 0, swapped: 0 };
@@ -4253,6 +4266,8 @@ type EeFeedPart = {
   format: string;
   events: BalticRoadEvent[];
   sites?: Map<string, [number, number]>;
+  /** DP-171 — czas pobrania [ms]. */
+  ms: number;
 };
 
 async function fetchEeFeedPart(
@@ -4267,11 +4282,12 @@ async function fetchEeFeedPart(
     weatherBlocks: number; weatherNoSite: number;
   },
 ): Promise<EeFeedPart> {
-  if (Date.now() - started > BALTIC_FEED_BUDGET_MS) {
+  const t0 = Date.now();
+  if (Date.now() - started > EE_FEED_BUDGET_MS) {
     return {
       code: feed.code, ok: false,
       warning: `niepobrany ${feed.code} (budżet czasu)`,
-      per: 'budget', format: '', events: [],
+      per: 'budget', format: '', events: [], ms: 0,
     };
   }
   const url = eeDatexFeedUrl(feed.path);
@@ -4280,16 +4296,18 @@ async function fetchEeFeedPart(
     Accept: feed.format === 'json'
       ? 'application/json, application/xml, text/xml, */*'
       : 'application/xml, text/xml, application/json, */*',
+    /* DP-171: gzip na wszystkich usługach EE (jak sonda). */
+    'Accept-Encoding': 'gzip',
     [EE_DATEX_KEY_HEADER]: apiKey,
   };
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), BALTIC_FEED_TIMEOUT_MS);
+  const timer = setTimeout(() => ctrl.abort(), EE_FEED_TIMEOUT_MS);
   try {
-    if (Date.now() - started > BALTIC_FEED_BUDGET_MS) {
+    if (Date.now() - started > EE_FEED_BUDGET_MS) {
       return {
         code: feed.code, ok: false,
         warning: `niepobrany ${feed.code} (budżet czasu)`,
-        per: 'budget', format: '', events: [],
+        per: 'budget', format: '', events: [], ms: Math.max(0, Date.now() - t0),
       };
     }
     const res = await deps.fetch(url, { headers, signal: ctrl.signal });
@@ -4298,6 +4316,7 @@ async function fetchEeFeedPart(
         code: feed.code, ok: false,
         warning: `EE ${feed.code}: HTTP ${res.status}`,
         per: `http_${res.status}`, format: '', events: [],
+        ms: Math.max(0, Date.now() - t0),
       };
     }
     /* DP-168: wspólny odczyt strumieniowy 5 MB. */
@@ -4307,6 +4326,7 @@ async function fetchEeFeedPart(
         code: feed.code, ok: false,
         warning: `nieczytelna odpowiedź ${feed.code}`,
         per: 'too_large', format: 'unknown', events: [],
+        ms: Math.max(0, Date.now() - t0),
       };
     }
     const localStats = {
@@ -4327,6 +4347,7 @@ async function fetchEeFeedPart(
         code: feed.code, ok: false,
         warning: `nieczytelna odpowiedź ${feed.code}`,
         per: `bad:${parsed.format}`, format: parsed.format, events: [],
+        ms: Math.max(0, Date.now() - t0),
       };
     }
     /* DP-168 / F7 #733 B8 — ok:<rekordy>:<pominięte>:<format>:<swapped> */
@@ -4338,6 +4359,7 @@ async function fetchEeFeedPart(
       format: parsed.format,
       events: parsed.events,
       sites: parsed.sites,
+      ms: Math.max(0, Date.now() - t0),
     };
   } catch (e) {
     /* DP-169: klasa błędu + host bez ścieżki (klucz nie w warnings). */
@@ -4347,6 +4369,7 @@ async function fetchEeFeedPart(
       warning: balticNetWarning(`EE ${feed.code}`, url, e),
       per: klass === 'timeout' ? 'timeout' : `error:${klass}`,
       format: '', events: [],
+      ms: Math.max(0, Date.now() - t0),
     };
   } finally {
     clearTimeout(timer);
@@ -4402,17 +4425,47 @@ export async function runRoadEe(deps: JobDeps): Promise<JobResult> {
   };
   const sites = new Map<string, [number, number]>();
   const parts: EeFeedPart[] = [];
+  let sitesSource: 'fetch' | 'cache' | 'miss' = 'miss';
 
-  /* F7 #733 B5 — najpierw measurementSites (współrzędne), potem reszta równolegle. */
+  /* F7 #733 B5 — measurementSites najpierw; DP-171: raz na dobę z cache. */
   const sitesFeed = EE_DATEX_FEEDS.find((f) => f.code === 'MEASUREMENT_SITES');
   const otherFeeds = EE_DATEX_FEEDS.filter((f) => f.code !== 'MEASUREMENT_SITES');
-  if (sitesFeed) {
+  const cachedSites = getEeSitesCache(started);
+  if (sitesFeed && cachedSites) {
+    for (const [id, ll] of cachedSites) sites.set(id, ll);
+    sitesSource = 'cache';
+    parts.push({
+      code: sitesFeed.code, ok: true, warning: null,
+      per: balticFeedObsOk(0, 0, 'cache', 0),
+      format: 'cache', events: [], sites: cachedSites, ms: 0,
+    });
+  } else if (sitesFeed) {
     const sitePart = await fetchEeFeedPart(
       deps, sitesFeed, apiKey, started, sites, parseStats,
     );
     parts.push(sitePart);
-    if (sitePart.sites) {
+    if (sitePart.sites && sitePart.sites.size > 0) {
       for (const [id, ll] of sitePart.sites) sites.set(id, ll);
+      setEeSitesCache(sitePart.sites, started);
+      sitesSource = 'fetch';
+    } else {
+      const stale = getEeSitesCache(started, Number.POSITIVE_INFINITY);
+      if (stale) {
+        for (const [id, ll] of stale) sites.set(id, ll);
+        sitesSource = 'cache';
+        if (!sitePart.ok) {
+          parts[parts.length - 1] = {
+            ...sitePart,
+            ok: true,
+            warning: sitePart.warning
+              ? `${sitePart.warning}; użyto cache stacji`
+              : 'EE MEASUREMENT_SITES: użyto cache stacji',
+            per: balticFeedObsOk(0, 0, 'cache-stale', 0),
+            format: 'cache',
+            sites: stale,
+          };
+        }
+      }
     }
   }
   const rest = await mapPoolLimit(otherFeeds, EE_FEED_CONCURRENCY, (feed) =>
@@ -4428,14 +4481,23 @@ export async function runRoadEe(deps: JobDeps): Promise<JobResult> {
   let fetchedOk = 0;
   const allEvents: BalticRoadEvent[] = [];
   const perCode: Record<string, string> = {};
+  const perMs: Record<string, string> = {};
   for (const p of parts) {
     perCode[p.code] = p.per;
+    /* DP-171: ee_<usługa>_ms */
+    perMs[p.code] = String(p.ms);
     if (p.warning) warnings.push(p.warning);
     if (p.ok) {
       fetchedOk++;
       for (const e of p.events) allEvents.push(e);
     }
   }
+
+  const eePerObs = {
+    ...Object.fromEntries(Object.entries(perCode).map(([k, v]) => [`ee_${k.toLowerCase()}`, v])),
+    ...Object.fromEntries(Object.entries(perMs).map(([k, v]) => [`ee_${k.toLowerCase()}_ms`, v])),
+    ee_sites_source: sitesSource,
+  };
 
   if (fetchedOk === 0) {
     const streak = await roadEeFailStreak(deps);
@@ -4458,6 +4520,7 @@ export async function runRoadEe(deps: JobDeps): Promise<JobResult> {
           header: EE_DATEX_KEY_HEADER,
           key_env_first: 'TARKTEE_DATEX_TOKEN',
           ...diag,
+          ...eePerObs,
         },
       };
     }
@@ -4473,6 +4536,7 @@ export async function runRoadEe(deps: JobDeps): Promise<JobResult> {
         header: EE_DATEX_KEY_HEADER,
         key_env_first: 'TARKTEE_DATEX_TOKEN',
         ...diag,
+        ...eePerObs,
       },
     };
   }
@@ -4550,7 +4614,7 @@ export async function runRoadEe(deps: JobDeps): Promise<JobResult> {
       ee_road_from: `pole:${parseStats.roadFromPole},opis:${parseStats.roadFromOpis}`,
       measurement_sites: String(sites.size),
       ...diag,
-      ...Object.fromEntries(Object.entries(perCode).map(([k, v]) => [`ee_${k.toLowerCase()}`, v])),
+      ...eePerObs,
     },
   };
 }
