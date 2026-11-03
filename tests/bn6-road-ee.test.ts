@@ -15,6 +15,7 @@ import {
   EE_DATEX_KEY_HEADER,
   EE_FEED_TIMEOUT_MS,
   EE_ICY_CONTENT_RE,
+  EE_RESTRICTIONS_MAX_BYTES,
   EE_SOURCE_REF,
   EE_UA,
   LV_ICY_CONTENT_RE,
@@ -22,9 +23,12 @@ import {
   balticCapLongDetourClosure,
   balticFeedObsKey,
   balticFeedObsOk,
+  balticFeedShapeObs,
   balticKeyMeta,
   balticSlowdownMult,
+  classifyBalticFeedClass,
   classifyBalticNetError,
+  lvMetadataDataUrl,
   clearEeSitesCache,
   dimensionLimitRisk,
   EE_PROBE_API_PATH,
@@ -207,11 +211,14 @@ describe('BN6 road-ee parsers', () => {
     expect(minDistToCorridorKm(59.20, 24.70, CORRIDOR_EE)).toBeGreaterThan(3);
   });
 
-  it('F7 B4: hasDatexMarker — message/null/[]/Error/HTML → unknown', () => {
+  it('F7 B4 / DP-178: hasDatexMarker — message/null/Error/HTML → unknown; [] = OK', () => {
     expect(hasDatexMarker(restXml, 'xml')).toBe(true);
     expect(parseEeFeedBody('{"message":"Forbidden"}', 'SRTI_ACCIDENT', 'json').format).toBe('unknown');
     expect(parseEeFeedBody('null', 'SRTI_ACCIDENT', 'json').format).toBe('unknown');
-    expect(parseEeFeedBody('[]', 'SRTI_ACCIDENT', 'json').format).toBe('unknown');
+    /* DP-178 pkt 3 (#735): pusty [] = OK 0 rekordów (nie bad:unknown). */
+    const emptyArr = parseEeFeedBody('[]', 'SRTI_ACCIDENT', 'json');
+    expect(emptyArr.format).toBe('datex-json');
+    expect(emptyArr.events).toHaveLength(0);
     expect(parseEeFeedBody('<Error>denied</Error>', 'RESTRICTIONS', 'xml').format).toBe('unknown');
     expect(parseEeFeedBody(
       '<!DOCTYPE html><html><body>payloadPublication mentioned</body></html>',
@@ -234,6 +241,23 @@ describe('BN6 road-ee parsers', () => {
     );
     expect(emptyPub.format).toBe('datex-json');
     expect(emptyPub.events).toHaveLength(0);
+  });
+
+  it('DP-178: shape obs + LV metadata URL + RESTRICTIONS 20 MB', () => {
+    expect(EE_RESTRICTIONS_MAX_BYTES).toBe(20 * 1024 * 1024);
+    expect(classifyBalticFeedClass('<!DOCTYPE html><html></html>', 'text/html')).toBe('html');
+    expect(classifyBalticFeedClass('[]', 'application/json')).toBe('json-array-pusty');
+    expect(classifyBalticFeedClass('{"files":[],"url":"x"}', 'application/json'))
+      .toBe('json-obiekt:files,url');
+    expect(classifyBalticFeedClass('<d2:payloadPublication xmlns:d2="x"/>', 'application/xml'))
+      .toBe('xml:d2:payloadPublication');
+    expect(classifyBalticFeedClass('\u001f\u008bxx', null)).toBe('gzip-nierozpakowany');
+    expect(balticFeedShapeObs(200, 'application/json; charset=utf-8', 12, '[]'))
+      .toBe('200:application/json:12:json-array-pusty');
+    expect(lvMetadataDataUrl({
+      files: [{ field_source_url: 'https://data.example.lv/feed.xml' }],
+    })).toBe('https://data.example.lv/feed.xml');
+    expect(lvMetadataDataUrl({ message: 'maintenance' })).toBeNull();
   });
 
   it('F7 B5 / r2 B1: nested weather — jäide / zimno+RH / mgła → HIGH+slow; märg → nie', () => {
@@ -614,13 +638,27 @@ describe('DP-168 roadBaltic shared', () => {
       status: 200,
       headers: { 'Content-Length': String(BALTIC_FEED_MAX_BYTES + 1) },
     });
-    expect(await readBalticFeedBody(bigCl)).toEqual({ ok: false, reason: 'too_large' });
+    expect(await readBalticFeedBody(bigCl)).toEqual({
+      ok: false, reason: 'too_large', bytes: BALTIC_FEED_MAX_BYTES + 1,
+    });
 
     const ok = new Response('<?xml ok?>', { status: 200 });
-    expect(await readBalticFeedBody(ok)).toEqual({ ok: true, text: '<?xml ok?>' });
+    const okBody = await readBalticFeedBody(ok);
+    expect(okBody).toEqual({ ok: true, text: '<?xml ok?>', bytes: '<?xml ok?>'.length });
 
     const over = new Response(new Uint8Array(BALTIC_FEED_MAX_BYTES + 8), { status: 200 });
-    expect(await readBalticFeedBody(over)).toEqual({ ok: false, reason: 'too_large' });
+    const overBody = await readBalticFeedBody(over);
+    expect(overBody.ok).toBe(false);
+    if (!overBody.ok) expect(overBody.reason).toBe('too_large');
+
+    /* DP-178: RESTRICTIONS 20 MB — Content-Length 6 MB: default too_large, limit 20 MB OK. */
+    const midCl = String(6 * 1024 * 1024);
+    expect(await readBalticFeedBody(new Response('x', {
+      status: 200, headers: { 'Content-Length': midCl },
+    }))).toMatchObject({ ok: false, reason: 'too_large' });
+    expect(await readBalticFeedBody(new Response('ok-restr', {
+      status: 200, headers: { 'Content-Length': midCl },
+    }), EE_RESTRICTIONS_MAX_BYTES)).toEqual({ ok: true, text: 'ok-restr', bytes: 8 });
   });
 
   /* F7 #737 B2 — AbortError w trakcie czytania → classifyBalticNetError = timeout. */

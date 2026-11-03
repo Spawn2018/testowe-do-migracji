@@ -1,4 +1,12 @@
 
+## 2026-11-03 03:45 — #747 SCALONE + start DP-178
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720/#735 w planie. DP-178/179 w rejestrze.
+- Scalanie: **#747 SCALONE** `4ce85732` (BN8 front; F7 gotowe @ `9fcd6fe2`, CI 7/7). `deploy-main` robi resztę. BN9-c6 — koordynator.
+- **Krok DP-178** (`pakiet/dp178-ee-lv-shape-fix`): shape obs EE/LV; RESTRICTIONS 20 MB; SRTI `[]`=OK; LV metadane→plik; Tark Tee bez bbox (PDF).
+- **Dalej:** push → CI → F7. Po F7: BN8b po HERE ~04:15 UTC (§7). DP-179 — szczegóły od koordynatora.
+- Bez push na main.
+
 ## 2026-11-03 03:15 — #746 SCALONE + start BN8 front src/lib
 
 - Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie.
