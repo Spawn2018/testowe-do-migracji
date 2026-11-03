@@ -65,6 +65,40 @@ comment on function public.bn8b_here_leg_line(text) is
 revoke all on function public.bn8b_here_leg_line(text) from public, anon, authenticated;
 grant execute on function public.bn8b_here_leg_line(text) to service_role;
 
+-- F7 N2: dystans na gotowej linii (1× makeline na refresh, nie per próbka).
+create or replace function public.bn8b_here_leg_progress_on_line(
+  p_line geometry, p_geom geometry, p_fetched timestamptz default null
+)
+returns table (remaining_frac numeric, off_m numeric, remaining_km numeric, total_km numeric, fetched_at timestamptz)
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_loc double precision;
+  v_total numeric;
+begin
+  if p_geom is null or p_line is null or st_npoints(p_line) < 2 then
+    return;
+  end if;
+  v_total := round((st_length(p_line::geography) / 1000.0)::numeric, 2);
+  v_loc := st_linelocatepoint(p_line, st_setsrid(p_geom, 4326));
+  remaining_frac := least(1, greatest(0, 1.0 - v_loc));
+  off_m := st_distance(st_setsrid(p_geom, 4326)::geography, p_line::geography);
+  remaining_km := round((remaining_frac * v_total)::numeric, 2);
+  total_km := v_total;
+  fetched_at := p_fetched;
+  return next;
+end;
+$$;
+comment on function public.bn8b_here_leg_progress_on_line(geometry, geometry, timestamptz) is
+  'BN8b/#720 F7 N2: postęp/odległość na gotowej LineString HERE (bez ponownego makeline).';
+revoke all on function public.bn8b_here_leg_progress_on_line(geometry, geometry, timestamptz)
+  from public, anon, authenticated;
+grant execute on function public.bn8b_here_leg_progress_on_line(geometry, geometry, timestamptz)
+  to service_role;
+
 create or replace function public.bn8b_here_leg_progress(p_leg text, p_geom geometry)
 returns table (remaining_frac numeric, off_m numeric, remaining_km numeric, total_km numeric, fetched_at timestamptz)
 language plpgsql
@@ -75,8 +109,6 @@ as $$
 declare
   v_line geometry;
   v_fetched timestamptz;
-  v_loc double precision;
-  v_total numeric;
 begin
   if p_geom is null or p_leg is null then
     return;
@@ -90,17 +122,8 @@ begin
      and jsonb_typeof(g.points) = 'array'
      and jsonb_array_length(g.points) >= 2;
   v_line := public.bn8b_here_leg_line(p_leg);
-  if v_line is null or st_npoints(v_line) < 2 then
-    return;
-  end if;
-  v_total := round((st_length(v_line::geography) / 1000.0)::numeric, 2);
-  v_loc := st_linelocatepoint(v_line, st_setsrid(p_geom, 4326));
-  remaining_frac := least(1, greatest(0, 1.0 - v_loc));
-  off_m := st_distance(st_setsrid(p_geom, 4326)::geography, v_line::geography);
-  remaining_km := round((remaining_frac * v_total)::numeric, 2);
-  total_km := v_total;
-  fetched_at := v_fetched;
-  return next;
+  return query
+    select * from public.bn8b_here_leg_progress_on_line(v_line, p_geom, v_fetched);
 end;
 $$;
 comment on function public.bn8b_here_leg_progress(text, geometry) is
@@ -678,13 +701,18 @@ begin
     v_se_corr := coalesce(v_se_corr, 'SE_E4');
   end if;
 
-  -- F7 W1: v_slow_pl (ROAD_LT/LV/EE) × h_pl; v_slow_se (ROAD_FI / SE_*) × h_road.
-  -- ROAD_FI/SE_E4 zawsze w corridor_conditions (=1.00) — nie mogą zasłaniać PL.
+  -- F7 W1/N1: v_slow_pl (ROAD_LT/LV/EE) tylko przy PL_EE_E67 i status < FERRY;
+  -- inaczej 1.00 (rdzeń GDN-NYN/GDY-KAA bez zmian; po promie nie mnoży h_pl).
+  -- v_slow_se (ROAD_FI / SE_*) × h_road.
   select max(slowdown_mult), string_agg(reason, '; ' order by corridor)
     into v_slow_pl, v_slow_reason_pl
     from corridor_conditions
    where corridor in ('ROAD_LT', 'ROAD_LV', 'ROAD_EE');
   v_slow_pl := coalesce(v_slow_pl, 1.00);
+  if v_pl_corr is distinct from 'PL_EE_E67' or v_status >= 'FERRY' then
+    v_slow_pl := 1.00;
+    v_slow_reason_pl := null;
+  end if;
 
   select slowdown_mult, reason into v_slow_se, v_slow_reason_se
     from corridor_conditions where corridor = v_se_corr;
@@ -692,7 +720,8 @@ begin
     select slowdown_mult, reason into v_slow_se, v_slow_reason_se
       from corridor_conditions where corridor = 'ROAD_FI';
   end if;
-  if v_slow_se is null and v_se_corr in ('SE_E4_STO', 'SE_E18_KPS', 'SE_E4') then
+  -- N4: 'SE_E4' martwy w IN — pierwszy SELECT już trafia przy v_se_corr=SE_E4.
+  if v_slow_se is null and v_se_corr in ('SE_E4_STO', 'SE_E18_KPS') then
     select slowdown_mult, reason into v_slow_se, v_slow_reason_se
       from corridor_conditions where corridor = 'SE_E4';
   end if;
@@ -713,12 +742,12 @@ begin
   h_road_eff := h_road * v_slow_se;
   h_se := h_road_eff + h_rest + h_brk;
 
-  -- F7 W5: znacznik źródła geometrii korytarza BN7 (here+fetched_at albo brak).
+  -- F7 W5/N3: corridor_geom = here|brak (alarm); postęp ETA nadal OSM — method uczciwie.
   if v_status = 'IN_TRANSIT_SE' and v_se_corr in ('FI_E75', 'SE_E4_STO', 'SE_E18_KPS') then
     if public.bn8b_here_leg_fresh(v_se_leg) then
       v_corridor_geom := 'here';
       select g.fetched_at into v_here_fetched from public.here_road_geometry g where g.leg = v_se_leg;
-      v_method := 'ETA v2 (HERE)';
+      v_method := 'ETA v2 (OSM; HERE tylko alarm)';
     else
       v_corridor_geom := 'brak';
     end if;
@@ -727,7 +756,7 @@ begin
     if public.bn8b_here_leg_fresh(v_pl_leg) then
       v_corridor_geom := 'here';
       select g.fetched_at into v_here_fetched from public.here_road_geometry g where g.leg = v_pl_leg;
-      v_method := 'ETA v2 (HERE)';
+      v_method := 'ETA v2 (OSM; HERE tylko alarm)';
     else
       v_corridor_geom := 'brak';
     end if;
@@ -1114,6 +1143,7 @@ declare
   v_bn7_no_here boolean := false;
   v_here_fresh boolean := false;
   v_here_fetched timestamptz;
+  v_here_line geometry; -- F7 N2: jedna LineString na refresh
   v_src_label text := 'OSM';
 begin
   select * into r from compute_load_eta(p_load);
@@ -1242,7 +1272,8 @@ begin
   if v_bn7_no_here then
     null; -- bez pomiaru na przybliżeniu OSM; corridor_polylines zostaje OSM (D-81)
   elsif v_bn7 and v_blocked is not true then
-    -- F7 B1: dystans bezpośrednio z here_road_geometry legu trasy.
+    -- F7 B1/N2: dystans z here_road_geometry legu — linia raz, potem 2 próbki.
+    v_here_line := public.bn8b_here_leg_line(v_leg);
     select count(*)::int,
            max(hp.off_m),
            min(hp.off_m),
@@ -1259,7 +1290,9 @@ begin
          order by ts desc
          limit 2
       ) s
-      cross join lateral public.bn8b_here_leg_progress(v_leg, s.g) hp;
+      cross join lateral public.bn8b_here_leg_progress_on_line(
+        v_here_line, s.g, v_here_fetched
+      ) hp;
     if coalesce(v_off, 0) <= l3_ops('OFFROUTE_KM') * 1000 then
       v_max_off := 0;
     end if;
@@ -1350,12 +1383,12 @@ end $$;
 revoke all on function public.compute_load_eta(uuid, timestamptz) from public, anon, authenticated;
 grant execute on function public.compute_load_eta(uuid, timestamptz) to service_role;
 comment on function public.compute_load_eta(uuid, timestamptz) is
-  'BN8b/#720 F7: load_route_family; leg trasy; v_slow_pl×h_pl / v_slow_se×h_road; corridor_geom here|brak.';
+  'BN8b/#720 F7 r2: load_route_family; v_slow_pl tylko PL_EE_E67 przed FERRY; OSM postęp, HERE tylko alarm.';
 
 revoke all on function public.refresh_load_eta(uuid) from public, anon, authenticated;
 grant execute on function public.refresh_load_eta(uuid) to service_role;
 comment on function public.refresh_load_eta(uuid) is
-  'BN8b/#720 F7: OFF_CORRIDOR BN7 z here_road_geometry legu (bez sync polyline); jeden UPDATE z corridor_geom; MUU/PLD st_dwithin.';
+  'BN8b/#720 F7 r2: OFF_CORRIDOR HERE po legu; linia raz (N2); jeden UPDATE corridor_geom; bez sync polyline.';
 
 revoke all on function public.promote_ferry_departures(timestamptz) from public, anon, authenticated;
 grant execute on function public.promote_ferry_departures(timestamptz) to service_role;

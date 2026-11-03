@@ -2551,18 +2551,11 @@ chk "BN8a W5f: ferry_sailings_map bez coalesce GDN" \
   "select pg_get_functiondef('public.ferry_sailings_map()'::regprocedure) not like '%coalesce(fr.port_from%'" t
 
 # BN8b (#720 §7 / 0385 F7 #749): OFF_CORRIDOR z HERE po LEGU; bez sync do corridor_polylines.
-# UUID 821* / 822* — nie koliduje z L820* BN8a. Każdy chk w begin/rollback; sprzątanie chk=0.
-# L 821a–m (matryca 4 rodzin); L 822* F7 W3.
+# UUID 821* / 822* / 823* — nie koliduje z L820* BN8a. Każdy chk w begin/rollback; sprzątanie chk=0.
+# L 821a–m (matryca 4 rodzin); L 822* F7 W3; L 823* F7 r2 N1/W3f.
+# F7 r2: asercje behawioralne zamiast like '%…%' na tekście funkcji.
 chk "BN8b: PORT_CHECKIN_TLL = 2 h (82-C)" \
   "select (hours = 2)::text from eta_segment_params where code='PORT_CHECKIN_TLL'" t
-chk "BN8b: compute_load_eta używa load_route_family" \
-  "select pg_get_functiondef('public.compute_load_eta(uuid,timestamptz)'::regprocedure) like '%load_route_family%'" t
-chk "BN8b: refresh_load_eta świeżość po legu HERE" \
-  "select pg_get_functiondef('public.refresh_load_eta(uuid)'::regprocedure) like '%bn8b_here_leg_fresh%'" t
-chk "BN8b: brak sync HERE→corridor_polylines" \
-  "select pg_get_functiondef('public.refresh_load_eta(uuid)'::regprocedure) not like '%bn8b_sync_corridor_polyline%'" t
-chk "BN8b: propose_id używa ferry_route_departure_country" \
-  "select pg_get_functiondef('public.sailing_mismatch_propose_id(uuid)'::regprocedure) like '%ferry_route_departure_country%'" t
 L821a=aaaaaaaa-0000-0000-0000-00000000821a
 L821b=aaaaaaaa-0000-0000-0000-00000000821b
 L821c=aaaaaaaa-0000-0000-0000-00000000821c
@@ -2582,6 +2575,15 @@ L822c=aaaaaaaa-0000-0000-0000-00000000822c
 L822d=aaaaaaaa-0000-0000-0000-00000000822d
 L822e=aaaaaaaa-0000-0000-0000-00000000822e
 L822f=aaaaaaaa-0000-0000-0000-00000000822f
+L823a=aaaaaaaa-0000-0000-0000-00000000823a
+L823b=aaaaaaaa-0000-0000-0000-00000000823b
+L823c=aaaaaaaa-0000-0000-0000-00000000823c
+L823d=aaaaaaaa-0000-0000-0000-00000000823d
+L823e=aaaaaaaa-0000-0000-0000-00000000823e
+L823f=aaaaaaaa-0000-0000-0000-00000000823f
+S823t=77777777-0000-0000-0000-00000000823a
+S823g=77777777-0000-0000-0000-00000000823b
+V823=66666666-0000-0000-0000-00000000823a
 # Wspólna polilinia HERE PL_EE_E67 (punkty [lat,lon]); na = 24.50/58.39; obok ≈10 km E.
 HERE_PL_EE='[[52.083,17.017],[53.13,23.16],[54.10,22.93],[54.90,23.90],[56.41,24.19],[57.87,24.36],[58.39,24.50],[59.437,24.753]]'
 # FI E75 / SE post — uproszczona linia Helsinki→Boden (na = 25.19/60.21).
@@ -2843,7 +2845,106 @@ chk "BN8b F7: IN_TRANSIT_SE FI_E75 na linii → 0" \
    select count(*) from risk_signals where load_id='$L822f' and dedup_key like 'OFF_CORRIDOR%';
    rollback" 0
 
-chk "BN8b po teście brak risk_signals/loads L821*/L822*" \
+# F7 r2 W3g: 10 km obok FI_E75 w IN_TRANSIT_SE → 1.
+chk "BN8b F7 r2: IN_TRANSIT_SE FI_E75 10 km obok → 1" \
+  "begin;
+   insert into here_road_geometry (leg, points, summary, fetched_at, length_m, duration_s)
+    values ('FI-HEL', '$HERE_FI'::jsonb, 'BN8b F7 FI off', now(), 900000, 50000)
+    on conflict (leg) do update set points=excluded.points, fetched_at=excluded.fetched_at, summary=excluded.summary;
+   insert into loads (id, project_id, carrier_org_id, hhl_order_no, carrier_order_no, status, plan_load_date, plan_delivery_date, ferry_route)
+    values ('$L823a','$P','$SCXO','HHL/BN8B-823A','SCX/BN8B-823A','IN_TRANSIT_SE', current_date, current_date + 5, 'TLL-HEL');
+   insert into positions (load_id, ts, geom_raw, source) values
+    ('$L823a', now() - interval '20 minutes', st_setsrid(st_makepoint(24.20, 61.50), 4326), 'TELEMATICS_API'),
+    ('$L823a', now() - interval '5 minutes', st_setsrid(st_makepoint(24.20, 61.50), 4326), 'TELEMATICS_API');
+   select public.refresh_load_eta('$L823a');
+   select count(*) from risk_signals where load_id='$L823a' and dedup_key like 'OFF_CORRIDOR%';
+   rollback" 1
+
+# F7 r2 N1: ROAD_LT=1.5 nie zmienia ETA GDN-NYN; wydłuża TLL-HEL (przed promem).
+chk "BN8b F7 N1: ROAD_LT×1.5 — GDN bez zmian, TLL dłuższy" \
+  "begin;
+   update corridor_conditions set slowdown_mult=1.00, reason='ok'
+    where corridor in ('ROAD_LT','ROAD_LV','ROAD_EE');
+   insert into loads (id, project_id, carrier_org_id, hhl_order_no, carrier_order_no, status, plan_load_date, plan_delivery_date, ferry_route)
+    values ('$L823b','$P','$SCXO','HHL/BN8B-823B','SCX/BN8B-823B','IN_TRANSIT_PL', current_date, current_date + 3, 'GDN-NYN'),
+           ('$L823c','$P','$SCXO','HHL/BN8B-823C','SCX/BN8B-823C','IN_TRANSIT_PL', current_date, current_date + 5, 'TLL-HEL');
+   insert into positions (load_id, ts, geom_raw, source) values
+    ('$L823b', now() - interval '10 minutes', st_setsrid(st_makepoint(17.50, 52.50), 4326), 'TELEMATICS_API'),
+    ('$L823c', now() - interval '10 minutes', st_setsrid(st_makepoint(24.50, 58.39), 4326), 'TELEMATICS_API');
+   insert into load_events (load_id, event_type, occurred_at, payload) values
+    ('$L823b','GEOFENCE_EXIT', now() - interval '2 hours', jsonb_build_object('geofence_kind','LOADING')),
+    ('$L823c','GEOFENCE_EXIT', now() - interval '2 hours', jsonb_build_object('geofence_kind','LOADING'));
+   create temporary table bn8b_n1_eta (
+     route text primary key, eta_base timestamptz, eta_slow timestamptz
+   ) on commit drop;
+   insert into bn8b_n1_eta (route, eta_base)
+    select 'GDN', eta from public.compute_load_eta('$L823b')
+    union all
+    select 'TLL', eta from public.compute_load_eta('$L823c');
+   update corridor_conditions set slowdown_mult=1.50, reason='BN8b N1 LT'
+    where corridor='ROAD_LT';
+   update bn8b_n1_eta e set eta_slow = c.eta
+     from public.compute_load_eta('$L823b') c where e.route='GDN';
+   update bn8b_n1_eta e set eta_slow = c.eta
+     from public.compute_load_eta('$L823c') c where e.route='TLL';
+   select bool_and(
+            case route
+              when 'GDN' then eta_base = eta_slow and eta_base is not null
+              when 'TLL' then eta_slow > eta_base and eta_base is not null
+            end
+          )
+     from bn8b_n1_eta;
+   rollback" t
+
+# F7 r2 W3f: eta_site nie null TLL-HEL IN_TRANSIT_PL / IN_TRANSIT_SE.
+chk "BN8b F7 W3f: eta_site TLL-HEL IN_TRANSIT_PL/SE" \
+  "begin;
+   insert into here_road_geometry (leg, points, summary, fetched_at, length_m, duration_s)
+    values ('PL-TLL', '$HERE_PL_EE'::jsonb, 'BN8b W3f PL', now(), 1350000, 72000),
+           ('FI-HEL', '$HERE_FI'::jsonb, 'BN8b W3f FI', now(), 900000, 50000)
+    on conflict (leg) do update set points=excluded.points, fetched_at=excluded.fetched_at, summary=excluded.summary;
+   insert into loads (id, project_id, carrier_org_id, hhl_order_no, carrier_order_no, status, plan_load_date, plan_delivery_date, ferry_route)
+    values ('$L823d','$P','$SCXO','HHL/BN8B-823D','SCX/BN8B-823D','IN_TRANSIT_PL', current_date, current_date + 5, 'TLL-HEL'),
+           ('$L823e','$P','$SCXO','HHL/BN8B-823E','SCX/BN8B-823E','IN_TRANSIT_SE', current_date, current_date + 5, 'TLL-HEL');
+   insert into positions (load_id, ts, geom_raw, source) values
+    ('$L823d', now() - interval '10 minutes', st_setsrid(st_makepoint(24.50, 58.39), 4326), 'TELEMATICS_API'),
+    ('$L823e', now() - interval '10 minutes', st_setsrid(st_makepoint(24.00, 61.50), 4326), 'TELEMATICS_API');
+   insert into load_events (load_id, event_type, occurred_at, payload) values
+    ('$L823d','GEOFENCE_EXIT', now() - interval '2 hours', jsonb_build_object('geofence_kind','LOADING'));
+   select public.refresh_load_eta('$L823d');
+   select public.refresh_load_eta('$L823e');
+   select (select eta_site is not null from loads where id='$L823d')
+      and (select eta_site is not null from loads where id='$L823e');
+   rollback" t
+
+# F7 r2 W3f: założony rejs tylko z rodziny (GDN bliższy w oknie → i tak TLL-HEL).
+chk "BN8b F7 W3f: założony rejs tylko z rodziny TLL" \
+  "begin;
+   insert into vessels (id, name, operator) values
+    ('$V823','BN8b F7 vessel','TALLINK')
+    on conflict (id) do nothing;
+   insert into sailings (id, project_id, vessel_id, route, departure_at, arrival_at, status, source) values
+    ('$S823g','$P','$V823','GDN-NYN', now() + interval '3 hours', now() + interval '21 hours','ZAPLANOWANY','POLFERRIES'),
+    ('$S823t','$P','$V823','TLL-HEL', now() + interval '6 hours', now() + interval '8 hours','ZAPLANOWANY','TALLINK');
+   insert into loads (id, project_id, carrier_org_id, hhl_order_no, carrier_order_no, status, plan_load_date, plan_delivery_date, ferry_route)
+    values ('$L823f','$P','$SCXO','HHL/BN8B-823FAM','SCX/BN8B-823FAM','IN_TRANSIT_PL', current_date, current_date + 5, 'TLL-HEL');
+   insert into positions (load_id, ts, geom_raw, source) values
+    ('$L823f', now() - interval '10 minutes', st_setsrid(st_makepoint(24.50, 58.39), 4326), 'TELEMATICS_API');
+   insert into load_events (load_id, event_type, occurred_at, payload) values
+    ('$L823f','GEOFENCE_EXIT', now() - interval '2 hours', jsonb_build_object('geofence_kind','LOADING'));
+   select (c.basis->>'sailing' like 'założony%')
+      and exists (
+        select 1 from jsonb_array_elements(coalesce(c.basis->'segments','[]'::jsonb)) seg
+         where seg->>'code'='CROSSING'
+           and abs(extract(epoch from (
+             (seg->>'departure')::timestamptz
+             - (select departure_at from sailings where id='$S823t')
+           ))) < 60
+      )
+     from public.compute_load_eta('$L823f') c;
+   rollback" t
+
+chk "BN8b po teście brak risk_signals/loads L821*/L822*/L823*" \
   "select (select count(*) from risk_signals where load_id::text like 'aaaaaaaa-0000-0000-0000-0000000082%')
         + (select count(*) from loads where id::text like 'aaaaaaaa-0000-0000-0000-0000000082%')" 0
 

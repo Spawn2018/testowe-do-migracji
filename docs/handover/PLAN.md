@@ -1266,10 +1266,12 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-170 | Cursor | EE: `ee_probe_api` — 1× animalObstacle 45 s + gzip (równolegle z pulą); LV: `lv_shape_*` (https/http/bez_schematu/same_cyfry/spacje/pusty) — #735 po prod #736 | #735 / #739 | BN6 / EE+LV | SCALONE (#739 `d4214676`); krok 2 #735 po prod |
 | DP-171 | Cursor | #735 krok 2 po prod: EE timeout 30 s + gzip + budżet 120 s + cache measurementSites 24 h + `ee_*_ms`; LV `normalizeLvNapUrl` (`LV_NAP_BASE` + `/api…` / `https:///…`) + `lv_base` | #735 | BN6 / EE+LV | SCALONE (#744 `4ae40c5b`) |
 | DP-172 | Cursor | DeepL dla sytuacji drogowych LT/LV/EE/FI jak SE (decyzja 89): źródła LT/LV/ET/FI; wolny tekst po filtrze korytarza; pamięć+retry+licznik; bez tłum. nazw miejsc; kody → `detail.kody` | #742 | BN6 / DeepL | SCALONE (#745 `162b4aa1` / **0383**) |
-| DP-175 | Cursor | test jsdom: legi BN7 bez punktów → tylko rdzeń (nie blokuje #740) | F7 #740 | BN7 / test | w kolejce |
-| DP-177 | koordynator | `keepUnits` także w tytułach bałtyckich (front) | F7 #743 | BN9-c4b / front | w kolejce |
+| DP-175 | Cursor | test jsdom: legi BN7 bez punktów → tylko rdzeń (nie blokuje #740) | F7 #740 / #750 | BN7 / test | SCALONE (#750 `db62c9b9`) |
+| DP-177 | koordynator | `keepUnits` także w tytułach bałtyckich (front) | F7 #743 / #750 | BN9-c4b / front | SCALONE (#750 `db62c9b9`) |
 | DP-178 | koordynator (#735) | EE/LV: shape obs; RESTRICTIONS 20 MB; SRTI `[]`=OK; LV meta→plik; F7 #748 r1: klucz tylko host NAP | #735 / #748 | BN6 / EE+LV | SCALONE (#748 `462af010`) |
 | DP-179 | koordynator (F7 #747) | Wspomniane przy DP-178 w F7 #747 — bez osobnej treści; przyjąć = w pakiecie DP-178 albo dopisek | F7 #747 | BN6 | w kolejce (szczegóły) |
+| DP-181 | Cursor | `byOperator` po `catalogOperators()`; `isBeforePlannedLoad` po trasie | F7 #750 | BN8 / `src/lib` | w kolejce |
+| DP-182 | koordynator | armator startowy awizacji po wczytaniu rozkładu | F7 #750 | BN9-c6 / awizacja | w kolejce (koordynator) |
 | DP-122 | Cursor | `viking_schedule_imports` (0360) brak w kopii 01.11 01:30 — koordynator #697: **nie wymaga zmian** (0360 po kopii 00:30; kontrola kopii 02.11) | #697 | backup | bez zmian (koord. 01.11) |
 | DP-117 | Cursor | `route-check/index.ts` `loads` `.limit(500)` bez sortu/filtra statusu — przy >500 transportach losowy dobór | F7 #693 r1 | ferry / route-check | w kolejce |
 | DP-118 | Cursor | `store.resolveStaleRisks` — `risk_signals` bez limitu (`max_rows`) → część nieaktualnych ryzyk niezamknięta | F7 #693 r1 | BN3 / ryzyka | w kolejce |
@@ -1419,7 +1421,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 Źródło: #720 (Spawn2018, `dla-cursora`; 02.11 ~02:10). Spec w treści: BN8a (statusy, mismatch, overdue, `process_position`, `eta_record_segment_observations`, blokada fałszywego OFF_CORRIDOR, `loads.ferry_route`); BN8b (`compute_load_eta` + OFF_CORRIDOR z korytarzy BN7). Front `src/lib` Cursor; ekrany BN9-c6 — koordynator. DP-143/DP-144 przy BN8.
 **Decyzja 82-C** (właściciel 02.11 00:21, #720): czas zgłoszenia w porcie EE (TLL/MUU/PLD) = **2 h** jako założenie (`PORT_CHECKIN_TLL`/`_MUU`/`_PLD`, `source='założenie — decyzja 82-C…'`); front awizacji wyrównać do tego samego parametru (dziś 14 h) w BN8 `src/lib`.
 **F7 #738 N6/N7 → BN8 (nie BN7):** po 0381 ETA bałtyckie nadal niepełne w `compute_load_eta` (postęp PL po `PL_ROAD`, PORT_OUT z geofence Gdańska, korytarz SE `SE_E4`); PORT_CHECKIN prod 3 h vs 2 h EE — domknięcie w BN8b.
-1. ~~**BN8a**~~ — SCALONE (#741 `f4c4e2ab` / **0382**; F7 r6): `loads.ferry_route` + `load_route_family`; kraje SE/FI; OFF_CORRIDOR tylko core; mismatch PL/EE; `eta_record` po trasie. ~~**DP-171/172**~~ → ~~**`cron_fetch=true`**~~ (#746). ~~**front `src/lib`**~~ SCALONE (#747 `4ce85732`; F7 @ `9fcd6fe2`): 82-C 2 h, `clearanceHoursForRoute`, `altProposal`/`CrossingMap`, DP-143/144. ~~**DP-178**~~ SCALONE (#748 `462af010`). **W TOKU:** **BN8b** (`pakiet/bn8b-eta-off-corridor` / **0385**, §7 #720) — OFF_CORRIDOR z HERE BN7 + `compute_load_eta` bałtyckie; status **622**.
+1. ~~**BN8a**~~ — SCALONE (#741 `f4c4e2ab` / **0382**; F7 r6): `loads.ferry_route` + `load_route_family`; kraje SE/FI; OFF_CORRIDOR tylko core; mismatch PL/EE; `eta_record` po trasie. ~~**DP-171/172**~~ → ~~**`cron_fetch=true`**~~ (#746). ~~**front `src/lib`**~~ SCALONE (#747 `4ce85732`; F7 @ `9fcd6fe2`): 82-C 2 h, `clearanceHoursForRoute`, `altProposal`/`CrossingMap`, DP-143/144. ~~**DP-178**~~ SCALONE (#748 `462af010`). ~~**BN9-c6**~~ SCALONE (#750 `db62c9b9`; DP-175/177). **W TOKU:** **BN8b** (`pakiet/bn8b-eta-off-corridor` / **0385**, §7 #720; F7 r2 N1–N4) — OFF_CORRIDOR z HERE BN7 + `compute_load_eta` bałtyckie; status **629**.
 
 ### #687 · DP-114 Tallink HEL–TLL 404 + niepełna pula Alert — SCALONE (`5fc7d4a0` / PR #689)
 Źródło: #687 (Spawn2018, `dla-cursora`). Po #683 prod: `TALLINK_HEL_TLL_URL` `/en/helsinki-tallinn` → HTTP 404; reguła 72 traci połowę puli.
@@ -2573,7 +2575,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 03.11.2026 03:45 | #747 SCALONE `4ce85732` (BN8 front F7 @ 9fcd6fe2); start DP-178 (#735 shape/20 MB/SRTI/LV meta); DP-179 w rejestrze | pętla / DP-178 |
 | 03.11.2026 04:05 | #748 F7 r1: klucz LV tylko `*.transportdata.gov.lv`; obcy host bez klucza + `data_host` | pętla / DP-178 |
 | 03.11.2026 04:30 | #748 SCALONE `462af010` (DP-178); start BN8b `pakiet/bn8b-eta-off-corridor` (§7) | pętla / BN8b |
-| 03.11.2026 04:30 | #748 SCALONE `462af010` (DP-178); start BN8b `pakiet/bn8b-eta-off-corridor` (§7) | pętla / BN8b |
+| 03.11.2026 05:30 | #750 SCALONE `db62c9b9` (BN9-c6); F7 #749 r2: N1 v_slow_pl / N2 linia raz / N3 method / N4; DP-181/182; status **629** | pętla / BN8b |
 | 31.10.2026 — | Decyzja 73: TLLA-HEL ETA−150 min / HELA-TLL ETD+160 min (fixture Cargo; nocny 165 min OK). Decyzja 74: `sailings.source_ref` 0359; Digitraffic `digitraffic:portcall:<id>:<route>`; HTML/RECZNIE/DANE_STARTOWE wygrywają; #685-b RPC zastępuje digitraffic:% w ±3 h | F7 #688 r1–r4 |
 | 31.10.2026 — | F7 #683 nieblokujące (osobna poprawka): Scheduler grudzień + „on 2 January” → rok bieżący, ciche wygaśnięcie; Alert INFO bez ryzyka/historii — świadomie | F7 #683 r7 |
 | 31.10.2026 — | F7 #683 r8 nieblokujące (osobno): Alert poza Schedulerem obok Schedulera; sprzeczne bloki (resume→cofnięcie auto); rok przy długim oknie Schedulera; mutanty M10/M15–M17/M22 świadomie bez testów | F7 #683 r8 |
