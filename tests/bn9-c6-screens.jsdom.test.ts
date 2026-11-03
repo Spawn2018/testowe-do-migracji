@@ -25,7 +25,7 @@ const { SailingPin } = await import('../src/components/drawer/SailingPin');
 const { EtaBlock } = await import('../src/components/drawer/EtaBlock');
 const { PanelOverview } = await import('../src/components/drawer/PanelOverview');
 const { BalticFerries } = await import('../src/components/dash/BalticFerries');
-const { balticNearest } = await import('../src/components/dash/balticNearest');
+const { balticNearest, plSeNearest } = await import('../src/components/dash/balticNearest');
 const { Cockpit } = await import('../src/components/dash/Cockpit');
 const { Topbar } = await import('../src/components/shell/Topbar');
 const { keepUnits } = await import('../src/components/risks/RoadRow');
@@ -287,6 +287,18 @@ describe('BN9-c6 · 4. Kokpit — najbliższy prom bałtycki obok Polferries/Ste
     const list = balticNearest(nearestCrossingByOperator(sail, NOW, 1));
     expect(list.map((x) => x.op)).toEqual(['VIKING', 'TALLINK', 'DFDS']);
     expect(balticNearest(nearestCrossingByOperator([sail[0]], NOW, 1))).toEqual([]);
+  });
+
+  it('decyzja #750: najbliższy rejs to Tallink → kafelek „Najbliższy prom” = najbliższy Polferries/Stena; Tallink tylko w sekcji bałtyckiej', () => {
+    const st = S({ id: 'k-st', route: 'GDY-KAA', vessel: 'Stena Spirit', source: 'STENA', departureAt: '2026-11-03T19:00:00Z', arrivalAt: '2026-11-04T05:00:00Z' });
+    const near = nearestCrossingByOperator([...sail, st], NOW, 1);
+    expect(plSeNearest(near)?.id).toBe('k-pf');
+    expect(balticNearest(near).map((x) => x.sailing.id)).toContain('k-tl');
+    expect(balticNearest(near).map((x) => x.sailing.id)).not.toContain('k-pf');
+    /* bez rejsów PL–SE — kafelek „brak rejsu”, mimo rejsów bałtyckich */
+    expect(plSeNearest(nearestCrossingByOperator(sail.slice(1), NOW, 1))).toBeNull();
+    /* tylko Stena — Stena */
+    expect(plSeNearest(nearestCrossingByOperator([st, sail[1]], NOW, 1))?.id).toBe('k-st');
   });
 
   it('Kokpit: karty Viking/Tallink/DFDS z trasą i ETA przypłynięcia (opóźnione, gdy jest) pod kafelkami', async () => {

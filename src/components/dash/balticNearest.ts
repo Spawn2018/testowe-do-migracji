@@ -15,3 +15,9 @@ export function balticNearest(near: CrossingMap): BalticFerry[] {
   }
   return out.sort((a, b) => Date.parse(effDeparture(a.sailing)) - Date.parse(effDeparture(b.sailing)));
 }
+
+/** BN9-c6: najbliższy rejs Polska – Szwecja (Polferries / Stena) do kafelka „Najbliższy prom”; brak — null. */
+export function plSeNearest(near: CrossingMap): Sailing | null {
+  return LEGACY_OPERATORS.map((op) => near[op]?.[0]).filter((x): x is Sailing => !!x)
+    .sort((a, b) => Date.parse(effDeparture(a)) - Date.parse(effDeparture(b)))[0] ?? null;
+}
