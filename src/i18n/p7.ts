@@ -89,6 +89,18 @@ const PL: Record<string, string> = {
   p7_pin_err_cancelled: 'Ten rejs jest odwołany — wybierz inny rejs w awizacji.',
   p7_pin_err_route: 'Ten rejs jest na innej trasie. Przypiąć można tylko rejs Gdańsk → Nynäshamn albo Gdynia → Karlskrona.',
   p7_pin_none: 'Auto jest już w Szwecji, a przypisany rejs jeszcze nie wypłynął. W rozkładzie nie ma pasującego rejsu — wybierz rejs w awizacji.',
+  /* BN9-c6: trasy z Estonii (backend od #741 — PL/EE → SE/FI) — kraj przypłynięcia z trasy */
+  p7_pin_lead_fi: 'Auto jest już w Finlandii, a przypisany rejs jeszcze nie wypłynął. Pasujący rejs: {sailing}.',
+  p7_pin_ask_fi: 'Przypiąć rejs {sailing}? Status i etap w Finlandii przeliczą się od razu, a zmiana trafi do historii.',
+  p7_pin_none_fi: 'Auto jest już w Finlandii, a przypisany rejs jeszcze nie wypłynął. W rozkładzie nie ma pasującego rejsu — wybierz rejs w awizacji.',
+  p7_pin_err_route_ee: 'Ten rejs jest na innej trasie. Przypiąć można tylko rejs z Estonii do Finlandii albo Szwecji (np. Tallinn → Helsinki).',
+  /* BN9-c6: wiersz „Rejs” i ETA dla tras bałtyckich */
+  p7_eta_baltic_val: 'brak danych',
+  p7_eta_baltic_sub: 'ETA dla trasy z Estonii jeszcze nie jest liczona — pojawi się po uruchomieniu obliczeń dla tej trasy.',
+  /* BN9-c6: Kokpit — najbliższy prom na przeprawach bałtyckich (obok kafelka Polferries / Stena) */
+  p7_ck_baltic_h: 'Najbliższy prom — przeprawy bałtyckie',
+  p7_ck_baltic_desc: '{vessel} {route} · przypłynięcie (ETA) {arr}',
+  p7_ck_baltic_short: '{route} · ETA {arr}',
   p7_pilots_h: 'Piloci',
   p7_pilot_pl: 'Pilot PL',
   p7_pilot_se: 'Pilot SE',

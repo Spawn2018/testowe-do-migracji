@@ -346,3 +346,8 @@ Przyczyna: decyzja właściciela 88 (02.11 22:32) — pomarańczowe linie przez 
 - `mapa-baltyk-hhl-pl-1440-light.png` (682×866): cała sieć (wcześniej tylko korytarz aktywnego SG-17 TLL-HEL) — dodatkowo drogi PL-MUU/PL-PLD, FI-VUO, SE-STO/SE-KPS i tory MUU-VUO, TLL-STO, PLD-KPS; kadr i dopisek jak wcześniej.
 - `mapa-baltyk-hhl-pl-390-light.png` (364×541): to samo na telefonie — cała sieć mieści się pod dopiskiem (12 px, 2 linie pod „Warstwy”), Boden pod dopiskiem, „+ / −” wolne.
 Dopisek na telefonie 11,5 → 12 px (brama E8: tekst ≥ 12 px — dopisek jest teraz zawsze na Mapie i w Kokpicie). Wzorca `shots-baseline` nie zmieniano.
+
+## BN9-c6 (03.11.2026) — ekrany po BN8: migawki bez zmian
+Z workflowu `visual` (`update=true`, gałąź `wyglad/BN9-c6`, przebieg 41569802196, commit `88d7ad1`, artefakt `visual-artifacts`): wszystkie 29 migawek identyczne co do bajtu — Kokpit 1920 (w demo nie ma rejsów armatorów bałtyckich, więc sekcja „Najbliższy prom — przeprawy bałtyckie” się nie rysuje; kafelek „Najbliższy prom” w demo bez zmian), Mapa, karty TLL-HEL / GDN-NYN, Ryzyka, Drogi bałtyckie (DP-177 — w danych demo tytuły bez liczby z jednostką), pogoda, Rejsy, pasek promu (migawki bez `ferries=all`).
+Migawka `karta-tll-hel-rejs-hhl-pl-1440-light.png` (przebieg 41571946540) usunięta decyzją koordynatora (#750): w demo pokazywała statek Polferries „Wawel” na trasie Tallinn – Helsinki (`demoRoute`), co jest mylące. Wiersz „Rejs” z trasą bałtycką, stan ETA „brak danych” przed BN8b, Kokpit z promem bałtyckim (kafelek tylko Polferries / Stena) i pasek TLLA-HEL — pokrycie testami jsdom (`tests/bn9-c6-screens.jsdom.test.ts`).
+Wzorca `shots-baseline` nie zmieniano.

@@ -14,8 +14,8 @@ import { editableOrderSide } from '../../lib/orderNumbers';
 import {
   awizacjaDuplicateWarning,
   awizacjaOperators,
+  earliestFerryDepartureMsForRoute,
   historicalSailingsAllowed,
-  isBeforePlannedLoad,
   reachableSailings,
   resourceSuggestions,
   type FerryOperatorId,
@@ -31,10 +31,19 @@ import { TrackingLinkField } from './TrackingLinkField';
 import { awizDeadline, awizMissing, awizMissingSe, convoyOf, dayShort, dmHm, NO_PILOTS, pilotsMissingCount, trailerHasManyPlates, type Pilots } from '../../lib/p7Awiz';
 import { canFixAwizOf, pilotsOf, savePilotsOf, symbolSpecOf } from '../../lib/p7Source';
 import { transportLabel } from '../../lib/transportName';
+import { initialAwizOperator, transportRoute } from './bn9c6Route';
 import { pt, ptp } from '../../i18n/p7';
-import type { Load } from '../../types';
+import type { Load, Sailing } from '../../types';
 import './p7.css';
 
+
+/**
+ * BN9-c6 (BN8, decyzja 82-C): rejs przed planowanym załadunkiem + odprawą w porcie wyjścia TEJ trasy
+ * (`clearanceHoursForRoute`: Gdańsk 14 h, Gdynia 16 h, porty EE 2 h) — nie z pierwszej trasy armatora.
+ */
+function beforePlannedLoad(s: Sailing, load: Load, operator: FerryOperatorId): boolean {
+  return Date.parse(effDeparture(s)) < earliestFerryDepartureMsForRoute(load, s.route, operator);
+}
 
 type Props = {
   load: Load;
@@ -74,7 +83,8 @@ export function AwizacjaModal({ load, onClose }: Props) {
   const [carrierOrder, setCarrierOrder] = useState(load.carrierOrderNo ?? '');
   const [hhlOrder, setHhlOrder] = useState(load.hhlOrderNo ?? '');
   const [trackingRef, setTrackingRef] = useState(load.resources.trackingRef ?? '');
-  const [operator, setOperator] = useState<FerryOperatorId>('POLFERRIES');
+  /* BN9-c6: start od armatora przypiętego rejsu, potem armatora trasy transportu (nie na sztywno Polferries) */
+  const [operator, setOperator] = useState<FerryOperatorId>(() => initialAwizOperator(curSailing, transportRoute(load, sailings)));
   const [sailingId, setSailingId] = useState(load.sailingId ?? '');
   const [err, setErr] = useState<string | null>(null);
   /* piloci (D-20261009-1233-01) — tylko przy „PL + SE” w tabeli właściciela i gdy zapis jest podłączony */
@@ -112,9 +122,9 @@ export function AwizacjaModal({ load, onClose }: Props) {
   );
 
   /* DP-48: dopisek „przed planowanym załadunkiem” w tekście opcji jest ucinany w zamkniętym polu (pół szerokości) —
-     dla wybranego rejsu powtarzamy go jako osobną linię pod polem. Warunek bez zmian: ten sam `isBeforePlannedLoad`. */
+     dla wybranego rejsu powtarzamy go jako osobną linię pod polem. Warunek: ten sam `beforePlannedLoad` co w opcji (odprawa z portu trasy — BN9-c6). */
   const selSailing = sailingOptions.find((o) => o.id === sailingId);
-  const selBefore = !!selSailing && isBeforePlannedLoad(selSailing, load, operator);
+  const selBefore = !!selSailing && beforePlannedLoad(selSailing, load, operator);
 
   const dupCode = awizacjaDuplicateWarning(loads, load.id, { driverName, tractorPlate });
 
@@ -349,7 +359,7 @@ export function AwizacjaModal({ load, onClose }: Props) {
           <div className="am-2">
             <label className="form-field am-f">
               <span>{pt(locale, 'p7_m_operator')}</span>
-              <select className="input" value={operator} onChange={(e) => { setOperator(e.target.value as FerryOperatorId); setSailingId(''); }}>
+              <select className="input" value={operator} data-awiz-operator onChange={(e) => { setOperator(e.target.value as FerryOperatorId); setSailingId(''); }}>
                 {awizacjaOperators(sailings, operator).map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
               </select>
             </label>
@@ -361,7 +371,7 @@ export function AwizacjaModal({ load, onClose }: Props) {
                 <select className="input" value={sailingId} onChange={(e) => setSailingId(e.target.value)} data-awiz-sailing>
                   <option value="">{t(locale, 'sail_none')}</option>
                   {sailingOptions.map((o) => {
-                    const before = isBeforePlannedLoad(o, load, operator);
+                    const before = beforePlannedLoad(o, load, operator);
                     return (
                       <option key={o.id} value={o.id}>
                         {routeShortLabel(o.route)} · {o.vessel} · {fmtLocal(effDeparture(o))} → {fmtLocal(effArrival(o))}

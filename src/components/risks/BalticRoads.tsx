@@ -14,7 +14,7 @@ import { attributionView, type BalticRoadRow, type BalticRoadSection } from '../
 import { formatListDateTime, formatPlNumber } from '../../lib/format';
 import { rt, rtn, rtp } from '../../i18n/p6';
 import { DemoMark } from '../ui/DemoMark';
-import { RoadRow } from './RoadRow';
+import { keepUnits, RoadRow } from './RoadRow';
 
 const fmtNum = (v: number) => formatPlNumber(v, Number.isInteger(v) ? 0 : 1);
 
@@ -46,7 +46,7 @@ function Row({ r, locale, phone }: { r: BalticRoadRow; locale: Locale; phone: bo
       box={r.country}
       /* długi tytuł ze źródła — jedna linia z wielokropkiem, pełny tekst w podpowiedzi (React sam koduje znaki) */
       titleTip={[tag, r.event ?? r.title].filter(Boolean).join(' · ')}
-      title={<>{r.limit ? <span className="rk-limit-tag" data-limit-tag>{tag}</span> : null}{r.event ?? r.title}</>}
+      title={<>{r.limit ? <span className="rk-limit-tag" data-limit-tag>{tag}</span> : null}{keepUnits(r.event ?? r.title)}</>}
       impact={r.impact}
       when={rowWhen(locale, r)}
       note={r.note}

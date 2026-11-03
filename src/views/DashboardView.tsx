@@ -14,7 +14,6 @@ import { nextGdnSailing, seaForSailing } from '../lib/voyage';
 import { ferryRouteLabel, ferryRouteName } from '../lib/portName';
 import { vesselById } from '../lib/ferry';
 import { effDeparture, nearestCrossingByOperator } from '../lib/sailings';
-import { OPERATOR_MATCH_ORDER } from '../lib/ferryCatalog';
 import { buildCockpit, todoQueue, todoRisks, viewedKind, type CockpitTile } from '../lib/cockpitE9';
 import { formatSeaRiskLabel } from '../lib/voyageSea';
 import { formatAppMoney } from '../lib/money/demoFx';
@@ -32,6 +31,8 @@ import { useLatestNbp } from '../lib/nbpLive';
 import type { MarineConditionRow } from '../lib/marineWeatherDb';
 import { cockpitCrossings, nearestFerrySeaRow } from '../lib/bn9c3Marine';
 import { MarineCards } from '../components/dash/MarineCards';
+import { BalticFerries } from '../components/dash/BalticFerries';
+import { balticNearest, plSeNearest } from '../components/dash/balticNearest';
 
 /* wyglad/J4 (E9; E11/E12 „ocena przewoźnika → Kokpit”): produkcja — odczyt `carrier_scorecard` (chunk leniwy) */
 const CarrierRatingLive = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('../auth/CarrierRatingLive'))) : null;
@@ -115,9 +116,9 @@ export function DashboardView() {
   const nowMinute = Math.floor(getNow().getTime() / 60_000);
   const ferry = useMemo(() => {
     if (PROD_BUILD) {
-      /* BN9-a: Stena, Polferries, a nowi armatorzy z katalogu tylko wtedy, gdy mają rejs */
-      const near = nearestCrossingByOperator(sailings, nowMinute * 60_000, 1);
-      const s = OPERATOR_MATCH_ORDER.map((op) => near[op]?.[0]).filter(Boolean).sort((a, b) => Date.parse(effDeparture(a!)) - Date.parse(effDeparture(b!)))[0];
+      /* BN9-c6 (decyzja koordynatora, #750): kafelek tylko przeprawy Polska – Szwecja (Polferries / Stena) — pogoda
+         w kafelku jest z Gdańsk – Nynäshamn; armatorzy bałtyccy mają własną sekcję pod kafelkami (`BalticFerries`) */
+      const s = plSeNearest(nearestCrossingByOperator(sailings, nowMinute * 60_000, 1));
       if (!s) return null;
       /* E37, E21 (audyt-A A-03): pełne nazwy portów „Gdańsk → Nynäshamn”, jak w pasku górnym; BN9-b: „Tallinn A → Helsinki” */
       return { vessel: s.vessel, route: ferryRouteLabel(locale, s.route), depIso: effDeparture(s), sea: marineSea };
@@ -176,6 +177,11 @@ export function DashboardView() {
     () => cockpitCrossings(mapLoads, sailings, marineRows, mapNowMin * 60_000),
     [mapLoads, sailings, marineRows, mapNowMin],
   );
+  /* BN9-c6: najbliższy prom na przeprawach bałtyckich (ze słownika, tylko armatorzy z rejsem) — obok kafelka PL–SE */
+  const balticFerries = useMemo(
+    () => balticNearest(nearestCrossingByOperator(sailings, nowMinute * 60_000, 1)),
+    [sailings, nowMinute],
+  );
   const tiles = buildCockpit({
     role, locale, nowIso: getNow().toISOString(), loads, documents, bills,
     todo, ferry, margin: marginInfo, siteSince,
@@ -221,8 +227,14 @@ export function DashboardView() {
         footer={footer}
         moneyTags={moneyTags}
         onGo={onGo}
+        /* BN9-c6: najbliższy prom bałtycki (jest tylko z rejsem w rozkładzie) nad pogodą na przeprawach */
         extra={seaCrossings.length ? (
-          <MarineCards locale={locale} crossings={seaCrossings} onGo={() => navigateTo({ view: 'risk', riskFilter: 'FERRY' })} />
+          <>
+            <BalticFerries locale={locale} ferries={balticFerries} onGo={() => navigateTo({ view: 'risk', riskFilter: 'FERRY' })} />
+            <MarineCards locale={locale} crossings={seaCrossings} onGo={() => navigateTo({ view: 'risk', riskFilter: 'FERRY' })} />
+          </>
+        ) : balticFerries.length ? (
+          <BalticFerries locale={locale} ferries={balticFerries} onGo={() => navigateTo({ view: 'risk', riskFilter: 'FERRY' })} />
         ) : null}
       />
 

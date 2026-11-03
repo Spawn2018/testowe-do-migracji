@@ -9,8 +9,11 @@ import type { Locale } from '../../types';
 import type { RoadImpact } from '../../lib/p6Route';
 import { rt } from '../../i18n/p6';
 
-/** Liczba nie odrywa się od jednostki w tekście ze źródła („50 km/h”, „2 h”, „12 t”) — spacja nierozdzielająca (jak `keepUnits` w HelpPanel). */
-const keepUnits = (x: string): string =>
+/**
+ * Liczba nie odrywa się od jednostki w tekście ze źródła („50 km/h”, „2 h”, „12 t”) — spacja nierozdzielająca (jak `keepUnits` w HelpPanel).
+ * DP-177: eksport — także tytuły dróg bałtyckich (`BalticRoads`, tytuł jako węzeł z etykietą limitu).
+ */
+export const keepUnits = (x: string): string =>
   x.replace(/(\d) (?=(?:km|m|h|min|t|dni|%)(?![\p{L}\p{N}]))/gu, '$1\u00a0');
 
 export interface RoadRowProps {
