@@ -1,4 +1,32 @@
 
+## 2026-11-03 18:35 — #771 CI zielone @ bb86b896 — czekam F7
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`. PR do scalenia: brak „F7: gotowe” (po ostatnim commicie).
+- CI @ `bb86b896`: unit×2 ✔, db ✔ (`tests/db/gate.sh` 17m45s), visual×5 ✔.
+- **Krok:** odnotowanie zielonego CI; komentarz w #771 — czekam „F7: gotowe do scalenia”. Bez push na main.
+- **Dalej:** F7 → merge #771 → C2: DP-198, potem 119….
+
+## 2026-11-03 18:15 — #771 CI db: DP-194 obs → DP-197 (via E4)
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`. PR do scalenia: brak „F7: gotowe” (po 1710d33f).
+- CI @ `1710d33f`: unit/visual ✔; db FAIL status 641/1 — stary chk „DP-194 obs 0:here” vs via E4 (wierzchołek OSM ~3–4 km od HERE).
+- **Krok:** chk → `DP-197: świeży HERE + wierzchołek OSM → 1:here` (testy za decyzją DP-197). status **642**. Bez push na main poza gałęzią PR.
+- **Dalej:** push → CI db → F7. Potem C2: 119… / DP-198.
+
+## 2026-11-03 17:45 — #771 F7 r1: via E4 + stale 22 d + DP-198
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`. PR do scalenia: brak „F7: gotowe” (#771 r1 niegotowe).
+- CI @ `fa6f4e63`: unit/db/visual ✔ — potem F7 r1.
+- **Krok F7 #771 r1:** (1) `here_road_geometry` SE-NYN `fetched_at = now()-22d` + test Karlstad → `1:OSM`; (2) via na jezdni E4 (Essingeleden…Luleå E4/97), nie centra; (3) testy behaw. `refreshRoadLegs` (via URL / brak korytarza / odchyłka→retry 24 h); **DP-198** w PLAN (cron 6 d). status **642**.
+- **Dalej:** push → CI → odpowiedź punkt po punkcie → F7. Potem C2: 119… / DP-198.
+
+## 2026-11-03 17:10 — #770 SCALONE; start DP-197 (0390)
+
+- Skrzynka: #550 WSTRZYMANE; bez nowego `pilne`.
+- Scalanie: **#770 SCALONE** `dcc19ac6` (DP-193/194 / **0389**; F7 @ `f1be2b7a` po docs). `deploy-main` robi resztę. Bez push na main.
+- **Krok DP-197** `pakiet/c2-dp-197-se-nyn-corridor` / **0390**: via miast SE-NYN; here-roads `useCorridorDev` + sparse SE_E4; `refresh_load_eta` — SE_E4 w v_bn7 tylko przy świeżym HERE; test Sztokholm 3 km + Karlstad source=HERE. status **641**.
+- **Dalej:** CI → F7. Potem C2: 119….
+
 ## 2026-11-03 16:40 — #770 CI zielone @ e1f7e29b — czekam F7
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720/#762 w planie. Bez nowego `pilne`. PR do scalenia: brak „F7: gotowe” (po ostatnim commicie).
