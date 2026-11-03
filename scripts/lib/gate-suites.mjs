@@ -13,7 +13,7 @@ const ROOT = resolve(import.meta.dirname, '../..');
 /** Oczekiwane OK na lokalnym Postgresie (gate.sh). */
 export const EXPECTED_LOCAL = {
   security: 495, // #662-b: +1 maska URL/token w audit_log; #662 +8 → 494
-  status: 629, // BN8b/0385 F7 r2 #749: −4 like-tekst +4 N1/W3f/FI-off; było 629 r1
+  status: 633, // DP-184 F7 r1: +2 na linii SE_E4_STO/SE_E18_KPS → 0; było 631 (+2 obok 10 km)
   storage: 37,
   money: 200, // DP-167 F7 #734 r2: +2 title_key zmiana; było 198 (r1 +4 od 194 / DP-167 +3 od 191)
   release: 146,
@@ -45,7 +45,7 @@ export const EXPECTED_LOCAL = {
   h3: 20,
   smsksh: 16,
   'ferry-status': 18, // BN3 #683 F7 B5 / 0358: +4 (AUTO null, CHECK, apply RECZNIE, łańcuch AUTO); było 14
-  bmapa: 199, // DP-183: +1 zakresy FI-HEL/FI-VUO/SE-STO; było 198 (BN7 F7 #738)
+  bmapa: 202, // DP-184: +3 geom/n_points store+purge; było 199
   h4: 19,
   p4k: 111, // #630 F7 r1: +rola PORT_CHECKIN; CROSSING mismatch w medianie; undo 7d
   aud03: 32, // D-0005 F7: +OPS, by=HHL_ADMIN, P2 bez sprawy, ASK_FIX/DECISION_HOLD
