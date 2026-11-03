@@ -1,4 +1,11 @@
 
+## 2026-11-03 07:05 — #752 SCALONE; start DP-180
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720/#735 w planie.
+- Scalanie: **#752 SCALONE** `ea949a23` / **0386** (DP-183; F7 gotowe @ `dfcc34bf`, CI 8/8). `deploy-main` robi resztę. Bez push na main.
+- **Krok DP-180** (`pakiet/dp-180-ee-lv-cache-envelope`, #735 odbiór DP-178): EE pusta koperta DATEX SRTI (`feedType`/…) = `datex-json` 0 rek.; RESTRICTIONS/SAFETY TTL 60 min + cache (`ee_*_source=cache`); timeout RESTRICTIONS 45 s; LV `perCode`/`perShape`/`perDataHost` także przy `fetched_ok=0`. Vitest bn6 ee+lv **62**.
+- **Dalej:** push → CI → F7. Po F7: DP-181 → DP-184.
+
 ## 2026-11-03 06:25 — #749+#751 SCALONE; start DP-183
 
 - Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. DP-180 (#735), DP-183 (#718), DP-185 (#751) wpisane do rejestru.

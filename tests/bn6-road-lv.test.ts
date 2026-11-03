@@ -362,6 +362,27 @@ describe('BN6 runRoadLv F7 #730', () => {
     expect(r.observations?.road_lv_fail_streak).toBe('3');
     expect(st.risks.some((x) => x.dedup.startsWith('SOURCE_DOWN:ROAD_LV'))).toBe(true);
     expect(r.warnings?.every((w) => !/https?:\/\//i.test(w))).toBe(true);
+    /* DP-180: perCode także przy fetched_ok=0 (ścieżka SOURCE_DOWN). */
+    expect(r.observations?.lv_roadworks).toMatch(/^http_500$/);
+    expect(r.observations?.lv_slippery_wm).toMatch(/^http_500$/);
+    expect(r.observations?.lv_slippery_ti).toMatch(/^http_500$/);
+    expect(r.observations?.lv_weight_dim).toMatch(/^http_500$/);
+  });
+
+  it('DP-180: perCode/perShape przy fetched_ok=0 (bez SOURCE_DOWN); lv_shape_* ≠ lv_*_shape', async () => {
+    const st = new MemStore();
+    const r = await runRoadLv(deps(st, {
+      'nap.example/lv/roadworks': '<!DOCTYPE html><html>SPA</html>',
+      'nap.example/lv/slippery-wm': '<!DOCTYPE html><html>SPA</html>',
+      'nap.example/lv/slippery-ti': '<!DOCTYPE html><html>SPA</html>',
+      'nap.example/lv/weight-dim': '<!DOCTYPE html><html>SPA</html>',
+    }, MOCK_ENV).d);
+    expect(r.observations?.fetched_ok).toBe('0');
+    expect(r.observations?.lv_roadworks).toMatch(/^bad:/);
+    expect(String(r.observations?.lv_roadworks_shape ?? '')).toMatch(/^200:[^:]+:\d+:html$/);
+    /* lv_shape_roadworks = kształt sekretu URL (DP-170); lv_roadworks_shape = odpowiedź. */
+    expect(r.observations?.lv_shape_roadworks).toBe('https');
+    expect(r.observations?.lv_roadworks_shape).not.toBe(r.observations?.lv_shape_roadworks);
   });
 
   it('N3: brak sekretów → ok, configured:0, bez SOURCE_DOWN', async () => {

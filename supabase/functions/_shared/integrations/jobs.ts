@@ -103,19 +103,21 @@ import {
   LT_ATTRIBUTION, LT_RESTRICTIONS_URL, LT_UA, LT_WEATHER_URL,
   LV_ATTRIBUTION, LV_NAP_BASE, LV_NAP_CODES, LV_NAP_KEY_HEADER, LV_SOURCE_REF, LV_UA,
   BALTIC_FEED_BUDGET_MS, BALTIC_FEED_TIMEOUT_MS, EE_RESTRICTIONS_MAX_BYTES,
-  EE_FEED_BUDGET_MS, EE_FEED_TIMEOUT_MS,
+  EE_FEED_BUDGET_MS, EE_FEED_TIMEOUT_MS, EE_HEAVY_FEED_CACHE_TTL_MS,
+  EE_RESTRICTIONS_TIMEOUT_MS,
   applyBalticCorridorRoadFilter, applyFiCorridorRoadFilter, balticFeedObsOk, balticFeedShapeObs,
   balticKeyMeta,
   balticNetWarning, balticRoadRisk, balticSlowdownMult, balticUrlKind, balticWarnHost,
   capBalticRiskSeverity, classifyBalticNetError, dedupeLvSlippery, eeDatexApiKeyMeta,
   eeDatexFeedUrl, fiCorridorBboxes, fiTrafficUrl, filterInEeBboxes, filterInFiBboxes,
-  filterInLvBboxes, dimensionLimitRisk, filterInLtBboxes, getEeSitesCache, isDimensionLimitEvent,
+  filterInLvBboxes, dimensionLimitRisk, filterInLtBboxes, getEeHeavyFeedCache, getEeSitesCache,
+  isDimensionLimitEvent, isEeHeavyFeedCode,
   isFiWeightLimitLike, ltWeatherToSlowdownEvents, lvMetadataDataUrl, lvNapKeyAllowedForUrl,
   lvNapKeyEnv, lvNapUrlEnv,
   normalizeLvNapUrl,
   lvWeatherToSlowdownEvents, parseEeFeedBody, parseFiTrafficMessages, parseLtRestrictions,
   parseLtWeather, parseLvFeedBody, probeBalticHost, probeEeDatexApi, readBalticFeedBody,
-  setEeSitesCache, weightLimitRisk,
+  setEeHeavyFeedCache, setEeSitesCache, weightLimitRisk,
   type BalticKeyMeta, type BalticRoadEvent, type LvNapCode,
 } from './roadBaltic.ts';
 import { buildTrafficIncidentsUrl, parseHereTrafficIncidents } from '../here/trafficIncidents.ts';
@@ -4239,6 +4241,18 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
     }
   }
 
+  /*
+   * DP-180: perCode / perShape / perDataHost na wszystkich ścieżkach powrotu.
+   * Uwaga nazw: lv_shape_<kod> (DP-170: kształt sekretu URL) ≠ lv_<kod>_shape (kształt odpowiedzi).
+   */
+  const lvPerObs = {
+    ...Object.fromEntries(Object.entries(perCode).map(([k, v]) => [`lv_${k.toLowerCase()}`, v])),
+    ...Object.fromEntries(Object.entries(perShape).map(([k, v]) => [`lv_${k.toLowerCase()}_shape`, v])),
+    ...Object.fromEntries(
+      Object.entries(perDataHost).map(([k, v]) => [`lv_${k.toLowerCase()}_data_host`, v]),
+    ),
+  };
+
   if (fetchedOk === 0) {
     const streak = await roadLvFailStreak(deps);
     if (streak >= 3) {
@@ -4260,6 +4274,7 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
           header: LV_NAP_KEY_HEADER,
           records_skipped: String(parseStats.skipped),
           ...diag,
+          ...lvPerObs,
         },
       };
     }
@@ -4275,6 +4290,7 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
         header: LV_NAP_KEY_HEADER,
         records_skipped: String(parseStats.skipped),
         ...diag,
+        ...lvPerObs,
       },
     };
   }
@@ -4354,11 +4370,7 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
       /* F7 #730 r3 B2 — liczba zamian lat/lon. */
       lv_swapped: String(parseStats.swapped),
       ...diag,
-      ...Object.fromEntries(Object.entries(perCode).map(([k, v]) => [`lv_${k.toLowerCase()}`, v])),
-      ...Object.fromEntries(Object.entries(perShape).map(([k, v]) => [`lv_${k.toLowerCase()}_shape`, v])),
-      ...Object.fromEntries(
-        Object.entries(perDataHost).map(([k, v]) => [`lv_${k.toLowerCase()}_data_host`, v]),
-      ),
+      ...lvPerObs,
     },
   };
 }
@@ -4397,6 +4409,8 @@ type EeFeedPart = {
   ms: number;
   /** DP-178 — kształt nieczytelnej odpowiedzi (bez treści/URL). */
   shape?: string;
+  /** DP-180 — fetch | cache (RESTRICTIONS/SAFETY / sites). */
+  source?: 'fetch' | 'cache';
 };
 
 async function fetchEeFeedPart(
@@ -4410,6 +4424,7 @@ async function fetchEeFeedPart(
     roadFromPole: number; roadFromOpis: number;
     weatherBlocks: number; weatherNoSite: number;
   },
+  timeoutMs: number = EE_FEED_TIMEOUT_MS,
 ): Promise<EeFeedPart> {
   const t0 = Date.now();
   if (Date.now() - started > EE_FEED_BUDGET_MS) {
@@ -4430,7 +4445,8 @@ async function fetchEeFeedPart(
     [EE_DATEX_KEY_HEADER]: apiKey,
   };
   const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), EE_FEED_TIMEOUT_MS);
+  /* DP-180: RESTRICTIONS 45 s; pozostałe EE_FEED_TIMEOUT_MS (30 s). */
+  const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   try {
     if (Date.now() - started > EE_FEED_BUDGET_MS) {
       return {
@@ -4496,6 +4512,7 @@ async function fetchEeFeedPart(
       events: parsed.events,
       sites: parsed.sites,
       ms: Math.max(0, Date.now() - t0),
+      source: 'fetch',
     };
   } catch (e) {
     /* DP-169: klasa błędu + host bez ścieżki (klucz nie w warnings). */
@@ -4604,9 +4621,55 @@ export async function runRoadEe(deps: JobDeps): Promise<JobResult> {
       }
     }
   }
-  const rest = await mapPoolLimit(otherFeeds, EE_FEED_CONCURRENCY, (feed) =>
-    fetchEeFeedPart(deps, feed, apiKey, started, sites, parseStats));
-  parts.push(...rest);
+  /*
+   * DP-180: RESTRICTIONS/SAFETY co 60 min z cache; świeża kopia → OK + ee_*_source=cache
+   * (liczy się do complete); timeout 45 s tylko RESTRICTIONS; budżet 120 s bez zmian.
+   */
+  const feedsToFetch: (typeof EE_DATEX_FEEDS)[number][] = [];
+  for (const feed of otherFeeds) {
+    if (isEeHeavyFeedCode(feed.code)) {
+      const cached = getEeHeavyFeedCache(feed.code, started, EE_HEAVY_FEED_CACHE_TTL_MS);
+      if (cached) {
+        parts.push({
+          code: feed.code, ok: true, warning: null,
+          per: balticFeedObsOk(cached.length, 0, 'cache', 0),
+          format: 'cache', events: cached, ms: 0, source: 'cache',
+        });
+        continue;
+      }
+    }
+    feedsToFetch.push(feed);
+  }
+  const rest = await mapPoolLimit(feedsToFetch, EE_FEED_CONCURRENCY, (feed) =>
+    fetchEeFeedPart(
+      deps, feed, apiKey, started, sites, parseStats,
+      feed.code === 'RESTRICTIONS' ? EE_RESTRICTIONS_TIMEOUT_MS : EE_FEED_TIMEOUT_MS,
+    ));
+  for (const part of rest) {
+    if (part.ok && isEeHeavyFeedCode(part.code)) {
+      setEeHeavyFeedCache(part.code, part.events, started);
+      parts.push({ ...part, source: part.source ?? 'fetch' });
+      continue;
+    }
+    if (!part.ok && isEeHeavyFeedCode(part.code)) {
+      const stale = getEeHeavyFeedCache(part.code, started, Number.POSITIVE_INFINITY);
+      if (stale) {
+        parts.push({
+          ...part,
+          ok: true,
+          warning: part.warning
+            ? `${part.warning}; użyto cache ${part.code}`
+            : `EE ${part.code}: użyto cache`,
+          per: balticFeedObsOk(stale.length, 0, 'cache-stale', 0),
+          format: 'cache',
+          events: stale,
+          source: 'cache',
+        });
+        continue;
+      }
+    }
+    parts.push(part);
+  }
 
   const probeSettled = await Promise.allSettled([probeApiP]);
   const probeApi = probeSettled[0]!.status === 'fulfilled'
@@ -4619,12 +4682,15 @@ export async function runRoadEe(deps: JobDeps): Promise<JobResult> {
   const perCode: Record<string, string> = {};
   const perMs: Record<string, string> = {};
   const perShape: Record<string, string> = {};
+  const perSource: Record<string, string> = {};
   for (const p of parts) {
     perCode[p.code] = p.per;
     /* DP-171: ee_<usługa>_ms */
     perMs[p.code] = String(p.ms);
     /* DP-178: ee_<usługa>_shape przy nieczytelnej odpowiedzi */
     if (p.shape) perShape[p.code] = p.shape;
+    /* DP-180: ee_<usługa>_source=cache|fetch */
+    if (p.source) perSource[p.code] = p.source;
     if (p.warning) warnings.push(p.warning);
     if (p.ok) {
       fetchedOk++;
@@ -4636,6 +4702,9 @@ export async function runRoadEe(deps: JobDeps): Promise<JobResult> {
     ...Object.fromEntries(Object.entries(perCode).map(([k, v]) => [`ee_${k.toLowerCase()}`, v])),
     ...Object.fromEntries(Object.entries(perMs).map(([k, v]) => [`ee_${k.toLowerCase()}_ms`, v])),
     ...Object.fromEntries(Object.entries(perShape).map(([k, v]) => [`ee_${k.toLowerCase()}_shape`, v])),
+    ...Object.fromEntries(
+      Object.entries(perSource).map(([k, v]) => [`ee_${k.toLowerCase()}_source`, v]),
+    ),
     ee_sites_source: sitesSource,
   };
 

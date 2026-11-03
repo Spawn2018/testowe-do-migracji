@@ -1469,8 +1469,14 @@ export const BALTIC_FEED_TIMEOUT_MS = 10_000;
 export const BALTIC_FEED_BUDGET_MS = 65_000;
 export const EE_FEED_TIMEOUT_MS = 30_000;
 export const EE_FEED_BUDGET_MS = 120_000;
+/** DP-180 — RESTRICTIONS: timeout 45 s (duży plik; SAFETY/reszta zostaje 30 s). */
+export const EE_RESTRICTIONS_TIMEOUT_MS = 45_000;
 /** DP-171 — measurementSites raz na dobę (pamięć procesu Edge). */
 export const EE_SITES_CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+/** DP-180 — RESTRICTIONS/SAFETY co 60 min z ostatnią dobrą kopią zdarzeń. */
+export const EE_HEAVY_FEED_CACHE_TTL_MS = 60 * 60 * 1000;
+export const EE_HEAVY_FEED_CODES = ['RESTRICTIONS', 'SAFETY'] as const;
+export type EeHeavyFeedCode = (typeof EE_HEAVY_FEED_CODES)[number];
 
 export type BalticFeedBodyResult =
   | { ok: true; text: string; bytes: number }
@@ -2443,6 +2449,41 @@ export function setEeSitesCache(
   eeSitesCache = { fetchedAt, sites: new Map(sites) };
 }
 
+/** DP-180 — ostatnia dobra kopia RESTRICTIONS/SAFETY (TTL 60 min; pusta = OK). */
+let eeHeavyFeedCache: Partial<
+  Record<EeHeavyFeedCode, { fetchedAt: number; events: BalticRoadEvent[] }>
+> = {};
+
+export function clearEeHeavyFeedCache(): void {
+  eeHeavyFeedCache = {};
+}
+
+export function isEeHeavyFeedCode(code: string): code is EeHeavyFeedCode {
+  return (EE_HEAVY_FEED_CODES as readonly string[]).includes(code);
+}
+
+export function getEeHeavyFeedCache(
+  code: EeHeavyFeedCode,
+  nowMs: number,
+  ttlMs: number = EE_HEAVY_FEED_CACHE_TTL_MS,
+): BalticRoadEvent[] | null {
+  const hit = eeHeavyFeedCache[code];
+  if (!hit) return null;
+  if (nowMs - hit.fetchedAt > ttlMs) return null;
+  return hit.events.map((e) => ({ ...e }));
+}
+
+export function setEeHeavyFeedCache(
+  code: EeHeavyFeedCode,
+  events: BalticRoadEvent[],
+  fetchedAt: number,
+): void {
+  eeHeavyFeedCache[code] = {
+    fetchedAt,
+    events: events.map((e) => ({ ...e })),
+  };
+}
+
 export async function probeEeDatexApi(
   fetchFn: typeof fetch,
   apiKey: string,
@@ -3170,6 +3211,14 @@ export function parseEeFeedBody(
       if (Array.isArray(json) && json.length === 0) {
         return { events: [], format: 'datex-json' };
       }
+      /*
+       * DP-180 (#735 odbiór DP-178): pusta koperta DATEX SRTI
+       * (feedType/publicationTime/payloadPublicationExtension…) bez listy sytuacji
+       * = datex-json, 0 rekordów (hasDatexMarker nie widzi situationRecord).
+       */
+      if (eeIsDatexPublicationEnvelope(json)) {
+        return { events: parseEeSrtiJson(json, code, stats), format: 'datex-json' };
+      }
       if (
         json && typeof json === 'object' && !Array.isArray(json)
         && typeof (json as { message?: unknown }).message === 'string'
@@ -3195,9 +3244,29 @@ export function parseEeFeedBody(
   return { events: [], format: 'unknown' };
 }
 
+/** DP-180 — klucze publikacji DATEX II (pusta koperta SRTI bez situationRecord). */
+const EE_DATEX_PUBLICATION_KEYS = [
+  'feedType',
+  'publicationTime',
+  'publicationCreator',
+  'payloadPublicationExtension',
+  'feedDescription',
+] as const;
+
+/**
+ * DP-180 — obiekt publikacji DATEX (feedType/publicationTime/…) —
+ * nawet bez situationRecord / payloadPublication.
+ */
+export function eeIsDatexPublicationEnvelope(json: unknown): boolean {
+  if (json == null || typeof json !== 'object' || Array.isArray(json)) return false;
+  const o = json as Record<string, unknown>;
+  return EE_DATEX_PUBLICATION_KEYS.some((k) => k in o);
+}
+
 /**
  * F7 #733 r3 — rozpoznana struktura DATEX/GeoJSON (także pusta).
  * `{"features":[]}` / `payload` bez situation → OK; `payload:null` / `null` / `[]` → false.
+ * DP-180: koperta feedType/publicationTime/… też OK.
  */
 function eeJsonHasValidStructure(json: unknown): boolean {
   if (json == null) return false;
@@ -3205,6 +3274,7 @@ function eeJsonHasValidStructure(json: unknown): boolean {
   if (typeof json !== 'object') return false;
   const o = json as Record<string, unknown>;
   if (Array.isArray(o.features)) return true;
+  if (eeIsDatexPublicationEnvelope(o)) return true;
   if ('payload' in o) {
     const p = o.payload;
     if (p == null) return false;
