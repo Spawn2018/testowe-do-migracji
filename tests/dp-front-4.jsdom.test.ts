@@ -172,12 +172,8 @@ describe('DP-33 · DP-7 i DP-8 — zachowanie zamiast tekstu kodu', () => {
     drawFerryLanes(g2, new Set(['FERRY-GDN-NYN', 'FERRY-GDY-KAA']));
     expect(g2.getLayers()).toHaveLength(ferryLaneLines().length - 2);
   });
-  it('DP-7: mapa korytarza i pula map korzystają z drawFerryLanes (podłączenie — lekka asercja źródła)', async () => {
-    const { readFileSync } = await import('node:fs');
-    /* BN9-c5: CorridorMap rysuje linie zakresu przez pulę (`drawCorridorLines` → `drawFerryLanes`) */
-    expect(readFileSync('src/components/map/CorridorMap.tsx', 'utf8')).toMatch(/drawCorridorLines\(pooled, /);
-    expect(readFileSync('src/components/map/mapPool.ts', 'utf8')).toMatch(/drawFerryLanes\(ferryLeg, /);
-  });
+  /* DP-41 (Pakiet DP-A): podłączenie mapy korytarza do torów — test zachowania (render `CorridorMap`, tory na mapie punkt
+     w punkt z `ferryLaneLines`) w tests/dp-a-mapy.jsdom.test.ts zamiast sprawdzania tekstu kodu. */
   it('DP-8: w paczce demo brak loadera bazy; formularz pokazuje listę zapasową wszystkich armatorów', async () => {
     const { vesselsLoader } = await import('../src/lib/vesselsLoad');
     expect(vesselsLoader).toBeNull();

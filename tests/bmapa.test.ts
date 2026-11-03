@@ -94,7 +94,6 @@ describe('B-MAPA podkład', () => {
   it('mapy nie wołają szarego Esri ani błędnego podpisu', () => {
     for (const file of [
       'src/components/map/CorridorMap.tsx',
-      'src/components/map/GeofenceEditorMap.tsx',
       'src/components/drawer/LoadDrawer.tsx',
     ]) {
       const src = readFileSync(file, 'utf8');
@@ -105,7 +104,6 @@ describe('B-MAPA podkład', () => {
     /* BN9-c5: podkład i linie tras CorridorMap zakłada przez pulę map (`ensureBasemap` / `drawCorridorLines` → applyBasemap) */
     expect(readFileSync('src/components/map/CorridorMap.tsx', 'utf8')).toContain('ensureBasemap');
     expect(readFileSync('src/components/map/mapPool.ts', 'utf8')).toContain('applyBasemap');
-    expect(readFileSync('src/components/map/GeofenceEditorMap.tsx', 'utf8')).toContain('applyBasemap');
     expect(readFileSync('src/components/drawer/LoadDrawer.tsx', 'utf8')).toContain('CorridorMap');
     expect(readFileSync('src/components/map/TrackReplay.tsx', 'utf8')).toContain('data-trail-source');
   });

@@ -5,10 +5,28 @@
  * BN9-c5 (#718 BN7 §4): tory bałtyckie już nie „zawsze” — tylko dla tras z zakresu mapy (`extraWaterTracksFor`).
  */
 import type { WaterTrackId } from '../ferryCatalog';
-import { WATER_GDN_NYN, WATER_GDY_KAA } from './draw';
+import { WATER_GDN_NYN } from './draw';
 import { extraWaterTracksFor, WATER_TRACKS_EXTRA } from './ferryLines';
 
 export type LaneLine = readonly (readonly [number, number])[];
+
+/**
+ * DP-78: tor Gdynia–Karlskrona [lng, lat] rysowany na mapach. Wcześniej (`WATER_GDY_KAA` z `_shared/map/draw.ts`) kończył
+ * się poziomym odcinkiem 56,16° N od 15,95° E do portu — nad Sturkö, Tjurkö i szkierami. Teraz podejście od południa,
+ * otwartym morzem na zachód od Utklippan, przesmykiem Kungsholmen–Drottningskär (Aspö / Tjurkö) do portu.
+ * Początek i koniec bez zmian (porty z katalogu). Wersja serwerowa w `_shared` bez zmian (poza zakresem paczki frontu).
+ */
+export const WATER_GDY_KAA_LANE: readonly (readonly [number, number])[] = [
+  [18.54, 54.533],
+  [18.85, 54.9],
+  [17.6, 55.35],
+  [16.5, 55.75],
+  [15.85, 55.98],
+  [15.62, 56.06],
+  [15.595, 56.107],
+  [15.61, 56.135],
+  [15.63, 56.161],
+];
 
 /**
  * Styl torów promowych — JEDEN dla wszystkich map: korytarz (Kokpit, Mapa, szuflada/karta transportu, telefon —
@@ -69,12 +87,12 @@ export function ferryLaneLines(
 ): LaneLine[] {
   const legacy = [
     ['FERRY-GDN-NYN', 'GDN-NYN', WATER_GDN_NYN],
-    ['FERRY-GDY-KAA', 'GDY-KAA', WATER_GDY_KAA],
+    ['FERRY-GDY-KAA', 'GDY-KAA', WATER_GDY_KAA_LANE],
   ] as const;
   const out: LaneLine[] = [];
   for (const [leg, track, lane] of legacy) {
     if (skipLegs.has(leg) || !tracks.has(track)) continue;
-    /* WATER_GDN_NYN / WATER_GDY_KAA są w kolejności [lng, lat] */
+    /* WATER_GDN_NYN / WATER_GDY_KAA_LANE są w kolejności [lng, lat] */
     out.push(lane.map(([lng, lat]) => [lat, lng] as const));
   }
   /* kolejność stała (jak `WATER_TRACKS_EXTRA`), niezależna od kolejności tras w zakresie */
