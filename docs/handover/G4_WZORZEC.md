@@ -378,3 +378,10 @@ Przyczyna: DP-72 — w demo osobne linie Śrem–Gdynia (PL-GDY, Obwodnica Trój
 - `mapa-hhl-pl-1920-{light,dark-default}.png`: nowa pomarańczowa linia przez środek Szwecji (Karlskrona – Linköping – Västerås – Gävle), linia E22 z Karlskrony wzdłuż wybrzeża; koniec toru przy Karlskronie od południa. Kadr, tory bałtyckie, znaczniki i tabela bez zmian.
 - `mapa-baltyk-hhl-pl-1440-light.png`: to samo w kadrze Mapy 1440.
 DP-113: jasna migawka Mapy jest teraz zapisana od nowa, więc pokazuje bieżący kolor torów `#3A82BA` (DP-76 r2 — wcześniej różnica koloru mieściła się w tolerancji i wzorzec został ze starym kolorem). Wzorca `shots-baseline` nie zmieniano.
+
+## Pakiet DP-C (03.11.2026) — DP-67: okno Awizacja z rejsem przed planowanym załadunkiem (DP-48)
+Z workflowu `visual` (`update=true`, gałąź `wyglad/pakiet-dp-c`, przebieg 41626626647, commit `2575c64`, artefakt `visual-artifacts`). Pozostałe 29 migawek w artefakcie jest identycznych co do bajtu (Kokpit 1920 jasny i ciemny — zegar demo DP-79 przy `?now=2026-09-23T14:32:00Z` daje tę samą datę „dziś 23.09.2026”; Mapa, karty, Ryzyka, Drogi bałtyckie, pogoda, Rejsy, pasek promu, stany).
+- `awizacja-rejs-przed-zaladunkiem-hhl-pl-1440-light.png` (nowa, 560×960): Administrator HHL, SG-11 (Zaplanowany, załadunek 07.10.2026), w polu „Rejs promem” pierwszy rejs z dopiskiem „przed planowanym załadunkiem” (GDN → NYN · Nova Star · 23.09.2026); w zamkniętym polu dopisek ucięty, pod polem osobna linia „Wybrany rejs odpływa przed planowanym załadunkiem.”, niżej „Rejs można dodać później…”.
+- `awizacja-rejs-przed-zaladunkiem-hhl-pl-390-light.png` (nowa, 390×3400): to samo na telefonie — pola w jednej kolumnie, linia DP-48 pod polem „Rejs promem”; okno pełnoekranowe (wysokość okna testu 3400 px, dół pusty).
+Uwaga do wyglądu (bez zmiany w tym pakiecie): na 1440 pole „Armator” w siatce `.am-2` rozciąga się na wysokość kolumny rejsu (dwie linie podpowiedzi) — wysokie pole wyboru.
+Wzorca `shots-baseline` nie zmieniano.

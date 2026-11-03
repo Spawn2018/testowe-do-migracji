@@ -484,3 +484,56 @@ test.describe('BN9-c5 visual — karta transportu Gdańsk – Nynäshamn (HHL pl
     })
   })
 })
+
+/* DP-67 (Pakiet DP-C): DP-48 — okno Awizacja z wybranym rejsem przed planowanym załadunkiem; dopisek
+   „Wybrany rejs odpływa przed planowanym załadunkiem.” jako osobna linia pod polem „Rejs promem”.
+   SG-11 (Zaplanowany, załadunek 07.10, bez rejsu) — pierwszy rejs z dopiskiem na liście. Komputer 1440 i telefon 390. */
+test.describe('DP-67 visual — Awizacja: rejs przed planowanym załadunkiem (HHL pl)', () => {
+  test.describe.configure({ mode: 'serial' })
+
+  for (const width of [1440, 390]) {
+    const file = `awizacja-rejs-przed-zaladunkiem__hhl__pl__${width}__light.png`
+    test(file, async ({ page }) => {
+      await page.emulateMedia({ reducedMotion: 'reduce' })
+      await gotoFrozen(page, width)
+      await setRole(page, 'HHL')
+      await setTheme(page, 'light', 'dark')
+      await navTo(page, 'sched')
+      await page.evaluate(() => {
+        const el = [...document.querySelectorAll('[data-load]')].find((r) => /\bSG-11\b/.test(r.textContent ?? '')) as HTMLElement | undefined
+        if (!el) throw new Error('brak wiersza SG-11')
+        el.click()
+      })
+      /* Administrator HHL: ten sam przycisk „Uzupełnij / Edytuj awizację” co SCX, znacznik `data-awiz-fix`;
+         na telefonie sekcja Przeglądu jest zwinięta (<details>) — rozwijamy ją przed kliknięciem */
+      await page.locator('.drawer [data-awiz-fix]').first().waitFor({ state: 'attached' })
+      await page.evaluate(() => {
+        const btn = document.querySelector('.drawer [data-awiz-fix]')
+        for (let d = btn?.closest('details'); d; d = d.parentElement?.closest('details') ?? null) d.open = true
+      })
+      await page.locator('.drawer [data-awiz-fix]').first().click()
+      const modal = page.locator('[data-awiz-modal]')
+      await expect(modal).toBeVisible()
+      const sel = modal.locator('select[data-awiz-sailing]')
+      await expect(sel).toBeVisible()
+      await expect(modal.locator('[data-awiz-sailing-before]')).toHaveCount(0)
+      const value = await sel.locator('option').evaluateAll((o) =>
+        (o as HTMLOptionElement[]).find((x) => !!x.value && !x.closest('optgroup') && /przed planowanym załadunkiem/.test(x.textContent ?? ''))?.value ?? '',
+      )
+      expect(value, 'SG-11: brak rejsu przed planowanym załadunkiem').not.toBe('')
+      await sel.selectOption(value)
+      const hint = modal.locator('[data-awiz-sailing-before]')
+      await expect(hint).toHaveText('Wybrany rejs odpływa przed planowanym załadunkiem.')
+      await page.setViewportSize({ width, height: width < 769 ? 3400 : 2200 })
+      await page.evaluate(async () => {
+        if (document.fonts?.ready) await document.fonts.ready
+      })
+      await page.waitForTimeout(600)
+      await expect(modal).toHaveScreenshot(file, {
+        maxDiffPixels: 60,
+        threshold: 0.28,
+        animations: 'disabled',
+      })
+    })
+  }
+})
