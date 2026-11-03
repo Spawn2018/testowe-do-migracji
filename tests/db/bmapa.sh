@@ -269,7 +269,8 @@ no_in=$(sys "select count(*)::text from pg_constraint where conname='here_road_g
 # BN7 #718 / 0381: dict + cron_fetch + route_legs + FK + ETA (odbiór §6)
 echo; echo "[#718] BN7 dict / cron_fetch / route_legs / ETA"
 val "BN7 spec=dict = 7" "select count(*)::text from here_road_legs where map_group='bn7' and active and spec='dict'" "7"
-val "BN7 cron_fetch=false = 7" "select count(*)::text from here_road_legs where map_group='bn7' and active and cron_fetch is not true" "7"
+# 0384: po froncie BN9-c5 + DP-171/172 — cron_fetch=true (punkty nadal null do pierwszego crona).
+val "BN7 cron_fetch=true = 7" "select count(*)::text from here_road_legs where map_group='bn7' and active and cron_fetch" "7"
 val "core cron_fetch=true = 5" "select count(*)::text from here_road_legs where map_group='core' and active and cron_fetch" "5"
 val "cron_fetch default = false" "select (column_default like '%false%')::text from information_schema.columns where table_schema='public' and table_name='here_road_legs' and column_name='cron_fetch'" "true"
 val "BN7 corridor OSM = 4" "select count(*)::text from corridor_polylines where code in ('PL_EE_E67','FI_E75','SE_E4_STO','SE_E18_KPS')" "4"
