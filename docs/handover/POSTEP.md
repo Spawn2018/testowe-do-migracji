@@ -1,4 +1,11 @@
 
+## 2026-11-03 08:55 — #755 SCALONE; start DP-184
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie.
+- Scalanie: **#755 SCALONE** `d2842862` (DP-181; F7 gotowe @ `3651609c`, CI unit+visual ✔). `deploy-main` robi resztę. Bez push na main.
+- **Krok DP-184** (`pakiet/dp-184-here-geom-npoints` / **0387**): `here_road_geometry.geom` + `n_points`; `here_store_road` / `purge_here_road_geometry`; `bn8b_here_leg_fresh`/`_line`/`_progress` bez `jsonb_array_length` na hot path (n_points); testy OFF_CORRIDOR 10 km `SE_E4_STO`/`SE_E18_KPS`; status **631**, bmapa **202**.
+- **Dalej:** push → CI (unit + db status/bmapa) → F7.
+
 ## 2026-11-03 08:35 — DP-181 F7 #755 r3
 
 - Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie.
