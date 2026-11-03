@@ -139,6 +139,34 @@ sys "delete from notifications where template in ('SMS_FALLBACK','SMS_GATEWAY_SI
 sval "#402: SMS_FALLBACK mail off → SUPPRESSED" "select public.l13_queue_email('critical','SMS_FALLBACK','$HHLU','hhl@test','$L','X',
   '{}'::jsonb,'c402-sms-fb',null)" SUPPRESSED
 sval "#402: SCHEDULE_DATE_CRITICAL → dates" "select public.notify_event_key('SCHEDULE_DATE_CRITICAL','{}'::jsonb)" dates
+# DP-156 F7 / C1: bałtyk z load jak SE; bez load tylko HIGH/CRIT → risk_crit.
+sval "DP-156 F7: FI MEDIUM bez transportu → null" "select public.notify_event_key('RISK_OPEN', jsonb_build_object('kind','ROAD_FI','severity','MEDIUM')) is null" t
+sval "DP-156 F7: FI MEDIUM z transportem → risk_route" "select public.notify_event_key('RISK_OPEN', jsonb_build_object('kind','ROAD_FI','severity','MEDIUM','load_id','aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee'))" risk_route
+sval "DP-156 F7: LT CRITICAL bez transportu → risk_crit" "select public.notify_event_key('RISK_OPEN', jsonb_build_object('kind','ROAD_LT','severity','CRITICAL'))" risk_crit
+sval "DP-156 F7: FI HIGH bez transportu → risk_crit" "select public.notify_event_key('RISK_OPEN', jsonb_build_object('kind','ROAD_FI','severity','HIGH'))" risk_crit
+sval "DP-156 F7: SE MEDIUM bez load → risk_route (bez zmian)" "select public.notify_event_key('RISK_OPEN', jsonb_build_object('kind','ROAD_SE','severity','MEDIUM'))" risk_route
+sval "DP-156: ROAD_EE szablon bez load_id → risk_general" "select public.notify_event_key('ROAD_EE', '{}'::jsonb)" risk_general
+# DP-156 F7 r2 e2e: trigger + matrix_notify (licznik po risk_id).
+sys "insert into push_subscriptions (user_id, endpoint, p256dh, auth)
+  values ('$HHLU', 'https://example.test/c3-dp156-hhl', 'dGVzdA', 'dGVzdA')
+  on conflict (endpoint) do nothing" >/dev/null
+sys "update notification_matrix set in_app=true, push=true where event_key='risk_crit' and role='HHL_ADMIN'" >/dev/null
+sys "delete from user_notify_pref where user_id='$HHLU' and event_key='risk_crit' and channel in ('bell','push')" >/dev/null
+RID_FI_M=$(sys "insert into risk_signals (project_id, kind, severity, title, title_key, detail, dedup_key)
+  values ('$P','ROAD_FI','MEDIUM','DP156 FI M','rk_road_fi_m','{}'::jsonb,'c3-dp156-fi-m-'||gen_random_uuid()::text)
+  returning id" | grep -E '^[0-9a-f-]{36}$' | tail -1 | tr -d '\r')
+sval "DP-156 e2e: FI MEDIUM bez load → 0 notif" "select count(*) from notifications where payload->>'risk_id'='$RID_FI_M'" 0
+RID_FI_H=$(sys "insert into risk_signals (project_id, kind, severity, title, title_key, detail, dedup_key)
+  values ('$P','ROAD_FI','HIGH','DP156 FI H','rk_road_fi_h','{}'::jsonb,'c3-dp156-fi-h-'||gen_random_uuid()::text)
+  returning id" | grep -E '^[0-9a-f-]{36}$' | tail -1 | tr -d '\r')
+sval "DP-156 e2e: FI HIGH bez load → IN_APP > 0" "select (count(*) > 0)::text from notifications where channel='IN_APP' and payload->>'risk_id'='$RID_FI_H'" true
+sval "DP-156 e2e: FI HIGH bez load → WEB_PUSH > 0" "select (count(*) > 0)::text from notifications where channel='WEB_PUSH' and payload->>'risk_id'='$RID_FI_H'" true
+RID_SE_M=$(sys "insert into risk_signals (project_id, kind, severity, title, title_key, detail, dedup_key)
+  values ('$P','ROAD_SE','MEDIUM','DP156 SE M','rk_road_se_m','{}'::jsonb,'c3-dp156-se-m-'||gen_random_uuid()::text)
+  returning id" | grep -E '^[0-9a-f-]{36}$' | tail -1 | tr -d '\r')
+sval "DP-156 e2e: SE MEDIUM bez load → 0 notif" "select count(*) from notifications where payload->>'risk_id'='$RID_SE_M'" 0
+sys "update risk_signals set severity='MEDIUM' where id='$RID_FI_H'" >/dev/null
+sval "DP-156 e2e: HIGH→MEDIUM zamyka dzwonek" "select (count(*) filter (where read_at is null)=0)::text from notifications where channel='IN_APP' and payload->>'risk_id'='$RID_FI_H'" true
 # F7: poziom firmy — e-mail wyłączony w org_kind → 0 EMAIL także bez prefs osoby.
 sys "delete from user_notify_pref where user_id='$HHLU' and event_key='risk_crit'" >/dev/null
 sys "update notification_matrix set email=true where event_key='risk_crit' and role='HHL_ADMIN'" >/dev/null

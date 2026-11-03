@@ -13,7 +13,7 @@ const ROOT = resolve(import.meta.dirname, '../..');
 /** Oczekiwane OK na lokalnym Postgresie (gate.sh). */
 export const EXPECTED_LOCAL = {
   security: 495, // #662-b: +1 maska URL/token w audit_log; #662 +8 → 494
-  status: 633, // DP-184 F7 r1: +2 na linii SE_E4_STO/SE_E18_KPS → 0; było 631 (+2 obok 10 km)
+  status: 634, // DP-155: +1 ROAD_FI×1.5 FI_E75; było 633 (DP-184 F7 r1)
   storage: 37,
   money: 200, // DP-167 F7 #734 r2: +2 title_key zmiana; było 198 (r1 +4 od 194 / DP-167 +3 od 191)
   release: 146,
@@ -55,7 +55,7 @@ export const EXPECTED_LOCAL = {
   e41: 36, // P2 + P2-poprawki; A4 +6 kolumny; A2 +4 (msgs_read + loads_read / drugi SCX, D-0330)
   e25: 93, // A10 F7: +PLANNED bez daty (3) + SCX claims (1) + wahanie trasy STATUS_AUTO (3)
   'c16-push': 18, // C16 N8 + C16-H H5 (D-20261015-1955-01, D-20261016-0100-01)
-  c3: 40, // #496 F7 r3: +2 fuel_miss/ext_mail 42501; było 38 (#467)
+  c3: 51, // DP-156 F7 r2: +6 e2e trigger/HIGH key/zamknięcie; było 45
 };
 
 /**

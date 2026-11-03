@@ -1249,8 +1249,8 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-150 | Cursor | DMI: 1 punkt/korytarz, szeregowo z odstępem, cache 3 h, krótszy timeout | F7 #724 / #714 | BN5 / ferry-weather | SCALONE #725 (z DP-149) |
 | DP-151 | Cursor | `fetchMarineConditions` — `detail` w `select` (status / warnings / ice) | F7 #724 / #714 | BN5 / front | SCALONE #725 (z DP-149) |
 | DP-152 | Cursor | `fHorizonTo` bierze najkrótszy horyzont ze wszystkich punktów; punkt przybrzeżny skraca okno DMI/`window_to` wszystkim — licz per korytarz albo maksimum ważnych | F7 #725 | BN5 / ferry-weather | w kolejce (z BN6 albo osobno) |
-| DP-155 | Cursor | ETA (`compute_load_eta` / `refresh_load_eta` / `yard_drive_quote`) czyta tylko `SE_E4`/`SE_E22` — wiersz `ROAD_FI` w `corridor_conditions` nie wpływa na ETA (#716 §3.5) | F7 #726 | BN8b / ETA | w kolejce |
-| DP-156 | Cursor | `notify_event_key` zna tylko `ROAD_SE`/`ROAD_PL` — uzupełnić gdy ryzyka drogowe LT/LV/EE/FI dostaną `load_id` | F7 #726 | BN6 / notify | w kolejce |
+| DP-155 | Cursor | ETA: `ROAD_FI` → `slowdown_se` przy `FI_E75` (0385); test ×1.5 FI dłuższy / GDN bez zmian; `yard_drive_quote` bez zmian (tylko SREM/BODEN→PL/SE_E4) | F7 #726 / C1 #762 | BN8b / ETA | W TOKU (#766 C1) |
+| DP-156 | Cursor | `notify_event_key`: ROAD_LT/LV/EE/FI — z `load_id` jak SE; bez `load_id` tylko HIGH/CRIT → `risk_crit`; HIGH→MEDIUM zamyka dzwonek (F7 #766 r2 / **0388**) | F7 #726 / C1 #762 | BN6 / notify | W TOKU (#766 C1 / **0388**) |
 | DP-157 | Cursor | road-fi: (a) zwykłe Tietyö bez zamknięcia/objazdu/limitu → LOW; (b) do BN7 filtr numerów dróg korytarza (VT4/E75, VT29/E8, Kehä III 50, Vuosaaren 103 + porty); (c) jednorazowo resolve 146 ROAD_FI poza filtrem (przez job, nie ręcznie) | F7 #727 | BN6 / road-fi | DONE #732 |
 | DP-158 | Cursor | ROAD_FI tytuły: polska etykieta typu (Tietyö→roboty drogowe, Liikennetiedote→komunikat, painorajoitus→limit masy) w params/title_key; surowy fiński w detail | F7 #727 | BN6 / road-fi | DONE #732 |
 | DP-159 | Cursor | `bn3-tallink-alert`: `finalizeTallinkAlertsForStatus` bez `NOW` → od 02.11 wall-clock psuje decyzję 72 (08:00 Tallinn) | pre-push #727 | BN3 / testy | SCALONE w #727 |
@@ -1269,7 +1269,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-175 | Cursor | test jsdom: legi BN7 bez punktów → tylko rdzeń (nie blokuje #740) | F7 #740 / #750 | BN7 / test | SCALONE (#750 `db62c9b9`) |
 | DP-177 | koordynator | `keepUnits` także w tytułach bałtyckich (front) | F7 #743 / #750 | BN9-c4b / front | SCALONE (#750 `db62c9b9`) |
 | DP-178 | koordynator (#735) | EE/LV: shape obs; RESTRICTIONS 20 MB; SRTI `[]`=OK; LV meta→plik; F7 #748 r1: klucz tylko host NAP | #735 / #748 | BN6 / EE+LV | SCALONE (#748 `462af010`) |
-| DP-179 | koordynator (F7 #747) | Wspomniane przy DP-178 w F7 #747 — bez osobnej treści; przyjąć = w pakiecie DP-178 albo dopisek | F7 #747 | BN6 | w kolejce (szczegóły) |
+| DP-179 | koordynator (F7 #747) | Wspomniane przy DP-178 w F7 #747 — bez osobnej treści; przyjęte = objęte DP-178 | F7 #747 | BN6 | DONE (bez osobnej treści; C1) |
 | DP-180 | Cursor | EE: pusta koperta DATEX SRTI = OK; RESTRICTIONS/SAFETY co 60 min + cache; timeout 45 s RESTRICTIONS; LV: `perCode`/`perShape`/`perDataHost` na wszystkich ścieżkach `runRoadLv` | #735 odbiór DP-178 | BN6 / EE+LV | SCALONE (#753 `12beba4b`) |
 | DP-181 | Cursor | `byOperator` po `catalogOperators()`; `isBeforePlannedLoad` po trasie; F7 #755 r3: `reachOf` STENA→POLFERRIES→nowi (makieta E30); `crossingLine` source przed named | F7 #750 / #755 | BN8 / `src/lib` | SCALONE (#755 `d2842862`) |
 | DP-182 | koordynator | armator startowy awizacji po wczytaniu rozkładu | F7 #750 / #751 | BN9-c6 / awizacja | SCALONE (#751 `6c0af746`) |
@@ -1277,8 +1277,11 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-184 | Cursor | po BN8b: `here_road_geometry.geom` (+ `st_simplify` ~20 m) + `n_points`; `here_store_road` / `purge_here_road_geometry` (D-81); świeżość bez `jsonb_array_length`; test 10 km obok `SE_E4_STO`/`SE_E18_KPS` | F7 #749 r3 | BN8b / HERE | SCALONE (#760 `d378b0ce` / **0387**) |
 | DP-185 | koordynator | uproszczenie awizacji (`picked ?? startOperator`), dociąganie `sailingId`, 2 testy | F7 #751 | BN9-c6 / awizacja | SCALONE (#763 `6c053f6c`) |
 | DP-186 | Cursor | EE RESTRICTIONS/SAFETY: kopia w bazie (ostatnia dobra lista + data), gdy `ee_*_source=cache` nie widać w 24 h albo `complete`=0 przez timeouty | F7 #753 (nieblokujące) | BN6 / EE | w kolejce (C5 — decyzja 04.11 ~07:00 po 24 h #753) |
-| DP-187 | Cursor | `runJob`: odstęp od `started_at`; F7 r1 A — bez zapisu pominięć do `integration_runs` (`console.info`); `lastRun`=`started_at` | #756 / F7 #765 | BN6 / jobs | W TOKU (#765) |
-| DP-188 | Cursor | LV: `lv_<kod>_err` = treść JSON `error` (≤80 znaków, ciało ≤200 B; max 3 kody); bez zmiany URL/proxy | #756 odbiór #753 | BN6 / LV | W TOKU (#765) |
+| DP-187 | Cursor | `runJob`: odstęp od `started_at`; F7 r1 A — bez zapisu pominięć do `integration_runs` (`console.info`); `lastRun`=`started_at` | #756 / F7 #765 | BN6 / jobs | SCALONE (#765 `c1c8f827`) |
+| DP-188 | Cursor | LV: `lv_<kod>_err` = treść JSON `error` (≤80 znaków, ciało ≤200 B; max 3 kody); bez zmiany URL/proxy | #756 odbiór #753 | BN6 / LV | SCALONE (#765 `c1c8f827`) |
+| DP-193 | Cursor | `eta_basis.flags` w SE: zwinąć powtórzenia „przerwa z GPS” (np. ×58) + limit długości listy | #762 odbiór 0387 | C2 / ETA | w kolejce (C2) |
+| DP-194 | Cursor | SE_E4/`SE-NYN`: rozszerzyć HERE OFF_CORRIDOR poza `v_bn7` (dziś celowo tylko PL_EE_E67/FI_E75/SE_E4_STO/SE_E18_KPS; odpowiedź w #762) | #762 odbiór 0387 | C2 / BN8b | w kolejce (C2; rekomendacja: tak) |
+| DP-195 | Cursor | `WATER_GDY_KAA`: ujednolicić punkty serwerowe (`_shared/map/draw.ts`) z frontem `WATER_GDY_KAA_LANE` (DP-78 / #764); test wspólnych punktów | #762 po DP-A | C3 / mapa | w kolejce (C3; po #764) |
 | DP-189 | Cursor | Ryzyka › Drogi LT/LV/EE/FI zawsze widoczne (jak SE); `onRoute` = oznaczenie + kolejność, nie filtr; kolejność makiety LT→LV→EE→FI | #757 / właściciel 03.11 08:43 | BN9-c4 / front | SCALONE (#761 `a9665811`) |
 | DP-190 | Cursor | Jednorazowe pobranie HERE FI-HEL / FI-VUO / SE-STO (zamiast crona 04.11 04:15Z); bez migracji | #757 / właściciel 03.11 | BN7 / HERE | DONE (PROD 03.11 ~08:09Z; 11151/10878/12423 pkt; routing 7→10; spend 0) |
 | DP-191 | koordynator | Usunięty dopisek „Trasa orientacyjna (HERE…)” z map (Mapa/Kokpit/karta) | właściciel 03.11 08:46 / #758 | mapa / front | SCALONE (#758 `d3db3e49`) |
@@ -1432,21 +1435,26 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 Źródło: #720 (Spawn2018, `dla-cursora`; 02.11 ~02:10). Spec w treści: BN8a (statusy, mismatch, overdue, `process_position`, `eta_record_segment_observations`, blokada fałszywego OFF_CORRIDOR, `loads.ferry_route`); BN8b (`compute_load_eta` + OFF_CORRIDOR z korytarzy BN7). Front `src/lib` Cursor; ekrany BN9-c6 — koordynator. DP-143/DP-144 przy BN8.
 **Decyzja 82-C** (właściciel 02.11 00:21, #720): czas zgłoszenia w porcie EE (TLL/MUU/PLD) = **2 h** jako założenie (`PORT_CHECKIN_TLL`/`_MUU`/`_PLD`, `source='założenie — decyzja 82-C…'`); front awizacji wyrównać do tego samego parametru (dziś 14 h) w BN8 `src/lib`.
 **F7 #738 N6/N7 → BN8 (nie BN7):** po 0381 ETA bałtyckie nadal niepełne w `compute_load_eta` (postęp PL po `PL_ROAD`, PORT_OUT z geofence Gdańska, korytarz SE `SE_E4`); PORT_CHECKIN prod 3 h vs 2 h EE — domknięcie w BN8b.
-1. ~~**BN8a**~~ — SCALONE (#741 `f4c4e2ab` / **0382**; F7 r6): `loads.ferry_route` + `load_route_family`; kraje SE/FI; OFF_CORRIDOR tylko core; mismatch PL/EE; `eta_record` po trasie. ~~**DP-171/172**~~ → ~~**`cron_fetch=true`**~~ (#746). ~~**front `src/lib`**~~ SCALONE (#747 `4ce85732`; F7 @ `9fcd6fe2`): 82-C 2 h, `clearanceHoursForRoute`, `altProposal`/`CrossingMap`, DP-143/144. ~~**DP-178**~~ SCALONE (#748 `462af010`). ~~**BN9-c6**~~ SCALONE (#750 `db62c9b9`; DP-175/177). ~~**BN8b**~~ SCALONE (#749 `3b09e130` / **0385**; F7 gotowe @ `7a955bb4`): OFF_CORRIDOR HERE BN7 + `compute_load_eta` bałtyckie; status **629**. ~~**DP-183**~~ SCALONE (#752 `ea949a23` / **0386**). ~~**DP-180**~~ SCALONE (#753 `12beba4b`). ~~**DP-181**~~ SCALONE (#755 `d2842862`). ~~**DP-191**~~ SCALONE (#758). ~~**DP-192**~~ SCALONE (#759). ~~**DP-189/190**~~ SCALONE (#761 `a9665811`; DP-190 DONE PROD). ~~**DP-184**~~ SCALONE (#760 `d378b0ce` / **0387**). **Dalej:** DP-187/188 (#756); potem pakiety C1–C5 (#762); DP-186 = C5 po 24 h #753.
+1. ~~**BN8a**~~ — SCALONE (#741 `f4c4e2ab` / **0382**; F7 r6): `loads.ferry_route` + `load_route_family`; kraje SE/FI; OFF_CORRIDOR tylko core; mismatch PL/EE; `eta_record` po trasie. ~~**DP-171/172**~~ → ~~**`cron_fetch=true`**~~ (#746). ~~**front `src/lib`**~~ SCALONE (#747 `4ce85732`; F7 @ `9fcd6fe2`): 82-C 2 h, `clearanceHoursForRoute`, `altProposal`/`CrossingMap`, DP-143/144. ~~**DP-178**~~ SCALONE (#748 `462af010`). ~~**BN9-c6**~~ SCALONE (#750 `db62c9b9`; DP-175/177). ~~**BN8b**~~ SCALONE (#749 `3b09e130` / **0385**; F7 gotowe @ `7a955bb4`): OFF_CORRIDOR HERE BN7 + `compute_load_eta` bałtyckie; status **629**. ~~**DP-183**~~ SCALONE (#752 `ea949a23` / **0386**). ~~**DP-180**~~ SCALONE (#753 `12beba4b`). ~~**DP-181**~~ SCALONE (#755 `d2842862`). ~~**DP-191**~~ SCALONE (#758). ~~**DP-192**~~ SCALONE (#759). ~~**DP-189/190**~~ SCALONE (#761 `a9665811`; DP-190 DONE PROD). ~~**DP-184**~~ SCALONE (#760 `d378b0ce` / **0387**). ~~**DP-187/188**~~ SCALONE (#765 `c1c8f827`). **Dalej:** C1–C5 (#762; C1 cz.1 DP-155/156 **0388**); DP-186 = C5 po 24 h #753.
 
 ### #762 · Kolejka drobnych poprawek Cursora — pakiety C1–C5 (do wydania 1.0)
 Źródło: #762 (Spawn2018; 03.11). Po #760 → #756 (DP-187/188) → C1…. Koordynator: pakiety DP-A/B/C (front) — nie brać.
-1. **C1 — Korytarz bałtycki:** DP-179, 143, 144, 146, 152–158 (LT/LV/EE/FI etykiety, szum FI, oblodzenie LT; przed BN10).
-2. **C2 — telematyka / ETA:** DP-119, 120, 121, 123, 124, 126, 129, 132, 140 (140 = BN8a — sprawdzić aktualność).
-3. **C3 — stare pozycje backendu:** DP-2, 10, 12, 22, 24, 29–32, 38–40, 43, 46, 47, 53–58 (nieaktualne → zamknąć z uzasadnieniem w PLAN).
+1. **C1 — Korytarz bałtycki:** ~~DP-179~~ DONE; ~~143/144~~ DONE; DP-146, 152; ~~155/156~~ W TOKU (#766); ~~157/158~~ DONE (LT/LV/EE/FI etykiety, szum FI; przed BN10).
+2. **C2 — telematyka / ETA:** DP-119, 120, 121, 123, 124, 126, 129, 132, 140 (+ **DP-193**, **DP-194** z odbioru 0387).
+3. **C3 — stare pozycje backendu:** DP-2, 10, 12, 22, 24, 29–32, 38–40, 43, 46, 47, 53–58 (+ **DP-195** tor KAA po #764).
 4. **C4 — reszta:** DP-69, 70, 81–83, 90–93, 97, 99–103, 105–109, 111, 112.
 5. **C5 — warunkowe:** DP-186 (decyzja 04.11 ~07:00 po 24 h odbioru #753).
 Cel: C1–C4 przed bramą #588 i wydaniem 1.0 (≈ 20–21.11). Pozycja >~50 linii / nowa tabela → osobne zgłoszenie.
 
-### #756 · DP-187/188 — road-ee gap + LV error body — W TOKU (#765)
+### #766 · C1 cz.1 — DP-155 + DP-156 — W TOKU
+Źródło: #762 C1. Gałąź `pakiet/c1-dp-155-road-fi-eta`. Migracja **0388** (F7 r2: 0389 scalona; e2e + zamknięcie po obniżeniu).
+1. **DP-155:** test `ROAD_FI`×1.5 → ETA FI_E75 dłuższa, GDN-NYN bez zmian (logika już w 0385).
+2. **DP-156:** `notify_event_key` + ROAD_LT/LV/EE/FI; bez transportu tylko HIGH/CRIT; HIGH→MEDIUM → `notify_mark_case_closed`.
+
+### #756 · DP-187/188 — road-ee gap + LV error body — SCALONE (#765 `c1c8f827`)
 Źródło: #756 (Spawn2018; odbiór #753). Jednym PR bez migracji.
-1. **DP-187:** `runJob` liczy odstęp od `started_at`; F7 r1 **A** — pominięć **nie** w `integration_runs` (`console.info` + `skipped_gap_min` w odpowiedzi); `lastRun` = `started_at` / `limit(1)`.
-2. **DP-188:** `lv_<kod>_err` z JSON `error` (≤80 znaków, ciało ≤200 B; max 3 kody).
+1. ~~**DP-187**~~ — `started_at`; F7 A bez zapisu pominięć; `lastRun`=`started_at`.
+2. ~~**DP-188**~~ — `lv_<kod>_err` z JSON `error`.
 
 ### #687 · DP-114 Tallink HEL–TLL 404 + niepełna pula Alert — SCALONE (`5fc7d4a0` / PR #689)
 Źródło: #687 (Spawn2018, `dla-cursora`). Po #683 prod: `TALLINK_HEL_TLL_URL` `/en/helsinki-tallinn` → HTTP 404; reguła 72 traci połowę puli.
@@ -2611,6 +2619,8 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 03.11.2026 10:00 | #761 SCALONE `a9665811` (DP-189; F7 @ 09128235); merge main do #760 (konflikt PLAN/POSTEP) → CI→F7 | pętla / DP-184 |
 | 03.11.2026 10:30 | #760 SCALONE `d378b0ce` / **0387** (F7 @ b028bf0a); start DP-187/188 (#756); #762 C1–C5 wpisane §4 | pętla / DP-187 |
 | 03.11.2026 10:50 | #763 SCALONE `6c053f6c` (Pakiet DP-B / DP-185); F7 #765 r1 → wariant A (bez zapisu skipped); push poprawki | pętla / DP-187 |
+| 03.11.2026 11:20 | #765 SCALONE `c1c8f827` (DP-187/188; F7 @ 3fd8734b); DP-193/194→C2, DP-195→C3; start C1 DP-155/156 **0388** | pętla / C1 |
+| 03.11.2026 11:50 | #764 SCALONE `e3f6c101` (DP-A); #766 F7 r1 → **0389** bałtyk bez load tylko HIGH/CRIT; c3 **45** | pętla / C1 F7 |
 | 31.10.2026 — | Decyzja 73: TLLA-HEL ETA−150 min / HELA-TLL ETD+160 min (fixture Cargo; nocny 165 min OK). Decyzja 74: `sailings.source_ref` 0359; Digitraffic `digitraffic:portcall:<id>:<route>`; HTML/RECZNIE/DANE_STARTOWE wygrywają; #685-b RPC zastępuje digitraffic:% w ±3 h | F7 #688 r1–r4 |
 | 31.10.2026 — | F7 #683 nieblokujące (osobna poprawka): Scheduler grudzień + „on 2 January” → rok bieżący, ciche wygaśnięcie; Alert INFO bez ryzyka/historii — świadomie | F7 #683 r7 |
 | 31.10.2026 — | F7 #683 r8 nieblokujące (osobno): Alert poza Schedulerem obok Schedulera; sprzeczne bloki (resume→cofnięcie auto); rok przy długim oknie Schedulera; mutanty M10/M15–M17/M22 świadomie bez testów | F7 #683 r8 |

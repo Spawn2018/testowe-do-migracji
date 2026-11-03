@@ -1,4 +1,33 @@
 
+## 2026-11-03 12:40 — #766 F7 r2: pkt 2–4 (e2e, zamknięcie, 0388)
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
+- Scalanie: brak „F7: gotowe” — F7 r2 @ 7413490: pkt 1 przyjęty; brakowało 2–4.
+- **Krok F7 #766 r2:** (2) e2e c3 przez trigger — FI MEDIUM→0, FI HIGH→IN_APP+WEB_PUSH, SE MEDIUM→0, HIGH→risk_crit; (3) HIGH→MEDIUM → `notify_mark_case_closed`; (4) 0388+0389 → jedna **0388**. c3 **51**. Bez push na main.
+- **Dalej:** push #766 → CI → F7. Potem C1 reszta (DP-146, 152) albo C2.
+
+## 2026-11-03 12:10 — #766 CI db: gate-suites c3 43→45
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
+- Scalanie: brak „F7: gotowe” po `6b02ba6e`. unit+visual ✔; `db` czerwone: c3 **45/45 OK**, `gate-suites` oczekiwał 43.
+- **Krok:** `EXPECTED_LOCAL.c3` **45** (F7 r1 +2). Bez push na main.
+- **Dalej:** push #766 → CI → F7. Potem C1 reszta (DP-146, 152) albo C2.
+
+## 2026-11-03 11:50 — #764 SCALONE; #766 F7 r1 (DP-156 wolumen / 0389)
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
+- Scalanie: **#764 SCALONE** `e3f6c101` (Pakiet DP-A; F7 gotowe @ `8963ee02`, CI unit+visual ✔). `deploy-main` robi resztę. Bez push na main.
+- **Krok F7 #766 r1:** bałtyk `ROAD_LT/LV/EE/FI` — z `load_id` jak SE; bez `load_id` tylko HIGH/CRIT → `risk_crit` (MEDIUM/LOW → null). Payload z `load_id`; trigger + bramka `matrix_notify` + push `risk_crit`. Migracja **0389**. c3 **45** (status **634** bez zmian).
+- **Szacunek 24 h (z F7):** FI/LT/EE/LV nowe bez transportu ≈ 269, w tym HIGH/CRIT = **0** → po zmianie ≈ **0** dzwonków z detached; z transportem jak SE (wczoraj SE 24 IN_APP + 4 WEB_PUSH). Zamiast ~150+ z MEDIUM → rząd SE.
+- **Dalej:** push #766 → CI → F7. Potem C1 reszta (DP-146, 152) albo C2.
+
+## 2026-11-03 11:20 — #765 SCALONE; start C1 (DP-155/156)
+
+- Skrzynka: #550 WSTRZYMANE; #762 — DP-193/194 (C2), DP-195 (C3) wpisane; odpowiedź DP-194 w #762. #756 zamknięte. Bez nowego `pilne`.
+- Scalanie: **#765 SCALONE** `c1c8f827` (DP-187/188; F7 gotowe @ `3fd8734b`, CI unit/db/visual ✔). `deploy-main` robi resztę. Bez push na main.
+- **Krok C1 cz.1** (`pakiet/c1-dp-155-road-fi-eta` / **0388**): DP-155 test ROAD_FI×1.5 (FI_E75); DP-156 `notify_event_key` + ROAD_LT/LV/EE/FI; DP-179 DONE (bez treści). status **634**, c3 **43**.
+- **Dalej:** push PR → CI → F7. Potem C1 reszta (DP-146, 152) albo C2.
+
 ## 2026-11-03 10:50 — #763 SCALONE; F7 #765 r1 → wariant A
 
 - Skrzynka: #550 WSTRZYMANE; #716/#718/#720 w planie. Bez nowego `pilne`.
