@@ -84,7 +84,17 @@ export function AwizacjaModal({ load, onClose }: Props) {
   const [hhlOrder, setHhlOrder] = useState(load.hhlOrderNo ?? '');
   const [trackingRef, setTrackingRef] = useState(load.resources.trackingRef ?? '');
   /* BN9-c6: start od armatora przypiętego rejsu, potem armatora trasy transportu (nie na sztywno Polferries) */
-  const [operator, setOperator] = useState<FerryOperatorId>(() => initialAwizOperator(curSailing, transportRoute(load, sailings)));
+  const startOperator = initialAwizOperator(curSailing, transportRoute(load, sailings));
+  const [operator, setOperator] = useState<FerryOperatorId>(startOperator);
+  /* DP-182: rozkład (`sailings`) bywa wczytany dopiero po otwarciu okna — start dociągany do armatora przypiętego rejsu
+     / trasy, dopóki użytkownik sam nie wybrał armatora ani rejsu; po rozpoznaniu przypiętego rejsu — koniec dociągania */
+  const [operatorTouched, setOperatorTouched] = useState(false);
+  const [startSettled, setStartSettled] = useState(!!curSailing);
+  useEffect(() => {
+    if (operatorTouched || startSettled) return;
+    setOperator(startOperator);
+    if (curSailing) setStartSettled(true);
+  }, [startOperator, curSailing, operatorTouched, startSettled]);
   const [sailingId, setSailingId] = useState(load.sailingId ?? '');
   const [err, setErr] = useState<string | null>(null);
   /* piloci (D-20261009-1233-01) — tylko przy „PL + SE” w tabeli właściciela i gdy zapis jest podłączony */
@@ -359,7 +369,7 @@ export function AwizacjaModal({ load, onClose }: Props) {
           <div className="am-2">
             <label className="form-field am-f">
               <span>{pt(locale, 'p7_m_operator')}</span>
-              <select className="input" value={operator} data-awiz-operator onChange={(e) => { setOperator(e.target.value as FerryOperatorId); setSailingId(''); }}>
+              <select className="input" value={operator} data-awiz-operator onChange={(e) => { setOperatorTouched(true); setOperator(e.target.value as FerryOperatorId); setSailingId(''); }}>
                 {awizacjaOperators(sailings, operator).map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
               </select>
             </label>
@@ -368,7 +378,7 @@ export function AwizacjaModal({ load, onClose }: Props) {
             ) : (
               <label className="form-field am-f">
                 <span>{pt(locale, 'p7_m_sailing')}</span>
-                <select className="input" value={sailingId} onChange={(e) => setSailingId(e.target.value)} data-awiz-sailing>
+                <select className="input" value={sailingId} onChange={(e) => { setOperatorTouched(true); setSailingId(e.target.value); }} data-awiz-sailing>
                   <option value="">{t(locale, 'sail_none')}</option>
                   {sailingOptions.map((o) => {
                     const before = beforePlannedLoad(o, load, operator);
