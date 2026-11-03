@@ -1,4 +1,12 @@
 
+## 2026-11-03 02:40 — #745 SCALONE + start cron_fetch=true (0384)
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie; #742 zamknięte.
+- Scalanie: **#745 SCALONE** `162b4aa1` (DP-172 / 0383; F7 gotowe @ `ec88e12a`). CI unit/db/visual ✔.
+- **Krok:** `pakiet/bn7-cron-fetch-true` / **0384** — `here_road_legs.cron_fetch=true` dla 7× `map_group=bn7`; asercja bmapa; pierwsze punkty z crona ~04:15 UTC (DP-70).
+- **Dalej:** push → CI → F7. Po F7: BN8 front/`src/lib` + BN8b.
+- Bez push na main.
+
 ## 2026-11-03 02:15 — DP-172 start (DeepL LT/LV/ET/FI) + #744 SCALONE
 
 - Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720/#735/#742 w planie.
