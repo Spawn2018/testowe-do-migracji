@@ -12,8 +12,8 @@ const ROOT = resolve(import.meta.dirname, '../..');
 
 /** Oczekiwane OK na lokalnym Postgresie (gate.sh). */
 export const EXPECTED_LOCAL = {
-  security: 495, // #662-b: +1 maska URL/token w audit_log; #662 +8 → 494
-  status: 642, // DP-197 F7 #771: +1 stale 22d OSM; +1 Essingeleden; DP-194 +4; DP-193 +2
+  security: 496, // F7 #780 r3: +1 memory_auto_24h w deepl_usage_view; #662-b → 495
+  status: 643, // F7 #780 r2: +1 risk_audience_for TV_CODE=HHL; DP-197 → 642
   storage: 37,
   money: 200, // DP-167 F7 #734 r2: +2 title_key zmiana; było 198 (r1 +4 od 194 / DP-167 +3 od 191)
   release: 146,
@@ -55,7 +55,7 @@ export const EXPECTED_LOCAL = {
   e41: 36, // P2 + P2-poprawki; A4 +6 kolumny; A2 +4 (msgs_read + loads_read / drugi SCX, D-0330)
   e25: 93, // A10 F7: +PLANNED bez daty (3) + SCX claims (1) + wahanie trasy STATUS_AUTO (3)
   'c16-push': 18, // C16 N8 + C16-H H5 (D-20261015-1955-01, D-20261016-0100-01)
-  c3: 51, // DP-156 F7 r2: +6 e2e trigger/HIGH key/zamknięcie; było 45
+  c3: 54, // F7 #780 r2: +3 obok_trasy notif×2 + audience TV_CODE; DP-156 → 51
 };
 
 /**
@@ -66,7 +66,7 @@ export const EXPECTED_LOCAL = {
  */
 export const EXPECTED_TEST = {
   ...EXPECTED_LOCAL,
-  security: 491, // 495 - 4 SKIP (B6); #662-b +1
+  security: 492, // 496 - 4 SKIP (B6); F7 #780 r3 +1
   risks: 44, // 46 − 2 SKIP (C1)
   // dec6: 27 − 4 SKIP — wstawki auth.sessions dla kont seeda (FK → auth.users); lokalnie/CI bez FK (stub)
   dec6: 23,
