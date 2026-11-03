@@ -2555,7 +2555,7 @@ chk "BN8a W5f: ferry_sailings_map bez coalesce GDN" \
 # L 821a–m (matryca 4 rodzin); L 822* F7 W3; L 823* F7 r2 N1/W3f.
 # F7 r2: asercje behawioralne zamiast like '%…%' na tekście funkcji.
 chk "BN8b: PORT_CHECKIN_TLL = 2 h (82-C)" \
-  "select (hours = 2)::text from eta_segment_params where code='PORT_CHECKIN_TLL'" t
+  "select (hours = 2)::text from eta_segment_params where code='PORT_CHECKIN_TLL'" true
 L821a=aaaaaaaa-0000-0000-0000-00000000821a
 L821b=aaaaaaaa-0000-0000-0000-00000000821b
 L821c=aaaaaaaa-0000-0000-0000-00000000821c
@@ -2917,15 +2917,15 @@ chk "BN8b F7 W3f: eta_site TLL-HEL IN_TRANSIT_PL/SE" \
       and (select eta_site is not null from loads where id='$L823e');
    rollback" t
 
-# F7 r2 W3f: założony rejs tylko z rodziny (GDN bliższy w oknie → i tak TLL-HEL).
+# F7 r3 W3f: GDN między v_start a TLL (bez filtra rodziny wybrałoby GDN; z filtrem = TLL-HEL).
 chk "BN8b F7 W3f: założony rejs tylko z rodziny TLL" \
   "begin;
    insert into vessels (id, name, operator) values
     ('$V823','BN8b F7 vessel','TALLINK')
     on conflict (id) do nothing;
    insert into sailings (id, project_id, vessel_id, route, departure_at, arrival_at, status, source) values
-    ('$S823g','$P','$V823','GDN-NYN', now() + interval '3 hours', now() + interval '21 hours','ZAPLANOWANY','POLFERRIES'),
-    ('$S823t','$P','$V823','TLL-HEL', now() + interval '6 hours', now() + interval '8 hours','ZAPLANOWANY','TALLINK');
+    ('$S823g','$P','$V823','GDN-NYN', now() + interval '5 hours', now() + interval '23 hours','ZAPLANOWANY','POLFERRIES'),
+    ('$S823t','$P','$V823','TLL-HEL', now() + interval '8 hours', now() + interval '10 hours','ZAPLANOWANY','TALLINK');
    insert into loads (id, project_id, carrier_org_id, hhl_order_no, carrier_order_no, status, plan_load_date, plan_delivery_date, ferry_route)
     values ('$L823f','$P','$SCXO','HHL/BN8B-823FAM','SCX/BN8B-823FAM','IN_TRANSIT_PL', current_date, current_date + 5, 'TLL-HEL');
    insert into positions (load_id, ts, geom_raw, source) values

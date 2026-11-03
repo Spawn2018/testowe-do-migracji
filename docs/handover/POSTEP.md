@@ -1,4 +1,11 @@
 
+## 2026-11-03 05:55 — F7 #749 r3 (filtr rodziny + CI)
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. #751 wygląd DP-176/182 — bez F7.
+- Scalanie: brak F7 „gotowe” (#749). CI @ `bb2d1a08`: unit/visual ✔; db FAIL 628/629 (`PORT_CHECKIN_TLL` `true`≠`t`).
+- **Krok:** F7 r3 — GDN-NYN `+5 h` / TLL-HEL `+8 h` (rejs między `v_start` a TLL → filtr rodziny); `PORT_CHECKIN` oczekiwane `true`; DP-184 w rejestrze (po scaleniu). Status **629**.
+- **Dalej:** push → CI → F7 „gotowe”. Bez push na main.
+
 ## 2026-11-03 05:30 — #750 SCALONE + F7 #749 r2 (N1/N2/N3/N4)
 
 - Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. DP-181/182 wpisane.
