@@ -5,7 +5,7 @@
 import type { Locale } from '../types';
 import { t } from './messages';
 
-const PL: Record<string, string> = {
+export const PL: Record<string, string> = {
   fe_step: '{n} z {total}',
   fe_steps_aria: 'Krok {n} z {total}',
   fe_inv_title: 'Zaproszenie do Watch Tower',

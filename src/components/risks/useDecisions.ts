@@ -3,7 +3,7 @@
  * To samo zapytanie i te same funkcje bazy co dotychczasowe Centrum decyzji (DEC-2): `decisions` z katalogiem
  * `decision_types`, rozstrzygnięcie `decision_resolve`, odłożenie `decision_snooze`. Tylko produkcja; demo — `p6Source.ts`.
  */
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type { OrgKind } from '../../types';
 import type { DecisionOption, TodoDecision } from '../../lib/p6Todo';
 import { changesLoads, dbErrorKey, decisionRpc, etaDbErrorKey } from '../../lib/carrierDecision';
@@ -73,7 +73,8 @@ export function useOpenDecisions(enabled: boolean): DecisionsApi {
   const [rows, setRows] = useState<TodoDecision[]>([]);
   const [error, setError] = useState<string | null>(null);
   const rowsRef = useRef<TodoDecision[]>([]);
-  rowsRef.current = rows;
+  /* DP-61: ref aktualizowany po zatwierdzeniu renderu (nie w trakcie) — `resolve` czyta go tylko w obsłudze zdarzeń */
+  useLayoutEffect(() => { rowsRef.current = rows; }, [rows]);
 
   /* DP-52: pobranie (system zewnętrzny) osobno od zapisu stanu — efekt ustawia stan dopiero w wywołaniu zwrotnym
      po odpowiedzi bazy (jak dotąd: setState zawsze po `await`), bez synchronicznego setState w efekcie. */

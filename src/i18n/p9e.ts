@@ -5,7 +5,7 @@
 import type { Locale } from '../types';
 import { t } from './messages';
 
-const PL: Record<string, string> = {
+export const PL: Record<string, string> = {
   p9e_cars_one: '{n} auto',
   p9e_cars_few: '{n} auta',
   p9e_cars_many: '{n} aut',

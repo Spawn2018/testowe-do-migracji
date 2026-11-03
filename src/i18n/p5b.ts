@@ -5,7 +5,7 @@
 import type { Locale } from '../types';
 import { t } from './messages';
 
-const PL: Record<string, string> = {
+export const PL: Record<string, string> = {
   /* Opłata paliwowa (E3) */
   p5b_f_sub: 'Załącznik 1 do umowy · wersja {v} od {date}',
   p5b_f_agreed: 'Uzgodnione z przewoźnikiem',

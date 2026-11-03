@@ -48,7 +48,8 @@ describe('Kto co dostaje — F7 #404', () => {
   });
   it('ekran bierze nowe dane bez ponownego montowania (wybrany wiersz zostaje)', () => {
     const w = readFileSync(new URL('../src/components/options/WhoGetsScreen.tsx', import.meta.url), 'utf8');
-    expect(w).toContain('useEffect(() => { setGroups(initial); }, [initial]);');
+    /* DP-62: nowe `initial` przejmowane w trakcie renderu (stan z poprzedniej wartości), bez setState w efekcie */
+    expect(w).toMatch(/if \(prevInitial !== initial\) \{\s*setPrevInitial\(initial\);\s*setGroups\(initial\);/);
     const l = readFileSync(new URL('../src/auth/LiveWhoGets.tsx', import.meta.url), 'utf8');
     expect(l).not.toContain('key={ver}');
   });

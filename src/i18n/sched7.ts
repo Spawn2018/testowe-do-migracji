@@ -5,7 +5,7 @@
 import type { Locale } from '../types';
 import { t } from './messages';
 
-const PL: Record<string, string> = {
+export const PL: Record<string, string> = {
   s7_c_type: 'Typ',
   s7_c_code: 'Wysyłka',
   s7_c_dims: 'Rozmiar L × W × H',
