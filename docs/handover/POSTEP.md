@@ -1,4 +1,12 @@
 
+## 2026-11-03 11:50 — #764 SCALONE; #766 F7 r1 (DP-156 wolumen / 0389)
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
+- Scalanie: **#764 SCALONE** `e3f6c101` (Pakiet DP-A; F7 gotowe @ `8963ee02`, CI unit+visual ✔). `deploy-main` robi resztę. Bez push na main.
+- **Krok F7 #766 r1:** bałtyk `ROAD_LT/LV/EE/FI` — z `load_id` jak SE; bez `load_id` tylko HIGH/CRIT → `risk_crit` (MEDIUM/LOW → null). Payload z `load_id`; trigger + bramka `matrix_notify` + push `risk_crit`. Migracja **0389**. c3 **45** (status **634** bez zmian).
+- **Szacunek 24 h (z F7):** FI/LT/EE/LV nowe bez transportu ≈ 269, w tym HIGH/CRIT = **0** → po zmianie ≈ **0** dzwonków z detached; z transportem jak SE (wczoraj SE 24 IN_APP + 4 WEB_PUSH). Zamiast ~150+ z MEDIUM → rząd SE.
+- **Dalej:** push #766 → CI → F7. Potem C1 reszta (DP-146, 152) albo C2.
+
 ## 2026-11-03 11:20 — #765 SCALONE; start C1 (DP-155/156)
 
 - Skrzynka: #550 WSTRZYMANE; #762 — DP-193/194 (C2), DP-195 (C3) wpisane; odpowiedź DP-194 w #762. #756 zamknięte. Bez nowego `pilne`.
