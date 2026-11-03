@@ -1,4 +1,11 @@
 
+## 2026-11-03 18:15 — #771 CI db: DP-194 obs → DP-197 (via E4)
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`. PR do scalenia: brak „F7: gotowe” (po 1710d33f).
+- CI @ `1710d33f`: unit/visual ✔; db FAIL status 641/1 — stary chk „DP-194 obs 0:here” vs via E4 (wierzchołek OSM ~3–4 km od HERE).
+- **Krok:** chk → `DP-197: świeży HERE + wierzchołek OSM → 1:here` (testy za decyzją DP-197). status **642**. Bez push na main poza gałęzią PR.
+- **Dalej:** push → CI db → F7. Potem C2: 119… / DP-198.
+
 ## 2026-11-03 17:45 — #771 F7 r1: via E4 + stale 22 d + DP-198
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`. PR do scalenia: brak „F7: gotowe” (#771 r1 niegotowe).

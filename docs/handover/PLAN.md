@@ -2631,6 +2631,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 03.11.2026 16:40 | #770 CI unit/db/visual ✔ @ `e1f7e29b`; czekam F7: gotowe do scalenia; potem DP-197 | pętla / C2 |
 | 03.11.2026 17:05 | #770 SCALONE `dcc19ac6` (F7 @ `f1be2b7a`); start DP-197 **0390** (via SE-NYN + HERE alarm) | pętla / C2 |
 | 03.11.2026 17:45 | #771 F7 r1 niegotowe → via E4 (nie centra), SE-NYN `fetched_at−22d`, testy behaw. + stale OSM; DP-198; status **642** | pętla / C2 F7 |
+| 03.11.2026 18:15 | #771 CI db: chk DP-194 obs→DP-197 `1:here` (wierzchołek OSM poza via E4); status **642** | pętla / C2 CI |
 | 31.10.2026 — | Decyzja 73: TLLA-HEL ETA−150 min / HELA-TLL ETD+160 min (fixture Cargo; nocny 165 min OK). Decyzja 74: `sailings.source_ref` 0359; Digitraffic `digitraffic:portcall:<id>:<route>`; HTML/RECZNIE/DANE_STARTOWE wygrywają; #685-b RPC zastępuje digitraffic:% w ±3 h | F7 #688 r1–r4 |
 | 31.10.2026 — | F7 #683 nieblokujące (osobna poprawka): Scheduler grudzień + „on 2 January” → rok bieżący, ciche wygaśnięcie; Alert INFO bez ryzyka/historii — świadomie | F7 #683 r7 |
 | 31.10.2026 — | F7 #683 r8 nieblokujące (osobno): Alert poza Schedulerem obok Schedulera; sprzeczne bloki (resume→cofnięcie auto); rok przy długim oknie Schedulera; mutanty M10/M15–M17/M22 świadomie bez testów | F7 #683 r8 |

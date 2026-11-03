@@ -3069,18 +3069,20 @@ chk "DP-194: brak HERE SE_E4 obok OSM → 1 source=OSM" \
        || ':' || coalesce((select detail->'params'->>'source' from risk_signals
             where load_id='$L826b' and dedup_key='OFF_CORRIDOR:$L826b' and resolved_at is null), '?');
    rollback" 1:OSM
-chk "DP-194: świeży HERE + wierzchołek OSM → 0, corridor_geom=here (obserwacja)" \
+# DP-197 (po F7 #771 via E4): świeży HERE → alarm po HERE; wierzchołek OSM SE_E4
+# (17.6389/59.8586) ≈3–4 km od zachodniego E4 → OFF_CORRIDOR (nie „obserwacja” z DP-194).
+chk "DP-197: świeży HERE + wierzchołek OSM → 1, corridor_geom=here" \
   "begin;
-   select public.here_store_road('SE-NYN', '$HERE_SE_NYN'::jsonb, 'DP-194 SE-NYN obs', now(), 980000, 52000);
+   select public.here_store_road('SE-NYN', '$HERE_SE_NYN'::jsonb, 'DP-197 SE-NYN osm-vtx', now(), 980000, 52000);
    insert into loads (id, project_id, carrier_org_id, hhl_order_no, carrier_order_no, status, plan_load_date, plan_delivery_date, ferry_route)
-    values ('$L826c','$P','$SCXO','HHL/DP194-826C','SCX/DP194-826C','IN_TRANSIT_SE', current_date, current_date + 3, 'GDN-NYN');
+    values ('$L826c','$P','$SCXO','HHL/DP197-826C','SCX/DP197-826C','IN_TRANSIT_SE', current_date, current_date + 3, 'GDN-NYN');
    insert into positions (load_id, ts, geom_raw, source) values
     ('$L826c', now() - interval '20 minutes', st_setsrid(st_makepoint(17.6389, 59.8586), 4326), 'TELEMATICS_API'),
     ('$L826c', now() - interval '5 minutes', st_setsrid(st_makepoint(17.6389, 59.8586), 4326), 'TELEMATICS_API');
    select public.refresh_load_eta('$L826c');
    select (select count(*) from risk_signals where load_id='$L826c' and dedup_key like 'OFF_CORRIDOR%')::text
        || ':' || coalesce((select eta_basis->>'corridor_geom' from loads where id='$L826c'), '?');
-   rollback" 0:here
+   rollback" 1:here
 chk "DP-197: świeży HERE + Karlstad → 1 source=HERE" \
   "begin;
    select public.here_store_road('SE-NYN', '$HERE_SE_NYN'::jsonb, 'DP-197 SE-NYN here-alarm', now(), 980000, 52000);
