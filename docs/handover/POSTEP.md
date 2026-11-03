@@ -1,4 +1,32 @@
 
+## 2026-11-03 05:55 — F7 #749 r3 (filtr rodziny + CI)
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. #751 wygląd DP-176/182 — bez F7.
+- Scalanie: brak F7 „gotowe” (#749). CI @ `bb2d1a08`: unit/visual ✔; db FAIL 628/629 (`PORT_CHECKIN_TLL` `true`≠`t`).
+- **Krok:** F7 r3 — GDN-NYN `+5 h` / TLL-HEL `+8 h` (rejs między `v_start` a TLL → filtr rodziny); `PORT_CHECKIN` oczekiwane `true`; DP-184 w rejestrze (po scaleniu). Status **629**.
+- **Dalej:** push → CI → F7 „gotowe”. Bez push na main.
+
+## 2026-11-03 05:30 — #750 SCALONE + F7 #749 r2 (N1/N2/N3/N4)
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. DP-181/182 wpisane.
+- Scalanie: **#750 SCALONE** `db62c9b9` (BN9-c6; F7 gotowe @ `3091d056`, CI 7/7). `deploy-main` robi resztę.
+- **Krok BN8b F7 r2:** N1 `v_slow_pl` tylko `PL_EE_E67` i status &lt; FERRY; N2 linia HERE raz/`bn8b_here_leg_progress_on_line`; N3 method „OSM; HERE tylko alarm”; N4 martwy `SE_E4` w IN; testy behawioralne (−4 like +4 N1/W3f/FI-off); status **629**.
+- **Dalej:** push → CI → F7. Bez push na main.
+
+## 2026-11-03 05:00 — BN8b kod (#720 §7 / 0385)
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie.
+- Scalanie: brak (gałąź `pakiet/bn8b-eta-off-corridor`; #748 już na main).
+- **Krok BN8b:** migracja **0385** — OFF_CORRIDOR BN7 tylko przy świeżej HERE (≤7 d, ≥2 pkt) + sync `corridor_polylines`; brak/stara → `corridor_geom=brak`; MUU/PLD bufor 2 km; `compute_load_eta` z `load_route_family` / PORT_CHECKIN EE / korytarze `road_corridor_*` + `corridor_conditions`; drobne 7.3 (propose/overdue/promote/W5d); status **622** (+18: 4 rodziny×3 + regresja + cleanup).
+- **Dalej:** push → CI → F7. Bez push na main.
+
+## 2026-11-03 04:30 — #748 SCALONE + start BN8b
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. DP-178 SCALONE.
+- Scalanie: **#748 SCALONE** `462af010` (DP-178; F7 gotowe @ `6989c9a6`, CI 8/8). `deploy-main` robi resztę.
+- **Krok BN8b** (`pakiet/bn8b-eta-off-corridor`): §7 #720 — OFF_CORRIDOR z geometrii HERE BN7 + `compute_load_eta` bałtyckie.
+- **Dalej:** migracja **0385** → push → CI → F7. Bez push na main.
+
 ## 2026-11-03 04:05 — DP-178 F7 r1 (#748): klucz LV tylko host NAP
 
 - Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720/#735 w planie.
