@@ -1,4 +1,32 @@
 
+## 2026-11-03 08:35 — DP-181 F7 #755 r3
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie.
+- Scalanie: brak F7 „gotowe” (#755 — niegotowe r3 @ `b40d7083`). Bez push na main.
+- **Krok F7 r3:** cofnięty wzorzec e8 (makieta E30); `reachOf` → STENA, POLFERRIES, potem nowi z katalogu; `crossingLine` → najpierw `source`, potem `named` + test sprzeczny; `sail-view` z powrotem Stena→Polferries. Vitest 34 (4 pliki) + awizacja/bn9-c6.
+- **Dalej:** push → CI → F7. Po F7: DP-184.
+
+## 2026-11-03 08:25 — DP-181 CI visual telefon
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie.
+- Scalanie: brak F7 „gotowe” (#755). Bez push na main.
+- **Krok:** visual @ `0f515a22` — zrzuty/bramy ✔; telefon FAIL: `e8-phone-gate` P7-d oczekiwał „Stena…, Polferries…” po `reachOf`→`catalogOperators` (POLFERRIES, STENA). Asercja → Polferries, Stena Line (jak `sail-view.test.ts`).
+- **Dalej:** push → CI → F7. Po F7: DP-184.
+
+## 2026-11-03 08:05 — DP-181 F7 #755 r1
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720/#735 w planie.
+- Scalanie: brak F7 „gotowe” (#755 — niegotowe r1 @ `7fb4c064`). Bez push na main.
+- **Krok F7 r1:** Topbar → `catalogOperators()`; `crossingLine` + `reachOf` → `catalogOperators()` (wynik UI); `operatorFromText` zostaje na MATCH_ORDER (dopasowanie tekstu). Test RPC `NEWFERRY` w wierszach paska. Visual zrzuty @ `7fb4c064` ✔ (kolejność POLFERRIES/STENA bez aktualizacji wzorców). Vitest 80 (8 plików).
+- **Dalej:** push → CI → F7. Po F7: DP-184.
+
+## 2026-11-03 07:40 — #753 SCALONE; start DP-181
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720/#735 w planie. DP-186 wpisane (F7 #753 — EE kopia w bazie po odbiorze 24 h).
+- Scalanie: **#753 SCALONE** `12beba4b` (DP-180; F7 gotowe @ `1329378a`, CI 8/8). `deploy-main` robi resztę. Bez push na main.
+- **Krok DP-181** (`pakiet/dp-181-byoperator-route-clearance`, F7 #750): `byOperator` → `catalogOperators()`; `isBeforePlannedLoad` → `earliestFerryDepartureMsForRoute` (odprawa z portu trasy); AwizacjaModal używa wspólnej funkcji. Vitest awizacja/bn9a/bn9b/bn9-c6/dp-front-5 **63**.
+- **Dalej:** push → CI → F7. Po F7: DP-184.
+
 ## 2026-11-03 07:05 — #752 SCALONE; start DP-180
 
 - Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720/#735 w planie.

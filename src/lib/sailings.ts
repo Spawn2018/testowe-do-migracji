@@ -8,8 +8,8 @@ import type { FerryBooking, Load, LoadStatus, Locale, OrgKind, Risk, Sailing, Sa
 import { dictEntry } from '../i18n/messages';
 import { fmtDateTime, TZ_OPS, wallLocalToIso } from './time';
 import {
-  LEGACY_OPERATORS, OPERATOR_MATCH_ORDER, operatorFromText, operatorsForRoute, outboundRoutesOf,
-  isOperatorOutboundRoute, routeByCode, sailingOfOperator, type FerryOperator,
+  LEGACY_OPERATORS, catalogOperators, operatorFromText, operatorsForRoute,
+  outboundRoutesOf, isOperatorOutboundRoute, routeByCode, sailingOfOperator, type FerryOperator,
 } from './ferryCatalog';
 
 export const effDeparture = (s: Sailing): string => s.delayedDepartureAt ?? s.departureAt;
@@ -251,9 +251,13 @@ export const NEAREST_CROSSING_LIMIT = 3;
 export function crossingLine(s: Sailing): FerryOperator | null {
   if (s.source === 'DANE_STARTOWE') return null;
   const named = operatorFromText(s.operator);
-  /* kolejność jak dotąd: Stena (źródło albo nazwa), potem Polferries, potem nowi */
-  for (const line of OPERATOR_MATCH_ORDER) {
-    if (s.source === line || named === line) return line;
+  /* DP-181 / F7 #755 r3: wynik → CrossingMap / UI — seed + RPC.
+     Przy sprzeczności source vs nazwa: najpierw `source`, potem `named` (kolejność dopasowania tekstu zostaje w MATCH_ORDER). */
+  for (const { code: line } of catalogOperators()) {
+    if (s.source === line) return line;
+  }
+  for (const { code: line } of catalogOperators()) {
+    if (named === line) return line;
   }
   // Inny armator (np. TT-Line) spoza katalogu — nie dopisujemy go do listy.
   if ((s.operator ?? '').trim()) return null;
@@ -283,9 +287,10 @@ function lineDepartures(
 /** Mapa armator → rejsy; Polferries i Stena zawsze (pusta lista = „Brak danych”), nowi tylko z rejsami. */
 export type CrossingMap = Partial<Record<FerryOperator, Sailing[]>> & Record<'POLFERRIES' | 'STENA', Sailing[]>;
 
+/** DP-181 / F7 #750: armatorzy ze słownika (seed + RPC), nie sztywna `OPERATOR_MATCH_ORDER`. */
 function byOperator(pick: (line: FerryOperator) => Sailing[]): CrossingMap {
   const out = {} as CrossingMap;
-  for (const line of OPERATOR_MATCH_ORDER) {
+  for (const { code: line } of catalogOperators()) {
     const list = pick(line);
     if (list.length || LEGACY_OPERATORS.includes(line)) out[line] = list;
   }

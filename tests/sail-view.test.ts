@@ -61,7 +61,8 @@ describe('E30 pkt 7: Rejsy', () => {
     }
     expect(sv('pl', sourceKey('STENA'))).toBe('Stena Line');
   });
-  it('zasięg rozkładów: Stena, potem Polferries; bez odwołanych; rok zawsze (właściciel 16.10.2026)', () => {
+  it('zasięg rozkładów: Stena, potem Polferries (makieta E30); bez odwołanych; rok zawsze (właściciel 16.10.2026)', () => {
+    /* DP-181 / F7 #755 r3: kolejność jak makieta / Topbar — STENA, POLFERRIES, potem nowi z katalogu */
     const r = reachOf(all);
     expect(r.map((x) => x.line)).toEqual(['STENA', 'POLFERRIES']);
     expect(sailDay(r[0].untilIso)).toBe('18.10.2026');

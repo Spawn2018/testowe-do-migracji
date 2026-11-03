@@ -99,13 +99,13 @@ export function reachableSailings(
   });
 }
 
-/** #666 decyzja 51: rejs przed planowanym załadunkiem + odprawą — do wyboru, z oznaczeniem w UI. */
+/** #666 decyzja 51 / DP-181: rejs przed załadunkiem + odprawą z portu TEJ trasy — do wyboru, z oznaczeniem w UI. */
 export function isBeforePlannedLoad(
   s: Sailing,
   load: Pick<Load, 'plannedLoadDate' | 'awizacja'>,
   operator: FerryOperatorId = 'POLFERRIES',
 ): boolean {
-  return Date.parse(effDeparture(s)) < earliestFerryDepartureMs(load, operator);
+  return Date.parse(effDeparture(s)) < earliestFerryDepartureMsForRoute(load, s.route, operator);
 }
 
 /**

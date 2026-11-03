@@ -110,6 +110,19 @@ describe('reachableSailings', () => {
     expect(isBeforePlannedLoad(all[2]!, l, 'TALLINK')).toBe(true);
     expect(isBeforePlannedLoad(all[0]!, l, 'STENA')).toBe(false);
   });
+
+  it('DP-181: isBeforePlannedLoad po trasie (EE 2 h), nie po pierwszej trasie armatora (14 h)', () => {
+    /* plan 20.11 06:00+02; odprawa TLL 2 h → próg 08:00+02; rejs 12:00+02 = po progu EE, ale przed progiem 14 h */
+    const l = load({ id: 'ee', plannedLoadDate: '2026-11-20', sailingId: null });
+    const mid: Sailing = {
+      id: 'tll-mid', vessel: 'M/F MyStar', route: 'TLL-HEL',
+      departureAt: '2026-11-20T10:00:00.000Z', arrivalAt: '2026-11-20T12:00:00.000Z',
+      delayedDepartureAt: null, delayedArrivalAt: null, status: 'ZAPLANOWANY', source: 'TALLINK',
+    };
+    expect(isBeforePlannedLoad(mid, l, 'TALLINK')).toBe(false);
+    /* regresja: ten sam rejs przy POLFERRIES też liczy odprawę z TLL (2 h), nie Gdańsk 14 h */
+    expect(isBeforePlannedLoad(mid, l, 'POLFERRIES')).toBe(false);
+  });
 });
 
 describe('#666 decyzja 52/55 — historyczne Polferries i komunikaty', () => {
