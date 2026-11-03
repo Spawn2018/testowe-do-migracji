@@ -3061,14 +3061,15 @@ chk "DP-194: GDN-NYN SE_E4 10 km obok → 1" \
    select public.refresh_load_eta('$L826b');
    select count(*) from risk_signals where load_id='$L826b' and dedup_key like 'OFF_CORRIDOR%';
    rollback" 1
+# Bez HERE → OSM (PLAN DP-194); wierzchołek SE_E4 = Sztokholm (jak 27B Polferries), nie punkt z linii HERE.
 chk "DP-194: brak HERE SE-NYN na E4 → OSM 0 i corridor_geom=brak" \
   "begin;
    delete from here_road_geometry where leg = 'SE-NYN';
    insert into loads (id, project_id, carrier_org_id, hhl_order_no, carrier_order_no, status, plan_load_date, plan_delivery_date, ferry_route)
     values ('$L826c','$P','$SCXO','HHL/DP194-826C','SCX/DP194-826C','IN_TRANSIT_SE', current_date, current_date + 3, 'GDN-NYN');
    insert into positions (load_id, ts, geom_raw, source) values
-    ('$L826c', now() - interval '20 minutes', st_setsrid(st_makepoint(17.50, 60.00), 4326), 'TELEMATICS_API'),
-    ('$L826c', now() - interval '5 minutes', st_setsrid(st_makepoint(17.50, 60.00), 4326), 'TELEMATICS_API');
+    ('$L826c', now() - interval '20 minutes', st_setsrid(st_makepoint(18.0686, 59.3293), 4326), 'TELEMATICS_API'),
+    ('$L826c', now() - interval '5 minutes', st_setsrid(st_makepoint(18.0686, 59.3293), 4326), 'TELEMATICS_API');
    select public.refresh_load_eta('$L826c');
    select (select count(*) from risk_signals where load_id='$L826c' and dedup_key like 'OFF_CORRIDOR%')::text
        || ':' || coalesce((select eta_basis->>'corridor_geom' from loads where id='$L826c'), '?');

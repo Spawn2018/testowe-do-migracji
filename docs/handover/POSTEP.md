@@ -1,4 +1,10 @@
 
+## 2026-11-03 15:15 — #770 CI db FAIL → fix DP-194 punkt OSM
+
+- Skrzynka: #550 WSTRZYMANE; bez nowego `pilne`. PR do scalenia: brak F7.
+- **Krok C2 #770:** status FAIL `DP-194: brak HERE…` (1:brak vs 0:brak) — punkt 17.50/60.00 z linii HERE poza OSM SE_E4. Test bez HERE → Sztokholm 18.0686/59.3293 (jak 27B). unit/visual ✔; db status **637**.
+- **Dalej:** push → CI → F7. Potem C2: DP-119….
+
 ## 2026-11-03 14:45 — #769 SCALONE; start C2 DP-193+194
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720/#762 w planie. Bez nowego `pilne`.
