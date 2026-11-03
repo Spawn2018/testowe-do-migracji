@@ -372,3 +372,11 @@ Przyczyna: polecenie właściciela 03.11 08:46 — usunąć z map dymek „Trasa
 - `karta-tll-hel-hhl-pl-{1440,390}-light.png`: Przegląd karty — pole na dole mapy bez linii z dopiskiem.
 Wzorca `shots-baseline` nie zmieniano.
 >>>>>>> origin/main
+
+## Pakiet DP-A (03.11.2026) — mapy: linie demo PL-GDY i SE-KAA-INLAND, tor Gdynia–Karlskrona, znaczniki
+Odświeżone tylko `tests/__screenshots__/mapa-hhl-pl-1920-{light,dark-default}.png` i `mapa-baltyk-hhl-pl-1440-light.png`, z workflowu `visual` (`update=true`, gałąź `wyglad/pakiet-dp-a`,
+przebieg 41608489947, commit `39e201e`, artefakt `visual-artifacts`). Pozostałe 26 migawek w artefakcie jest identycznych co do bajtu (Kokpit 1920 też — różnice w mini-mapie w tolerancji).
+Przyczyna: DP-72 — w demo osobne linie Śrem–Gdynia (PL-GDY, Obwodnica Trójmiasta) i śródlądowa Karlskrona–Boden (SE-KAA-INLAND: Emmaboda – Linköping – Norrköping – Västerås – Gävle → E4), jak legi w produkcji; DP-71 — SE-KAA z Karlskrony przez Lyckeby, Jämjö i Brömsebro (bez prostej przez ląd); DP-78 — tor Gdynia–Karlskrona dochodzi do Karlskrony od południa (bez poziomego odcinka nad szkierami); DP-77 — znaczniki miejsc przy przybliżeniu < 5,5 mniejsze (na migawkach przykryte znacznikami transportów).
+- `mapa-hhl-pl-1920-{light,dark-default}.png`: nowa pomarańczowa linia przez środek Szwecji (Karlskrona – Linköping – Västerås – Gävle), linia E22 z Karlskrony wzdłuż wybrzeża; koniec toru przy Karlskronie od południa. Kadr, tory bałtyckie, znaczniki i tabela bez zmian.
+- `mapa-baltyk-hhl-pl-1440-light.png`: to samo w kadrze Mapy 1440.
+DP-113: jasna migawka Mapy jest teraz zapisana od nowa, więc pokazuje bieżący kolor torów `#3A82BA` (DP-76 r2 — wcześniej różnica koloru mieściła się w tolerancji i wzorzec został ze starym kolorem). Wzorca `shots-baseline` nie zmieniano.
