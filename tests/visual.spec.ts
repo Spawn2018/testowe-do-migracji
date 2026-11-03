@@ -504,7 +504,8 @@ test.describe('DP-67 visual — Awizacja: rejs przed planowanym załadunkiem (HH
         if (!el) throw new Error('brak wiersza SG-11')
         el.click()
       })
-      await page.locator('.drawer [data-awiz-open]').first().click()
+      /* Administrator HHL: ten sam przycisk „Uzupełnij awizację” co SCX, znacznik `data-awiz-fix` */
+      await page.locator('.drawer [data-awiz-fix]').first().click()
       const modal = page.locator('[data-awiz-modal]')
       await expect(modal).toBeVisible()
       const sel = modal.locator('select[data-awiz-sailing]')
