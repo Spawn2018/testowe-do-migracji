@@ -9,7 +9,8 @@ import {
 } from '../src/lib/ferryCatalog';
 import {
   ferryIceRisk, ferryIceRiskDedup, isWinterNavWindowActive,
-  parseWinterNavigationLocations, portCallV2CancelledHasFihel,
+  isWinterNavWindowActiveOnSailingDay, parseIbnetRestriction, parseWinterNavigationLocations,
+  portCallV2CancelledHasFihel, vesselMeetsIbnetIceClass,
   winterLocodesForRoute, winterNavIceRisk, winterNavRiskDedup, WINTER_NAV_LOCATIONS_URL,
 } from '../supabase/functions/_shared/ferry/winterNavigation';
 import {
@@ -178,6 +179,8 @@ describe('BN3 winter-nav / MMSI / DP-11', () => {
     expect(med.severity).toBe('MEDIUM');
     expect(med.dedup).toBe(ferryIceRiskDedup('s1', hit));
     expect(med.title).toMatch(/sprawdź klasę lodową/);
+    /* DP-120: IBNet „II 2000” → po polsku. */
+    expect(med.title).toMatch(/klasa lodowa II, min\. 2000 DWT/);
     const high = ferryIceRisk({
       hit: { ...hit, kind: 'SUSPENSION', summary: 'closed' },
       sailingId: 's1', vessel: 'Sirena', route: 'PLD-KPS',
@@ -185,6 +188,26 @@ describe('BN3 winter-nav / MMSI / DP-11', () => {
     });
     expect(high.severity).toBe('HIGH');
     expect(high.dedup).not.toBe(winterNavRiskDedup(hit));
+  });
+
+  it('DP-120: IBNet PL + klasa 1A Super spełnia I 2000; dzień rejsu', () => {
+    const ib = parseIbnetRestriction('I 2000');
+    expect(ib.polish).toBe('klasa lodowa I, min. 2000 DWT');
+    expect(vesselMeetsIbnetIceClass('1A Super', ib)).toBe(true);
+    expect(vesselMeetsIbnetIceClass('II', ib)).toBe(false);
+    expect(vesselMeetsIbnetIceClass(null, ib)).toBe(false);
+    const dep = Date.parse('2026-02-15T18:00:00Z');
+    expect(isWinterNavWindowActiveOnSailingDay(
+      '2026-02-01T00:00:00Z', '2026-02-20T00:00:00Z', dep,
+    )).toBe(true);
+    /* Ograniczenie tylko „teraz”, nie w dniu rejsu. */
+    expect(isWinterNavWindowActiveOnSailingDay(
+      '2026-02-01T00:00:00Z', '2026-02-10T00:00:00Z', dep,
+    )).toBe(false);
+    expect(winterNavIceRisk({
+      locode: 'FIHEL', name: 'HELSINKI', kind: 'RESTRICTION',
+      summary: 'I 2000', startTime: '2026-02-01T00:00:00Z', endTime: null,
+    }, '2026-02-10T12:00:00Z').title).toMatch(/klasa lodowa I, min\. 2000 DWT/);
   });
 
   it('parseWinterNavigationLocations: aktywne ograniczenie FIHEL → hit; przeszłe pominięte', () => {

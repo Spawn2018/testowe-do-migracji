@@ -32,8 +32,9 @@ import {
 export { DIGITRAFFIC_USER };
 import {
   FERRY_ICE_ATTRIBUTION, PORT_CALL_V2_CANCELLED_URL, WINTER_NAV_LOCATIONS_URL,
-  ferryIceRisk, parseWinterNavigationLocations, portCallV2CancelledHasFihel,
-  winterLocodesForRoute, winterNavIceRisk,
+  ferryIceRisk, isWinterNavWindowActiveOnSailingDay, parseIbnetRestriction,
+  parseWinterNavigationLocations, portCallV2CancelledHasFihel,
+  vesselMeetsIbnetIceClass, winterLocodesForRoute, winterNavIceRisk,
 } from '../ferry/winterNavigation.ts';
 import {
   cancelSuspectRisk, cancelSuspectRiskDedup, cancelSuspectTrigger,
@@ -4999,6 +5000,9 @@ export async function runFerryWeather(deps: JobDeps): Promise<JobResult> {
   const upcoming = sailings.filter((s) => Date.parse(s.departure_at) <= Date.parse(toIso));
   const vessels = await deps.store.vessels();
   const vesselName = (id: string) => vessels.find((v) => v.id === id)?.name ?? id;
+  const vesselById = new Map(
+    vessels.map((v) => [v.id, { name: v.name, ice_class: v.ice_class ?? null }]),
+  );
 
   // Okno pobrania: od teraz −6 h do najdalszego odejścia +6 h (max 72 h)
   let fetchFrom = new Date(now.getTime() - 6 * 3600_000);
@@ -5215,7 +5219,7 @@ export async function runFerryWeather(deps: JobDeps): Promise<JobResult> {
     await deps.store.resolveRisks('FERRY_WEATHER:');
   }
 
-  risks += await raiseFerryIceRisks(deps, upcoming, vesselName, nowIso, iceSnap.hits);
+  risks += await raiseFerryIceRisks(deps, upcoming, vesselById, nowIso, iceSnap.hits);
 
   return {
     job: 'ferry-weather', mode: 'LIVE', ok: true, risks, warnings,
@@ -5268,7 +5272,11 @@ async function fetchWinterNavIceSnapshot(
       attribution: null,
     };
   }
-  const parsed = parseWinterNavigationLocations(json, nowIso);
+  /* DP-120: horyzont 72 h — filtr dnia rejsu w raiseFerryIceRisks. */
+  const untilMs = Date.parse(nowIso) + 72 * 3600_000;
+  const parsed = parseWinterNavigationLocations(json, nowIso, {
+    mode: 'open_until', untilMs,
+  });
   if (parsed.warnings.some((w) => /struktura/i.test(w))) {
     return {
       ok: false, hits: [],
@@ -5284,11 +5292,14 @@ async function fetchWinterNavIceSnapshot(
   };
 }
 
-/** BN5 cz.3 — FERRY_ICE per rejs gdy port wyjścia/celu ma aktywne ograniczenie/zawieszenie. */
+/**
+ * BN5 cz.3 / DP-120 — FERRY_ICE per rejs:
+ * ograniczenie w dniu odejścia + porównanie klasy lodowej z `vessels`.
+ */
 async function raiseFerryIceRisks(
   deps: JobDeps,
   upcoming: { id: string; vessel_id: string; route: string; departure_at: string }[],
-  vesselName: (id: string) => string,
+  vesselById: Map<string, { name: string; ice_class?: string | null }>,
   nowIso: string,
   hits: WinterNavIceSnapshot['hits'],
 ): Promise<number> {
@@ -5303,16 +5314,29 @@ async function raiseFerryIceRisks(
   for (const s of upcoming) {
     const locodes = winterLocodesForRoute(s.route);
     if (!locodes.length) continue;
+    const depMs = Date.parse(s.departure_at);
+    const v = vesselById.get(s.vessel_id);
+    const vesselLabel = v?.name ?? s.vessel_id;
+    const iceClass = v?.ice_class ?? null;
     for (const locode of locodes) {
       for (const hit of byLocode.get(locode) ?? []) {
+        /* DP-120: tylko gdy ograniczenie przecina dzień UTC rejsu. */
+        if (!isWinterNavWindowActiveOnSailingDay(hit.startTime, hit.endTime, depMs)) {
+          continue;
+        }
+        /* Zawieszenie zawsze; ograniczenie — pomiń gdy klasa spełnia IBNet. */
+        if (hit.kind === 'RESTRICTION') {
+          const req = parseIbnetRestriction(hit.summary);
+          if (vesselMeetsIbnetIceClass(iceClass, req)) continue;
+        }
         const risk = ferryIceRisk({
           hit,
           sailingId: s.id,
-          vessel: vesselName(s.vessel_id),
+          vessel: vesselLabel,
           route: s.route,
           departureUtc: s.departure_at,
           nowIso,
-          hasIceClass: false,
+          vesselIceClass: iceClass,
         });
         keep.push(risk.dedup);
         if (await deps.store.raiseRisk(risk)) risks += 1;

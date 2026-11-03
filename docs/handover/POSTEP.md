@@ -1,4 +1,11 @@
 
+## 2026-11-03 20:50 — #776 SCALONE; start DP-120 (klasa lodowa / dzień rejsu)
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie; #773 zamknięte. Bez nowego `pilne`.
+- Scalanie: **#776 SCALONE** `e023c2ba` (DP-200; F7 @ `dc319c52`; CI unit/db/visual ✔). `deploy-main` robi resztę. Bez push na main.
+- **Krok DP-120** `pakiet/c2-dp-120-winter-ice-class` / **0391**: `vessels.ice_class` + seed ro-pax; FERRY_ICE filtr dnia UTC rejsu; 1A Super spełnia „I 2000” → bez ryzyka; IBNet PL w tytule; `open_until` 72 h. vitest winter/integrations (DP-120) ✔.
+- **Dalej:** push → CI → F7. Potem C2: 121….
+
 ## 2026-11-03 20:20 — #774 SCALONE; start DP-200 (Łotwa REST snapshot)
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720/#773 w planie. Bez nowego `pilne`.

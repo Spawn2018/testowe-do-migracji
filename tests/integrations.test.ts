@@ -996,6 +996,8 @@ describe('ferry-weather — II-8 FMI+DMI+SMHI', () => {
     expect(ice[0]!.severity).toBe('MEDIUM');
     expect(ice[0]!.titleKey).toBe('rk_ferry_ice');
     expect(ice[0]!.title).toMatch(/sprawdź klasę lodową/);
+    /* DP-120: IBNet „II 2000” po polsku. */
+    expect(ice[0]!.title).toMatch(/klasa lodowa II, min\. 2000 DWT/);
     expect(st.risks.some((x) => x.dedup.includes('s-gdn') && x.dedup.startsWith('FERRY_ICE:'))).toBe(false);
     expect(r.observations?.attribution).toMatch(/Fintraffic/);
     const winterHdr = headerCalls.find((c) => c.url.includes('winter-navigation'));
@@ -1113,6 +1115,64 @@ describe('ferry-weather — II-8 FMI+DMI+SMHI', () => {
     expect(ice).toHaveLength(1);
     expect(ice[0]!.dedup).toBe('FERRY_ICE:s-muu:FIHEL:RESTRICTION');
     expect(ice[0]!.severity).toBe('MEDIUM');
+    expect(ice[0]!.title).toMatch(/klasa lodowa I, min\. 2000 DWT/);
+  });
+
+  it('DP-120: 1A Super spełnia I 2000 → brak FERRY_ICE; koniec przed dniem rejsu → brak', async () => {
+    const restr = JSON.stringify({
+      type: 'FeatureCollection',
+      features: [{
+        type: 'Feature',
+        properties: {
+          name: 'HELSINKI',
+          locodeList: 'FIHEL',
+          restrictions: [{
+            startTime: '2026-10-01T00:00:00Z',
+            endTime: '2026-10-20T00:00:00Z',
+            textCompilation: 'I 2000',
+          }],
+        },
+      }],
+    });
+    class StoreIce extends MemStore {
+      override async vessels() {
+        return [
+          { id: WAW, name: 'M/F Wawel', mmsi: null, ice_class: '1A Super' },
+          { id: NS, name: 'M/F Nova Star', mmsi: 311000787, ice_class: '1A' },
+        ];
+      }
+    }
+    const okClass = new StoreIce();
+    okClass.sailings = [{
+      id: 's-muu', vessel_id: WAW, route: 'MUU-VUO',
+      departure_at: '2026-10-02T10:00:00.000Z', arrival_at: '2026-10-02T12:00:00.000Z',
+      delayed_departure_at: null, delayed_arrival_at: null, status: 'ZAPLANOWANY', source: 'ECKERO',
+    }];
+    const r1 = await runFerryWeather(deps(okClass, { ...wxPages(), 'winter-navigation': restr }, {}, WX_NOW).d);
+    expect(r1.ok).toBe(true);
+    expect(okClass.risks.filter((x) => x.dedup.startsWith('FERRY_ICE:'))).toHaveLength(0);
+
+    /* Okno kończy się 1.10 — rejs 2.10: brak przecięcia dnia. */
+    const ended = JSON.stringify({
+      type: 'FeatureCollection',
+      features: [{
+        type: 'Feature',
+        properties: {
+          name: 'HELSINKI',
+          locodeList: 'FIHEL',
+          restrictions: [{
+            startTime: '2026-09-01T00:00:00Z',
+            endTime: '2026-10-01T00:00:00Z',
+            textCompilation: 'I 2000',
+          }],
+        },
+      }],
+    });
+    const st2 = new MemStore();
+    st2.sailings = okClass.sailings;
+    const r2 = await runFerryWeather(deps(st2, { ...wxPages(), 'winter-navigation': ended }, {}, WX_NOW).d);
+    expect(r2.ok).toBe(true);
+    expect(st2.risks.filter((x) => x.dedup.startsWith('FERRY_ICE:'))).toHaveLength(0);
   });
 
   it('BN5 pkt 4: fala 4 m na GULF_FI → FERRY_WEATHER TLL-HEL/MUU-VUO, nie GDN-NYN', async () => {
