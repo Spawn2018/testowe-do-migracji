@@ -1,4 +1,11 @@
 
+## 2026-11-03 13:45 — #767 SCALONE; DP-152 CI ✔ + zod 4.6.7
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
+- Scalanie: **#767 SCALONE** `b005f5e1` (Pakiet DP-C: DP-67/79; DP-142 nieaktualne; F7 @ `c8f1eac8`, CI unit×2 visual×5 ✔). `deploy-main` robi resztę. Bez push na main.
+- **Krok DP-152** PR **#768** @ `fcc02ce2`: CI unit/db/visual ✔; F7 gotowe było @ `fcc02ce2`, ale przed merge `npm audit` high na `zod@4.6.5` (GHSA-mrhx) → bump **zod ^4.6.7** (audit high=0). Nowy commit unieważnia F7.
+- **Dalej:** push #768 → CI → ponowne F7. Potem DP-146.
+
 ## 2026-11-03 13:15 — #766 SCALONE; start DP-152
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
