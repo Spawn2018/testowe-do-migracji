@@ -31,13 +31,15 @@ const KINDS: GeofenceType[] = [
   'REST',
 ];
 
-const COUNTRIES: GeofenceCountry[] = ['PL', 'SE', 'LT', 'DE'];
+const COUNTRIES: GeofenceCountry[] = ['PL', 'SE', 'LT', 'DE', 'EE', 'FI'];
 
 function countryLabel(locale: Parameters<typeof t>[0], country: GeofenceCountry | undefined): string {
   if (country === 'PL') return t(locale, 'geo_country_pl');
   if (country === 'SE') return t(locale, 'geo_country_se');
   if (country === 'LT') return t(locale, 'geo_country_lt');
   if (country === 'DE') return t(locale, 'geo_country_de');
+  if (country === 'EE') return t(locale, 'geo_country_ee');
+  if (country === 'FI') return t(locale, 'geo_country_fi');
   return '—';
 }
 

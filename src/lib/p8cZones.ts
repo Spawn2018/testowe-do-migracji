@@ -6,7 +6,7 @@
  * Czyste funkcje widoku — bez zapytań i zapisów.
  */
 import type { Geofence, GeofenceType, Load } from '../types';
-import { LEGACY_OPERATORS, type FerryOperator } from './ferryCatalog';
+import { isFerryOperator, LEGACY_OPERATORS, type FerryOperator } from './ferryCatalog';
 
 export type ZoneGroup = 'srem' | 'gdansk' | 'gdynia' | 'se_ports' | 'boden' | 'other';
 export const ZONE_GROUPS: readonly ZoneGroup[] = ['srem', 'gdansk', 'gdynia', 'se_ports', 'boden', 'other'];
@@ -47,9 +47,12 @@ export interface ZoneChange {
 
 const has = (s: string, ...w: string[]) => w.some((x) => s.toLocaleLowerCase('pl-PL').includes(x));
 
-/** Trasa promowa: z danych, a bez niej z nazwy (Gdynia, Karlskrona, Stena → Stena; reszta portów — Polferries). */
-export function routeOf(z: Pick<ZoneRow, 'name' | 'type' | 'route'>): ZoneRoute | null {
-  if (z.route) return z.route;
+/**
+ * Trasa promowa (Model B / E34): armator z kolumny, a bez niego z nazwy.
+ * DP-143: kod/rodzina trasy w `route` (Model A, np. TLL-HEL) nie jest ZoneRoute — wtedy fallback z nazwy.
+ */
+export function routeOf(z: Pick<Geofence, 'name' | 'type' | 'route'>): ZoneRoute | null {
+  if (isFerryOperator(z.route)) return z.route;
   if (z.type !== 'PORT_OUT' && z.type !== 'PRE_PORT' && z.type !== 'PORT_IN') return null;
   return has(z.name, 'gdyni', 'karlskron', 'stena') ? 'STENA' : 'POLFERRIES';
 }

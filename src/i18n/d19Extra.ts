@@ -91,6 +91,8 @@ export const d19Pl: Dict = {
   geo_country_se: 'Szwecja',
   geo_country_lt: 'Litwa',
   geo_country_de: 'Niemcy',
+  geo_country_ee: 'Estonia',
+  geo_country_fi: 'Finlandia',
   geo_who: 'Kogo powiadomić',
   geo_buffer: 'Zapas',
   geo_circle: 'Koło',

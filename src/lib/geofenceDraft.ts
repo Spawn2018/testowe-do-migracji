@@ -1,3 +1,4 @@
+import { portByCode } from './ferryCatalog';
 import { SITES } from './status';
 import type { Geofence, GeofenceCountry } from '../types';
 
@@ -24,6 +25,15 @@ export function isBalticCenter(lat: number, lng: number): boolean {
 
 export function placeForCountry(country: GeofenceCountry): { lat: number; lng: number } {
   if (country === 'SE') return { lat: NEW_ZONE_SE.lat, lng: NEW_ZONE_SE.lng };
+  /* DP-143: EE/FI — środek portu katalogu (Tallinn / Helsinki), nie Śrem */
+  if (country === 'EE') {
+    const p = portByCode('TLL');
+    if (p) return { lat: p.lat, lng: p.lng };
+  }
+  if (country === 'FI') {
+    const p = portByCode('HEL');
+    if (p) return { lat: p.lat, lng: p.lng };
+  }
   return { lat: NEW_ZONE_PL.lat, lng: NEW_ZONE_PL.lng };
 }
 

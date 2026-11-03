@@ -67,13 +67,13 @@ export const FERRY_PORTS: readonly FerryPortDef[] = [
   { code: 'GDY', country: 'PL', lat: 54.533, lng: 18.54, nameKey: 'p3a_port_GDY', clearanceH: 16 },
   { code: 'NYN', country: 'SE', lat: 58.903, lng: 17.948, nameKey: 'p3a_port_NYN' },
   { code: 'KAA', country: 'SE', lat: 56.155, lng: 15.62, nameKey: 'p3a_port_KAA' },
-  /* Porty estońskie: odprawa 14 h jak Polferries — DO POTWIERDZENIA W BN8 */
+  /* Porty EE: odprawa 2 h — decyzja 82-C (założenie do kalibracji po pierwszych przejazdach); BN8 */
   /* Tallinn, Old City Harbour (Vanasadam) — terminale A i D */
-  { code: 'TLL', country: 'EE', lat: 59.443, lng: 24.77, nameKey: 'p3a_port_TLL', clearanceH: 14 },
+  { code: 'TLL', country: 'EE', lat: 59.443, lng: 24.77, nameKey: 'p3a_port_TLL', clearanceH: 2 },
   /* Muuga, terminal HHLA TK */
-  { code: 'MUU', country: 'EE', lat: 59.497, lng: 24.96, nameKey: 'p3a_port_MUU', clearanceH: 14 },
+  { code: 'MUU', country: 'EE', lat: 59.497, lng: 24.96, nameKey: 'p3a_port_MUU', clearanceH: 2 },
   /* Paldiski, port południowy */
-  { code: 'PLD', country: 'EE', lat: 59.335, lng: 24.083, nameKey: 'p3a_port_PLD', clearanceH: 14 },
+  { code: 'PLD', country: 'EE', lat: 59.335, lng: 24.083, nameKey: 'p3a_port_PLD', clearanceH: 2 },
   /* Helsinki, West Harbour (Länsisatama) T2; Katajanokka ok. 4 km dalej */
   { code: 'HEL', country: 'FI', lat: 60.153, lng: 24.915, nameKey: 'p3a_port_HEL' },
   { code: 'VUO', country: 'FI', lat: 60.206, lng: 25.19, nameKey: 'p3a_port_VUO' },
@@ -168,6 +168,11 @@ export type FerryDictSnapshot = {
 
 /** Wgraj snapshot RPC — rozszerza isKnownRoute / operatorsForRoute / isOutbound (seed zostaje). */
 export function applyFerryDictSnapshot(snap: FerryDictSnapshot): void {
+  const names = new Map<string, string>();
+  for (const o of snap.operators ?? []) {
+    if (o?.code && o.name) names.set(o.code, o.name);
+  }
+  rpcOperatorNames = names;
   const codes = new Set<string>();
   const ops = new Map<string, readonly FerryOperator[]>();
   const fam = new Map<string, string>();
@@ -177,6 +182,7 @@ export function applyFerryDictSnapshot(snap: FerryDictSnapshot): void {
     codes.add(r.code);
     fam.set(r.code, r.family_key || r.code);
     if (r.port_from && r.port_to) routePorts.set(r.code, { from: r.port_from, to: r.port_to });
+    /* DP-144: armator tylko w bazie (poza seedem) też wchodzi — isFerryOperator czyta rpcOperatorNames */
     const list = (r.operators ?? []).filter(isFerryOperator);
     if (list.length) ops.set(r.code, list);
   }
@@ -184,11 +190,6 @@ export function applyFerryDictSnapshot(snap: FerryDictSnapshot): void {
   rpcOperatorsByRoute = ops;
   rpcFamilyByRoute = fam;
   rpcRoutePorts = routePorts;
-  const names = new Map<string, string>();
-  for (const o of snap.operators ?? []) {
-    if (o?.code && o.name) names.set(o.code, o.name);
-  }
-  rpcOperatorNames = names;
   const countries = new Map<string, string>();
   const info = new Map<string, { name: string; terminal: string | null }>();
   for (const p of snap.ports ?? []) {
@@ -219,7 +220,21 @@ export function isKnownRoute(code: unknown): code is FerryRouteCode {
 }
 
 export function isFerryOperator(code: unknown): code is FerryOperator {
-  return typeof code === 'string' && OPERATOR_BY_CODE.has(code);
+  /* DP-144: seed + kody z ferry_dict_snapshot (armator tylko w bazie też trafia do Kokpitu/awizacji) */
+  return typeof code === 'string' && (OPERATOR_BY_CODE.has(code) || rpcOperatorNames.has(code));
+}
+
+/**
+ * Armatorzy do list awizacji / Kokpitu: seed, potem dodatkowi z RPC (DP-144).
+ * Kolejność seeda bez zmian (Stena, Polferries, Tallink…).
+ */
+export function catalogOperators(): readonly { code: FerryOperator; name: string }[] {
+  const out: { code: FerryOperator; name: string }[] = FERRY_OPERATORS.map((o) => ({ code: o.code, name: o.name }));
+  for (const [code, name] of rpcOperatorNames) {
+    if (OPERATOR_BY_CODE.has(code)) continue;
+    out.push({ code: code as FerryOperator, name });
+  }
+  return out;
 }
 
 export function routeByCode(code: string | null | undefined): FerryRouteDef | null {
@@ -357,10 +372,26 @@ const DEFAULT_CLEARANCE_H = 14;
 
 /**
  * Godziny „Śrem → port + odprawa” dla armatora: z portu wyjazdowego jego pierwszej trasy wyjazdowej
- * (Polferries: Gdańsk 14 h, Stena: Gdynia 16 h; porty estońskie 14 h — do potwierdzenia w BN8).
+ * (Polferries: Gdańsk 14 h, Stena: Gdynia 16 h; porty EE 2 h — decyzja 82-C).
  */
 export function clearanceHoursFor(operator: FerryOperator): number {
   return PORT_BY_CODE.get(primaryRouteOf(operator).from)?.clearanceH ?? DEFAULT_CLEARANCE_H;
+}
+
+/**
+ * BN8 / 82-C: odprawa z portu wyjazdowego trasy (nie z pierwszego armatora).
+ * Gdy kod trasy nieznany — fallback jak `clearanceHoursFor(operator)`.
+ */
+export function clearanceHoursForRoute(
+  route: string | null | undefined,
+  operator: FerryOperator = 'POLFERRIES',
+): number {
+  const ends = routeEnds(route);
+  if (ends) {
+    const h = PORT_BY_CODE.get(ends.from)?.clearanceH;
+    if (h != null) return h;
+  }
+  return clearanceHoursFor(operator);
 }
 
 /**

@@ -415,7 +415,8 @@ export interface Load {
   renumberedFrom?: string | null;
 }
 
-export type GeofenceCountry = 'PL' | 'SE' | 'LT' | 'DE';
+/** DP-143 / BN8: EE i FI — strefy portów bałtyckich (obok PL/SE/LT/DE). */
+export type GeofenceCountry = 'PL' | 'SE' | 'LT' | 'DE' | 'EE' | 'FI';
 
 export interface Geofence {
   id: string;
@@ -426,8 +427,11 @@ export interface Geofence {
   lng: number;
   /** Kraj strefy. SMS załadunku i placu czyta tę wartość, nie sam środek koła. */
   country?: GeofenceCountry;
-  /** #505 / E34: trasa portu (POLFERRIES / STENA); null = nieportowa albo jak POLFERRIES w silniku. */
-  route?: FerryOperator | null;
+  /**
+   * #505 / E34 / DP-143: Model B (PL) = armator (`FerryOperator`); Model A (Bałtyk) = kod/rodzina trasy
+   * (`TLL-HEL` itd. — 0338). null = nieportowa albo jak POLFERRIES w silniku.
+   */
+  route?: FerryOperator | string | null;
   radiusM: number;
   hysteresisM: number;
   dwellMin: number;

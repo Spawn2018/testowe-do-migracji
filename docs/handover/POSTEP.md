@@ -1,4 +1,12 @@
 
+## 2026-11-03 03:15 — #746 SCALONE + start BN8 front src/lib
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie.
+- Scalanie: **#746 SCALONE** `638abbf4` (cron_fetch=true / **0384**; F7 gotowe @ `b0015e90`). CI unit/db/visual ✔. `deploy-main` robi resztę.
+- **Krok BN8 front** (`pakiet/bn8-front-src-lib`): EE `clearanceH=2` (82-C); `clearanceHoursForRoute`; `altProposal` jedna ścieżka / CrossingMap; DP-143 EE/FI + route kod trasy; DP-144 `catalogOperators`/RPC; vitest `bn8-front-src-lib`.
+- **Dalej:** push → CI → F7. Po F7: **BN8b** po pierwszym HERE (~04:15 UTC, §7 w #720).
+- Bez push na main.
+
 ## 2026-11-03 02:40 — #745 SCALONE + start cron_fetch=true (0384)
 
 - Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie; #742 zamknięte.
