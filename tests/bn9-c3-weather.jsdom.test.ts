@@ -362,7 +362,8 @@ describe('BN9-c3 — Ryzyka KSH na komputerze: sekcja pogody nie przesuwa „Dro
       seSituations: [], seDemo: false, showDemoMarks: true, parts: ['ferry', 'roads'], withHead: false,
     })));
     const panels = [...el.querySelectorAll('.rk-route-parts > [data-panel]')].map((s) => s.getAttribute('data-panel'));
-    expect(panels).toEqual(['ferry', 'marine', 'road-pl', 'road-se']);
+    /* DP-189: 4 sekcje bałtyckie zawsze (jak SE), także bez transportów bałtyckich */
+    expect(panels).toEqual(['ferry', 'marine', 'road-pl', 'road-se', 'road-lt', 'road-lv', 'road-ee', 'road-fi']);
     const css = readFileSync('src/components/risks/risks.css', 'utf8');
     expect(css).toContain('.rk-ksh .rk-route-parts>[data-panel="marine"]{grid-column:1 / -1;order:1}');
     expect(css).toMatch(/@media \(max-width: 768px\)\{[\s\S]*\.rk-ksh \.rk-route-parts>\[data-panel="marine"\]\{order:0\}/);

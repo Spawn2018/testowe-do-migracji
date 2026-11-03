@@ -153,7 +153,7 @@ export function RoutePanel({
   const sysCount = rr.system.length;
   /* BN9-c3: pogoda na przeprawach — produkcja `marine_conditions` (pięć korytarzy BN5), demo — przykład z p6Source */
   const seaRows = PROD ? marine : sampleMarineOf(nowIso);
-  /* BN9-c4: drogi LT/LV/EE/FI — kraje z tras aktywnych transportów; bez transportów bałtyckich sekcji nie ma */
+  /* BN9-c4 / DP-189: drogi LT/LV/EE/FI — sekcje zawsze; onRoute = oznaczenie + kolejność */
   const balticDemoOn = balticDemo && !PROD;
   const balticOnRoute = balticCountriesOfLoads(loads, sailings, nowIso);
   if (balticDemoOn) balticCountriesOfRoutes(sampleBalticRoutesOf()).forEach((c) => balticOnRoute.add(c));

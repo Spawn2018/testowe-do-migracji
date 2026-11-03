@@ -1,4 +1,12 @@
 
+## 2026-11-03 09:15 — #757 DP-190 DONE + start DP-189
+
+- Skrzynka: #550 WSTRZYMANE; #716/#718/#720 w planie. #757 (Spawn2018) — DP-189/190; polecenie w #760: równolegle z DP-184, po #760 nie kolejne DP z kolejki.
+- Scalanie: brak F7 „gotowe” (#760 CI w toku; #758/#759 wygląd bez F7). Bez push na main.
+- **DP-190:** Edge `here-roads` z throttlem 1380 min (skip); `runHereRoads` poza limitem — **3/3** FI-HEL 11151, FI-VUO 10878, SE-STO 12423 pkt @ ~08:09Z; routing 7→10; `here_month_spend` 0 (w puli darmowej; ~3×$0,00275 gdyby ponad pulę). Harmonogram crona bez zmian.
+- **DP-189:** `balticRoadSections` — zawsze 4 kraje; wszystkie ryzyka kraju; `onRoute` → `data-on-route` + kolejność; testy jsdom 30. Wzorce visual bez odświeżenia (demo i tak 4 sekcje).
+- **Dalej:** push PR → CI → F7. #760 osobno.
+
 ## 2026-11-03 08:35 — DP-181 F7 #755 r3
 
 - Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie.

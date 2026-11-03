@@ -2,9 +2,9 @@
  * BN9-c4 (#573 „Ekrany po BN6”) — Ryzyka › Drogi: sekcje „Drogi LT”, „Drogi LV”, „Drogi EE”, „Drogi FI” obok „Drogi PL”
  * i „Drogi SE”, ten sam wiersz co Drogi SE (`RoadRow`, BN9-c4b: wpływ, tytuł, kiedy; opis / „Tłumaczenie w toku” i „Pokaż oryginał”).
  * Ograniczenia masy/wymiarów wyróżnione etykietą i dopiskiem „Sprawdź zezwolenie / trasę.” (bez danych ładunku spoza ryzyka).
- * Kraj na trasie aktywnego transportu bez zdarzeń — stan źródła (`corridor_conditions`): świeży odczyt ≤ 60 min → „Brak utrudnień
- * na korytarzu.”, starszy → „Brak świeżych danych ze źródła (ostatni odczyt: …)”, brak wiersza → „Źródło jeszcze niepodłączone.”;
- * bez transportów bałtyckich — nic (poza ryzykami przy transporcie).
+ * Kraj bez zdarzeń — stan źródła (`corridor_conditions`): świeży odczyt ≤ 60 min → „Brak utrudnień
+ * na korytarzu.”, starszy → „Brak świeżych danych ze źródła (ostatni odczyt: …)”, brak wiersza → „Źródło jeszcze niepodłączone.”.
+ * DP-189 (#757): cztery sekcje zawsze (jak Drogi SE); `data-on-route` = kraj na trasie aktywnego transportu.
  * Atrybucja pod sekcją z `detail.zrodlo` ryzyk (bez wpisanych na sztywno źródeł).
  */
 import { useEffect, useState, type ReactNode } from 'react';
@@ -94,6 +94,7 @@ function CountrySection({ s, locale, phone, demo, focusId }: { s: BalticRoadSect
       className="rk-sec-box"
       data-panel={`road-${lc}`}
       data-baltic={s.country}
+      data-on-route={s.onRoute ? '1' : '0'}
       data-all={all ? '1' : '0'}
       data-demo={demo ? 'baltic-roads' : undefined}
       aria-labelledby={id}
