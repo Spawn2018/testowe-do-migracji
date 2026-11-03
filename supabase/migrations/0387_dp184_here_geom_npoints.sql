@@ -5,22 +5,23 @@
 begin;
 
 alter table public.here_road_geometry
-  add column if not exists geom geometry(Geometry, 4326),
+  add column if not exists geom geometry(LineString, 4326),
   add column if not exists n_points integer;
 
 comment on column public.here_road_geometry.geom is
-  'DP-184: LineString HERE (st_simplify ~20 m w 3857). Tylko w tej tabeli — D-81, kasowane z points.';
+  'DP-184: LineString HERE (st_simplify 20 w 3857 ≈ 8–11 m na 55–66°N). Tylko w tej tabeli — D-81, kasowane z points.';
 comment on column public.here_road_geometry.n_points is
   'DP-184: liczba punktów JSON przy zapisie; świeżość bez jsonb_array_length.';
 
 -- ---------------------------------------------------------------------------
--- Pomocnicza: LineString z points [lat,lon] + uproszczenie ~20 m
+-- Pomocnicza: LineString z points [lat,lon] + uproszczenie (20 jednostek 3857)
 -- ---------------------------------------------------------------------------
 create or replace function public.here_road_line_from_points(p_points jsonb)
 returns geometry
 language plpgsql
-stable
-security definer
+immutable
+parallel safe
+security invoker
 set search_path = public
 as $$
 declare
@@ -45,7 +46,7 @@ begin
   if v_line is null or st_npoints(v_line) < 2 then
     return null;
   end if;
-  -- ~20 m w Web Mercator; krótka linia / degeneracja → oryginał
+  -- 20 jednostek Web Mercator ≈ 8–11 m na 55–66°N; krótka linia / degeneracja → oryginał
   v_simple := st_transform(st_simplify(st_transform(v_line, 3857), 20), 4326);
   if v_simple is null or st_npoints(v_simple) < 2 then
     return v_line;
@@ -55,7 +56,7 @@ end;
 $$;
 
 comment on function public.here_road_line_from_points(jsonb) is
-  'DP-184: LineString z points HERE [lat,lon], st_simplify ~20 m (3857).';
+  'DP-184: LineString z points HERE [lat,lon], st_simplify 20 w 3857 (≈8–11 m na szerokościach korytarza).';
 revoke all on function public.here_road_line_from_points(jsonb)
   from public, anon, authenticated;
 grant execute on function public.here_road_line_from_points(jsonb) to service_role;

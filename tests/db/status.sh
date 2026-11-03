@@ -2583,6 +2583,8 @@ L823e=aaaaaaaa-0000-0000-0000-00000000823e
 L823f=aaaaaaaa-0000-0000-0000-00000000823f
 L824a=aaaaaaaa-0000-0000-0000-00000000824a
 L824b=aaaaaaaa-0000-0000-0000-00000000824b
+L824c=aaaaaaaa-0000-0000-0000-00000000824c
+L824d=aaaaaaaa-0000-0000-0000-00000000824d
 S823t=77777777-0000-0000-0000-00000000823a
 S823g=77777777-0000-0000-0000-00000000823b
 V823=66666666-0000-0000-0000-00000000823a
@@ -2605,9 +2607,7 @@ chk "BN8b TLL-HEL: brak HERE → 0 OFF_CORRIDOR" \
    rollback" 0
 chk "BN8b TLL-HEL: HERE + na korytarzu → 0" \
   "begin;
-   insert into here_road_geometry (leg, points, summary, fetched_at, length_m, duration_s, n_points)
-    values ('PL-TLL', '$HERE_PL_EE'::jsonb, 'BN8b fixture TLL', now(), 1350000, 72000, jsonb_array_length('$HERE_PL_EE'::jsonb))
-    on conflict (leg) do update set points=excluded.points, fetched_at=excluded.fetched_at, summary=excluded.summary, n_points=excluded.n_points;
+   select public.here_store_road('PL-TLL', '$HERE_PL_EE'::jsonb, 'BN8b fixture TLL', now(), 1350000, 72000);
    insert into loads (id, project_id, carrier_org_id, hhl_order_no, carrier_order_no, status, plan_load_date, plan_delivery_date, ferry_route)
     values ('$L821b','$P','$SCXO','HHL/BN8B-821B','SCX/BN8B-821B','IN_TRANSIT_PL', current_date, current_date + 5, 'TLL-HEL');
    insert into positions (load_id, ts, geom_raw, source) values
@@ -2618,9 +2618,7 @@ chk "BN8b TLL-HEL: HERE + na korytarzu → 0" \
    rollback" 0
 chk "BN8b TLL-HEL: HERE + 10 km obok → 1" \
   "begin;
-   insert into here_road_geometry (leg, points, summary, fetched_at, length_m, duration_s, n_points)
-    values ('PL-TLL', '$HERE_PL_EE'::jsonb, 'BN8b fixture TLL', now(), 1350000, 72000, jsonb_array_length('$HERE_PL_EE'::jsonb))
-    on conflict (leg) do update set points=excluded.points, fetched_at=excluded.fetched_at, summary=excluded.summary, n_points=excluded.n_points;
+   select public.here_store_road('PL-TLL', '$HERE_PL_EE'::jsonb, 'BN8b fixture TLL', now(), 1350000, 72000);
    insert into loads (id, project_id, carrier_org_id, hhl_order_no, carrier_order_no, status, plan_load_date, plan_delivery_date, ferry_route)
     values ('$L821c','$P','$SCXO','HHL/BN8B-821C','SCX/BN8B-821C','IN_TRANSIT_PL', current_date, current_date + 5, 'TLL-HEL');
    insert into positions (load_id, ts, geom_raw, source) values
@@ -2860,13 +2858,12 @@ chk "BN8b F7 r2: IN_TRANSIT_SE FI_E75 10 km obok → 1" \
     ('$L823a', now() - interval '5 minutes', st_setsrid(st_makepoint(24.20, 61.50), 4326), 'TELEMATICS_API');
    select public.refresh_load_eta('$L823a');
    select count(*) from risk_signals where load_id='$L823a' and dedup_key like 'OFF_CORRIDOR%';
+   rollback" 1
 
-# DP-184 / F7 #749: 10 km obok SE_E4_STO (SE-STO) w IN_TRANSIT_SE → 1.
+# DP-184 F7 r1: zapis przez here_store_road (geom produkcyjny); 10 km obok SE_E4_STO → 1.
 chk "BN8b DP-184: IN_TRANSIT_SE SE_E4_STO 10 km obok → 1" \
   "begin;
-   insert into here_road_geometry (leg, points, summary, fetched_at, length_m, duration_s, n_points)
-    values ('SE-STO', '$HERE_SE_STO'::jsonb, 'BN8b DP-184 SE-STO', now(), 980000, 52000, jsonb_array_length('$HERE_SE_STO'::jsonb))
-    on conflict (leg) do update set points=excluded.points, fetched_at=excluded.fetched_at, summary=excluded.summary, n_points=excluded.n_points;
+   select public.here_store_road('SE-STO', '$HERE_SE_STO'::jsonb, 'BN8b DP-184 SE-STO', now(), 980000, 52000);
    insert into loads (id, project_id, carrier_org_id, hhl_order_no, carrier_order_no, status, plan_load_date, plan_delivery_date, ferry_route)
     values ('$L824a','$P','$SCXO','HHL/BN8B-824A','SCX/BN8B-824A','IN_TRANSIT_SE', current_date, current_date + 5, 'TLL-STO');
    insert into positions (load_id, ts, geom_raw, source) values
@@ -2876,12 +2873,10 @@ chk "BN8b DP-184: IN_TRANSIT_SE SE_E4_STO 10 km obok → 1" \
    select count(*) from risk_signals where load_id='$L824a' and dedup_key like 'OFF_CORRIDOR%';
    rollback" 1
 
-# DP-184 / F7 #749: 10 km obok SE_E18_KPS (SE-KPS) w IN_TRANSIT_SE → 1.
+# DP-184 F7 r1: here_store_road SE-KPS; 10 km obok SE_E18_KPS → 1.
 chk "BN8b DP-184: IN_TRANSIT_SE SE_E18_KPS 10 km obok → 1" \
   "begin;
-   insert into here_road_geometry (leg, points, summary, fetched_at, length_m, duration_s, n_points)
-    values ('SE-KPS', '$HERE_SE_KPS'::jsonb, 'BN8b DP-184 SE-KPS', now(), 960000, 50000, jsonb_array_length('$HERE_SE_KPS'::jsonb))
-    on conflict (leg) do update set points=excluded.points, fetched_at=excluded.fetched_at, summary=excluded.summary, n_points=excluded.n_points;
+   select public.here_store_road('SE-KPS', '$HERE_SE_KPS'::jsonb, 'BN8b DP-184 SE-KPS', now(), 960000, 50000);
    insert into loads (id, project_id, carrier_org_id, hhl_order_no, carrier_order_no, status, plan_load_date, plan_delivery_date, ferry_route)
     values ('$L824b','$P','$SCXO','HHL/BN8B-824B','SCX/BN8B-824B','IN_TRANSIT_SE', current_date, current_date + 5, 'PLD-KPS');
    insert into positions (load_id, ts, geom_raw, source) values
@@ -2891,7 +2886,31 @@ chk "BN8b DP-184: IN_TRANSIT_SE SE_E18_KPS 10 km obok → 1" \
    select count(*) from risk_signals where load_id='$L824b' and dedup_key like 'OFF_CORRIDOR%';
    rollback" 1
 
-   rollback" 1
+# DP-184 F7 r1: SE_E4_STO na linii → 0 (regresja „zawsze alarm”).
+chk "BN8b DP-184: IN_TRANSIT_SE SE_E4_STO na linii → 0" \
+  "begin;
+   select public.here_store_road('SE-STO', '$HERE_SE_STO'::jsonb, 'BN8b DP-184 SE-STO on', now(), 980000, 52000);
+   insert into loads (id, project_id, carrier_org_id, hhl_order_no, carrier_order_no, status, plan_load_date, plan_delivery_date, ferry_route)
+    values ('$L824c','$P','$SCXO','HHL/BN8B-824C','SCX/BN8B-824C','IN_TRANSIT_SE', current_date, current_date + 5, 'TLL-STO');
+   insert into positions (load_id, ts, geom_raw, source) values
+    ('$L824c', now() - interval '20 minutes', st_setsrid(st_makepoint(17.50, 60.00), 4326), 'TELEMATICS_API'),
+    ('$L824c', now() - interval '5 minutes', st_setsrid(st_makepoint(17.50, 60.00), 4326), 'TELEMATICS_API');
+   select public.refresh_load_eta('$L824c');
+   select count(*) from risk_signals where load_id='$L824c' and dedup_key like 'OFF_CORRIDOR%';
+   rollback" 0
+
+# DP-184 F7 r1: SE_E18_KPS na linii → 0.
+chk "BN8b DP-184: IN_TRANSIT_SE SE_E18_KPS na linii → 0" \
+  "begin;
+   select public.here_store_road('SE-KPS', '$HERE_SE_KPS'::jsonb, 'BN8b DP-184 SE-KPS on', now(), 960000, 50000);
+   insert into loads (id, project_id, carrier_org_id, hhl_order_no, carrier_order_no, status, plan_load_date, plan_delivery_date, ferry_route)
+    values ('$L824d','$P','$SCXO','HHL/BN8B-824D','SCX/BN8B-824D','IN_TRANSIT_SE', current_date, current_date + 5, 'PLD-KPS');
+   insert into positions (load_id, ts, geom_raw, source) values
+    ('$L824d', now() - interval '20 minutes', st_setsrid(st_makepoint(17.50, 60.00), 4326), 'TELEMATICS_API'),
+    ('$L824d', now() - interval '5 minutes', st_setsrid(st_makepoint(17.50, 60.00), 4326), 'TELEMATICS_API');
+   select public.refresh_load_eta('$L824d');
+   select count(*) from risk_signals where load_id='$L824d' and dedup_key like 'OFF_CORRIDOR%';
+   rollback" 0
 
 # F7 r2 N1: ROAD_LT=1.5 nie zmienia ETA GDN-NYN; wydłuża TLL-HEL (przed promem).
 chk "BN8b F7 N1: ROAD_LT×1.5 — GDN bez zmian, TLL dłuższy" \

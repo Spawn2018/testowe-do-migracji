@@ -1,4 +1,11 @@
 
+## 2026-11-03 09:45 — #759/#758 SCALONE; DP-184 F7 r1; #761 czekam F7
+
+- Skrzynka: #550 WSTRZYMANE; #716/#718/#720 w planie. Bez nowego `pilne`.
+- Scalanie: **#759 SCALONE** `5f549897` (DP-192; F7 @ `085c4fa6`); **#758 SCALONE** `d3db3e49` (DP-191; F7 @ `530d164d`). #761 DP-189 CI unit+visual ✔ @ `09128235` — czekam F7. Bez push na main.
+- **Krok DP-184 F7 r1** (#760): (1) zamknięty string SQL FI_E75 przed blokami SE; `bash -n` OK; (2) SE-STO/SE-KPS/PL-TLL przez `here_store_road` (geom); (3) negatywne „na linii → 0” L824c/d; status **633**. Opcjonalne: `LineString`, `security invoker immutable`, opis 8–11 m. Guard backfillu zbędny (PROD 0 nienumerycznych).
+- **Dalej:** push #760 → CI db → F7. #761 równolegle.
+
 ## 2026-11-03 08:55 — #755 SCALONE; start DP-184
 
 - Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie.
