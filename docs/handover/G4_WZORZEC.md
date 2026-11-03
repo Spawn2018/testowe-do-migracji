@@ -358,3 +358,12 @@ przebieg 41579509837, commit `da98169`, artefakt `visual-artifacts`). Pozostałe
 Przyczyna: DP-176 — w Kokpicie kadr całej sieci z marginesem 12 px (zamiast 24 px), a dopisek „Trasa orientacyjna…” u góry z prawej liczony jako margines prawy (sieć obok dopisku, nie pod nim). Mini-mapa 727 × 360: przybliżenie ok. 3 → 4; w kadrze bez Islandii, sieć (Śrem – Boden, Bałtyk, Finlandia) w lewej części mapy, dopisek nie zasłania tras.
 Różnice tylko w obszarze mini-mapy (w kadrze migawki jej górny pas, prostokąt x 1180–1907, y 932–1080): 91 469 px (jasny) i 90 952 px (ciemny) — Boden i znacznik „3” wyżej i bliżej lewej krawędzi, widoczne Szwecja i Finlandia w większej skali zamiast morza od Islandii. Dopisek w tym samym miejscu; reszta Kokpitu bez zmian.
 DP-182 (awizacja) nie zmienia migawek — pokrycie testem jsdom `tests/dp-176-182.jsdom.test.ts`. Kokpitu na telefonie nie ma w migawkach smoke (kadr telefonu: margines górny na dopisek jak dotąd — test jsdom). Wzorca `shots-baseline` nie zmieniano.
+
+## DP-191 (03.11.2026) — bez dopisku „Trasa orientacyjna (HERE…)” na mapach
+Z workflowu `visual` (`update=true`, gałąź `wyglad/dp-191-bez-dopisku-here`, przebieg 41599495465, commit `2007ee2`, artefakt `visual-artifacts`). Pozostałe 21 migawek w artefakcie jest identycznych co do bajtu (karta GDN-NYN, Ryzyka, Drogi bałtyckie, pogoda, Rejsy, pasek promu, stany).
+Przyczyna: polecenie właściciela 03.11 08:46 — usunąć z map dymek „Trasa orientacyjna (HERE, bez wymiarów ładunku) — nie zastępuje trasy z zezwolenia.” (Mapa, Kokpit, Przegląd karty transportu).
+- `mapa-hhl-pl-1920-{light,dark-default}.png`: bez dopisku u góry z prawej; trasy, warstwy, znaczniki i tabela bez zmian.
+- `kokpit-hhl-pl-1920-{light,dark-default}.png`: mini-mapa bez dopisku; kadr całej sieci z marginesem 12 px (DP-176) bez marginesu na dopisek — sieć na środku mini-mapy, przybliżenie jak na Mapie; reszta Kokpitu bez zmian.
+- `mapa-baltyk-hhl-pl-{1440,390}-light.png`: bez dopisku (na telefonie pas pod „Warstwy” wolny).
+- `karta-tll-hel-hhl-pl-{1440,390}-light.png`: Przegląd karty — pole na dole mapy bez linii z dopiskiem.
+Wzorca `shots-baseline` nie zmieniano.
