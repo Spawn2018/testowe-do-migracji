@@ -367,3 +367,6 @@ Przyczyna: polecenie właściciela 03.11 08:46 — usunąć z map dymek „Trasa
 - `mapa-baltyk-hhl-pl-{1440,390}-light.png`: bez dopisku (na telefonie pas pod „Warstwy” wolny).
 - `karta-tll-hel-hhl-pl-{1440,390}-light.png`: Przegląd karty — pole na dole mapy bez linii z dopiskiem.
 Wzorca `shots-baseline` nie zmieniano.
+
+## DP-189 (03.11.2026) — Ryzyka › Drogi LT/LV/EE/FI zawsze (jak SE)
+Bez odświeżenia migawek: `drogi-baltyckie-*` już pokazują 4 sekcje w demo (trasa TLL–HEL). Zmiana behawioru bez transportu bałtyckiego — jsdom `tests/bn9-c4-roads.jsdom.test.ts` (DP-189).
