@@ -1,4 +1,11 @@
 
+## 2026-11-03 12:10 — #766 CI db: gate-suites c3 43→45
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
+- Scalanie: brak „F7: gotowe” po `6b02ba6e`. unit+visual ✔; `db` czerwone: c3 **45/45 OK**, `gate-suites` oczekiwał 43.
+- **Krok:** `EXPECTED_LOCAL.c3` **45** (F7 r1 +2). Bez push na main.
+- **Dalej:** push #766 → CI → F7. Potem C1 reszta (DP-146, 152) albo C2.
+
 ## 2026-11-03 11:50 — #764 SCALONE; #766 F7 r1 (DP-156 wolumen / 0389)
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
