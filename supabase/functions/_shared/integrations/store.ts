@@ -616,7 +616,27 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
       return out;
     },
     async latestPositions(maxAgeMin: number) {
-      return must(await sb.rpc('latest_vehicle_positions', { p_max_age_min: maxAgeMin }), 'latest_vehicle_positions') as VehiclePos[];
+      /* DP-119 / F7 #693 r1: RPC setof też pod max_rows=1000 — strony Range + dedupe load_id. */
+      const PAGE = SAILINGS_PAGE_SIZE;
+      const out: VehiclePos[] = [];
+      const seen = new Set<string>();
+      for (let from = 0; ; from += PAGE) {
+        if (from >= SAILINGS_MAX_PAGES * PAGE) {
+          throw new Error('latest_vehicle_positions page cap exceeded');
+        }
+        const rows = must(
+          await sb.rpc('latest_vehicle_positions', { p_max_age_min: maxAgeMin }).range(from, from + PAGE - 1),
+          'latest_vehicle_positions',
+        ) as VehiclePos[];
+        for (const row of rows) {
+          const k = String(row.load_id);
+          if (seen.has(k)) continue;
+          seen.add(k);
+          out.push(row);
+        }
+        if (rows.length < PAGE) break;
+      }
+      return out;
     },
     async seSlowdownPct() {
       const r = await sb.from('app_parameters').select('value').eq('key', 'SE_ROAD_SLOWDOWN_PCT').maybeSingle();

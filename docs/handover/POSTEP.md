@@ -1,4 +1,11 @@
 
+## 2026-11-03 19:30 — #772 SCALONE; start DP-119 (max_rows docs/inv/RPC)
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
+- Scalanie: **#772 SCALONE** `ee54ad20` (DP-198; F7 @ `02dff99d`; CI unit/db/visual ✔). `deploy-main` robi resztę. Bez push na main.
+- **Krok DP-119** `pakiet/c2-dp-119-max-rows-docs-inv`: `fetchAllDocuments` / `fetchAllInvoices` (range 1000 + order + dedupe); `latestPositions` RPC ze stronami Range. Testy `dp119-max-rows-docs-inv`. Bez migracji.
+- **Dalej:** push → CI → F7. Potem C2: 120….
+
 ## 2026-11-03 19:00 — #771 SCALONE; start DP-198 (cron 6 d)
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
