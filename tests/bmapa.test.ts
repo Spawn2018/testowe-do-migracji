@@ -195,6 +195,10 @@ describe('B-MAPA geometria', () => {
     // #667 B / F7 r1 B3: E22 + jawne SE_KAA_INLAND
     expect(refresh).toMatch(/SE_E22/);
     expect(refresh).toMatch(/corridorCode: 'SE_KAA_INLAND'/);
+    // DP-197: SE-NYN = SE_E4 + via miast + sparse odchyłka.
+    expect(refresh).toMatch(/corridorCode: 'SE_E4'/);
+    expect(refresh).toMatch(/useCorridorDev/);
+    expect(refresh).toMatch(/59\.3293/);
     expect(refresh).not.toMatch(/corridorInland:\s*true/);
     expect(refresh).not.toMatch(/CORRIDOR_KAA = 'SE_KAA_TRACK'/);
     const mig = readFileSync('supabase/migrations/0316_572_bn0_se_kaa_via.sql', 'utf8');

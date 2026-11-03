@@ -49,7 +49,26 @@ export type RoadLegDef = {
  */
 export const ROAD_LEGS: readonly RoadLegDef[] = [
   { leg: 'PL-GDN', origin: '52.07391,17.0246', destination: '54.40372,18.6813', spec: 'pl', summary: 'Trasa drogowa Śrem–Gdańsk', browserFetch: true, mapGroup: 'core', cronFetch: true },
-  { leg: 'SE-NYN', origin: '58.90453,17.95621', destination: '65.80539,21.75914', spec: 'se', summary: 'Trasa drogowa Nynäshamn–Boden', browserFetch: true, mapGroup: 'core', cronFetch: true },
+  {
+    leg: 'SE-NYN',
+    origin: '58.90453,17.95621',
+    destination: '65.80539,21.75914',
+    spec: 'se',
+    summary: 'Trasa drogowa Nynäshamn–Boden',
+    // DP-197: kontrola odchyłki od SE_E4 + via miast (jak KAA / decyzja 97).
+    corridorCode: 'SE_E4',
+    viaPoints: [
+      [59.3293, 18.0686], // Sztokholm
+      [59.8586, 17.6389], // Uppsala
+      [60.6749, 17.1413], // Gävle
+      [62.3908, 17.3069], // Sundsvall
+      [63.8258, 20.2630], // Umeå
+      [65.5842, 22.1547], // Luleå
+    ],
+    browserFetch: true,
+    mapGroup: 'core',
+    cronFetch: true,
+  },
   { leg: 'PL-GDY', origin: '52.07391,17.0246', destination: '54.53321,18.54425', spec: 'loose', summary: 'Trasa drogowa Śrem–Gdynia', browserFetch: true, mapGroup: 'core', cronFetch: true },
   {
     leg: 'SE-KAA',
@@ -203,9 +222,11 @@ export async function refreshRoadLegs(
   for (const leg of legs) {
     const prev = have.get(leg.leg);
     const isKaa = leg.spec === 'kaa';
-    const corridor = isKaa ? await corridorFor(leg) : null;
+    // DP-197: SE-NYN/SE_E4 — ta sama kontrola odchyłki i via co KAA.
+    const useCorridorDev = isKaa || leg.corridorCode === 'SE_E4';
+    const corridor = useCorridorDev ? await corridorFor(leg) : null;
     const corridorNewer =
-      isKaa &&
+      useCorridorDev &&
       corridor != null &&
       corridor.updatedAt > 0 &&
       prev != null &&
@@ -213,13 +234,16 @@ export async function refreshRoadLegs(
       corridor.updatedAt > Date.parse(prev.fetched_at);
     if (!shouldFetch(prev, nowMs, corridorNewer, maxAgeMs)) continue;
 
-    if (isKaa && (corridor == null || corridor.pts.length < 2)) {
+    if (useCorridorDev && (corridor == null || corridor.pts.length < 2)) {
       warnings.push(`${leg.leg}: brak korytarza (via) — pominięto HERE`);
       continue;
     }
 
     const dictVia = leg.viaPoints ?? [];
-    const viaPts = isKaa ? (corridor?.via ?? []) : dictVia;
+    // KAA: via z korytarza OSM; SE_E4: via miast z legu (DP-197), inaczej corridor.via.
+    const viaPts = isKaa
+      ? (corridor?.via ?? [])
+      : (dictVia.length > 0 ? dictVia : (corridor?.via ?? []));
     const corridorPts = corridor?.pts ?? [];
     const corridorLabel = corridor?.code ?? '?';
     attempted += 1;
@@ -231,7 +255,7 @@ export async function refreshRoadLegs(
     // BN7: summary.length / duration; exclude RUS/BLR (ISO alpha-3, dok. HERE v8).
     routeUrl.searchParams.set('return', leg.spec === 'dict' ? 'polyline,summary' : 'polyline');
     routeUrl.searchParams.set('apiKey', opts.hereApiKey);
-    if (leg.spec === 'dict' || isKaa) {
+    if (leg.spec === 'dict' || useCorridorDev) {
       for (const v of viaPts) {
         routeUrl.searchParams.append('via', `${v[0]},${v[1]}!passThrough=true`);
       }
@@ -297,11 +321,14 @@ export async function refreshRoadLegs(
           ? looseRoadOk(line)
           : roadGeometryOk(line, geomSpec);
     // #667 F7 r3 B4: SE_E22 / SE_KAA_INLAND = rzadki korytarz (controlPts + 15 km);
+    // DP-197: SE_E4 też sparse — postój w Sztokholmie ~3 km od cięciwy OSM.
     // SE_KAA_TRACK (gdyby wrócił) = stara reguła śladu GPS.
     const sparse =
-      corridorLabel === 'SE_E22' || corridorLabel === 'SE_KAA_INLAND';
+      corridorLabel === 'SE_E22' ||
+      corridorLabel === 'SE_KAA_INLAND' ||
+      corridorLabel === 'SE_E4';
     const controlPts: LatLng[] = (() => {
-      if (!isKaa) return [];
+      if (!useCorridorDev) return [];
       const [oLat, oLng] = leg.origin.split(',').map(Number);
       const [dLat, dLng] = leg.destination.split(',').map(Number);
       const out: LatLng[] = [];
@@ -311,7 +338,7 @@ export async function refreshRoadLegs(
       return out;
     })();
     const okDev =
-      !isKaa ||
+      !useCorridorDev ||
       corridorPts.length < 2 ||
       kaaDeviationOk(
         line,

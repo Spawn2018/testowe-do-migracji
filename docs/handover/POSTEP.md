@@ -1,4 +1,11 @@
 
+## 2026-11-03 17:10 — #770 SCALONE; start DP-197 (0390)
+
+- Skrzynka: #550 WSTRZYMANE; bez nowego `pilne`.
+- Scalanie: **#770 SCALONE** `dcc19ac6` (DP-193/194 / **0389**; F7 @ `f1be2b7a` po docs). `deploy-main` robi resztę. Bez push na main.
+- **Krok DP-197** `pakiet/c2-dp-197-se-nyn-corridor` / **0390**: via miast SE-NYN; here-roads `useCorridorDev` + sparse SE_E4; `refresh_load_eta` — SE_E4 w v_bn7 tylko przy świeżym HERE; test Sztokholm 3 km + Karlstad source=HERE. status **641**.
+- **Dalej:** CI → F7. Potem C2: 119….
+
 ## 2026-11-03 16:40 — #770 CI zielone @ e1f7e29b — czekam F7
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720/#762 w planie. Bez nowego `pilne`. PR do scalenia: brak „F7: gotowe” (po ostatnim commicie).
