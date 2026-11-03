@@ -1,4 +1,11 @@
 
+## 2026-11-03 13:15 — #766 SCALONE; start DP-152
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
+- Scalanie: **#766 SCALONE** `272e0afc` (C1 DP-155/156 / **0388**; F7 gotowe @ `f48705c6`, CI unit/db/visual ✔). `deploy-main` robi resztę. Bez push na main.
+- **Krok DP-152** (`pakiet/dp-152-fhorizon-max`): `fHorizonTo` = max lastValid po punktach FMI (nie min); test przybrzeżny GDN vs MID. Potem DP-146.
+- **Dalej:** push PR → CI → F7.
+
 ## 2026-11-03 12:40 — #766 F7 r2: pkt 2–4 (e2e, zamknięcie, 0388)
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
