@@ -5,7 +5,7 @@
 import type { Locale } from '../types';
 import { t } from './messages';
 
-const PL: Record<string, string> = {
+export const PL: Record<string, string> = {
   p9a_title: 'Nie udało się wczytać podkładu mapy',
   p9a_title_short: 'Nie udało się wczytać podkładu',
   p9a_body: 'Pozycje i trasa są aktualne. Brakuje tylko tła z ulicami.',

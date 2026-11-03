@@ -43,9 +43,12 @@ val "nowy miesiąc wraca na HERE" "select here_tiles_open('2026-11-02 12:00+00')
 sys "update app_parameters set value=30000 where key='HERE_TILES_FREE'; update app_parameters set value=0.0002 where key='HERE_TILES_RATE_USD'" >/dev/null
 val "zapis geometrii" "select here_store_road('PL-GDN', '[[52.07,17.02],[54.40,18.68]]'::jsonb, 'trasa drogowa Śrem–Gdańsk', now())" ""
 val "podsumowanie zostaje w wierszu" "select summary from here_road_geometry where leg='PL-GDN'" "trasa drogowa Śrem–Gdańsk"
+val "DP-184 n_points po zapisie" "select n_points::text from here_road_geometry where leg='PL-GDN'" "2"
+val "DP-184 geom po zapisie" "select (geom is not null and st_npoints(geom) >= 2)::text from here_road_geometry where leg='PL-GDN'" "true"
 sys "update here_road_geometry set fetched_at = now() - interval '31 days' where leg='PL-GDN'" >/dev/null
 val "geometria starsza niż 30 dni jest kasowana" "select purge_here_road_geometry(now())::text" "1"
 val "podsumowanie zostaje po kasowaniu punktów" "select summary || ':' || coalesce(points::text,'null') from here_road_geometry where leg='PL-GDN'" "trasa drogowa Śrem–Gdańsk:null"
+val "DP-184 geom/n_points po purge" "select (geom is null and n_points is null)::text from here_road_geometry where leg='PL-GDN'" "true"
 # BN7 #718 / 0381: podpis + length_m/duration_s (stary 4-arg usunięty)
 val "konto nie zapisuje geometrii HERE" "select has_function_privilege('authenticated','here_store_road(text,jsonb,text,timestamptz,double precision,double precision)','execute')::text" "false"
 # H-2-PL: osobna pula traffic

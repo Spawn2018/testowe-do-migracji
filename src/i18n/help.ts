@@ -5,7 +5,7 @@
 import type { Locale } from '../types';
 import { t } from './messages';
 
-const PL: Record<string, string> = {
+export const PL: Record<string, string> = {
   help_title: 'Pomoc',
   help_close: 'Zamknij Pomoc',
   help_tab_how: 'Jak pracuję',

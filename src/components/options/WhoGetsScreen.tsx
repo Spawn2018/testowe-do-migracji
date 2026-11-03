@@ -4,7 +4,7 @@
  * po prawej „Podgląd wiersza” i „Zasady”. Telefon: zdarzenia jako karty; wybrane rozwinięte z 5 rodzajami kont.
  * Dane i zapis podłącza wykonawca (`notification_matrix`, `admin_notification_matrix_set`) — tu tylko wygląd.
  */
-import { useEffect, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import type { Locale } from '../../types';
 import { t, tp } from '../../i18n/messages';
 import { ACCOUNT_KINDS, type AccountKind } from './types';
@@ -81,8 +81,20 @@ export function WhoGetsScreen({ locale, groups: initial, cards, accounts, readOn
   const [mailOn, setMailOn] = useState(cards?.mail.on ?? false);
   const [pushOn, setPushOn] = useState(cards?.push.on ?? false);
   /* F7 #404: dane z bazy po zapisie — ekran bierze nowy stan bez ponownego montowania (wybrany wiersz zostaje) */
-  useEffect(() => { setGroups(initial); }, [initial]);
-  useEffect(() => { setMailOn(cards?.mail.on ?? false); setPushOn(cards?.push.on ?? false); }, [cards?.mail.on, cards?.push.on]);
+  /* DP-62: nowe dane z propsów przejmowane w trakcie renderu (stan z poprzedniej wartości), bez setState w efekcie */
+  const [prevInitial, setPrevInitial] = useState(initial);
+  if (prevInitial !== initial) {
+    setPrevInitial(initial);
+    setGroups(initial);
+  }
+  const mailIn = cards?.mail.on ?? false;
+  const pushIn = cards?.push.on ?? false;
+  const [prevCards, setPrevCards] = useState({ mail: mailIn, push: pushIn });
+  if (prevCards.mail !== mailIn || prevCards.push !== pushIn) {
+    setPrevCards({ mail: mailIn, push: pushIn });
+    setMailOn(mailIn);
+    setPushOn(pushIn);
+  }
   const card = (which: 'mail' | 'push', next: boolean) => {
     (which === 'mail' ? setMailOn : setPushOn)(next);
     onCard?.(which, next);

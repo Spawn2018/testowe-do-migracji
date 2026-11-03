@@ -17,7 +17,9 @@ jobs:
       - run: npm ci
       # DP-42: słownik pisowni PL-T (tests/pl-t.test.ts) — w CI (CI=true) brak hunspell/pl_PL to błąd, nie pominięcie
       - name: hunspell + pl_PL
-        run: sudo apt-get update -q && sudo apt-get install -y -q hunspell hunspell-pl
+        # DP-66: wersja słownika przypięta do obrazu runnera ubuntu-26.04 (`ubuntu-latest` od 10.2026) — zmiana słownika
+        # nie zmienia wyniku PL-T po cichu; po zmianie obrazu runnera podbić wersję
+        run: sudo apt-get update -q && sudo apt-get install -y -q --no-install-recommends hunspell hunspell-pl=1:25.2.3-1build1
       # Kontrola typów jak w `npm run build` (deploy-main): błąd TS wychodzi w PR, nie dopiero przy wdrożeniu (F7 #348 B1)
       - name: npx tsc -b
         run: npx tsc -b
