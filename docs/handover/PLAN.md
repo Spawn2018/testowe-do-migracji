@@ -1248,7 +1248,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-149 | Cursor | Ostrzeżenie „NaN poza siatką” tylko gdy wszystkie NaN; przytnij okno do horyzontu modelu | F7 #724 / #714 | BN5 / ferry-weather | SCALONE #725 `571aff01` |
 | DP-150 | Cursor | DMI: 1 punkt/korytarz, szeregowo z odstępem, cache 3 h, krótszy timeout | F7 #724 / #714 | BN5 / ferry-weather | SCALONE #725 (z DP-149) |
 | DP-151 | Cursor | `fetchMarineConditions` — `detail` w `select` (status / warnings / ice) | F7 #724 / #714 | BN5 / front | SCALONE #725 (z DP-149) |
-| DP-152 | Cursor | `fHorizonTo` bierze najkrótszy horyzont ze wszystkich punktów; punkt przybrzeżny skraca okno DMI/`window_to` wszystkim — licz per korytarz albo maksimum ważnych | F7 #725 | BN5 / ferry-weather | w kolejce (z BN6 albo osobno) |
+| DP-152 | Cursor | `fHorizonTo` = maksimum lastValid po punktach (nie min) — przybrzeżny nie skraca DMI/`window_to` | F7 #725 | BN5 / ferry-weather | W TOKU (#767) |
 | DP-155 | Cursor | ETA: `ROAD_FI` → `slowdown_se` przy `FI_E75` (0385); test ×1.5 FI dłuższy / GDN bez zmian; `yard_drive_quote` bez zmian (tylko SREM/BODEN→PL/SE_E4) | F7 #726 / C1 #762 | BN8b / ETA | W TOKU (#766 C1) |
 | DP-156 | Cursor | `notify_event_key`: ROAD_LT/LV/EE/FI — z `load_id` jak SE; bez `load_id` tylko HIGH/CRIT → `risk_crit`; HIGH→MEDIUM zamyka dzwonek (F7 #766 r2 / **0388**) | F7 #726 / C1 #762 | BN6 / notify | W TOKU (#766 C1 / **0388**) |
 | DP-157 | Cursor | road-fi: (a) zwykłe Tietyö bez zamknięcia/objazdu/limitu → LOW; (b) do BN7 filtr numerów dróg korytarza (VT4/E75, VT29/E8, Kehä III 50, Vuosaaren 103 + porty); (c) jednorazowo resolve 146 ROAD_FI poza filtrem (przez job, nie ręcznie) | F7 #727 | BN6 / road-fi | DONE #732 |
@@ -2621,6 +2621,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 03.11.2026 10:50 | #763 SCALONE `6c053f6c` (Pakiet DP-B / DP-185); F7 #765 r1 → wariant A (bez zapisu skipped); push poprawki | pętla / DP-187 |
 | 03.11.2026 11:20 | #765 SCALONE `c1c8f827` (DP-187/188; F7 @ 3fd8734b); DP-193/194→C2, DP-195→C3; start C1 DP-155/156 **0388** | pętla / C1 |
 | 03.11.2026 11:50 | #764 SCALONE `e3f6c101` (DP-A); #766 F7 r1 → **0389** bałtyk bez load tylko HIGH/CRIT; c3 **45** | pętla / C1 F7 |
+| 03.11.2026 12:40 | #766 F7 r2: e2e + HIGH→MEDIUM close; 0388+0389→**0388**; c3 **51** | pętla / C1 F7 |
 | 31.10.2026 — | Decyzja 73: TLLA-HEL ETA−150 min / HELA-TLL ETD+160 min (fixture Cargo; nocny 165 min OK). Decyzja 74: `sailings.source_ref` 0359; Digitraffic `digitraffic:portcall:<id>:<route>`; HTML/RECZNIE/DANE_STARTOWE wygrywają; #685-b RPC zastępuje digitraffic:% w ±3 h | F7 #688 r1–r4 |
 | 31.10.2026 — | F7 #683 nieblokujące (osobna poprawka): Scheduler grudzień + „on 2 January” → rok bieżący, ciche wygaśnięcie; Alert INFO bez ryzyka/historii — świadomie | F7 #683 r7 |
 | 31.10.2026 — | F7 #683 r8 nieblokujące (osobno): Alert poza Schedulerem obok Schedulera; sprzeczne bloki (resume→cofnięcie auto); rok przy długim oknie Schedulera; mutanty M10/M15–M17/M22 świadomie bez testów | F7 #683 r8 |

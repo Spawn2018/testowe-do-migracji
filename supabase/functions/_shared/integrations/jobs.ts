@@ -5020,8 +5020,9 @@ export async function runFerryWeather(deps: JobDeps): Promise<JobResult> {
   let fmiOk = 0;
   let dmiOk = 0;
   let smhiOk = 0;
-  /* DP-149: NaN na końcu okna ≠ poza siatką; dalej przycinamy do ostatniej ważnej próbki. */
-  let fHorizonTo = fTo;
+  /* DP-149: NaN na końcu okna ≠ poza siatką.
+   * DP-152: przycinaj do maksimum lastValid po punktach (nie minimum — przybrzeżny nie skraca DMI/window_to wszystkim). */
+  const fHorizons: string[] = [];
 
   for (const code of Object.keys(MARINE_POINTS) as MarinePointCode[]) {
     const p = MARINE_POINTS[code];
@@ -5034,11 +5035,11 @@ export async function runFerryWeather(deps: JobDeps): Promise<JobResult> {
       samples.push(...parsed.samples);
       if (fmiNanAllOffGrid(parsed)) {
         warnings.push(`FMI WAM ${code}: NaN poza siatką — punkt pominięty (${parsed.nanSkipped})`);
-      } else if (parsed.nanSkipped > 0 && parsed.samples.length) {
+      } else if (parsed.samples.length) {
+        fmiOk++;
         const last = fmiLastValidIso(parsed.samples);
-        if (last && last < fHorizonTo) fHorizonTo = last;
+        if (last) fHorizons.push(last);
       }
-      if (parsed.samples.length) fmiOk++;
     } else warnings.push(`FMI WAM ${code}: ${wRes.warning}`);
     let gustOk = false;
     if (gRes.ok) {
@@ -5046,13 +5047,11 @@ export async function runFerryWeather(deps: JobDeps): Promise<JobResult> {
       samples.push(...parsed.samples);
       if (fmiNanAllOffGrid(parsed)) {
         warnings.push(`FMI Harmonie ${code}: NaN poza siatką — punkt pominięty (${parsed.nanSkipped})`);
-      } else if (parsed.nanSkipped > 0 && parsed.samples.length) {
-        const last = fmiLastValidIso(parsed.samples);
-        if (last && last < fHorizonTo) fHorizonTo = last;
-      }
-      if (parsed.samples.length) {
+      } else if (parsed.samples.length) {
         fmiOk++;
         gustOk = true;
+        const last = fmiLastValidIso(parsed.samples);
+        if (last) fHorizons.push(last);
       }
     } else warnings.push(`FMI Harmonie ${code}: ${gRes.warning}`);
 
@@ -5076,7 +5075,10 @@ export async function runFerryWeather(deps: JobDeps): Promise<JobResult> {
     }
   }
 
-  if (fHorizonTo < fTo) fTo = fHorizonTo;
+  if (fHorizons.length) {
+    const fHorizonTo = fHorizons.reduce((a, b) => (a > b ? a : b));
+    if (fHorizonTo < fTo) fTo = fHorizonTo;
+  }
 
   /* DP-150: DMI — 1 punkt/korytarz, szeregowo z odstępem, cache 3 h, timeout 8 s. */
   const dmiGapMs = Math.max(0, Number(deps.env.DMI_REQUEST_GAP_MS ?? DMI_DEFAULT_GAP_MS));
