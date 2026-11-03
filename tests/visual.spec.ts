@@ -336,7 +336,7 @@ test.describe('BN9-c3 visual — Ryzyka KSH (pl 1440)', () => {
 
 /* BN9-c4 (#573 „Ekrany po BN6”) — Ryzyka › Drogi: „Drogi LT”, „Drogi LV”, „Drogi EE”, „Drogi FI” pod „Drogi PL” i „Drogi SE”.
    Demo: przykładowa trasa transportu Tallinn – Helsinki, zdarzenia wymyślone (G-09), limit masy wyróżniony, Estonia bez
-   zdarzeń („Brak utrudnień na korytarzu”, świeży odczyt źródła); sekcje rozwinięte kliknięciem (domyślnie zwinięte z licznikiem).
+   zdarzeń („Brak utrudnień na korytarzu”, świeży odczyt źródła); BN9-c4b — sekcje otwarte od razu (pierwsze 4, jak Drogi SE).
    Migawka obszaru czterech sekcji: telefon 390 (zakładka „Na trasie”) i — DP-161 — komputer 1440 HHL (prawa kolumna
    „Sytuacja na trasie” obok „Do zrobienia”, menu boczne widoczne). Układ KSH 1440 pokrywa `ryzyka-ksh-pl-1440-light.png`. */
 test.describe('BN9-c4 visual — drogi LT/LV/EE/FI (HHL pl)', () => {
@@ -353,8 +353,8 @@ test.describe('BN9-c4 visual — drogi LT/LV/EE/FI (HHL pl)', () => {
       if (width < 769) await page.locator('[data-rk-tab="route"]').click()
       const secs = page.locator('[data-baltic]')
       await expect(secs).toHaveCount(4)
-      /* sekcje zwinięte domyślnie (licznik) — rozwinięte do migawki */
-      for (const t of await page.locator('[data-baltic-toggle]').all()) await t.click()
+      /* BN9-c4b (decyzja 89): sekcje otwarte od razu jak Drogi SE — pierwsze 4, bez klikania (demo FI ma 3 pozycje) */
+      await expect(page.locator('[data-baltic-toggle]')).toHaveCount(0)
       await expect(page.locator('[data-panel="road-fi"] [data-limit="WEIGHT"]')).toHaveCount(1)
       await expect(page.locator('[data-empty="road-ee"]')).toBeVisible()
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
@@ -366,6 +366,9 @@ test.describe('BN9-c4 visual — drogi LT/LV/EE/FI (HHL pl)', () => {
       if (width < 769) await page.addStyleTag({ content: 'nav.tower-nav{display:none !important}' })
       await page.setViewportSize({ width, height: width < 769 ? 4200 : 2600 })
       await page.evaluate(() => window.scrollTo(0, 0))
+      /* BN9-c4b: bez klikania przełączników `main` (przewijany) zostaje na górze — obszar „Drogi LT” – „Drogi FI” przewinięty
+         do widoku jak dawniej po kliknięciu, inaczej przy 1440 wycinek kończy się na dole okna (dół „Drogi LV”) */
+      await page.locator('[data-baltic]').first().evaluate((e) => e.scrollIntoView({ block: 'start' }))
       await page.waitForTimeout(300)
       if (width >= 769) await expectTwoRiskColumns(page)
       /* obszar od „Drogi LT” do „Drogi FI” (sekcje stoją jedna pod drugą; na komputerze w prawej kolumnie) */

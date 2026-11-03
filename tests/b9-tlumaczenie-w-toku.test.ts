@@ -36,8 +36,10 @@ describe('B9 — „Tłumaczenie w toku” zamiast szwedzkiego', () => {
     expect(rt('pl', 'p6_road_pending')).toBe('Tłumaczenie w toku');
   });
   it('RoutePanel: „przetłumaczone” tylko przy gotowym tłumaczeniu, „w toku” z oznaczeniem data-road-note', () => {
-    const src = readFileSync('src/components/risks/RoutePanel.tsx', 'utf8');
-    expect(src).toContain("r.original && !r.pending ? ` · ${rt(locale, 'p6_road_translated')}`");
+    /* BN9-c4b: wiersz drogi wspólny z Drogami LT/LV/EE/FI (`RoadRow`); Drogi SE podają „przetłumaczone ze szwedzkiego” */
+    const src = readFileSync('src/components/risks/RoadRow.tsx', 'utf8');
+    expect(src).toContain('original && !pending ? ` · ${translated}`');
     expect(src).toContain('data-road-note="pending">{rt(locale, \'p6_road_pending\')}');
+    expect(readFileSync('src/components/risks/RoutePanel.tsx', 'utf8')).toContain("translated={rt(locale, 'p6_road_translated')}");
   });
 });

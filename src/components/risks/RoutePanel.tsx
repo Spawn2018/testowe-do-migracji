@@ -12,9 +12,10 @@ import type { Load, Locale, Risk, Sailing } from '../../types';
 import type { MarineConditionRow } from '../../lib/marineWeatherDb';
 import type { CorridorConditionRow } from '../../lib/corridorConditionsDb';
 import type { RoadSituation } from '../../lib/trafikverket';
-import { altProposal, ferryAlert, ferryRowsFromDb, impactOf, roadCounts, rowPorts, roadRowsFromCorridor, sortRoads, type FerryRowView, type RoadRowView } from '../../lib/p6Route';
+import { FIRST_ROADS, altProposal, ferryAlert, ferryRowsFromDb, impactOf, roadCounts, rowPorts, roadRowsFromCorridor, sortRoads, type FerryRowView, type RoadRowView } from '../../lib/p6Route';
 import { altSailingsOf, sampleBalticCorridorsOf, sampleBalticRoadRisksOf, sampleBalticRoutesOf, sampleFerryRowsOf, sampleMarineOf, roadPlOf } from '../../lib/p6Source';
 import { MarineSection } from './MarineSection';
+import { RoadRow } from './RoadRow';
 import { balticRoadSectionNodes } from './BalticRoads';
 import { balticCountriesOfLoads, balticCountriesOfRoutes, balticCountryOf, balticRoadSections, type BalticCorridorRow } from '../../lib/bn9c4Roads';
 import { routeRisks } from '../../lib/todoRules';
@@ -35,7 +36,6 @@ const NoticeForm = import.meta.env.VITE_AUTH_MODE === 'supabase'
   ? lazy(lazyRetry(() => import('../OperatorNoticeForm').then((m) => ({ default: m.OperatorNoticeForm }))))
   : null;
 const hm = (iso: string) => formatListDateTime(iso).replace(/^.*, /, '');
-const FIRST_ROADS = 4;
 
 export type RoutePart = 'ferry' | 'roads' | 'system';
 
@@ -190,30 +190,15 @@ export function RoutePanel({
     </ul>
   );
 
+  /* BN9-c4b: wspólny wiersz z Drogami LT/LV/EE/FI (`RoadRow`) */
   const roadList = (list: RoadRowView[]) => (
     <ul className="rk-roads">
       {list.map((r) => (
-        <li key={r.id} className="rk-road" data-road={r.road}>
-          <span className="rk-box">{r.road}</span>
-          <span className="rk-road-tx">
-            <span className="rk-road-t">{r.title}</span>
-            <span className="rk-road-s">
-              <span className={`rk-alert ${r.impact === 'VERY_HIGH' ? 'is-red' : r.impact === 'HIGH' ? 'is-amber' : 'is-plain'}`}>
-                {rt(locale, `p6_imp_${r.impact}`)}
-              </span>
-              {r.when ? ` · ${r.when}` : ''}
-              {r.original && !r.pending ? ` · ${rt(locale, 'p6_road_translated')}` : ''}
-            </span>
-            {r.pending && !phone ? <span className="rk-road-n" data-road-note="pending">{rt(locale, 'p6_road_pending')}</span>
-              : r.note && !phone ? <span className="rk-road-n" data-road-note="pl">{r.note}</span> : null}
-            {r.original && !phone ? (
-              <details className="rk-orig">
-                <summary>{rt(locale, 'p6_road_original')}</summary>
-                <span data-original="road">{r.original}</span>
-              </details>
-            ) : null}
-          </span>
-        </li>
+        <RoadRow
+          key={r.id} locale={locale} phone={phone} attrs={{ 'data-road': r.road }} box={r.road} title={r.title}
+          impact={r.impact} when={r.when} note={r.note} noteKind="pl" original={r.original} pending={r.pending === true}
+          translated={rt(locale, 'p6_road_translated')}
+        />
       ))}
     </ul>
   );

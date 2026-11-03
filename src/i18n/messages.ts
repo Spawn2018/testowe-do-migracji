@@ -438,6 +438,10 @@ const pl: Dict = {
   bn9c4_when_from: 'od {from}',
   bn9c4_when_to: 'do {to}',
   bn9c4_attr: 'Dane: {src}',
+  bn9c4_translated_LT: 'przetłumaczone z litewskiego',
+  bn9c4_translated_LV: 'przetłumaczone z łotewskiego',
+  bn9c4_translated_EE: 'przetłumaczone z estońskiego',
+  bn9c4_translated_FI: 'przetłumaczone z fińskiego',
   /* BN9-c5 (#718 BN7 §7 pkt 1): dopisek przy linii Korytarza bałtyckiego na mapach */
   bn9c5_route_note: 'Trasa orientacyjna (HERE, bez wymiarów ładunku) — nie zastępuje trasy z zezwolenia.',
   p4b_trk_nolink: 'Śledzenie wyłączone — brak linku śledzenia',
@@ -962,6 +966,10 @@ export const BN9C4_EN: Readonly<Record<string, string>> = {
   bn9c4_when_from: 'from {from}',
   bn9c4_when_to: 'until {to}',
   bn9c4_attr: 'Data: {src}',
+  bn9c4_translated_LT: 'translated from Lithuanian',
+  bn9c4_translated_LV: 'translated from Latvian',
+  bn9c4_translated_EE: 'translated from Estonian',
+  bn9c4_translated_FI: 'translated from Finnish',
 };
 
 /**

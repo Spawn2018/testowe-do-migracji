@@ -544,6 +544,10 @@ export interface RoadRiskInfo {
   weightLimitT: number | null;
   heightLimitM: number | null;
   widthLimitM: number | null;
+  /** BN9-c4b: tekst ze źródła w języku kraju (`detail.oryginal`), gdy opis przetłumaczony — jak `original` w Drogach SE */
+  original?: string | null;
+  /** BN9-c4b: tłumaczenie opisu jeszcze nie dotarło (`detail.pending` albo oryginał bez polskiego opisu) — „Tłumaczenie w toku” */
+  pending?: boolean;
 }
 
 export interface RateRule {
