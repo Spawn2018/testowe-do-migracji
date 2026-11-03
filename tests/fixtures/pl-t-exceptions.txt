@@ -108,3 +108,15 @@ tarktee.ee
 Transpordiamet
 # BN9-c4 (F7 r1, decyzja B): dopisek w sekcji Drogi LT — „Via Lietuva”
 Lietuva
+# DP-63: słowniki PL modułów (p5, p5b, p6, p8c, sail7, sched7, sys, e49) — nazwy własne, skróty, terminy
+Traffic
+GoEasy
+Ekodiesel
+ONEkodiesel
+Silja
+wyst
+nd
+xlsx
+route
+build
+Buildy

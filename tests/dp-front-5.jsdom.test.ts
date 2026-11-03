@@ -4,11 +4,13 @@
  * DP-48 — dopisek „przed planowanym załadunkiem” dla wybranego rejsu jako osobna linia pod polem „Rejs promem”.
  * DP-49 — jeden tekst braku rejsów: okno Awizacja i Harmonogram › Rejsy.
  * DP-52 — ostrzeżenia oxlint (set-state-in-effect, nieużywany setRole) bez zmiany zachowania.
+ * DP-60 (Pakiet DP-B): martwy `OptionsAccordion` usunięty razem z jego testem; DP-65: test oxlint pada, gdy oxlint się nie uruchomi;
+ * DP-68: sonda hooka bez przypisania do zmiennej spoza komponentu (react(globals)).
  */
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { act, createElement, type ReactNode } from 'react';
+import { act, createElement, useEffect } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { execFileSync } from 'node:child_process';
+import { spawnSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 
 /* DP-52: atrapa klienta bazy dla useOpenDecisions (tylko gdy VITE_AUTH_MODE=supabase) */
@@ -35,7 +37,6 @@ beforeAll(() => {
 const { useTowerStore } = await import('../src/store/useTowerStore');
 const { AwizacjaModal } = await import('../src/components/drawer/AwizacjaModal');
 const { SailingsPanel } = await import('../src/views/SailingsPanel');
-const { OptionsAccordion } = await import('../src/components/settings/OptionsAccordion');
 const { useOpenDecisions } = await import('../src/components/risks/useDecisions');
 const { isBeforePlannedLoad } = await import('../src/lib/awizacjaState');
 const { pt } = await import('../src/i18n/p7');
@@ -149,48 +150,30 @@ describe('DP-49 · jeden tekst braku rejsów: Awizacja i Harmonogram › Rejsy',
 });
 
 describe('DP-52 · oxlint bez starszych ostrzeżeń, zachowanie bez zmian', () => {
-  it('oxlint: brak set-state-in-effect w useDecisions/OptionsAccordion i nieużywanego setRole w AccountMenu', () => {
+  it('oxlint: brak set-state-in-effect / refs w useDecisions, OptionsShell, WhoGetsScreen, AwizacjaModal i nieużywanego setRole w AccountMenu', () => {
     const files = [
       'src/components/risks/useDecisions.ts',
-      'src/components/settings/OptionsAccordion.tsx',
+      'src/components/options/OptionsShell.tsx',
+      'src/components/options/WhoGetsScreen.tsx',
+      'src/components/drawer/AwizacjaModal.tsx',
       'src/components/shell/AccountMenu.tsx',
     ];
-    let out = '';
-    try {
-      out = execFileSync('node_modules/.bin/oxlint', ['-f', 'unix', ...files], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
-    } catch (e) {
-      out = String((e as { stdout?: string }).stdout ?? '');
-    }
-    const bad = out.split('\n').filter((l) => /set-state-in-effect|no-unused-vars/.test(l));
+    const r = spawnSync('node_modules/.bin/oxlint', ['-f', 'unix', ...files], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+    /* DP-65: oxlint musi się uruchomić (brak programu / awaria = błąd testu, nie cichy sukces); 0 = bez błędów, 1 = błędy lintu */
+    expect(r.error, String(r.error ?? '')).toBeUndefined();
+    expect([0, 1], `oxlint status=${r.status} ${r.stderr ?? ''}`).toContain(r.status);
+    const bad = String(r.stdout ?? '').split('\n').filter((l) => /set-state-in-effect|no-unused-vars|react\(refs\)/.test(l));
     expect(bad).toEqual([]);
   });
 
-  it('OptionsAccordion: każda nowa wartość forceOpen otwiera swoją sekcję; ręczne zwinięcie zostaje do następnej zmiany', async () => {
-    const sec = (id: string) => ({ id, titleKey: 'opt_acc_search', descKey: 'opt_acc_search', children: createElement('p', null, id) as ReactNode });
-    const sections = [sec('a'), sec('b'), sec('c')];
-    const isOpen = (id: string) => (host.querySelector(`details[data-section="${id}"]`) as HTMLDetailsElement).open;
-    const render = (forceOpen: string | null) => act(() => { root.render(createElement(OptionsAccordion, { locale: 'pl', sections, forceOpen })); });
-    mount();
-    await render('b');
-    expect([isOpen('a'), isOpen('b'), isOpen('c')]).toEqual([false, true, false]);
-    await render('c');
-    expect([isOpen('a'), isOpen('b'), isOpen('c')]).toEqual([false, true, true]);
-    /* użytkownik zwija „c” (toggle) — ta sama wartość forceOpen nie otwiera jej ponownie */
-    const c = host.querySelector('details[data-section="c"]') as HTMLDetailsElement;
-    act(() => { c.open = false; c.dispatchEvent(new Event('toggle')); });
-    await render('c');
-    expect(isOpen('c')).toBe(false);
-    /* null, potem znów „c” — otwiera (jak efekt na zmianę forceOpen) */
-    await render(null);
-    expect(isOpen('c')).toBe(false);
-    await render('c');
-    expect(isOpen('c')).toBe(true);
-  });
-
   it('useOpenDecisions: w paczce demo bez zapytania; w trybie bazy wiersze po odpowiedzi, błąd bazy w error, refresh działa', async () => {
-    let api: ReturnType<typeof useOpenDecisions> | null = null;
+    /* DP-68: sonda oddaje wynik hooka przez efekt do funkcji spoza komponentu — bez przypisania zmiennej spoza komponentu w renderze */
+    type Api = ReturnType<typeof useOpenDecisions>;
+    const probe: { api: Api | null } = { api: null };
+    const report = (a: Api) => { probe.api = a; };
     const Probe = ({ enabled }: { enabled: boolean }) => {
-      api = useOpenDecisions(enabled);
+      const a = useOpenDecisions(enabled);
+      useEffect(() => { report(a); });
       return null;
     };
     db.calls = 0;
@@ -198,7 +181,7 @@ describe('DP-52 · oxlint bez starszych ostrzeżeń, zachowanie bez zmian', () =
     await act(async () => { root.render(createElement(Probe, { enabled: true })); });
     await tick();
     expect(db.calls).toBe(0);
-    expect(api!.rows).toEqual([]);
+    expect(probe.api!.rows).toEqual([]);
     act(() => { root.unmount(); });
 
     vi.stubEnv('VITE_AUTH_MODE', 'supabase');
@@ -213,12 +196,12 @@ describe('DP-52 · oxlint bez starszych ostrzeżeń, zachowanie bez zmian', () =
     await act(async () => { root.render(createElement(Probe, { enabled: true })); });
     await tick();
     expect(db.calls).toBe(1);
-    expect(api!.rows.map((r) => r.id)).toEqual(['d1']);
-    expect(api!.error).toBeNull();
+    expect(probe.api!.rows.map((r) => r.id)).toEqual(['d1']);
+    expect(probe.api!.error).toBeNull();
 
     db.result = { data: [], error: { message: 'brak połączenia' } };
-    await act(async () => { await api!.refresh(); });
-    expect(api!.error).toBe('brak połączenia');
-    expect(api!.rows.map((r) => r.id)).toEqual(['d1']);
+    await act(async () => { await probe.api!.refresh(); });
+    expect(probe.api!.error).toBe('brak połączenia');
+    expect(probe.api!.rows.map((r) => r.id)).toEqual(['d1']);
   });
 });

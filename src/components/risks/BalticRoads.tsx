@@ -18,12 +18,13 @@ import { keepUnits, RoadRow } from './RoadRow';
 
 const fmtNum = (v: number) => formatPlNumber(v, Number.isInteger(v) ? 0 : 1);
 
-/* etykieta limitu z wartością („Limit masy 12 t”); bez wartości — sama nazwa limitu */
+/* etykieta limitu z wartością („Limit masy 12 t”); bez wartości — sama nazwa limitu.
+   DP-177: liczba nie odrywa się od jednostki także w tytule (etykieta limitu) — twarda spacja jak w opisach i Drogach SE */
 function limitLabel(locale: Locale, r: BalticRoadRow): string {
   if (!r.limit) return '';
   if (r.limitValue == null) return rt(locale, `bn9c4_limit_${r.limit}`);
   const key = r.limit === 'WEIGHT' ? 'bn9c4_weight' : r.limit === 'HEIGHT' ? 'bn9c4_height' : 'bn9c4_width';
-  return rtp(locale, key, { limit: fmtNum(r.limitValue) });
+  return keepUnits(rtp(locale, key, { limit: fmtNum(r.limitValue) }));
 }
 
 function rowWhen(locale: Locale, r: BalticRoadRow): string | null {
@@ -45,7 +46,7 @@ function Row({ r, locale, phone }: { r: BalticRoadRow; locale: Locale; phone: bo
       attrs={{ 'data-baltic-road': r.id, 'data-risk-id': r.id, 'data-limit': r.limit ?? undefined }}
       box={r.country}
       /* długi tytuł ze źródła — jedna linia z wielokropkiem, pełny tekst w podpowiedzi (React sam koduje znaki) */
-      titleTip={[tag, r.event ?? r.title].filter(Boolean).join(' · ')}
+      titleTip={keepUnits([tag, r.event ?? r.title].filter(Boolean).join(' · '))}
       title={<>{r.limit ? <span className="rk-limit-tag" data-limit-tag>{tag}</span> : null}{keepUnits(r.event ?? r.title)}</>}
       impact={r.impact}
       when={rowWhen(locale, r)}
@@ -56,7 +57,7 @@ function Row({ r, locale, phone }: { r: BalticRoadRow; locale: Locale; phone: bo
       translated={rt(locale, `bn9c4_translated_${r.country}`)}
       extra={r.limit ? (
         <span className="rk-road-n rk-limit-check" data-limit-check>
-          {r.loadT != null ? rtp(locale, 'bn9c4_check_load', { load: fmtNum(r.loadT) }) : rt(locale, 'bn9c4_check')}
+          {r.loadT != null ? keepUnits(rtp(locale, 'bn9c4_check_load', { load: fmtNum(r.loadT) })) : rt(locale, 'bn9c4_check')}
         </span>
       ) : null}
     />

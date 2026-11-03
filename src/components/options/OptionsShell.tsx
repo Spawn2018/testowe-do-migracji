@@ -5,7 +5,7 @@
  * Telefon (E12 „Telefon”, E11 `img/e11-phone`): kafelki grup ze stanem → lista ekranów grupy → ekran z „‹”.
  * Tylko nawigacja między ekranami: bez zapisu, bez zmiany roli i uprawnień.
  */
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import type { Locale } from '../../types';
 import { t } from '../../i18n/messages';
 import { DESC_KEY, GROUP_KEY, RIGHT_KEY, SCREEN_KEY, type OptGroup, type OptGroupId, type OptScreen, type OptScreenId } from './types';
@@ -56,17 +56,19 @@ export function OptionsShell({ locale, rootKey, who, groups, request, saved }: P
   const first = all[0]?.screen.id ?? null;
   const [active, setActive] = useState<OptScreenId | null>(request?.screen ?? first);
   const [level, setLevel] = useState<Level>(request ? { kind: 'screen', screen: request.screen } : { kind: 'groups' });
-  /* każde wskazanie z zewnątrz obsłużone raz (numer `seq`) — kolejne odświeżenie widoku nie wraca do tego ekranu */
-  const handled = useRef(request?.seq ?? 0);
-
-  useEffect(() => {
-    if (!request || request.seq <= handled.current) return;
-    if (!all.some((x) => x.screen.id === request.screen)) return;
-    handled.current = request.seq;
+  /* każde wskazanie z zewnątrz obsłużone raz (numer `seq`) — kolejne odświeżenie widoku nie wraca do tego ekranu.
+     DP-62: obsługa w trakcie renderu (stan z poprzedniej wartości propsa) zamiast setState w efekcie; efekt tylko przewija. */
+  const [handled, setHandled] = useState(request?.seq ?? 0);
+  const [scrollSeq, setScrollSeq] = useState(0);
+  if (request && request.seq > handled && all.some((x) => x.screen.id === request.screen)) {
+    setHandled(request.seq);
     setActive(request.screen);
     setLevel({ kind: 'screen', screen: request.screen });
-    toTop();
-  }, [request, all]);
+    setScrollSeq(request.seq);
+  }
+  useEffect(() => {
+    if (scrollSeq) toTop();
+  }, [scrollSeq]);
 
   /* ekran zniknął (np. zmiana roli w Podglądzie) → pierwszy dostępny */
   const current = all.find((x) => x.screen.id === active) ?? all[0] ?? null;

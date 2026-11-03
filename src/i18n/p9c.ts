@@ -6,7 +6,7 @@ import type { Locale } from '../types';
 import { t } from './messages';
 import { serverRuleOn } from '../lib/serverRules';
 
-const PL: Record<string, string> = {
+export const PL: Record<string, string> = {
   /* nagłówek (pkt 2, L20 — bez deklaracji częstotliwości) */
   p9c_head: 'W oknie śledzenia {n} · z pozycją {m} · bez żadnej pozycji {k}',
   p9c_head_hint: ' — od 03:00 w dniu załadunku do „Dostarczone”',

@@ -6,7 +6,7 @@
 import type { Locale } from '../types';
 import { t } from './messages';
 
-const PL: Record<string, string> = {
+export const PL: Record<string, string> = {
   /* Kokpit (E16) */
   p5c_margin_desc: '{money} · ważona przychodem · {counts}',
   /* te same słowa co nagłówek Finansów (p5_fin_priced_line / p5_fin_priced_all) — tu osobno, żeby Kokpit nie wczytywał słownika P5 */

@@ -5,7 +5,7 @@
 import type { Locale } from '../types';
 import { t } from './messages';
 
-const PL: Record<string, string> = {
+export const PL: Record<string, string> = {
   /* Historia */
   p6b_f_ALL: 'Wszystko',
   p6b_f_ROUTE: 'Statusy i trasa',

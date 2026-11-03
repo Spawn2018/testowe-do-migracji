@@ -5,7 +5,7 @@
 import type { Locale } from '../types';
 import { t } from './messages';
 
-const PL: Record<string, string> = {
+export const PL: Record<string, string> = {
   j4_h_hhl: 'Ocena przewoźników',
   j4_h_scx: 'Twoja ocena i punktualność',
   j4_sub: 'transporty rozładowane',

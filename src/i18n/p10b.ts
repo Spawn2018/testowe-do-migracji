@@ -5,7 +5,7 @@
 import type { Locale } from '../types';
 import { t } from './messages';
 
-const PL: Record<string, string> = {
+export const PL: Record<string, string> = {
   p10b_bcast_close: 'Zamknij',
   p10b_bcast_close_aria: 'Zamknij komunikat HHL',
   p10b_reset_sent: 'Jeśli adres ma konto, wysłaliśmy link. Działa na każdym urządzeniu przez {ttl}.',

@@ -5,7 +5,7 @@
 import type { Locale } from '../types';
 import { t } from './messages';
 
-const PL: Record<string, string> = {
+export const PL: Record<string, string> = {
   /* nagłówek */
   p5_fin_unpriced_note: '({codes}{why})',
   p5_fin_unpriced_why_date: ', brak daty',

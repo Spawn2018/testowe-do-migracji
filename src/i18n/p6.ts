@@ -6,7 +6,7 @@
 import type { Locale } from '../types';
 import { t } from './messages';
 
-const PL: Record<string, string> = {
+export const PL: Record<string, string> = {
   p6_title: 'Ryzyka',
   p6_todo: 'Do zrobienia',
   p6_todo_same: 'ta sama liczba w menu i w Kokpicie',
