@@ -65,21 +65,36 @@ function resolveFrozenMs(): number | null {
   return cachedMs;
 }
 
+/**
+ * DP-79: zegar demo. Dane demo (seed, ETA, zdarzenia) stoją na 23.09.2026, 16:32 (Europe/Warsaw); bez zamrożenia
+ * (URL / VITE_FROZEN_NOW) Kokpit pokazywał nagłówek z bieżącą datą, a „dziś” wykresu i „ostatnia pozycja” z danych
+ * demo (np. „37 d temu”). W demo (`VITE_AUTH_MODE !== 'supabase'`) zegar startuje więc z `DEFAULT_HINT` i płynie
+ * od wczytania strony. Produkcja — czas rzeczywisty, bez zmian.
+ */
+const BOOT_MS = Date.now();
+function demoClock(): boolean {
+  const mode = typeof import.meta !== 'undefined' && import.meta.env ? import.meta.env.VITE_AUTH_MODE : undefined;
+  return mode !== 'supabase';
+}
+function liveMs(): number {
+  return demoClock() ? Date.parse(DEFAULT_HINT) + (Date.now() - BOOT_MS) : Date.now();
+}
+
 /** True when URL or VITE_FROZEN_NOW supplied a valid ISO timestamp. */
 export function isFrozenNow(): boolean {
   return resolveFrozenMs() != null;
 }
 
-/** Current instant as Date — frozen when configured, else wall clock. */
+/** Current instant as Date — frozen when configured, else demo clock (demo) / wall clock (production). */
 export function getNow(): Date {
   const ms = resolveFrozenMs();
-  return ms != null ? new Date(ms) : new Date();
+  return new Date(ms != null ? ms : liveMs());
 }
 
 /** Current instant as epoch ms — frozen when configured, else Date.now(). */
 export function getNowMs(): number {
   const ms = resolveFrozenMs();
-  return ms != null ? ms : Date.now();
+  return ms != null ? ms : liveMs();
 }
 
 /** Current instant as ISO string — frozen when configured, else now. */

@@ -7,7 +7,7 @@ import { formatCalendarDay } from '../../lib/time';
 import { formatPlNumber } from '../../lib/format';
 import { isAfterDelivery } from '../../lib/status';
 
-/** I-0: w buildzie produkcyjnym „dziś” = bieżąca data (bez zamrożonej daty danych demo 23.09). */
+/** I-0 / DP-79: „dziś” = dzień z `getNow()` — produkcja: bieżąca data; demo: zegar demo (23.09.2026 albo `?now=`). */
 const PROD_BUILD = import.meta.env.VITE_AUTH_MODE === 'supabase';
 function prodToday(): Date {
   const n = getNow();
@@ -78,7 +78,8 @@ export function DeliveryProgress({ loads, locale }: { loads: Load[]; locale: Loc
   const weeks = useMemo(() => {
     if (PROD_BUILD) return progressWeeksFromDb(loads, prodToday());
     const start = new Date('2026-09-07T00:00:00Z');
-    const today = new Date('2026-09-23T00:00:00Z');
+    /* DP-79: „dziś” z tego samego zegara co nagłówek Kokpitu (demo: 23.09.2026 albo `?now=`) */
+    const today = prodToday();
     const out: WeekPoint[] = [];
     for (let w = 0; w < 9; w++) {
       const from = new Date(start);
@@ -184,7 +185,7 @@ export function DeliveryProgress({ loads, locale }: { loads: Load[]; locale: Loc
           </svg>{' '}
           {t(locale, 'actualline')}
         </span>
-        <span style={{ color: 'var(--amber-ink)' }}>▏{t(locale, 'today_mark')} {PROD_BUILD ? dmy(prodToday()) : '23.09.2026'}</span>
+        <span style={{ color: 'var(--amber-ink)' }}>▏{t(locale, 'today_mark')} {dmy(prodToday())}</span>
       </div>
     </div>
   );
