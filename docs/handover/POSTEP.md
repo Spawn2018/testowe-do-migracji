@@ -1,4 +1,11 @@
 
+## 2026-11-03 04:05 — DP-178 F7 r1 (#748): klucz LV tylko host NAP
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720/#735 w planie.
+- Scalanie: brak F7 „gotowe” (F7 r1 @ `c045db82` — niegotowe).
+- **Krok:** `lvNapKeyAllowedForUrl` — drugi fetch meta z kluczem tylko `*.transportdata.gov.lv`; obcy host bez klucza, 401/403 → `meta:obcy-host:<host>`; obs `lv_*_data_host`. Vitest bn6 ee+lv **60**.
+- **Dalej:** push → CI → F7. Po F7: BN8b po HERE ~04:15 UTC. Bez push na main.
+
 ## 2026-11-03 03:45 — #747 SCALONE + start DP-178
 
 - Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720/#735 w planie. DP-178/179 w rejestrze.

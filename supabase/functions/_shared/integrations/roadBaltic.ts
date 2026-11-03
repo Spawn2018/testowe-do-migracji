@@ -1586,6 +1586,22 @@ const LV_META_URL_KEYS = [
 ] as const;
 
 /**
+ * F7 #748 r1 — klucz subskrypcji NAP tylko do hosta `LV_NAP_BASE` albo `*.transportdata.gov.lv`.
+ * Obcy CDN/S3: fetch bez nagłówka (plik publiczny).
+ */
+export function lvNapKeyAllowedForUrl(url: string, base: string = LV_NAP_BASE): boolean {
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    const baseHost = new URL(base).hostname.toLowerCase();
+    if (!host) return false;
+    if (host === baseHost) return true;
+    return host === 'transportdata.gov.lv' || host.endsWith('.transportdata.gov.lv');
+  } catch {
+    return false;
+  }
+}
+
+/**
  * DP-178 pkt 4 — JSON metadanych NAP (files/url/resources) → pierwszy https URL danych.
  * Bez ścieżek względnych wymagających logowania do ZIP.
  */

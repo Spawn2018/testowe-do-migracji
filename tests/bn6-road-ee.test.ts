@@ -29,6 +29,7 @@ import {
   classifyBalticFeedClass,
   classifyBalticNetError,
   lvMetadataDataUrl,
+  lvNapKeyAllowedForUrl,
   clearEeSitesCache,
   dimensionLimitRisk,
   EE_PROBE_API_PATH,
@@ -258,6 +259,10 @@ describe('BN6 road-ee parsers', () => {
       files: [{ field_source_url: 'https://data.example.lv/feed.xml' }],
     })).toBe('https://data.example.lv/feed.xml');
     expect(lvMetadataDataUrl({ message: 'maintenance' })).toBeNull();
+    /* F7 #748 r1: klucz tylko host NAP / *.transportdata.gov.lv */
+    expect(lvNapKeyAllowedForUrl('https://www.transportdata.gov.lv/api/pull/x')).toBe(true);
+    expect(lvNapKeyAllowedForUrl('https://api.transportdata.gov.lv/file.xml')).toBe(true);
+    expect(lvNapKeyAllowedForUrl('https://cdn.example.com/feed.xml')).toBe(false);
   });
 
   it('F7 B5 / r2 B1: nested weather — jäide / zimno+RH / mgła → HIGH+slow; märg → nie', () => {

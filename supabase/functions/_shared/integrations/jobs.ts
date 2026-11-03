@@ -110,7 +110,8 @@ import {
   capBalticRiskSeverity, classifyBalticNetError, dedupeLvSlippery, eeDatexApiKeyMeta,
   eeDatexFeedUrl, fiCorridorBboxes, fiTrafficUrl, filterInEeBboxes, filterInFiBboxes,
   filterInLvBboxes, dimensionLimitRisk, filterInLtBboxes, getEeSitesCache, isDimensionLimitEvent,
-  isFiWeightLimitLike, ltWeatherToSlowdownEvents, lvMetadataDataUrl, lvNapKeyEnv, lvNapUrlEnv,
+  isFiWeightLimitLike, ltWeatherToSlowdownEvents, lvMetadataDataUrl, lvNapKeyAllowedForUrl,
+  lvNapKeyEnv, lvNapUrlEnv,
   normalizeLvNapUrl,
   lvWeatherToSlowdownEvents, parseEeFeedBody, parseFiTrafficMessages, parseLtRestrictions,
   parseLtWeather, parseLvFeedBody, probeBalticHost, probeEeDatexApi, readBalticFeedBody,
@@ -4079,6 +4080,8 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
     skipped: number;
     swapped: number;
     shape?: string;
+    /** F7 #748: host drugiego fetchu (bez ścieżki). */
+    dataHost?: string;
   };
   const parts = await mapPoolLimit(configured, LV_FEED_CONCURRENCY, async ({ code, url, key }): Promise<LvFeedPart> => {
     if (Date.now() - started > BALTIC_FEED_BUDGET_MS) {
@@ -4093,16 +4096,20 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
         swapped: 0,
       };
     }
-    const headers: Record<string, string> = {
+    const baseHeaders: Record<string, string> = {
       'User-Agent': LV_UA,
       Accept: 'application/json, application/xml, text/xml, */*',
-      [LV_NAP_KEY_HEADER]: key,
     };
-    const fetchOnce = async (fetchUrl: string): Promise<{
+    const fetchOnce = async (
+      fetchUrl: string,
+      withKey: boolean,
+    ): Promise<{
       res: Response;
       body: Awaited<ReturnType<typeof readBalticFeedBody>> | null;
       ct: string | null;
     }> => {
+      const headers: Record<string, string> = { ...baseHeaders };
+      if (withKey) headers[LV_NAP_KEY_HEADER] = key;
       const ctrl = new AbortController();
       const timer = setTimeout(() => ctrl.abort(), BALTIC_FEED_TIMEOUT_MS);
       try {
@@ -4116,7 +4123,7 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
       }
     };
     try {
-      let { res, body, ct } = await fetchOnce(url);
+      let { res, body, ct } = await fetchOnce(url, true);
       if (!res.ok || body == null) {
         return {
           code, ok: false,
@@ -4137,13 +4144,26 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
       let text = body.text;
       let bytes = body.bytes;
       let shape = balticFeedShapeObs(res.status, ct, bytes, text);
-      /* DP-178 pkt 4: metadane JSON → pobierz plik danych (ten sam klucz). */
+      let dataHost: string | undefined;
+      /* DP-178 / F7 #748: metadane JSON → plik; klucz tylko na host NAP. */
       if (text.trim().startsWith('{')) {
         try {
           const meta = JSON.parse(text) as unknown;
           const dataUrl = lvMetadataDataUrl(meta);
           if (dataUrl && dataUrl !== url) {
-            const second = await fetchOnce(dataUrl);
+            dataHost = balticWarnHost(dataUrl);
+            const allowKey = lvNapKeyAllowedForUrl(dataUrl);
+            const second = await fetchOnce(dataUrl, allowKey);
+            if (!allowKey && (second.res.status === 401 || second.res.status === 403)) {
+              return {
+                code, ok: false,
+                warning: `nieczytelna odpowiedź ${code}`,
+                per: `bad:meta-obcy-host`, format: 'unknown', events: [],
+                skipped: 0, swapped: 0,
+                shape: `meta:obcy-host:${dataHost}`,
+                dataHost,
+              };
+            }
             if (second.res.ok && second.body && second.body.ok) {
               res = second.res;
               ct = second.ct;
@@ -4156,7 +4176,7 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
                 code, ok: false,
                 warning: `nieczytelna odpowiedź ${code}`,
                 per: 'too_large', format: 'unknown', events: [],
-                skipped: 0, swapped: 0, shape,
+                skipped: 0, swapped: 0, shape, dataHost,
               };
             }
           }
@@ -4176,7 +4196,7 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
           code, ok: false,
           warning: `nieczytelna odpowiedź ${code}`,
           per: `bad:${parsed.format}`, format: parsed.format, events: [],
-          skipped: localStats.skipped, swapped: localStats.swapped, shape,
+          skipped: localStats.skipped, swapped: localStats.swapped, shape, dataHost,
         };
       }
       /* DP-168 / F7 #730: lv_<kod>=ok:<rekordy>:<pominięte>:<format>:<swapped> */
@@ -4186,7 +4206,7 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
           parsed.events.length, localStats.skipped, parsed.format, localStats.swapped,
         ),
         format: parsed.format, events: parsed.events,
-        skipped: localStats.skipped, swapped: localStats.swapped,
+        skipped: localStats.skipped, swapped: localStats.swapped, dataHost,
       };
     } catch (e) {
       /* DP-165: klasa błędu + host bez ścieżki (klucz nie w warnings). */
@@ -4205,11 +4225,13 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
   const allEvents: BalticRoadEvent[] = [];
   const perCode: Record<string, string> = {};
   const perShape: Record<string, string> = {};
+  const perDataHost: Record<string, string> = {};
   const formats: Record<string, string> = {};
   for (const p of parts) {
     perCode[p.code] = p.per;
     if (p.format) formats[p.code] = p.format;
     if (p.shape) perShape[p.code] = p.shape;
+    if (p.dataHost) perDataHost[p.code] = p.dataHost;
     if (p.warning) warnings.push(p.warning);
     if (p.ok) {
       fetchedOk++;
@@ -4334,6 +4356,9 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
       ...diag,
       ...Object.fromEntries(Object.entries(perCode).map(([k, v]) => [`lv_${k.toLowerCase()}`, v])),
       ...Object.fromEntries(Object.entries(perShape).map(([k, v]) => [`lv_${k.toLowerCase()}_shape`, v])),
+      ...Object.fromEntries(
+        Object.entries(perDataHost).map(([k, v]) => [`lv_${k.toLowerCase()}_data_host`, v]),
+      ),
     },
   };
 }

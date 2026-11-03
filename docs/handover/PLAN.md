@@ -1268,7 +1268,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-172 | Cursor | DeepL dla sytuacji drogowych LT/LV/EE/FI jak SE (decyzja 89): źródła LT/LV/ET/FI; wolny tekst po filtrze korytarza; pamięć+retry+licznik; bez tłum. nazw miejsc; kody → `detail.kody` | #742 | BN6 / DeepL | SCALONE (#745 `162b4aa1` / **0383**) |
 | DP-175 | Cursor | test jsdom: legi BN7 bez punktów → tylko rdzeń (nie blokuje #740) | F7 #740 | BN7 / test | w kolejce |
 | DP-177 | koordynator | `keepUnits` także w tytułach bałtyckich (front) | F7 #743 | BN9-c4b / front | w kolejce |
-| DP-178 | koordynator (#735) | EE/LV: shape obs przy nieczytelnej odpowiedzi; EE RESTRICTIONS 20 MB (brak bbox); SRTI `[]` = OK 0; LV metadane→plik / html→host | #735 odbiór DP-171 | BN6 / EE+LV | W TOKU (`pakiet/dp178-ee-lv-shape-fix`) |
+| DP-178 | koordynator (#735) | EE/LV: shape obs; RESTRICTIONS 20 MB; SRTI `[]`=OK; LV meta→plik; F7 #748 r1: klucz tylko host NAP | #735 / #748 | BN6 / EE+LV | W TOKU (`pakiet/dp178-ee-lv-shape-fix`, F7 r1) |
 | DP-179 | koordynator (F7 #747) | Wspomniane przy DP-178 w F7 #747 — bez osobnej treści; przyjąć = w pakiecie DP-178 albo dopisek | F7 #747 | BN6 | w kolejce (szczegóły) |
 | DP-122 | Cursor | `viking_schedule_imports` (0360) brak w kopii 01.11 01:30 — koordynator #697: **nie wymaga zmian** (0360 po kopii 00:30; kontrola kopii 02.11) | #697 | backup | bez zmian (koord. 01.11) |
 | DP-117 | Cursor | `route-check/index.ts` `loads` `.limit(500)` bez sortu/filtra statusu — przy >500 transportach losowy dobór | F7 #693 r1 | ferry / route-check | w kolejce |
@@ -2571,6 +2571,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 03.11.2026 02:40 | #745 DP-172 SCALONE `162b4aa1`; start cron_fetch=true **0384** (#746) | pętla / BN7 |
 | 03.11.2026 03:10 | #746 SCALONE `638abbf4` / **0384** (F7 @ b0015e90); start BN8 front `src/lib` (82-C, DP-143/144) | pętla / BN8 |
 | 03.11.2026 03:45 | #747 SCALONE `4ce85732` (BN8 front F7 @ 9fcd6fe2); start DP-178 (#735 shape/20 MB/SRTI/LV meta); DP-179 w rejestrze | pętla / DP-178 |
+| 03.11.2026 04:05 | #748 F7 r1: klucz LV tylko `*.transportdata.gov.lv`; obcy host bez klucza + `data_host` | pętla / DP-178 |
 | 31.10.2026 — | Decyzja 73: TLLA-HEL ETA−150 min / HELA-TLL ETD+160 min (fixture Cargo; nocny 165 min OK). Decyzja 74: `sailings.source_ref` 0359; Digitraffic `digitraffic:portcall:<id>:<route>`; HTML/RECZNIE/DANE_STARTOWE wygrywają; #685-b RPC zastępuje digitraffic:% w ±3 h | F7 #688 r1–r4 |
 | 31.10.2026 — | F7 #683 nieblokujące (osobna poprawka): Scheduler grudzień + „on 2 January” → rok bieżący, ciche wygaśnięcie; Alert INFO bez ryzyka/historii — świadomie | F7 #683 r7 |
 | 31.10.2026 — | F7 #683 r8 nieblokujące (osobno): Alert poza Schedulerem obok Schedulera; sprzeczne bloki (resume→cofnięcie auto); rok przy długim oknie Schedulera; mutanty M10/M15–M17/M22 świadomie bez testów | F7 #683 r8 |
