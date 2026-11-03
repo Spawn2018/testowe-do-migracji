@@ -237,8 +237,6 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
   const linesScope = useMemo(() => scopeOfSpec(linesSpec), [linesSpec]);
   /* tory zakresu (kadr): zmiana zbioru torów = nowy kadr (F7 #740 W2) */
   const tracksKey = [...linesScope.tracks].sort().join(',');
-  /* dopisek przy linii bałtyckiej (BN7 §7 pkt 1) */
-  const balticLine = linesScope.baltic;
   /* tory, dla których był ostatni kadr (pierwszy kadr robi `acquireMap` z zakresem widoku) */
   const fitTracksRef = useRef<string | null>(null);
   const onMarkerRef = useRef(onMarker);
@@ -856,9 +854,6 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
       siteZone: (() => { const g = geofences.find((x) => x.type === 'SITE' && x.active); return g ? geofenceDisplayName(g.name, locale) : null; })(),
     })
     : null;
-  /* BN9-c5: dopisek trasy bałtyckiej — gdy jest linia bałtycka i warstwa „Trasa” włączona */
-  const showRouteNote = balticLine && !!mapLayers.route;
-  const noteInDrawer = showRouteNote && !!drawerNote;
   /* P11 (e1, e32): dopisek stoi nad podpisem podkładu (prawa autorskie), nie na nim — wysokość podpisu z elementu Leaflet */
   const hasNote = !!drawerNote;
   const [attrH, setAttrH] = useState(0);
@@ -878,7 +873,7 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
     if (!mapReady || slot !== 'drawer' || followedIdRef.current !== '-') return;
     const raf = requestAnimationFrame(() => fitCorridor(mapReady));
     return () => cancelAnimationFrame(raf);
-  }, [attrH, noteLines, noteInDrawer, mapReady, slot]);
+  }, [attrH, noteLines, mapReady, slot]);
 
   return (
     <div
@@ -923,16 +918,9 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
           {drawerNote.lines.map((ln, i) => (
             <span key={i} className={`po-mapnote-l${drawerNote.alert === i ? ' is-alert' : ''}`}>{ln}</span>
           ))}
-          {/* BN9-c5 (BN7 §7 pkt 1): w Przeglądzie dopisek trasy bałtyckiej w tym samym polu (jedno pole na dole mapy) */}
-          {noteInDrawer ? <span className="po-mapnote-l bn7-note-l" data-route-note="baltic">{t(locale, 'bn9c5_route_note')}</span> : null}
         </div>
       ) : null}
-      {showRouteNote && !noteInDrawer ? (
-        /* BN9-c5 (BN7 §7 pkt 1): linia bałtycka z HERE jest orientacyjna — nie zastępuje trasy z zezwolenia */
-        <div className="note bn7-note" data-route-note="baltic" role="note">
-          {t(locale, 'bn9c5_route_note')}
-        </div>
-      ) : null}
+      {/* DP-191 (polecenie właściciela 03.11): bez dopisku „Trasa orientacyjna (HERE…)” na Mapie, w Kokpicie i w Przeglądzie */}
       {/* wyglad/P4-b (E27): pusta lista = nikt w oknie śledzenia (Mapa: „W trasie: 0”, panel poza oknem) — to nie „brak danych” */}
       {slot !== 'drawer' && PROD_BUILD && mapLayers.vehicles && gpsReady && loads.length > 0 && !loads.some((l) => gpsFixes.has(l.id)) ? (
         <div className="note" data-empty="vehicle-positions" style={{ position: 'absolute', left: 12, right: 12, bottom: embedded ? 8 : 36, zIndex: 500, maxWidth: 360, background: 'var(--surface)', padding: '6px 8px' }}>

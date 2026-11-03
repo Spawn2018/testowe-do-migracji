@@ -1,8 +1,8 @@
 /**
  * @vitest-environment jsdom
  * DP-175 (F7 #740, BN9-c6 pkt 6) — Mapa w PROD z legami BN7 bez punktów (np. przed pierwszym `cron_fetch` albo pusty
- * odczyt HERE): rysuje rdzeń Polska–Szwecja, wszystkie 6 torów i dopisek „Trasa orientacyjna…”, bez błędu
- * i bez pustych linii BN7. Dane wymyślone (G-09).
+ * odczyt HERE): rysuje rdzeń Polska–Szwecja i wszystkie 6 torów, bez błędu i bez pustych linii BN7; DP-191: bez dopisku
+ * „Trasa orientacyjna…”. Dane wymyślone (G-09).
  */
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { act, createElement } from 'react';
@@ -35,7 +35,6 @@ const { CorridorMap } = await import('../src/components/map/CorridorMap');
 const { __poolEntryForTests, __resetMapPool, acquireMap, drawCorridorLines, NETWORK_LINES, releaseMap } = await import('../src/components/map/mapPool');
 const { __resetRoadLinesCacheForTests } = await import('../src/components/map/applyBasemap');
 const { BN7_LEGS, CORE_LEGS } = await import('../src/lib/map/routeLegs');
-const { I18N_ALL } = await import('../src/i18n/messages');
 
 type Pt = readonly [number, number];
 const first = (pl: Polyline): Pt => {
@@ -103,7 +102,7 @@ describe('DP-175 · Mapa PROD: legi BN7 bez punktów', () => {
     releaseMap(e, 'map');
   });
 
-  it('CorridorMap (strona Mapa): rdzeń, 6 torów i dopisek „Trasa orientacyjna…”, bez błędu w konsoli', async () => {
+  it('CorridorMap (strona Mapa): rdzeń, 6 torów, bez dopisku „Trasa orientacyjna…” (DP-191), bez błędu w konsoli', async () => {
     prod();
     const err = vi.spyOn(console, 'error');
     root = createRoot(host!);
@@ -111,7 +110,8 @@ describe('DP-175 · Mapa PROD: legi BN7 bez punktów', () => {
     await wait(300);
     expect(routeLayers().map(first)).toEqual(Object.values(START));
     expect(laneLayers()).toHaveLength(6);
-    expect(host!.querySelector('[data-route-note="baltic"]')?.textContent).toBe(I18N_ALL.pl.bn9c5_route_note);
+    expect(host!.querySelectorAll('[data-route-note]')).toHaveLength(0);
+    expect(host!.textContent ?? '').not.toContain('Trasa orientacyjna');
     const mapErrors = err.mock.calls.filter((c) => /leaflet|polyline|latlng|route/i.test(String(c[0])));
     expect(mapErrors).toEqual([]);
   });
