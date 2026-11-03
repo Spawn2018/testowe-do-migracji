@@ -55,16 +55,18 @@ export const ROAD_LEGS: readonly RoadLegDef[] = [
     destination: '65.80539,21.75914',
     spec: 'se',
     summary: 'Trasa drogowa Nynäshamn–Boden',
-    // DP-197: kontrola odchyłki od SE_E4 + via miast (jak KAA / decyzja 97).
+    // DP-197 / F7 #771: odchyłka SE_E4 + via na jezdni E4 (nie centra miast).
     corridorCode: 'SE_E4',
     viaPoints: [
-      [59.3293, 18.0686], // Sztokholm
-      [59.8586, 17.6389], // Uppsala
-      [60.6749, 17.1413], // Gävle
-      [62.3908, 17.3069], // Sundsvall
-      [63.8258, 20.2630], // Umeå
-      [65.5842, 22.1547], // Luleå
+      [59.322, 18.005], // Essingeleden E4
+      [59.8767, 17.6953], // Uppsala E4 (0354)
+      [60.6638, 17.109], // Gävle E4
+      [61.7279, 17.065], // Hudiksvall E4
+      [62.391, 17.340], // Sundsvall E4
+      [63.8127, 20.3263], // Umeå E4
+      [65.606, 22.053], // Luleå E4/97 (nie centrum)
     ],
+
     browserFetch: true,
     mapGroup: 'core',
     cronFetch: true,
@@ -240,10 +242,11 @@ export async function refreshRoadLegs(
     }
 
     const dictVia = leg.viaPoints ?? [];
-    // KAA: via z korytarza OSM; SE_E4: via miast z legu (DP-197), inaczej corridor.via.
+    // KAA: via z korytarza OSM; SE_E4: via węzłów E4 z legu (DP-197 / F7 #771), inaczej corridor.via.
     const viaPts = isKaa
       ? (corridor?.via ?? [])
       : (dictVia.length > 0 ? dictVia : (corridor?.via ?? []));
+
     const corridorPts = corridor?.pts ?? [];
     const corridorLabel = corridor?.code ?? '?';
     attempted += 1;
@@ -321,7 +324,7 @@ export async function refreshRoadLegs(
           ? looseRoadOk(line)
           : roadGeometryOk(line, geomSpec);
     // #667 F7 r3 B4: SE_E22 / SE_KAA_INLAND = rzadki korytarz (controlPts + 15 km);
-    // DP-197: SE_E4 też sparse — postój w Sztokholmie ~3 km od cięciwy OSM.
+    // DP-197: SE_E4 sparse — ciężarówka na E4 (Essingeleden) vs cięciwa OSM przez centrum.
     // SE_KAA_TRACK (gdyby wrócił) = stara reguła śladu GPS.
     const sparse =
       corridorLabel === 'SE_E22' ||

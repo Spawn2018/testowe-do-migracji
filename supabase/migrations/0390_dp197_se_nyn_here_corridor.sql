@@ -1,22 +1,30 @@
 -- DP-197: SE-NYN kontrola odchyłki/via vs SE_E4; alarm OFF_CORRIDOR po HERE gdy świeży (OSM bez HERE).
--- F7 #770 decyzja 97.
+-- F7 #770 decyzja 97; F7 #771 r1: via na E4 (nie centra), stara geometria SE-NYN → 22 d.
 select set_config('tower.audit_source', 'migracja 0390 (DP-197 SE-NYN HERE corridor)', true);
 
--- via miast wzdłuż E4 (Sztokholm…Luleå) — passThrough w here-roads + kontrola odchyłki.
+-- via na jezdni E4 (Essingeleden…Luleå E4/97) — passThrough; bez zjazdów do centrów (F7 #771).
 update public.here_road_legs set
   corridor_code = coalesce(corridor_code, 'SE_E4'),
   via_points = '[
-    [59.3293,18.0686],
-    [59.8586,17.6389],
-    [60.6749,17.1413],
-    [62.3908,17.3069],
-    [63.8258,20.2630],
-    [65.5842,22.1547]
+    [59.322,18.005],
+    [59.8767,17.6953],
+    [60.6638,17.109],
+    [61.7279,17.065],
+    [62.391,17.340],
+    [63.8127,20.3263],
+    [65.606,22.053]
   ]'::jsonb
  where leg = 'SE-NYN';
 
 comment on column public.here_road_legs.via_points is
-  'BN7 dict + DP-197 SE-NYN: Sztokholm, Uppsala, Gävle, Sundsvall, Umeå, Luleå.';
+  'BN7 dict + DP-197 SE-NYN: węzły E4 (Essingeleden, Uppsala, Gävle, Hudiksvall, Sundsvall, Umeå, Luleå E4/97).';
+
+-- F7 #771 r1 pkt 1: stara swobodna geometria SE-NYN (bez via) nie może włączać alarmu HERE.
+-- 22 d → bn8b_here_leg_fresh=false (OSM), shouldFetch cron 21 d=true; <30 d purge → linia na mapie zostaje.
+update public.here_road_geometry
+   set fetched_at = now() - interval '22 days',
+       retry_after = null
+ where leg = 'SE-NYN';
 
 create or replace function public.refresh_load_eta(p_load uuid) returns void
 language plpgsql security definer set search_path = public as $$

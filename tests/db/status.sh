@@ -2594,6 +2594,7 @@ L826d=aaaaaaaa-0000-0000-0000-00000000826d
 L827a=aaaaaaaa-0000-0000-0000-00000000827a
 L827b=aaaaaaaa-0000-0000-0000-00000000827b
 L830a=aaaaaaaa-0000-0000-0000-00000000830a
+L830b=aaaaaaaa-0000-0000-0000-00000000830b
 S823t=77777777-0000-0000-0000-00000000823a
 S823g=77777777-0000-0000-0000-00000000823b
 V823=66666666-0000-0000-0000-00000000823a
@@ -2603,8 +2604,8 @@ HERE_PL_EE='[[52.083,17.017],[53.13,23.16],[54.10,22.93],[54.90,23.90],[56.41,24
 HERE_FI='[[60.154,24.914],[60.212,25.188],[61.50,24.00],[65.00,25.50],[65.825,24.15]]'
 HERE_SE_STO='[[59.35,18.11],[59.50,18.00],[60.00,17.50],[65.825,24.15]]'
 HERE_SE_KPS='[[59.723,19.066],[59.80,18.80],[60.00,17.50],[65.825,24.15]]'
-# DP-197: SE-NYN z via miast (Sztokholm…); Uppsala 17.6389/59.8586 na linii.
-HERE_SE_NYN='[[58.90,17.95],[59.3293,18.0686],[59.34,18.02],[59.8586,17.6389],[60.67,17.14],[62.39,17.31],[63.83,20.26],[65.58,22.15],[65.81,21.76]]'
+# DP-197 F7 #771: SE-NYN zachodni E4 (Essingeleden…Luleå E4/97) — jak via_points.
+HERE_SE_NYN='[[58.90,17.95],[59.322,18.005],[59.8767,17.6953],[60.6638,17.109],[61.7279,17.065],[62.391,17.340],[63.8127,20.3263],[65.606,22.053],[65.81,21.76]]'
 
 chk "BN8b TLL-HEL: brak HERE → 0 OFF_CORRIDOR" \
   "begin;
@@ -3094,19 +3095,34 @@ chk "DP-197: świeży HERE + Karlstad → 1 source=HERE" \
             where load_id='$L826d' and dedup_key='OFF_CORRIDOR:$L826d' and resolved_at is null), '?');
    rollback" 1:HERE
 
-# DP-197: postój ~3 km od cięciwy OSM E4 w Sztokholmie, na linii HERE → brak alarmu.
-chk "DP-197: Sztokholm 3 km od E4 na HERE → 0" \
+# DP-197: Essingeleden na linii HERE (zachodni E4) → brak alarmu.
+chk "DP-197: Essingeleden na HERE → 0" \
   "begin;
    select public.here_store_road('SE-NYN', '$HERE_SE_NYN'::jsonb, 'DP-197 SE-NYN sto', now(), 980000, 52000);
    insert into loads (id, project_id, carrier_org_id, hhl_order_no, carrier_order_no, status, plan_load_date, plan_delivery_date, ferry_route)
     values ('$L830a','$P','$SCXO','HHL/DP197-830A','SCX/DP197-830A','IN_TRANSIT_SE', current_date, current_date + 3, 'GDN-NYN');
    insert into positions (load_id, ts, geom_raw, source) values
-    ('$L830a', now() - interval '20 minutes', st_setsrid(st_makepoint(18.02, 59.34), 4326), 'TELEMATICS_API'),
-    ('$L830a', now() - interval '5 minutes', st_setsrid(st_makepoint(18.02, 59.34), 4326), 'TELEMATICS_API');
+    ('$L830a', now() - interval '20 minutes', st_setsrid(st_makepoint(18.005, 59.322), 4326), 'TELEMATICS_API'),
+    ('$L830a', now() - interval '5 minutes', st_setsrid(st_makepoint(18.005, 59.322), 4326), 'TELEMATICS_API');
    select public.refresh_load_eta('$L830a');
    select (select count(*) from risk_signals where load_id='$L830a' and dedup_key like 'OFF_CORRIDOR%' and resolved_at is null)::text
        || ':' || coalesce((select eta_basis->>'corridor_geom' from loads where id='$L830a'), '?');
    rollback" 0:here
+
+# F7 #771 r1: geometria SE-NYN sprzed 22 d → nie świeża → alarm OSM (nie HERE).
+chk "DP-197: SE-NYN fetched_at−22d + Karlstad → 1:OSM" \
+  "begin;
+   select public.here_store_road('SE-NYN', '$HERE_SE_NYN'::jsonb, 'DP-197 SE-NYN stale22', now() - interval '22 days', 980000, 52000);
+   insert into loads (id, project_id, carrier_org_id, hhl_order_no, carrier_order_no, status, plan_load_date, plan_delivery_date, ferry_route)
+    values ('$L830b','$P','$SCXO','HHL/DP197-830B','SCX/DP197-830B','IN_TRANSIT_SE', current_date, current_date + 3, 'GDN-NYN');
+   insert into positions (load_id, ts, geom_raw, source) values
+    ('$L830b', now() - interval '20 minutes', st_setsrid(st_makepoint(13.5115, 59.3793), 4326), 'TELEMATICS_API'),
+    ('$L830b', now() - interval '5 minutes', st_setsrid(st_makepoint(13.5115, 59.3793), 4326), 'TELEMATICS_API');
+   select public.refresh_load_eta('$L830b');
+   select (select count(*) from risk_signals where load_id='$L830b' and dedup_key like 'OFF_CORRIDOR%' and resolved_at is null)::text
+       || ':' || coalesce((select detail->'params'->>'source' from risk_signals
+            where load_id='$L830b' and dedup_key='OFF_CORRIDOR:$L830b' and resolved_at is null), '?');
+   rollback" 1:OSM
 
 # DP-193 F7 #770: behawioralne przez compute_load_eta (collapse + „brak pozycji GPS”).
 chk "DP-193: brak pozycji GPS bez zmian" \

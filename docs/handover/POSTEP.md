@@ -1,4 +1,11 @@
 
+## 2026-11-03 17:45 — #771 F7 r1: via E4 + stale 22 d + DP-198
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`. PR do scalenia: brak „F7: gotowe” (#771 r1 niegotowe).
+- CI @ `fa6f4e63`: unit/db/visual ✔ — potem F7 r1.
+- **Krok F7 #771 r1:** (1) `here_road_geometry` SE-NYN `fetched_at = now()-22d` + test Karlstad → `1:OSM`; (2) via na jezdni E4 (Essingeleden…Luleå E4/97), nie centra; (3) testy behaw. `refreshRoadLegs` (via URL / brak korytarza / odchyłka→retry 24 h); **DP-198** w PLAN (cron 6 d). status **642**.
+- **Dalej:** push → CI → odpowiedź punkt po punkcie → F7. Potem C2: 119… / DP-198.
+
 ## 2026-11-03 17:10 — #770 SCALONE; start DP-197 (0390)
 
 - Skrzynka: #550 WSTRZYMANE; bez nowego `pilne`.
