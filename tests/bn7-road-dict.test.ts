@@ -4,7 +4,7 @@
  * F7 #738 N10: checkRoads dict + storeRoad length/duration + SOURCE_DOWN przy cronFetch.
  */
 import { describe, expect, it, vi } from 'vitest';
-import { roadSpecFromDict, type LatLng } from '../supabase/functions/_shared/map/draw.ts';
+import { dictGeomRejectReason, roadSpecFromDict, type LatLng } from '../supabase/functions/_shared/map/draw.ts';
 import {
   refreshRoadLegs,
   resolveLegs,
@@ -59,6 +59,23 @@ describe('BN7 roadSpecFromDict', () => {
   it('odrzuca długość poza min/max', () => {
     const line = denseLine(spine, 0.5);
     expect(roadSpecFromDict(line, { via, minKm: 5000, maxKm: 6000 })).toBe(false);
+  });
+
+  it('DP-183: dictGeomRejectReason — km i zakres w komunikacie', () => {
+    const line = denseLine(spine, 0.5);
+    const reason = dictGeomRejectReason(line, { via, minKm: 5000, maxKm: 6000 });
+    expect(reason).toMatch(/^geometria odrzucona \(km=\d+, zakres=5000-6000\)$/);
+    expect(dictGeomRejectReason(line, { via, minKm: 100, maxKm: 2000 })).toBeNull();
+  });
+
+  it('DP-183: dictGeomRejectReason — via za daleko', () => {
+    const line = denseLine(spine, 0.5);
+    const reason = dictGeomRejectReason(line, {
+      via: [[60, 30]],
+      minKm: 100,
+      maxKm: 2000,
+    });
+    expect(reason).toMatch(/^via za daleko \(\d+\.\d+ km > 8\)$/);
   });
 });
 
@@ -153,6 +170,50 @@ describe('BN7 legDefFromRow + refresh URL', () => {
       leg: 'X', origin_lat: 1, origin_lng: 2, dest_lat: 3, dest_lng: 4, spec: 'dict',
       cron_fetch: true,
     }).cronFetch).toBe(true);
+  });
+
+  it('DP-183: refreshRoadLegs — ostrzeżenie z powodem (nie gołe „geometria odrzucona”)', async () => {
+    const summaries: string[] = [];
+    const fetchFn = vi.fn(async () =>
+      new Response(JSON.stringify({ routes: [{ sections: [] }] }), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' },
+      }));
+    const s: RoadRefreshStore = {
+      listLegs: async () => [{
+        leg: 'SE-STO',
+        origin: '59.35,18.11',
+        destination: '65.80539,21.75914',
+        spec: 'dict',
+        summary: 'Trasa drogowa Sztokholm–Boden',
+        browserFetch: false,
+        mapGroup: 'bn7',
+        cronFetch: true,
+        viaPoints: [[59.86, 17.64]],
+        minKm: 950,
+        maxKm: 1050,
+      }],
+      listGeometry: async () => [{
+        leg: 'SE-STO',
+        fetched_at: '-infinity',
+        points: null,
+        retry_after: null,
+      }],
+      storeRoad: async (_leg, _pts, summary) => {
+        summaries.push(summary);
+        return true;
+      },
+      loadCorridor: async (code) => ({ code, pts: [], via: [], updatedAt: 0 }),
+      monthSpend: async () => 0,
+      noteRouting: async () => {},
+    };
+    const r = await refreshRoadLegs(s, {
+      fetch: fetchFn as unknown as typeof fetch,
+      hereApiKey: 'k',
+      maxAgeMs: ROAD_CRON_REFRESH_MS,
+    });
+    expect(r.warnings).toEqual(['SE-STO: za malo punktow (0<200)']);
+    expect(summaries[0]).toBe('Trasa drogowa Sztokholm–Boden — za malo punktow (0<200)');
   });
 
   it('refreshRoadLegs dict: via + exclude[countries] + return summary w URL', async () => {

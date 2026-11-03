@@ -1,4 +1,11 @@
 
+## 2026-11-03 06:25 — #749+#751 SCALONE; start DP-183
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. DP-180 (#735), DP-183 (#718), DP-185 (#751) wpisane do rejestru.
+- Scalanie: **#749 SCALONE** `3b09e130` / **0385** (F7 gotowe @ `7a955bb4`, CI 8/8); **#751 SCALONE** `6c0af746` (DP-176/182; F7 @ `a2c5db07`, CI 7/7). `deploy-main` robi resztę. Bez push na main.
+- **Krok DP-183** (`pakiet/dp-183-here-3-legs` / **0386**): ostrzeżenie odrzucenia z km/zakresem/`via`/punktami; `min_km`/`max_km` FI-HEL/FI-VUO 800–1100, SE-STO 820–1030; `retry_after=null` dla 3 legów → następny cron `here-roads` (~04:15 UTC), bez ręcznego joba. bmapa **199**.
+- **Dalej:** push → CI → F7. Po F7: DP-180 → DP-181 → DP-184.
+
 ## 2026-11-03 05:55 — F7 #749 r3 (filtr rodziny + CI)
 
 - Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. #751 wygląd DP-176/182 — bez F7.

@@ -338,6 +338,28 @@ export function looseRoadOk(line: readonly LatLng[]): boolean {
 }
 
 /**
+ * BN7 (#718) / DP-183: powód odrzucenia `dict` (null = OK).
+ * Długość = `lineLengthKm` (ta sama co w walidacji), nie summary HERE.
+ */
+export function dictGeomRejectReason(
+  line: readonly LatLng[],
+  opts: { via: readonly LatLng[]; minKm: number; maxKm: number },
+): string | null {
+  if (line.length < 200) return `za malo punktow (${line.length}<200)`;
+  const seg = maxSegmentKm(line);
+  if (seg > 3) return `segment ${seg.toFixed(1)} km > 3`;
+  const len = lineLengthKm(line);
+  if (len < opts.minKm || len > opts.maxKm) {
+    return `geometria odrzucona (km=${Math.round(len)}, zakres=${opts.minKm}-${opts.maxKm})`;
+  }
+  for (const v of opts.via) {
+    const d = nearestKm(line, v[0], v[1]);
+    if (d > 8) return `via za daleko (${d.toFixed(1)} km > 8)`;
+  }
+  return null;
+}
+
+/**
  * BN7 (#718): spec `dict` — ≥200 pkt, krok ≤3 km, długość w [minKm,maxKm],
  * każdy via ≤ 8 km od linii.
  */
@@ -345,14 +367,7 @@ export function roadSpecFromDict(
   line: readonly LatLng[],
   opts: { via: readonly LatLng[]; minKm: number; maxKm: number },
 ): boolean {
-  if (line.length < 200) return false;
-  if (maxSegmentKm(line) > 3) return false;
-  const len = lineLengthKm(line);
-  if (len < opts.minKm || len > opts.maxKm) return false;
-  for (const v of opts.via) {
-    if (nearestKm(line, v[0], v[1]) > 8) return false;
-  }
-  return true;
+  return dictGeomRejectReason(line, opts) == null;
 }
 
 export function roadGeometryOk(line: readonly LatLng[], spec: RoadSpec): boolean {
