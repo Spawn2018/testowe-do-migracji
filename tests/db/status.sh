@@ -2585,6 +2585,8 @@ L824a=aaaaaaaa-0000-0000-0000-00000000824a
 L824b=aaaaaaaa-0000-0000-0000-00000000824b
 L824c=aaaaaaaa-0000-0000-0000-00000000824c
 L824d=aaaaaaaa-0000-0000-0000-00000000824d
+L825a=aaaaaaaa-0000-0000-0000-00000000825a
+L825b=aaaaaaaa-0000-0000-0000-00000000825b
 S823t=77777777-0000-0000-0000-00000000823a
 S823g=77777777-0000-0000-0000-00000000823b
 V823=66666666-0000-0000-0000-00000000823a
@@ -2911,6 +2913,40 @@ chk "BN8b DP-184: IN_TRANSIT_SE SE_E18_KPS na linii → 0" \
    select public.refresh_load_eta('$L824d');
    select count(*) from risk_signals where load_id='$L824d' and dedup_key like 'OFF_CORRIDOR%';
    rollback" 0
+
+# DP-155 / C1: ROAD_FI×1.5 wydłuża ETA FI_E75 (IN_TRANSIT_SE TLL-HEL); GDN-NYN bez zmian.
+# (compute_load_eta już w 0385; yard_drive_quote = tylko SREM/BODEN → SE_E4/PL, bez ROAD_FI.)
+chk "DP-155: ROAD_FI×1.5 — FI_E75 dłuższy, GDN bez zmian" \
+  "begin;
+   update corridor_conditions set slowdown_mult=1.00, reason='ok'
+    where corridor in ('ROAD_FI','SE_E4','SE_E22');
+   insert into loads (id, project_id, carrier_org_id, hhl_order_no, carrier_order_no, status, plan_load_date, plan_delivery_date, ferry_route)
+    values ('$L825a','$P','$SCXO','HHL/DP155-A','SCX/DP155-A','IN_TRANSIT_SE', current_date, current_date + 5, 'TLL-HEL'),
+           ('$L825b','$P','$SCXO','HHL/DP155-B','SCX/DP155-B','IN_TRANSIT_SE', current_date, current_date + 3, 'GDN-NYN');
+   insert into positions (load_id, ts, geom_raw, source) values
+    ('$L825a', now() - interval '10 minutes', st_setsrid(st_makepoint(24.00, 61.50), 4326), 'TELEMATICS_API'),
+    ('$L825b', now() - interval '10 minutes', st_setsrid(st_makepoint(17.50, 59.00), 4326), 'TELEMATICS_API');
+   create temporary table dp155_eta (
+     route text primary key, eta_base timestamptz, eta_slow timestamptz, slow numeric
+   ) on commit drop;
+   insert into dp155_eta (route, eta_base, slow)
+    select 'FI', eta, (basis->>'slowdown_se')::numeric from public.compute_load_eta('$L825a')
+    union all
+    select 'GDN', eta, (basis->>'slowdown_se')::numeric from public.compute_load_eta('$L825b');
+   update corridor_conditions set slowdown_mult=1.50, reason='DP-155 FI'
+    where corridor='ROAD_FI';
+   update dp155_eta e set eta_slow = c.eta
+     from public.compute_load_eta('$L825a') c where e.route='FI';
+   update dp155_eta e set eta_slow = c.eta
+     from public.compute_load_eta('$L825b') c where e.route='GDN';
+   select bool_and(
+            case route
+              when 'FI' then eta_slow > eta_base and eta_base is not null and slow = 1.00
+              when 'GDN' then eta_base = eta_slow and eta_base is not null
+            end
+          )
+     from dp155_eta;
+   rollback" t
 
 # F7 r2 N1: ROAD_LT=1.5 nie zmienia ETA GDN-NYN; wydłuża TLL-HEL (przed promem).
 chk "BN8b F7 N1: ROAD_LT×1.5 — GDN bez zmian, TLL dłuższy" \

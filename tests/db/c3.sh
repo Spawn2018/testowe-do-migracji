@@ -139,6 +139,10 @@ sys "delete from notifications where template in ('SMS_FALLBACK','SMS_GATEWAY_SI
 sval "#402: SMS_FALLBACK mail off → SUPPRESSED" "select public.l13_queue_email('critical','SMS_FALLBACK','$HHLU','hhl@test','$L','X',
   '{}'::jsonb,'c402-sms-fb',null)" SUPPRESSED
 sval "#402: SCHEDULE_DATE_CRITICAL → dates" "select public.notify_event_key('SCHEDULE_DATE_CRITICAL','{}'::jsonb)" dates
+# DP-156 / C1: ROAD_LT/LV/EE/FI w notify_event_key (jak ROAD_SE/PL).
+sval "DP-156: ROAD_FI RISK_OPEN → risk_route" "select public.notify_event_key('RISK_OPEN', jsonb_build_object('kind','ROAD_FI','severity','MEDIUM'))" risk_route
+sval "DP-156: ROAD_LT CRITICAL → risk_crit" "select public.notify_event_key('RISK_OPEN', jsonb_build_object('kind','ROAD_LT','severity','CRITICAL'))" risk_crit
+sval "DP-156: ROAD_EE bez load_id → risk_general" "select public.notify_event_key('ROAD_EE', '{}'::jsonb)" risk_general
 # F7: poziom firmy — e-mail wyłączony w org_kind → 0 EMAIL także bez prefs osoby.
 sys "delete from user_notify_pref where user_id='$HHLU' and event_key='risk_crit'" >/dev/null
 sys "update notification_matrix set email=true where event_key='risk_crit' and role='HHL_ADMIN'" >/dev/null

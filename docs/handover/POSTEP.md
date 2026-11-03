@@ -1,4 +1,11 @@
 
+## 2026-11-03 11:20 — #765 SCALONE; start C1 (DP-155/156)
+
+- Skrzynka: #550 WSTRZYMANE; #762 — DP-193/194 (C2), DP-195 (C3) wpisane; odpowiedź DP-194 w #762. #756 zamknięte. Bez nowego `pilne`.
+- Scalanie: **#765 SCALONE** `c1c8f827` (DP-187/188; F7 gotowe @ `3fd8734b`, CI unit/db/visual ✔). `deploy-main` robi resztę. Bez push na main.
+- **Krok C1 cz.1** (`pakiet/c1-dp-155-road-fi-eta` / **0388**): DP-155 test ROAD_FI×1.5 (FI_E75); DP-156 `notify_event_key` + ROAD_LT/LV/EE/FI; DP-179 DONE (bez treści). status **634**, c3 **43**.
+- **Dalej:** push PR → CI → F7. Potem C1 reszta (DP-146, 152) albo C2.
+
 ## 2026-11-03 10:50 — #763 SCALONE; F7 #765 r1 → wariant A
 
 - Skrzynka: #550 WSTRZYMANE; #716/#718/#720 w planie. Bez nowego `pilne`.
