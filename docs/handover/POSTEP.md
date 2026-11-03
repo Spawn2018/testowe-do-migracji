@@ -1,4 +1,11 @@
 
+## 2026-11-03 19:45 — #774 DP-119: fix tsc TS2352 (BillRow cast)
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`. PR do scalenia: brak „F7: gotowe”.
+- CI @ `d4486007`: unit FAIL — `tsc` TS2352 `as BillRow[]` (select string → GenericStringError); db/visual w toku.
+- **Krok:** `as unknown as BillRow[]` / `DocumentRow[]` (wzorzec `fetchAllSailings`). Bez push na main.
+- **Dalej:** push → CI → F7. Potem C2: 120….
+
 ## 2026-11-03 19:30 — #772 SCALONE; start DP-119 (max_rows docs/inv/RPC)
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.

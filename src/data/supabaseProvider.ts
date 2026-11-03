@@ -123,7 +123,7 @@ export async function fetchAllDocuments(
     const r = await sb.from('documents').select(DOCUMENT_COLUMNS)
       .order('id', { ascending: true }).range(from, to);
     if (r.error) return { data: null, error: r.error };
-    const rows = (r.data ?? []) as DocumentRow[];
+    const rows = (r.data ?? []) as unknown as DocumentRow[];
     for (const row of rows) {
       const k = String(row.id);
       if (seen.has(k)) continue;
@@ -153,7 +153,8 @@ export async function fetchAllInvoices(
       .order('issue_date', { ascending: false }).order('id', { ascending: false })
       .range(from, to);
     if (r.error) return { data: null, error: r.error };
-    const rows = (r.data ?? []) as BillRow[];
+    /* `as unknown` — BILL_COLUMNS to string, typ selectu nie nachodzi na BillRow (jak fetchAllSailings). */
+    const rows = (r.data ?? []) as unknown as BillRow[];
     for (const row of rows) {
       const k = String(row.id);
       if (seen.has(k)) continue;
