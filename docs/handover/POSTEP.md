@@ -1,9 +1,9 @@
 
-## 2026-11-03 04:45 — BN8b start (#720 §7 / 0385)
+## 2026-11-03 05:00 — BN8b kod (#720 §7 / 0385)
 
 - Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie.
-- Scalanie: **#748 SCALONE** `462af010` (DP-178; F7 gotowe @ `6989c9a6`, CI 8/8). `deploy-main` OK.
-- **Krok BN8b** (`pakiet/bn8b-eta-off-corridor`): migracja **0385** — OFF_CORRIDOR BN7 przy świeżym HERE (≤7 d) + sync polilinii; `compute_load_eta` z `load_route_family` / PORT_CHECKIN EE 2 h; drobne 7.3 (propose/overdue/promote); status **615** (+11).
+- Scalanie: brak (gałąź `pakiet/bn8b-eta-off-corridor`; #748 już na main).
+- **Krok BN8b:** migracja **0385** — OFF_CORRIDOR BN7 tylko przy świeżej HERE (≤7 d, ≥2 pkt) + sync `corridor_polylines`; brak/stara → `corridor_geom=brak`; MUU/PLD bufor 2 km; `compute_load_eta` z `load_route_family` / PORT_CHECKIN EE / korytarze `road_corridor_*` + `corridor_conditions`; drobne 7.3 (propose/overdue/promote/W5d); status **622** (+18: 4 rodziny×3 + regresja + cleanup).
 - **Dalej:** push → CI → F7. Bez push na main.
 
 ## 2026-11-03 04:30 — #748 SCALONE + start BN8b

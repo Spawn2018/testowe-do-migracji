@@ -288,8 +288,9 @@ end $function$;
 -- ---------------------------------------------------------------------------
 create or replace function public.detect_ferry_overdue(
   p_now timestamptz default now(),
-  p_grace interval default interval '2 hours'  -- przestarzały: tolerancja z ferry_routes.overdue_tolerance_min
+  p_grace interval default interval '2 hours'
 ) returns integer
+-- p_grace przestarzały: tolerancja z ferry_routes.overdue_tolerance_min (BN8b §7.3).
 language plpgsql
 security definer
 set search_path to 'public', 'extensions'
