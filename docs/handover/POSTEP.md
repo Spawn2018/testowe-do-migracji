@@ -1,4 +1,11 @@
 
+## 2026-11-03 22:25 — #780 F7 r1 niegotowe → decyzja 99 (obok trasy + DeepL)
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie; #778+#779 otwarte (DP-202/203). Bez nowego `pilne`.
+- Scalanie: brak „F7: gotowe” po ostatnim SHA. **#780 F7 r1 niegotowe** @ `e8221e69` — stara spec „tylko trasa”; decyzja właściciela 03.11 21:44 + decyzja **99**.
+- **Krok:** off/unknown daleko → LOW „obok trasy” (LT/LV/FI/EE + SE); DeepL dla wszystkich pokazywanych; i18n `{off}`; PL-T `codes`; testy bn6/integrations. Bez migracji. Bez push na main.
+- **Dalej:** commit+push → CI → F7. Potem C2: 121….
+
 ## 2026-11-03 22:10 — #777 SCALONE; start DP-202+203 (LV korytarz + tytuły bałtyckie)
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie; #778+#779 (Spawn2018) wpisane jako DP-202/203. Bez nowego `pilne`.

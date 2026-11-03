@@ -516,12 +516,16 @@ export function balticEventTypePl(e: BalticRoadEvent): string {
   return 'zdarzenie drogowe';
 }
 
-/** DP-203: tytuł jak SE — `Warunki drogowe <droga> (<KRAJ>): <typ>, …`. */
+/**
+ * DP-203 / decyzja 99: tytuł jak SE — `Warunki drogowe <droga> (<KRAJ>): …`;
+ * poza trasą: `… (KRAJ) · obok trasy: …` (EN off route / SV vid sidan av rutten w `{off}`).
+ */
 export function formatBalticRoadTitle(
   country: BalticRoadCountry,
   e: BalticRoadEvent,
   typePl?: string,
-): { title: string; typePl: string; roadLabel: string } {
+  opts?: { offRoute?: boolean },
+): { title: string; typePl: string; roadLabel: string; off: string } {
   const type = typePl ?? balticEventTypePl(e);
   const roadLabel = balticRoadLabel(country, e.road);
   const from = balticWarsawDt(e.start);
@@ -534,10 +538,32 @@ export function formatBalticRoadTitle(
     place = det.length > 80 ? `${det.slice(0, 77)}…` : det;
   }
   const bits = [type, place, when].filter(Boolean);
+  const offRoute = opts?.offRoute === true || e.corridorMatch === 'off';
+  const off = offRoute ? ' · obok trasy' : '';
   return {
-    title: `Warunki drogowe ${roadLabel} (${country}): ${bits.join(', ')}`,
+    title: `Warunki drogowe ${roadLabel} (${country})${off}: ${bits.join(', ')}`,
     typePl: type,
     roadLabel,
+    off,
+  };
+}
+
+/** Decyzja 99: LOW + dopisek „obok trasy” (bez powiadomień — bałtyk bez load tylko HIGH/CRIT). */
+export function markBalticOffRoute(risk: RiskInput): RiskInput {
+  const title = / · obok trasy:/.test(risk.title)
+    ? risk.title
+    : risk.title.replace(/^(Warunki drogowe [^:]+):/, '$1 · obok trasy:');
+  return {
+    ...risk,
+    severity: 'LOW',
+    title,
+    params: { ...(risk.params ?? {}), off: ' · obok trasy' },
+    detail: {
+      ...(risk.detail && typeof risk.detail === 'object' ? risk.detail : {}),
+      obok_trasy: true,
+      korytarz_droga: (risk.detail as { korytarz_droga?: string } | undefined)?.korytarz_droga
+        ?? 'off',
+    },
   };
 }
 
@@ -565,13 +591,14 @@ export function balticRoadRisk(
         : formatted.typePl));
   return {
     kind,
-    severity: e.severity,
+    severity: formatted.off ? 'LOW' : e.severity,
     title: formatted.title,
     titleKey: 'rk_road_baltic',
     params: {
       country,
       road: formatted.roadLabel,
       event: formatted.typePl,
+      off: formatted.off,
     },
     detail: {
       opis,
@@ -620,32 +647,35 @@ export function weightLimitRisk(
   );
   const formatted = formatBalticRoadTitle(country, e, typePl);
   /* F7 #732 B1: limit bez liczby → MEDIUM „sprawdź…”, nigdy HIGH (nie spowalnia). */
+  const offParams = { off: formatted.off };
   if (limit == null) {
     return {
       ...base,
-      severity: 'MEDIUM',
+      severity: formatted.off ? 'LOW' : 'MEDIUM',
       title: formatted.title,
       titleKey: 'rk_road_baltic_weight_check',
-      params: { country, road: formatted.roadLabel, event: typePl, limit: null } as RiskInput['params'],
+      params: {
+        country, road: formatted.roadLabel, event: typePl, limit: null, ...offParams,
+      } as RiskInput['params'],
     };
   }
   if (loadTons != null && loadTons > limit) {
     return {
       ...base,
-      severity: 'HIGH',
+      severity: formatted.off ? 'LOW' : 'HIGH',
       title: formatted.title,
       titleKey: 'rk_road_baltic_weight',
       params: {
-        country, road: formatted.roadLabel, event: typePl, limit, load: loadTons,
+        country, road: formatted.roadLabel, event: typePl, limit, load: loadTons, ...offParams,
       },
     };
   }
   return {
     ...base,
-    severity: 'MEDIUM',
+    severity: formatted.off ? 'LOW' : 'MEDIUM',
     title: formatted.title,
     titleKey: 'rk_road_baltic_weight_check',
-    params: { country, road: formatted.roadLabel, event: typePl, limit },
+    params: { country, road: formatted.roadLabel, event: typePl, limit, ...offParams },
   };
 }
 
@@ -882,8 +912,8 @@ export const BALTIC_UNKNOWN_NEAR_KM = 0.3;
 /**
  * DP-164 + F7 #730 B7/r2 + DP-202/203: oznacz road + corridorMatch;
  * poza listą / bez numeru obniż severity.
- * DP-203: unknown NIE awansuje do `on` po odległości (wcześniej LV/EE ≤3 km → on);
- * raise tylko `on` albo unknown ≤ 300 m (LOW) — patrz `balticShouldRaiseRisk`.
+ * DP-203/decyzja 99: unknown NIE awansuje do `on` po odległości;
+ * `off` / unknown daleko → raise LOW „obok trasy” (`balticShouldRaiseRisk`).
  * EE: ≤ 2 km od portu → on (jak F7 #733). Pogoda: ≤ 3 km od korytarza.
  */
 export function applyBalticCorridorRoadFilter(
@@ -939,16 +969,20 @@ export function applyBalticCorridorRoadFilter(
 }
 
 /**
- * DP-202/203: ryzyko tylko na trasie (`on`) albo unknown ≤ 300 m (LOW „sprawdź”).
- * `off` → bez ryzyka (licznik `*_off_corridor` w obserwacjach).
+ * DP-203 / decyzja 99 (właściciel 03.11 21:44): `on` bez zmian;
+ * `off` i `unknown` > 300 m → nadal ryzyko LOW z „obok trasy” (bez powiadomień);
+ * `unknown` ≤ 300 m → LOW „sprawdź”.
+ * Licznik `*_off_corridor` = obserwacja liczby `off` (ryzyka zostają).
  */
+export type BalticRaiseKind = 'on' | 'unknown-near' | 'off';
+
 export function balticShouldRaiseRisk(
   country: 'LT' | 'LV' | 'EE' | 'FI',
   e: BalticRoadEvent,
-): 'on' | 'unknown-near' | false {
+): BalticRaiseKind | false {
   if (e.corridorMatch === 'on') return 'on';
-  if (e.corridorMatch === 'off') return false;
-  if (e.lat == null || e.lon == null) return false;
+  if (e.corridorMatch === 'off') return 'off';
+  if (e.lat == null || e.lon == null) return 'off';
   const corridor = country === 'FI'
     ? CORRIDOR_FI
     : country === 'EE'
@@ -958,7 +992,7 @@ export function balticShouldRaiseRisk(
         : CORRIDOR_LT;
   const densified = densifyCorridor(corridor);
   const dist = minDistToCorridorKm(e.lat, e.lon, corridor, densified);
-  return dist <= BALTIC_UNKNOWN_NEAR_KM ? 'unknown-near' : false;
+  return dist <= BALTIC_UNKNOWN_NEAR_KM ? 'unknown-near' : 'off';
 }
 
 /** DP-164: po weightLimitRisk / dimensionLimitRisk — ponowne obniżenie severity. */
@@ -1008,13 +1042,14 @@ export function dimensionLimitRisk(
   const formatted = formatBalticRoadTitle(country, e, typePl);
   return {
     ...base,
-    severity: 'MEDIUM',
+    severity: formatted.off ? 'LOW' : 'MEDIUM',
     title: formatted.title,
     titleKey: 'rk_road_baltic_dim_check',
     params: {
       country,
       road: formatted.roadLabel,
       event: typePl,
+      off: formatted.off,
       height: e.heightLimitM ?? '',
       width: e.widthLimitM ?? '',
       length: e.lengthLimitM ?? '',

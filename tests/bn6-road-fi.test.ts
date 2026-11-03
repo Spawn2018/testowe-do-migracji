@@ -424,14 +424,14 @@ describe('BN6 runRoadFi — F7 #726', () => {
     expect(hit?.params?.type_pl ?? hit?.params?.event).toBe('wypadek');
   });
 
-  it('DP-157(c): poza korytarzem nie w keep → resolveStale zamyka stare ROAD_FI', async () => {
+  it('decyzja 99: poza korytarzem → keep LOW „obok trasy” (wcześniej DP-157c bez ryzyka)', async () => {
     const st = new MemStore();
     st.risks.push({
-      kind: 'ROAD_FI', severity: 'MEDIUM', title: 'stare uliczne',
-      dedup: 'ROAD_FI:v2:GUID-STREET-HEL',
+      kind: 'ROAD_FI', severity: 'MEDIUM', title: 'stare inne',
+      dedup: 'ROAD_FI:v2:GUID-OLD-OTHER',
       detail: {}, titleKey: 'rk_road_baltic', params: {},
     });
-    /* F7 #732 B4: ~4 km od Länsisatamy — poza strefą portu 2 km. */
+    /* F7 #732 B4: ~4 km od Länsisatamy — poza strefą portu 2 km → unknown daleko → off. */
     const streetBody = JSON.stringify({
       type: 'FeatureCollection',
       features: [{
@@ -447,7 +447,11 @@ describe('BN6 runRoadFi — F7 #726', () => {
     const r = await runRoadFi(deps(st, allOkPages(streetBody)).d);
     expect(r.observations?.complete).toBe('1');
     expect(st.staleCalls.length).toBe(1);
-    expect(st.staleCalls[0]!.keep.every((k) => !k.includes('GUID-STREET-HEL'))).toBe(true);
-    expect(st.risks.some((x) => x.dedup.includes('GUID-STREET-HEL'))).toBe(false);
+    expect(st.staleCalls[0]!.keep.some((k) => k.includes('GUID-STREET-HEL'))).toBe(true);
+    expect(st.risks.some((x) => x.dedup === 'ROAD_FI:v2:GUID-OLD-OTHER')).toBe(false);
+    const street = st.risks.find((x) => x.dedup.includes('GUID-STREET-HEL'));
+    expect(street?.severity).toBe('LOW');
+    expect(street?.title).toMatch(/obok trasy/);
+    expect(Number(r.observations?.fi_off_corridor)).toBeGreaterThan(0);
   });
 });

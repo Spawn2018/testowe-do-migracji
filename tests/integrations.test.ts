@@ -13,7 +13,10 @@ import {
 } from '../supabase/functions/_shared/integrations/jobs';
 import type { DbSailing, RiskInput, SailingInsert, SailingPatch } from '../supabase/functions/_shared/integrations/sync';
 import { planSailingSync } from '../supabase/functions/_shared/integrations/sync';
-import { distanceToCorridorKm, CORRIDOR_SE, parseTrafikverketSituations, trafikverketResultError, trafikverketSituationQuery } from '../supabase/functions/_shared/integrations/road';
+import {
+  distanceToCorridorKm, CORRIDOR_SE, parseTrafikverketSituations, roadRisk,
+  seIsOffMainCorridor, trafikverketResultError, trafikverketSituationQuery,
+} from '../supabase/functions/_shared/integrations/road';
 
 const fx = (n: string) => readFileSync(new URL(`./fixtures/${n}`, import.meta.url), 'utf8');
 const CARGO = fx('polferries-cargo-rozklad-2026-09-26.html');
@@ -644,6 +647,15 @@ describe('road-se — Trafikverket (II-6 RoadCondition + WeatherMeasurepoint)', 
     // jedna sytuacja, kilka odchyleń: zostaje wypadek (wyżej niż roboty); info i droga 45 odpadają
     expect(parsed).toHaveLength(1);
     expect(parsed[0]).toMatchObject({ id: 'SE_STA_TRISSID_1_7654321', kind: 'wypadek', road: 'E4', severity: 'HIGH' });
+    /* Decyzja 99: SE poza E4/E22 → LOW „obok trasy” (gdy trafia do ROAD_SE). */
+    const onSe = roadRisk('SE', parsed[0]!, 'https://www.trafikverket.se/');
+    expect(onSe.title).toMatch(/^Warunki drogowe E4:/);
+    expect(onSe.title).not.toMatch(/obok trasy/);
+    expect(seIsOffMainCorridor({ ...parsed[0]!, road: 'E20' })).toBe(true);
+    const offSe = roadRisk('SE', { ...parsed[0]!, road: 'E20', corridorMatch: 'off' }, 'https://www.trafikverket.se/');
+    expect(offSe.severity).toBe('LOW');
+    expect(offSe.title).toMatch(/Warunki drogowe E20 · obok trasy:/);
+    expect(offSe.detail?.obok_trasy).toBe(true);
     const off = JSON.parse(TV_SIT);
     for (const d of off.RESPONSE.RESULT[0].Situation[0].Deviation) d.Geometry.WGS84 = 'POINT (12.694 56.046)';
     expect(parseTrafikverketSituations(off)).toHaveLength(0);

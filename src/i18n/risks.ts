@@ -198,11 +198,13 @@ const pl: Dict = {
   rk_translate_wait: 'Komunikat drogowy czeka na tłumaczenie',
   rk_road_pl: 'Trasa PL: {event}',
   rk_road_pl_road: 'Trasa PL {road}: {event}',
-  /** BN6 (#716) + DP-203 — drogi LT/LV/EE/FI jak SE */
-  rk_road_baltic: 'Warunki drogowe {road} ({country}): {event}',
-  rk_road_baltic_weight: 'Warunki drogowe {road} ({country}): Ograniczenie masy {limit} t (ładunek {load} t)',
-  rk_road_baltic_weight_check: 'Warunki drogowe {road} ({country}): Ograniczenie masy {limit} t — sprawdź zezwolenie',
-  rk_road_baltic_dim_check: 'Warunki drogowe {road} ({country}): {event}',
+  /** BN6 (#716) + DP-203 / decyzja 99 — drogi LT/LV/EE/FI jak SE; `{off}` = ` · obok trasy` albo puste */
+  rk_road_baltic: 'Warunki drogowe {road} ({country}){off}: {event}',
+  rk_road_baltic_weight: 'Warunki drogowe {road} ({country}){off}: Ograniczenie masy {limit} t (ładunek {load} t)',
+  rk_road_baltic_weight_check: 'Warunki drogowe {road} ({country}){off}: Ograniczenie masy {limit} t — sprawdź zezwolenie',
+  rk_road_baltic_dim_check: 'Warunki drogowe {road} ({country}){off}: {event}',
+  /** SE: dopisek decyzji 99 gdy zdarzenie spoza E4/E22 */
+  rk_road_se_off: 'Warunki drogowe {road} · obok trasy: {event}',
   rk_flow_closed: '{code}: droga zamknięta przy pozycji auta',
   rk_flow_slow: '{code}: ruch {kmh} km/h wobec {free} km/h swobodnie przy pozycji auta',
   rk_ais_arrived: 'AIS: {vessel} w porcie Nynäshamn — potwierdzenie przypłynięcia (informacja)',

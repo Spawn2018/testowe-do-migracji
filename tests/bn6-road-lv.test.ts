@@ -616,8 +616,8 @@ describe('BN6 runRoadLv / DP-200 REST snapshot', () => {
   });
 });
 
-describe('DP-202/203 LV korytarz + tytuły PL (#778/#779)', () => {
-  it('parser LVC: A7_L → on; A6_K/V1021_I → off; bez ryzyka off', () => {
+describe('DP-202/203 LV korytarz + tytuły PL (#778/#779); decyzja 99 obok trasy', () => {
+  it('parser LVC: A7_L → on; A6_K masa → off LOW „obok trasy”', () => {
     expect(normalizeLvRoadCode('A7_L')).toBe('A7');
     expect(normalizeLvRoadCode('A6_K')).toBe('A6');
     expect(normalizeLvRoadCode('P103_I')).toBe('P103');
@@ -635,14 +635,21 @@ describe('DP-202/203 LV korytarz + tytuły PL (#778/#779)', () => {
     }])[0]!;
     expect(a7.corridorMatch).toBe('on');
     expect(balticShouldRaiseRisk('LV', a7)).toBe('on');
+    const a7Risk = weightLimitRisk('LV', a7, null, LV_SOURCE_REF, LV_ATTRIBUTION);
+    expect(a7Risk.title).toMatch(/^Warunki drogowe A7 \(LV\): Ograniczenie masy/);
+    expect(a7Risk.title).not.toMatch(/obok trasy/);
 
     const a6 = applyBalticCorridorRoadFilter('LV', [{
-      id: 'a6', title: 'heightRestrictions · A6_K', detail: 'A6_K',
+      id: 'a6', title: 'massRestrictions · A6_K', detail: 'A6_K · km 22',
       severity: 'MEDIUM', lat: 56.95, lon: 24.10, kind: 'WEIGHT_DIM',
-      start: null, end: null, road: normalizeLvRoadCode('A6_K'), heightLimitM: 4,
+      start: null, end: null, road: normalizeLvRoadCode('A6_K'), weightLimitT: 40,
     }])[0]!;
     expect(a6.corridorMatch).toBe('off');
-    expect(balticShouldRaiseRisk('LV', a6)).toBe(false);
+    expect(balticShouldRaiseRisk('LV', a6)).toBe('off');
+    const a6Risk = weightLimitRisk('LV', a6, null, LV_SOURCE_REF, LV_ATTRIBUTION);
+    expect(a6Risk.severity).toBe('LOW');
+    expect(a6Risk.title).toMatch(/Warunki drogowe A6 \(LV\) · obok trasy:/);
+    expect(a6Risk.title).toMatch(/Ograniczenie masy 40 t/);
 
     const v = applyBalticCorridorRoadFilter('LV', [{
       id: 'v', title: 'virtualMass · V1021_I', detail: 'V1021_I',
@@ -650,10 +657,10 @@ describe('DP-202/203 LV korytarz + tytuły PL (#778/#779)', () => {
       start: null, end: null, road: normalizeLvRoadCode('V1021_I'),
     }])[0]!;
     expect(v.corridorMatch).toBe('off');
-    expect(balticShouldRaiseRisk('LV', v)).toBe(false);
+    expect(balticShouldRaiseRisk('LV', v)).toBe('off');
   });
 
-  it('unknown ≤300 m → LOW raise; daleko → bez ryzyka; tytuł PL jak SE', () => {
+  it('unknown ≤300 m → sprawdź; daleko → off „obok trasy”; A7 on bez dopisku', () => {
     const nearUnknown: BalticRoadEvent = {
       id: 'u', title: 'massRestrictions', detail: 'km 1',
       severity: 'MEDIUM', lat: 56.95, lon: 24.10, kind: 'WEIGHT_DIM',
@@ -664,7 +671,7 @@ describe('DP-202/203 LV korytarz + tytuły PL (#778/#779)', () => {
     const farUnknown: BalticRoadEvent = {
       ...nearUnknown, id: 'far', lat: 55.0, lon: 26.0,
     };
-    expect(balticShouldRaiseRisk('LV', farUnknown)).toBe(false);
+    expect(balticShouldRaiseRisk('LV', farUnknown)).toBe('off');
 
     const onEv: BalticRoadEvent = {
       id: 't', title: 'massRestrictions · A7_L', detail: 'A7 · km 6.2',
@@ -675,6 +682,7 @@ describe('DP-202/203 LV korytarz + tytuły PL (#778/#779)', () => {
     const title = formatBalticRoadTitle('LV', onEv, 'Ograniczenie masy 40 t');
     expect(title.title).toMatch(/^Warunki drogowe A7 \(LV\): Ograniczenie masy 40 t/);
     expect(title.title).not.toMatch(/^Trasa LV:/);
+    expect(title.off).toBe('');
     const w = weightLimitRisk('LV', onEv, null, LV_SOURCE_REF, LV_ATTRIBUTION);
     expect(w.title).toMatch(/Warunki drogowe A7 \(LV\):/);
     expect(w.title).toMatch(/Ograniczenie masy 40 t/);

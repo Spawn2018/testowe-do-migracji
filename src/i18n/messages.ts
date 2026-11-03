@@ -1083,7 +1083,8 @@ export function tp(requested: Locale, key: string, params: TParams = {}): string
 
 /** Tytuł / opis ryzyka: klucz słownika z parametrami, a bez klucza — tekst zapisany (dziennik, PL). */
 export function riskText(locale: Locale, text: string, key?: string, params?: TParams): string {
-  return key && hasKey(locale, key) ? tp(locale, key, params ?? {}) : text;
+  /* DP-203 / decyzja 99: `{off}` w rk_road_baltic* — puste gdy brak (stare ryzyka / demo). */
+  return key && hasKey(locale, key) ? tp(locale, key, { off: '', ...(params ?? {}) }) : text;
 }
 
 export function navLabel(locale: Locale, key: NavKey, role?: import('../types').RoleId): string {

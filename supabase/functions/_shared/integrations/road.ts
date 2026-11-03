@@ -78,6 +78,8 @@ export interface RoadEvent {
   id: string; title: string; detail: string; severity: RiskSeverity;
   lat: number | null; lon: number | null; road: string | null; start: string | null; end: string | null; kind: string;
   original?: string | null; note?: string | null; freeText?: string | null; unknownCodes?: string[];
+  /** Decyzja 99: SE spoza E4/E22 → „obok trasy” (gdy trafia do ROAD_SE). */
+  corridorMatch?: 'on' | 'off';
 }
 const wkt = (s: unknown): LatLon | null => {
   const m = typeof s === 'string' ? s.match(/POINT\s*\(\s*([-\d.]+)\s+([-\d.]+)\s*\)/i) : null;
@@ -307,13 +309,59 @@ export function parseDatexSituations(xml: string, bufferKm = 5): RoadEvent[] {
   return out;
 }
 
-export function roadRisk(country: 'SE' | 'PL', e: RoadEvent, sourceUrl: string): RiskInput {
+/** Decyzja 99: SE poza E4/E22 (lub jawne corridorMatch=off) → LOW + „obok trasy”. */
+export function seIsOffMainCorridor(e: RoadEvent): boolean {
+  if (e.corridorMatch === 'off') return true;
+  if (e.corridorMatch === 'on') return false;
+  const road = e.road;
+  if (road == null || road === '') return true;
+  return !isRoad(road, '4') && !isRoad(road, '22');
+}
+
+/** Decyzja 99: dopisek „obok trasy” w tytule ROAD_SE. */
+export function markSeOffRoute(risk: RiskInput): RiskInput {
+  const title = / · obok trasy:/.test(risk.title)
+    ? risk.title
+    : risk.title.replace(/^(Warunki drogowe [^:]+):/, '$1 · obok trasy:');
   return {
-    kind: country === 'SE' ? 'ROAD_SE' : 'ROAD_PL', severity: e.severity,
-    title: country === 'SE' ? `Warunki drogowe ${e.road || 'E4'}: ${e.title}` : `${e.road ? `Trasa PL ${e.road}` : 'Trasa PL'}: ${e.title}`,
-    titleKey: country === 'SE' ? 'rk_road_se' : e.road ? 'rk_road_pl_road' : 'rk_road_pl',
-    params: { event: e.title, ...(country === 'PL' && e.road ? { road: e.road } : {}) },
-    detail: { opis: e.detail, rodzaj: e.kind, lat: e.lat, lon: e.lon, od: e.start, do: e.end, oryginal: e.original ?? null, zrodlo: country === 'SE' ? 'Trafikverket (CC0)' : 'KPD GDDKiA' },
+    ...risk,
+    severity: 'LOW',
+    title,
+    titleKey: risk.titleKey === 'rk_road_se' ? 'rk_road_se_off' : risk.titleKey,
+    params: { ...(risk.params ?? {}), road: (risk.params as { road?: string } | undefined)?.road
+      ?? (typeof risk.detail === 'object' && risk.detail && 'droga' in risk.detail
+        ? String((risk.detail as { droga?: unknown }).droga ?? 'E4')
+        : 'E4') },
+    detail: {
+      ...(risk.detail && typeof risk.detail === 'object' ? risk.detail : {}),
+      obok_trasy: true,
+      korytarz_droga: 'off',
+    },
+  };
+}
+
+export function roadRisk(country: 'SE' | 'PL', e: RoadEvent, sourceUrl: string): RiskInput {
+  const offSe = country === 'SE' && seIsOffMainCorridor(e);
+  const roadLabel = e.road || 'E4';
+  const seTitle = offSe
+    ? `Warunki drogowe ${roadLabel} · obok trasy: ${e.title}`
+    : `Warunki drogowe ${roadLabel}: ${e.title}`;
+  return {
+    kind: country === 'SE' ? 'ROAD_SE' : 'ROAD_PL',
+    severity: offSe ? 'LOW' : e.severity,
+    title: country === 'SE' ? seTitle : `${e.road ? `Trasa PL ${e.road}` : 'Trasa PL'}: ${e.title}`,
+    titleKey: country === 'SE' ? (offSe ? 'rk_road_se_off' : 'rk_road_se') : e.road ? 'rk_road_pl_road' : 'rk_road_pl',
+    params: {
+      event: e.title,
+      ...(country === 'SE' ? { road: roadLabel } : {}),
+      ...(country === 'PL' && e.road ? { road: e.road } : {}),
+    },
+    detail: {
+      opis: e.detail, rodzaj: e.kind, lat: e.lat, lon: e.lon, od: e.start, do: e.end,
+      oryginal: e.original ?? null,
+      zrodlo: country === 'SE' ? 'Trafikverket (CC0)' : 'KPD GDDKiA',
+      ...(offSe ? { obok_trasy: true, korytarz_droga: 'off' } : {}),
+    },
     dedup: `${country === 'SE' ? 'ROAD_SE' : 'ROAD_PL'}:${e.id}`, sourceUrl, validUntil: e.end,
   };
 }
