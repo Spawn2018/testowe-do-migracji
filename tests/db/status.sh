@@ -3122,7 +3122,7 @@ chk "DP-193: wiele przerw → flags zwinięte (przerwy ×N)" \
      select 1 from jsonb_array_elements_text(coalesce(c.basis->'flags','[]'::jsonb)) f
       where f like 'przerwy z GPS ×%'
    )::text from public.compute_load_eta('$L827b') c;
-   rollback" t
+   rollback" true
 
 chk "BN8b po teście brak risk_signals/loads L821*/L822*/L823*/L824*/L826*/L827*" \
   "select (select count(*) from risk_signals where load_id::text like 'aaaaaaaa-0000-0000-0000-0000000082%')

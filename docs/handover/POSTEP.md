@@ -1,4 +1,11 @@
 
+## 2026-11-03 16:15 — #770 CI db: DP-193 expected `true` (nie `t`)
+
+- Skrzynka: #550 WSTRZYMANE; bez nowego `pilne`. PR do scalenia: brak „F7: gotowe”.
+- CI @ `b91f9a05`: unit/visual ✔; db status **639/1** — `DP-193: wiele przerw…` dostał `true` (`exists(…)::text`), oczekiwano `t`.
+- **Krok:** oczekiwane → `true` (jak pozostałe chk w `status.sh`). Liczba asercji bez zmian (**640** / h4 **26**).
+- **Dalej:** push → CI db → F7. Potem C2: DP-197 / 119….
+
 ## 2026-11-03 15:45 — #770 F7 r1: decyzja 97 + DP-193 behawioralne
 
 - Skrzynka: #550 WSTRZYMANE; bez nowego `pilne`. PR do scalenia: brak „F7: gotowe” (r1 niegotowe @ 45fd452).
