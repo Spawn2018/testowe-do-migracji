@@ -51,7 +51,7 @@ const {
   __resetDemoRoutesForTests, BN7_LEGS, baselineScope, CORE_LEGS, coreLegsOnly, corridorScope, demoRouteOverrides, legsOfRoute,
   networkScope, routeOfLoad,
 } = await import('../src/lib/map/routeLegs');
-const { BN9C5_EN, I18N_ALL } = await import('../src/i18n/messages');
+const { I18N_ALL } = await import('../src/i18n/messages');
 const { buildSeedLoads } = await import('../src/data/seed');
 
 type Pt = readonly [number, number];
@@ -62,7 +62,13 @@ const first = (pl: Polyline): Pt => {
 const demoLine = (leg: string) => DEMO_ROAD_LEGS.find((l) => l.leg === leg)!.line;
 const routeFirsts = (): Pt[] => (__poolEntryForTests()!.layers.route.getLayers() as Polyline[]).map(first);
 const laneFirsts = (): Pt[] => (__poolEntryForTests()!.layers.ferryLeg.getLayers() as Polyline[]).map(first);
+/** DP-191 (polecenie właściciela 03.11): dopisek usunięty z map — testy sprawdzają, że go nie ma. */
 const NOTE = 'Trasa orientacyjna (HERE, bez wymiarów ładunku) — nie zastępuje trasy z zezwolenia.';
+function expectNoNote(): void {
+  expect(host!.querySelectorAll('[data-route-note]')).toHaveLength(0);
+  expect(host!.querySelector('.bn7-note, .bn7-note-l')).toBeNull();
+  expect(host!.textContent ?? '').not.toContain('Trasa orientacyjna');
+}
 
 let host: HTMLDivElement | null = null;
 let root: Root | null = null;
@@ -218,11 +224,10 @@ describe('BN9-c5 · reguła legów trasy (czysta)', () => {
     expect(() => programmatic(m, () => { throw new Error('x'); })).toThrow('x');
     expect(isProgrammatic(m)).toBe(false);
   });
-  it('dopisek PL w słowniku; EN (BN9C5_EN) z tymi samymi kluczami, bez polskich liter, niepodpięte (8A)', () => {
-    expect(I18N_ALL.pl.bn9c5_route_note).toBe(NOTE);
-    expect(Object.keys(BN9C5_EN)).toEqual(['bn9c5_route_note']);
-    for (const v of Object.values(BN9C5_EN)) expect(/[ąćęłńóśźż]/i.test(v), v).toBe(false);
+  it('DP-191: dopisku „Trasa orientacyjna…” nie ma w słownikach (PL, EN)', () => {
+    expect(I18N_ALL.pl.bn9c5_route_note).toBeUndefined();
     expect(I18N_ALL.en.bn9c5_route_note).toBeUndefined();
+    expect(Object.values(I18N_ALL.pl)).not.toContain(NOTE);
   });
   it('dane demo: rdzeń = dokładnie DEMO_ROAD_LINES; legi BN7 oznaczone jako przykład', () => {
     const core = baselineScope();
@@ -243,7 +248,7 @@ function demoLoads() {
 }
 
 describe('BN9-c5 · karta transportu i Mapa (demo, CorridorMap)', () => {
-  it('karta TLL-HEL: tylko PL-TLL + FI-HEL i tor TLL-HEL; dopisek przy linii', async () => {
+  it('karta TLL-HEL: tylko PL-TLL + FI-HEL i tor TLL-HEL; bez dopisku (DP-191)', async () => {
     const { loads, planned } = demoLoads();
     useTowerStore.setState({
       theme: 'light',
@@ -261,7 +266,7 @@ describe('BN9-c5 · karta transportu i Mapa (demo, CorridorMap)', () => {
     expect(laneFirsts()).toEqual([WATER_TRACKS_EXTRA['TLL-HEL'][0]]);
     const style = (__poolEntryForTests()!.layers.route.getLayers()[0] as Polyline).options;
     expect(style.color).toBe(ORANGE_ROAD_STYLE.color);
-    expect(host!.querySelector('[data-route-note="baltic"]')?.textContent).toBe(NOTE);
+    expectNoNote();
   });
 
   it('karta PLD-KPS (demo przez `demoRoute`): PL-PLD + SE-KPS i tor PLD-KPS', async () => {
@@ -387,7 +392,7 @@ describe('BN9-c5 · karta transportu i Mapa (demo, CorridorMap)', () => {
     vi.unstubAllGlobals();
   });
 
-  /** Decyzja 88: rdzeń (3 linie demo) i 7 legów BN7 (przykład), 6 torów; dopisek „Trasa orientacyjna…”. */
+  /** Decyzja 88: rdzeń (3 linie demo) i 7 legów BN7 (przykład), 6 torów; DP-191: bez dopisku „Trasa orientacyjna…”. */
   const networkFirsts = (): Pt[] => [...DEMO_ROAD_LINES.map((l) => l[0]), ...[...BN7_LEGS].map((leg) => demoLine(leg)[0])];
   function expectNetwork(): void {
     expect(routeFirsts()).toEqual(networkFirsts());
@@ -395,10 +400,10 @@ describe('BN9-c5 · karta transportu i Mapa (demo, CorridorMap)', () => {
     for (const id of Object.keys(WATER_TRACKS_EXTRA) as (keyof typeof WATER_TRACKS_EXTRA)[]) {
       expect(laneFirsts(), id).toContainEqual(WATER_TRACKS_EXTRA[id][0]);
     }
-    expect(host!.querySelector('[data-route-note="baltic"]')?.textContent).toBe(NOTE);
+    expectNoNote();
   }
 
-  it('decyzja 88: Mapa bez aktywnych transportów bałtyckich — rdzeń, wszystkie legi BN7 i tory bałtyckie, dopisek', async () => {
+  it('decyzja 88: Mapa bez aktywnych transportów bałtyckich — rdzeń, wszystkie legi BN7 i tory bałtyckie, bez dopisku', async () => {
     demoLoads();
     mount();
     await act(async () => { root!.render(createElement(CorridorMap, { loads: [], slot: 'map' })); });

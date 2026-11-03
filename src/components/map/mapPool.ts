@@ -148,10 +148,10 @@ export function corridorPadding(map: L.Map): { paddingTopLeft: L.PointTuple; pad
   let extra = 0;
   let top = 0;
   try {
-    /* legenda Mapy i dopisek Przeglądu (wyglad/P9-f) leżą na dole mapy; BN9-c5: dopisek trasy bałtyckiej (`.bn7-note`)
-       i dopisek Przeglądu na telefonie leżą u góry — wtedy margines górny (wcześniej dopisek u góry liczony był jak dolny,
-       na wysokość całej mapy, i kadr spadał do najmniejszego przybliżenia) */
-    const over = map.getContainer().closest('.corridor-map-root')?.querySelectorAll<HTMLElement>('.mapkey, [data-map-bottom], .bn7-note') ?? [];
+    /* legenda Mapy i dopisek Przeglądu (wyglad/P9-f) leżą na dole mapy; dopisek Przeglądu na telefonie leży u góry —
+       wtedy margines górny (wcześniej nakładka u góry liczona była jak dolna, na wysokość całej mapy, i kadr spadał do
+       najmniejszego przybliżenia). DP-191: dopisku trasy bałtyckiej („Trasa orientacyjna…”) już nie ma */
+    const over = map.getContainer().closest('.corridor-map-root')?.querySelectorAll<HTMLElement>('.mapkey, [data-map-bottom]') ?? [];
     for (const key of over) {
       if (!(key.offsetHeight > 0)) continue;
       const root = key.offsetParent as HTMLElement | null;
@@ -194,46 +194,22 @@ const slotOf = new WeakMap<L.Map, MapSlot>();
 export const KOKPIT_PADDING = 12;
 type FramePadding = ReturnType<typeof corridorPadding>;
 /**
- * DP-176: mini-mapa Kokpitu jest szeroka i niska (727 × 360 przy 1920), a sieć (Śrem – Boden) wysoka i wąska — kadr
- * ogranicza wysokość, a dopisek „Trasa orientacyjna…” u góry z prawej zabierał jeszcze ~60 px wysokości, więc w kadrze
- * było morze aż po Islandię. W Kokpicie: margines 12 px, a dopisek z prawej liczony jako margines prawy (sieć obok
- * dopisku, nie pod nim), gdy to daje większe przybliżenie. Telefon (dopisek na całą szerokość) — margines górny jak dotąd.
+ * DP-176: mini-mapa Kokpitu jest szeroka i niska (727 × 360 przy 1920), a sieć (Śrem – Boden) wysoka i wąska — w Kokpicie
+ * margines 12 px zamiast 24 px (większe przybliżenie, cała sieć w kadrze). Marginesy od nakładek (`corridorPadding`)
+ * zostają, pomniejszone o różnicę marginesu bazowego. DP-191: bez dopisku „Trasa orientacyjna…” — bez wariantu
+ * „dopisek z boku”.
  */
-function kokpitPadding(map: L.Map, base: FramePadding): FramePadding {
+function kokpitPadding(base: FramePadding): FramePadding {
   const d = CORRIDOR_PADDING - KOKPIT_PADDING;
-  const tight: FramePadding = {
+  return {
     paddingTopLeft: [KOKPIT_PADDING, base.paddingTopLeft[1] - d],
     paddingBottomRight: [KOKPIT_PADDING, base.paddingBottomRight[1] - d],
   };
-  let side: FramePadding | null = null;
-  try {
-    const note = map.getContainer().closest('.corridor-map-root')?.querySelector<HTMLElement>('.bn7-note') ?? null;
-    const root = note?.offsetParent as HTMLElement | null | undefined;
-    if (note && root && note.offsetHeight > 0 && note.offsetWidth > 0) {
-      const w = root.clientWidth;
-      const h = root.clientHeight;
-      const noteBottom = note.offsetTop + note.offsetHeight;
-      const atTop = note.offsetTop + note.offsetHeight / 2 < h / 2;
-      const atRight = note.offsetLeft + note.offsetWidth / 2 > w / 2;
-      /* margines górny pochodzi tylko z dopisku (inna nakładka u góry — zostaje jak dotąd) */
-      const onlyNoteOnTop = tight.paddingTopLeft[1] - KOKPIT_PADDING <= noteBottom;
-      const right = Math.max(0, w - note.offsetLeft) + KOKPIT_PADDING;
-      if (atTop && atRight && onlyNoteOnTop && w - KOKPIT_PADDING - right >= 80) {
-        side = { paddingTopLeft: [KOKPIT_PADDING, KOKPIT_PADDING], paddingBottomRight: [right, tight.paddingBottomRight[1]] };
-      }
-    }
-  } catch {
-    side = null;
-  }
-  if (!side) return tight;
-  const b = boundsFor(map);
-  const zoomOf = (p: FramePadding) => map.getBoundsZoom(b, false, L.point(p.paddingTopLeft).add(p.paddingBottomRight));
-  return zoomOf(side) > zoomOf(tight) ? side : tight;
 }
 /** Margines kadru całej trasy dla miejsca mapy: Kokpit — `kokpitPadding` (DP-176), reszta — `corridorPadding`. */
 export function framePadding(map: L.Map): FramePadding {
   const base = corridorPadding(map);
-  return slotOf.get(map) === 'kokpit' ? kokpitPadding(map, base) : base;
+  return slotOf.get(map) === 'kokpit' ? kokpitPadding(base) : base;
 }
 
 /** Widok całej trasy dla bieżącego rozmiaru mapy (bez ruszania mapy). */

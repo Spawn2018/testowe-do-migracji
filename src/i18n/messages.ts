@@ -442,8 +442,6 @@ const pl: Dict = {
   bn9c4_translated_LV: 'przetłumaczone z łotewskiego',
   bn9c4_translated_EE: 'przetłumaczone z estońskiego',
   bn9c4_translated_FI: 'przetłumaczone z fińskiego',
-  /* BN9-c5 (#718 BN7 §7 pkt 1): dopisek przy linii Korytarza bałtyckiego na mapach */
-  bn9c5_route_note: 'Trasa orientacyjna (HERE, bez wymiarów ładunku) — nie zastępuje trasy z zezwolenia.',
   p4b_trk_nolink: 'Śledzenie wyłączone — brak linku śledzenia',
   p4b_trk_nolink_sub: 'lokalizacja, ślad i ETA działają tylko z linkiem śledzenia · link dodaje przewoźnik albo Administrator HHL w awizacji',
   p4b_ago_now: 'przed chwilą',
@@ -970,14 +968,6 @@ export const BN9C4_EN: Readonly<Record<string, string>> = {
   bn9c4_translated_LV: 'translated from Latvian',
   bn9c4_translated_EE: 'translated from Estonian',
   bn9c4_translated_FI: 'translated from Finnish',
-};
-
-/**
- * BN9-c5 — dopisek przy linii bałtyckiej po angielsku. Mapy są po polsku (8A, 17.10: `I18N_ALL.en === DRIVER_EN`),
- * więc tłumaczenie czeka niepodpięte (klucze jak w PL, jak `BN9C4_EN`).
- */
-export const BN9C5_EN: Readonly<Record<string, string>> = {
-  bn9c5_route_note: 'Indicative route (HERE, without load dimensions) — does not replace the route in the permit.',
 };
 
 /** PL-T (ANEKS 3 §3) — pełne słowniki do testu pisowni. */
