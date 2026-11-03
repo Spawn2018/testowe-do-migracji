@@ -13,7 +13,7 @@ const ROOT = resolve(import.meta.dirname, '../..');
 /** Oczekiwane OK na lokalnym Postgresie (gate.sh). */
 export const EXPECTED_LOCAL = {
   security: 495, // #662-b: +1 maska URL/token w audit_log; #662 +8 → 494
-  status: 634, // DP-155: +1 ROAD_FI×1.5 FI_E75; było 633 (DP-184 F7 r1)
+  status: 637, // DP-194: +3 SE_E4/SE-NYN HERE (na linii / 10 km / corridor_geom); było 634
   storage: 37,
   money: 200, // DP-167 F7 #734 r2: +2 title_key zmiana; było 198 (r1 +4 od 194 / DP-167 +3 od 191)
   release: 146,
@@ -46,7 +46,7 @@ export const EXPECTED_LOCAL = {
   smsksh: 16,
   'ferry-status': 18, // BN3 #683 F7 B5 / 0358: +4 (AUTO null, CHECK, apply RECZNIE, łańcuch AUTO); było 14
   bmapa: 202, // DP-184: +3 geom/n_points store+purge; było 199
-  h4: 19,
+  h4: 23, // DP-193: +4 eta_flags_collapse (60×, etykieta, max 12, auth)
   p4k: 111, // #630 F7 r1: +rola PORT_CHECKIN; CROSSING mismatch w medianie; undo 7d
   aud03: 32, // D-0005 F7: +OPS, by=HHL_ADMIN, P2 bez sprawy, ASK_FIX/DECISION_HOLD
   g20: 15, // P3-poprawki — G-20; D-0005: HHL_ADMIN może daty (err→val)

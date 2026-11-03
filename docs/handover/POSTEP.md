@@ -1,4 +1,11 @@
 
+## 2026-11-03 14:45 — #769 SCALONE; start C2 DP-193+194
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720/#762 w planie. Bez nowego `pilne`.
+- Scalanie: **#769 SCALONE** `1a523a5f` (DP-146 wait kart faktur; F7 @ `554401d5`, CI unit×2 visual×5 ✔). `deploy-main` robi resztę. Bez push na main.
+- **Krok C2** (`pakiet/c2-dp-193-194-eta-corridor` / **0389**): DP-193 `eta_flags_collapse` (×N, max 12) + H-4/`compute_load_eta`; DP-194 SE_E4/SE-NYN HERE OFF_CORRIDOR gdy świeży geom (bez HERE → OSM). status **637**, h4 **23**.
+- **Dalej:** push PR → CI (db status+h4) → F7. Potem C2 reszta (121→124→…).
+
 ## 2026-11-03 14:15 — #768 SCALONE; start DP-146
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.

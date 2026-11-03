@@ -2587,6 +2587,9 @@ L824c=aaaaaaaa-0000-0000-0000-00000000824c
 L824d=aaaaaaaa-0000-0000-0000-00000000824d
 L825a=aaaaaaaa-0000-0000-0000-00000000825a
 L825b=aaaaaaaa-0000-0000-0000-00000000825b
+L826a=aaaaaaaa-0000-0000-0000-00000000826a
+L826b=aaaaaaaa-0000-0000-0000-00000000826b
+L826c=aaaaaaaa-0000-0000-0000-00000000826c
 S823t=77777777-0000-0000-0000-00000000823a
 S823g=77777777-0000-0000-0000-00000000823b
 V823=66666666-0000-0000-0000-00000000823a
@@ -2596,6 +2599,8 @@ HERE_PL_EE='[[52.083,17.017],[53.13,23.16],[54.10,22.93],[54.90,23.90],[56.41,24
 HERE_FI='[[60.154,24.914],[60.212,25.188],[61.50,24.00],[65.00,25.50],[65.825,24.15]]'
 HERE_SE_STO='[[59.35,18.11],[59.50,18.00],[60.00,17.50],[65.825,24.15]]'
 HERE_SE_KPS='[[59.723,19.066],[59.80,18.80],[60.00,17.50],[65.825,24.15]]'
+# DP-194: SE-NYN (Nynäshamn→Boden); na linii = 17.50/60.00; obok ≈10 km E.
+HERE_SE_NYN='[[58.90,17.95],[59.50,18.00],[60.00,17.50],[65.825,24.15]]'
 
 chk "BN8b TLL-HEL: brak HERE → 0 OFF_CORRIDOR" \
   "begin;
@@ -3032,7 +3037,44 @@ chk "BN8b F7 W3f: założony rejs tylko z rodziny TLL" \
      from public.compute_load_eta('$L823f') c;
    rollback" t
 
-chk "BN8b po teście brak risk_signals/loads L821*/L822*/L823*/L824*" \
+# DP-194 (#762 C2): SE_E4 / SE-NYN — HERE OFF_CORRIDOR + corridor_geom=here (jak PL bałtyckie).
+chk "DP-194: GDN-NYN SE_E4 na linii → 0 i corridor_geom=here" \
+  "begin;
+   select public.here_store_road('SE-NYN', '$HERE_SE_NYN'::jsonb, 'DP-194 SE-NYN on', now(), 980000, 52000);
+   insert into loads (id, project_id, carrier_org_id, hhl_order_no, carrier_order_no, status, plan_load_date, plan_delivery_date, ferry_route)
+    values ('$L826a','$P','$SCXO','HHL/DP194-826A','SCX/DP194-826A','IN_TRANSIT_SE', current_date, current_date + 3, 'GDN-NYN');
+   insert into positions (load_id, ts, geom_raw, source) values
+    ('$L826a', now() - interval '20 minutes', st_setsrid(st_makepoint(17.50, 60.00), 4326), 'TELEMATICS_API'),
+    ('$L826a', now() - interval '5 minutes', st_setsrid(st_makepoint(17.50, 60.00), 4326), 'TELEMATICS_API');
+   select public.refresh_load_eta('$L826a');
+   select (select count(*) from risk_signals where load_id='$L826a' and dedup_key like 'OFF_CORRIDOR%')::text
+       || ':' || coalesce((select eta_basis->>'corridor_geom' from loads where id='$L826a'), '?');
+   rollback" 0:here
+chk "DP-194: GDN-NYN SE_E4 10 km obok → 1" \
+  "begin;
+   select public.here_store_road('SE-NYN', '$HERE_SE_NYN'::jsonb, 'DP-194 SE-NYN off', now(), 980000, 52000);
+   insert into loads (id, project_id, carrier_org_id, hhl_order_no, carrier_order_no, status, plan_load_date, plan_delivery_date, ferry_route)
+    values ('$L826b','$P','$SCXO','HHL/DP194-826B','SCX/DP194-826B','IN_TRANSIT_SE', current_date, current_date + 3, 'GDN-NYN');
+   insert into positions (load_id, ts, geom_raw, source) values
+    ('$L826b', now() - interval '20 minutes', st_setsrid(st_makepoint(17.70, 60.00), 4326), 'TELEMATICS_API'),
+    ('$L826b', now() - interval '5 minutes', st_setsrid(st_makepoint(17.70, 60.00), 4326), 'TELEMATICS_API');
+   select public.refresh_load_eta('$L826b');
+   select count(*) from risk_signals where load_id='$L826b' and dedup_key like 'OFF_CORRIDOR%';
+   rollback" 1
+chk "DP-194: brak HERE SE-NYN na E4 → OSM 0 i corridor_geom=brak" \
+  "begin;
+   delete from here_road_geometry where leg = 'SE-NYN';
+   insert into loads (id, project_id, carrier_org_id, hhl_order_no, carrier_order_no, status, plan_load_date, plan_delivery_date, ferry_route)
+    values ('$L826c','$P','$SCXO','HHL/DP194-826C','SCX/DP194-826C','IN_TRANSIT_SE', current_date, current_date + 3, 'GDN-NYN');
+   insert into positions (load_id, ts, geom_raw, source) values
+    ('$L826c', now() - interval '20 minutes', st_setsrid(st_makepoint(17.50, 60.00), 4326), 'TELEMATICS_API'),
+    ('$L826c', now() - interval '5 minutes', st_setsrid(st_makepoint(17.50, 60.00), 4326), 'TELEMATICS_API');
+   select public.refresh_load_eta('$L826c');
+   select (select count(*) from risk_signals where load_id='$L826c' and dedup_key like 'OFF_CORRIDOR%')::text
+       || ':' || coalesce((select eta_basis->>'corridor_geom' from loads where id='$L826c'), '?');
+   rollback" 0:brak
+
+chk "BN8b po teście brak risk_signals/loads L821*/L822*/L823*/L824*/L826*" \
   "select (select count(*) from risk_signals where load_id::text like 'aaaaaaaa-0000-0000-0000-0000000082%')
         + (select count(*) from loads where id::text like 'aaaaaaaa-0000-0000-0000-0000000082%')" 0
 

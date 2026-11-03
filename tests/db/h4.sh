@@ -129,4 +129,22 @@ approx "0186 z rest 11h: driven_since_rest ~2h (dzień od końca rest)" \
   "select driven_since_rest_h::text from h4_driver_state_from_gps('$L2', $NOW3)" \
   2.0 0.5
 
+# DP-193 (#762 C2): zwinąć powtórzenia w eta_basis.flags (przerwy z GPS ×N), maks. 12.
+val "DP-193: 60× przerwa + odpoczynek → 2 flagi" \
+  "select array_length(public.eta_flags_collapse(
+     (select array_agg('przerwa z GPS'::text) from generate_series(1,60))
+     || array['odpoczynek dobowy regularny (≥11 h) z GPS'::text]
+   ), 1)::text" "2"
+val "DP-193: etykieta przerwy ×60" \
+  "select (public.eta_flags_collapse(
+     (select array_agg('przerwa z GPS'::text) from generate_series(1,60))
+     || array['odpoczynek dobowy regularny (≥11 h) z GPS'::text]
+   ))[1]" "przerwy z GPS ×60"
+val "DP-193: maks. 12 pozycji" \
+  "select array_length(public.eta_flags_collapse(
+     (select array_agg(('flaga-'||g::text)) from generate_series(1,20) g)
+   ), 1)::text" "12"
+val "DP-193: authenticated bez EXECUTE eta_flags_collapse" \
+  "select has_function_privilege('authenticated','eta_flags_collapse(text[])','execute')::text" "false"
+
 echo "WYNIK: $ok OK, $fail FAIL"
