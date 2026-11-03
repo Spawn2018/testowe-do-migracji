@@ -1,4 +1,12 @@
 
+## 2026-11-03 20:20 — #774 SCALONE; start DP-200 (Łotwa REST snapshot)
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720/#773 w planie. Bez nowego `pilne`.
+- Scalanie: **#774 SCALONE** `5f0c4bce` (DP-119; F7 @ `32a8ec0c`; CI unit/db/visual ✔). `deploy-main` robi resztę. Bez push na main.
+- F7 #774: następne **#773 / DP-200** przed resztą C2; PLAN DP-119 dopisek „(rej. koord.: DP-116 cz. 2)”.
+- **Krok DP-200** `pakiet/c2-dp-200-lv-rest-snapshot`: `runRoadLv` → `POST …/download-file` + `x-api-key`; 204=`empty_204`; 403 FileIdMismatch→`file/info`; URL opcjonalny; `lv_mode=rest_snapshot`. vitest bn6-road-lv **24**. Bez migracji.
+- **Dalej:** push → CI → F7. Potem C2: 120….
+
 ## 2026-11-03 19:45 — #774 DP-119: fix tsc TS2352 (BillRow cast)
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`. PR do scalenia: brak „F7: gotowe”.

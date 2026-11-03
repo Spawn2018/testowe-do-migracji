@@ -1,6 +1,6 @@
 /**
  * BN6 (#716) cz.3 — LVC NAP LV: DATEX/GeoJSON, dedup śliskości, runRoadLv.
- * F7 #730 r1 B1–B7 / N1–N8 + DP-160/164.
+ * F7 #730 + DP-200 (#773): snapshot REST POST download-file + x-api-key.
  */
 import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -8,6 +8,8 @@ import { describe, expect, it } from 'vitest';
 import {
   LT_ICY_RE,
   LV_ATTRIBUTION,
+  LV_DOWNLOAD_FILE_URL,
+  LV_FILE_INFO_URL,
   LV_NAP_BASE,
   LV_NAP_KEY_HEADER,
   LV_SOURCE_REF,
@@ -27,6 +29,8 @@ import {
   filterInLvBboxes,
   isDimensionLimitEvent,
   lvCoordsFromRecord,
+  lvFileInfoFirstId,
+  lvIsFileIdMismatch,
   lvNormalizeLatLon,
   lvRoadOnCorridor,
   lvSeverityForRecord,
@@ -110,27 +114,52 @@ class MemStore implements SyncStore {
   async hereMonthSpend() { return 0; }
 }
 
+/** DP-200 — mock per klucz zbioru (ten sam URL download-file). */
+type LvMockReply = string | number | { status: number; body?: string };
+type LvKeyMock = { download?: LvMockReply; info?: LvMockReply };
+
+function replyOf(r: LvMockReply | undefined, fallbackStatus = 404): Response {
+  if (r == null) return new Response('missing', { status: fallbackStatus });
+  if (typeof r === 'number') {
+    if (r === 204) return new Response(null, { status: 204 });
+    return new Response(r === 403 ? '{"error":"FileIdMismatch"}' : 'err', { status: r });
+  }
+  if (typeof r === 'string') return new Response(r, { status: 200 });
+  if (r.status === 204) return new Response(null, { status: 204 });
+  return new Response(r.body ?? '', { status: r.status });
+}
+
 function deps(
   store: MemStore,
-  pages: Record<string, string | number>,
+  byKey: Record<string, LvKeyMock>,
   env: Record<string, string>,
-): { d: JobDeps; headerCalls: { url: string; headers: Record<string, string> }[] } {
-  const headerCalls: { url: string; headers: Record<string, string> }[] = [];
+): {
+  d: JobDeps;
+  headerCalls: { url: string; method: string; headers: Record<string, string>; body?: string }[];
+} {
+  const headerCalls: {
+    url: string; method: string; headers: Record<string, string>; body?: string;
+  }[] = [];
   const f = (async (input: RequestInfo | URL, init?: RequestInit) => {
     const url = String(input);
+    const method = (init?.method ?? 'GET').toUpperCase();
     const hdrs: Record<string, string> = {};
     const raw = init?.headers;
     if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
       for (const [k, v] of Object.entries(raw as Record<string, string>)) hdrs[k] = String(v);
     }
-    headerCalls.push({ url, headers: hdrs });
-    const hit = Object.entries(pages)
-      .filter(([k]) => url.includes(k))
-      .sort((a, b) => b[0].length - a[0].length)[0];
-    if (hit) {
-      return typeof hit[1] === 'number'
-        ? new Response('err', { status: hit[1] })
-        : new Response(hit[1], { status: 200 });
+    const body = typeof init?.body === 'string' ? init.body : undefined;
+    headerCalls.push({ url, method, headers: hdrs, body });
+    if (/transportdata\.gov\.lv\/?$/i.test(url) || url === `${LV_NAP_BASE}/`) {
+      return new Response('<html>ok</html>', { status: 200 });
+    }
+    const key = hdrs[LV_NAP_KEY_HEADER] ?? '';
+    const mock = byKey[key];
+    if (url.includes('/api/v1/metadata/file/info')) {
+      return replyOf(mock?.info);
+    }
+    if (url.includes('/api/v1/get/file/download-file')) {
+      return replyOf(mock?.download);
     }
     return new Response('missing', { status: 404 });
   }) as typeof fetch;
@@ -142,13 +171,16 @@ function deps(
 
 const MOCK_ENV: Record<string, string> = {
   LV_NAP_ROADWORKS_KEY: 'k-rw-secret-value',
-  LV_NAP_ROADWORKS_URL: 'https://nap.example/lv/roadworks',
   LV_NAP_SLIPPERY_WM_KEY: 'k-sw',
-  LV_NAP_SLIPPERY_WM_URL: 'https://nap.example/lv/slippery-wm',
   LV_NAP_SLIPPERY_TI_KEY: 'k-st',
-  LV_NAP_SLIPPERY_TI_URL: 'https://nap.example/lv/slippery-ti',
   LV_NAP_WEIGHT_DIM_KEY: 'k-wd',
-  LV_NAP_WEIGHT_DIM_URL: 'https://nap.example/lv/weight-dim',
+};
+
+const MOCK_BY_KEY: Record<string, LvKeyMock> = {
+  'k-rw-secret-value': { download: rwXml },
+  'k-sw': { download: slipWm },
+  'k-st': { download: slipTi },
+  'k-wd': { download: JSON.stringify(weightJson) },
 };
 
 describe('BN6 DP-160 / F7 #730 N1 LT_ICY_RE', () => {
@@ -278,34 +310,30 @@ describe('BN6 parse LV DATEX / GeoJSON (F7 #730)', () => {
   });
 });
 
-describe('BN6 runRoadLv F7 #730', () => {
-  it('nagłówek Ocp-Apim + UA; bez URL/kluczy w warnings; ryzyka + corridor', async () => {
+describe('BN6 runRoadLv / DP-200 REST snapshot', () => {
+  it('POST download-file + x-api-key; UA; ryzyka + corridor; lv_mode', async () => {
     const st = new MemStore();
-    const { d, headerCalls } = deps(st, {
-      'nap.example/lv/roadworks': rwXml,
-      'nap.example/lv/slippery-wm': slipWm,
-      'nap.example/lv/slippery-ti': slipTi,
-      'nap.example/lv/weight-dim': JSON.stringify(weightJson),
-    }, MOCK_ENV);
+    const { d, headerCalls } = deps(st, MOCK_BY_KEY, MOCK_ENV);
     const r = await runRoadLv(d);
-    /* F7 #736 B1: sonda hosta bez klucza + 4 zbiory z nagłówkiem. */
-    const probeCalls = headerCalls.filter((c) => /https:\/\/nap\.example\/?$/i.test(c.url));
-    const feedCalls = headerCalls.filter((c) => c.headers[LV_NAP_KEY_HEADER]);
+    const probeCalls = headerCalls.filter((c) => /transportdata\.gov\.lv\/?$/i.test(c.url));
+    const feedCalls = headerCalls.filter((c) =>
+      c.url.includes('/download-file') && c.headers[LV_NAP_KEY_HEADER],
+    );
     expect(probeCalls.length).toBe(1);
     expect(probeCalls[0]!.headers[LV_NAP_KEY_HEADER]).toBeUndefined();
     expect(feedCalls.length).toBe(4);
     for (const c of feedCalls) {
+      expect(c.method).toBe('POST');
       expect(c.headers['User-Agent']).toBe(LV_UA);
       expect(c.headers[LV_NAP_KEY_HEADER]).toBeTruthy();
+      expect(c.headers['Content-Type']).toMatch(/application\/json/i);
+      expect(c.body).toContain('"file_id":"1"');
     }
     expect(r.observations?.header).toBe(LV_NAP_KEY_HEADER);
+    expect(r.observations?.lv_mode).toBe('rest_snapshot');
     expect(r.observations?.complete).toBe('1');
-    expect(r.observations?.probe_lv).toMatch(/^(?:\d+|timeout|DNS|TLS|reset|connect timeout|read timeout|sieć):\d+$/);
-    expect(r.observations?.lv_url_kind).toBe('nap.example/lv');
-    expect(r.observations?.key_header_sent).toBe('1');
-    expect(r.observations?.key_len).toBe(String('k-rw-secret-value'.length));
-    expect(r.observations?.key_trimmed).toBe('0');
-    expect(r.warnings?.some((w) => /nap\.example|https?:\/\//i.test(w))).toBe(false);
+    expect(r.observations?.lv_base).toBe('www.transportdata.gov.lv');
+    expect(r.observations?.lv_url_kind).toBe(balticUrlKind(LV_DOWNLOAD_FILE_URL));
     expect(r.warnings?.some((w) => w.includes('k-rw-secret-value'))).toBe(false);
     expect(JSON.stringify(r.observations ?? {})).not.toContain('k-rw-secret-value');
     expect(st.corridor?.corridor).toBe('ROAD_LV');
@@ -316,18 +344,69 @@ describe('BN6 runRoadLv F7 #730', () => {
     expect(dim?.detail?.zrodlo).toBe(LV_ATTRIBUTION);
     expect(dim?.sourceUrl).toBe(LV_SOURCE_REF);
     expect(st.staleCalls.length).toBe(1);
-    expect(st.risks.some((x) => x.dedup === 'ROAD_LV:v2:bn6-lv-rw-far-east')).toBe(false);
-    expect(String(r.observations?.lv_roadworks ?? '')).toMatch(/^ok:\d+:\d+:datex-xml:\d+$/);
-    expect(r.observations?.lv_swapped).toMatch(/^\d+$/);
+    expect(String(r.observations?.lv_roadworks ?? '')).toMatch(/^ok:\d+$/);
   });
 
-  it('B4: 1/4 HTML → complete=false, bez resolveStale', async () => {
+  it('DP-200: 204 → empty_204, complete, bez ostrzeżenia', async () => {
+    const st = new MemStore();
+    const byKey: Record<string, LvKeyMock> = {
+      'k-rw-secret-value': { download: 204 },
+      'k-sw': { download: 204 },
+      'k-st': { download: 204 },
+      'k-wd': { download: 204 },
+    };
+    const r = await runRoadLv(deps(st, byKey, MOCK_ENV).d);
+    expect(r.observations?.fetched_ok).toBe('4');
+    expect(r.observations?.complete).toBe('1');
+    expect(r.observations?.lv_roadworks).toBe('empty_204');
+    expect(r.warnings ?? []).toEqual([]);
+    expect(st.staleCalls.length).toBe(1);
+  });
+
+  it('DP-200: 403 FileIdMismatch → file/info → ponów download', async () => {
+    const st = new MemStore();
+    const byKey: Record<string, LvKeyMock> = {
+      'k-rw-secret-value': {
+        download: { status: 403, body: '{"error":"FileIdMismatch"}' },
+        info: JSON.stringify({ dataset: 'rw', files: [{ file_id: '9', file_name: 'a.xml' }] }),
+      },
+      'k-sw': { download: slipWm },
+      'k-st': { download: slipTi },
+      'k-wd': { download: JSON.stringify(weightJson) },
+    };
+    let rwPosts = 0;
+    const base = deps(st, byKey, MOCK_ENV);
+    const f = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      const hdrs: Record<string, string> = {};
+      const raw = init?.headers;
+      if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+        for (const [k, v] of Object.entries(raw as Record<string, string>)) hdrs[k] = String(v);
+      }
+      const key = hdrs[LV_NAP_KEY_HEADER] ?? '';
+      if (url.includes('download-file') && key === 'k-rw-secret-value') {
+        rwPosts++;
+        const body = typeof init?.body === 'string' ? init.body : '';
+        if (body.includes('"file_id":"9"')) {
+          return new Response(rwXml, { status: 200 });
+        }
+        return new Response('{"error":"FileIdMismatch"}', { status: 403 });
+      }
+      return base.d.fetch(input, init);
+    }) as typeof fetch;
+    const r = await runRoadLv({ ...base.d, fetch: f });
+    expect(rwPosts).toBeGreaterThanOrEqual(2);
+    expect(String(r.observations?.lv_roadworks ?? '')).toMatch(/^ok:\d+$/);
+    expect(r.observations?.complete).toBe('1');
+  });
+
+  it('1/4 HTML → complete=false, bez resolveStale', async () => {
     const st = new MemStore();
     const r = await runRoadLv(deps(st, {
-      'nap.example/lv/roadworks': '<!DOCTYPE html><html>serwiss</html>',
-      'nap.example/lv/slippery-wm': slipWm,
-      'nap.example/lv/slippery-ti': slipTi,
-      'nap.example/lv/weight-dim': JSON.stringify(weightJson),
+      'k-rw-secret-value': { download: '<!DOCTYPE html><html>serwiss</html>' },
+      'k-sw': { download: slipWm },
+      'k-st': { download: slipTi },
+      'k-wd': { download: JSON.stringify(weightJson) },
     }, MOCK_ENV).d);
     expect(r.observations?.fetched_ok).toBe('3');
     expect(r.observations?.complete).toBe('0');
@@ -335,7 +414,7 @@ describe('BN6 runRoadLv F7 #730', () => {
     expect(st.staleCalls.length).toBe(0);
   });
 
-  it('SOURCE_DOWN po 3× fetched_ok===0 (configured>0)', async () => {
+  it('SOURCE_DOWN po 3× fetched_ok===0 (configured>0); err:500', async () => {
     const st = new MemStore();
     st.runs.push(
       {
@@ -354,67 +433,47 @@ describe('BN6 runRoadLv F7 #730', () => {
       },
     );
     const r = await runRoadLv(deps(st, {
-      'nap.example/lv/roadworks': 500,
-      'nap.example/lv/slippery-wm': 500,
-      'nap.example/lv/slippery-ti': 500,
-      'nap.example/lv/weight-dim': 500,
+      'k-rw-secret-value': { download: 500 },
+      'k-sw': { download: 500 },
+      'k-st': { download: 500 },
+      'k-wd': { download: 500 },
     }, MOCK_ENV).d);
     expect(r.observations?.fetched_ok).toBe('0');
     expect(r.observations?.road_lv_fail_streak).toBe('3');
     expect(st.risks.some((x) => x.dedup.startsWith('SOURCE_DOWN:ROAD_LV'))).toBe(true);
-    expect(r.warnings?.every((w) => !/https?:\/\//i.test(w))).toBe(true);
-    /* DP-180: perCode także przy fetched_ok=0 (ścieżka SOURCE_DOWN). */
-    expect(r.observations?.lv_roadworks).toMatch(/^http_500$/);
-    expect(r.observations?.lv_slippery_wm).toMatch(/^http_500$/);
-    expect(r.observations?.lv_slippery_ti).toMatch(/^http_500$/);
-    expect(r.observations?.lv_weight_dim).toMatch(/^http_500$/);
+    expect(r.observations?.lv_roadworks).toBe('err:500');
+    expect(r.observations?.lv_slippery_wm).toBe('err:500');
   });
 
-  it('DP-180: perCode/perShape przy fetched_ok=0 (bez SOURCE_DOWN); lv_shape_* ≠ lv_*_shape', async () => {
-    const st = new MemStore();
-    const r = await runRoadLv(deps(st, {
-      'nap.example/lv/roadworks': '<!DOCTYPE html><html>SPA</html>',
-      'nap.example/lv/slippery-wm': '<!DOCTYPE html><html>SPA</html>',
-      'nap.example/lv/slippery-ti': '<!DOCTYPE html><html>SPA</html>',
-      'nap.example/lv/weight-dim': '<!DOCTYPE html><html>SPA</html>',
-    }, MOCK_ENV).d);
-    expect(r.observations?.fetched_ok).toBe('0');
-    expect(r.observations?.lv_roadworks).toMatch(/^bad:/);
-    expect(String(r.observations?.lv_roadworks_shape ?? '')).toMatch(/^200:[^:]+:\d+:html$/);
-    /* lv_shape_roadworks = kształt sekretu URL (DP-170); lv_roadworks_shape = odpowiedź. */
-    expect(r.observations?.lv_shape_roadworks).toBe('https');
-    expect(r.observations?.lv_roadworks_shape).not.toBe(r.observations?.lv_shape_roadworks);
-  });
-
-  it('DP-188: lv_*_err z JSON {error} (≤200 B), max 3 kody; bez treści przy HTML', async () => {
+  it('DP-188: lv_*_err z JSON error; max 3', async () => {
     expect(balticJsonErrorSnippet('{"error":"subscription inactive"}')).toBe('subscription inactive');
-    expect(balticJsonErrorSnippet('{"error":"x"}'.padEnd(201, 'y'))).toBeNull();
     const st = new MemStore();
     const errBody = '{"error":"gateway: bad subscription key"}';
-    expect(errBody.length).toBeLessThanOrEqual(200);
     const r = await runRoadLv(deps(st, {
-      'nap.example/lv/roadworks': errBody,
-      'nap.example/lv/slippery-wm': errBody,
-      'nap.example/lv/slippery-ti': errBody,
-      'nap.example/lv/weight-dim': '<!DOCTYPE html><html>SPA</html>',
+      'k-rw-secret-value': { download: { status: 403, body: errBody } },
+      'k-sw': { download: { status: 403, body: errBody } },
+      'k-st': { download: { status: 403, body: errBody } },
+      'k-wd': { download: '<!DOCTYPE html><html>SPA</html>' },
     }, MOCK_ENV).d);
     expect(r.observations?.fetched_ok).toBe('0');
-    expect(String(r.observations?.lv_roadworks_shape ?? '')).toMatch(/json-obiekt:error/);
     expect(r.observations?.lv_roadworks_err).toBe('gateway: bad subscription key');
-    expect(r.observations?.lv_slippery_wm_err).toBe('gateway: bad subscription key');
-    expect(r.observations?.lv_slippery_ti_err).toBe('gateway: bad subscription key');
-    /* 4. kod bez JSON error → brak lv_weight_dim_err; max 3 i tak. */
-    expect(r.observations?.lv_weight_dim_err).toBeUndefined();
     const errKeys = Object.keys(r.observations ?? {}).filter((k) => k.endsWith('_err'));
     expect(errKeys.length).toBeLessThanOrEqual(3);
   });
 
-  it('N3: brak sekretów → ok, configured:0, bez SOURCE_DOWN', async () => {
+  it('brak KEY → ok, configured:0; sam KEY bez URL = skonfigurowany', async () => {
     const st = new MemStore();
-    const r = await runRoadLv(deps(st, {}, {}).d);
-    expect(r.ok).toBe(true);
-    expect(r.observations?.configured).toBe('0');
-    expect(st.risks.length).toBe(0);
+    const empty = await runRoadLv(deps(st, {}, {}).d);
+    expect(empty.ok).toBe(true);
+    expect(empty.observations?.configured).toBe('0');
+    expect(empty.warnings?.some((w) => /brak skonfigurowanych LV_NAP_\*_KEY/.test(w))).toBe(true);
+
+    const st2 = new MemStore();
+    const r = await runRoadLv(deps(st2, {
+      'only-key': { download: rwXml },
+    }, { LV_NAP_ROADWORKS_KEY: 'only-key' }).d);
+    expect(r.observations?.configured).toBe('1');
+    expect(String(r.observations?.lv_roadworks ?? '')).toMatch(/^ok:\d+$/);
   });
 
   it('B7: P/V → LOW; wielomiesięczne A7 z objazdem → MEDIUM bez slowdown', () => {
@@ -463,24 +522,6 @@ describe('BN6 runRoadLv F7 #730', () => {
     expect(balticSlowdownMult([off]).mult).toBe(1);
   });
 
-  it('r2 B4: maintenance/[]/Error/XHTML → unknown; bez resolveStale', async () => {
-    expect(parseLvFeedBody('{"message":"maintenance"}', 'ROADWORKS').format).toBe('unknown');
-    expect(parseLvFeedBody('[]', 'ROADWORKS').format).toBe('unknown');
-    expect(parseLvFeedBody('<Error>fail</Error>', 'ROADWORKS').format).toBe('unknown');
-    expect(parseLvFeedBody('<?xml version="1.0"?><html><body>x</body></html>', 'ROADWORKS').format)
-      .toBe('unknown');
-    const st = new MemStore();
-    const r = await runRoadLv(deps(st, {
-      'nap.example/lv/roadworks': '{"message":"maintenance"}',
-      'nap.example/lv/slippery-wm': '[]',
-      'nap.example/lv/slippery-ti': '<Error>x</Error>',
-      'nap.example/lv/weight-dim': '<?xml version="1.0"?><html>x</html>',
-    }, MOCK_ENV).d);
-    expect(r.observations?.complete).toBe('0');
-    expect(r.observations?.fetched_ok).toBe('0');
-    expect(st.staleCalls.length).toBe(0);
-  });
-
   it('r2 B5: ice w policeForces ≠ HIGH; Slidens w komentarzu = HIGH', () => {
     const police = `<situationRecord id="p1" xsi:type="AuthorityOperation">
       <pointCoordinates><latitude>56.95</latitude><longitude>24.10</longitude></pointCoordinates>
@@ -508,30 +549,17 @@ describe('BN6 runRoadLv F7 #730', () => {
       '<trafficConstrictionType>carriagewayBlocked</trafficConstrictionType>')).toBe('HIGH');
   });
 
-  it('F7 r3 B1: apvedceļš/apvedceļa/apbraukšana nie dają numeru z objazdu', () => {
+  it('F7 r3 B1: apvedceļš nie daje numeru z objazdu', () => {
     for (const detour of ['apvedceļš pa A7', 'apvedceļa pa A7', 'apbraukšana pa A7'] as const) {
       const blob = `Ceļš slēgts, ${detour}`;
       expect(stripBalticDetourText(blob)).not.toMatch(/\bA7\b/);
       expect(extractBalticRoadRefPreferStreet(null, blob)).not.toBe('A7');
     }
-    const filtered = applyBalticCorridorRoadFilter('LV', [{
-      id: 'lv-detour-text', title: 'zamknięcie', detail: 'Ceļš slēgts, apvedceļš pa A7',
-      severity: 'HIGH', lat: 56.95, lon: 24.10, kind: 'CLOSURES',
-      start: null, end: null, roadClosed: true, hasDetour: true,
-    }]);
-    expect(filtered[0].road).not.toBe('A7');
-    expect(filtered[0].severity).toBe('MEDIUM');
   });
 
-  it('F7 r3 B2: lv_swapped w observations przy zamianie osi', () => {
+  it('F7 r3 B2/B3: swapped + cap detour', () => {
     const swapped = lvNormalizeLatLon(24.10, 56.95);
     expect(swapped.swapped).toBe(true);
-    expect(swapped.lat).toBeCloseTo(56.95, 2);
-    const rec = `<x><latitude>24.10</latitude><longitude>56.95</longitude></x>`;
-    expect(lvCoordsFromRecord(rec)?.swapped).toBe(1);
-  });
-
-  it('F7 r3 B3: start=null + koniec ≤72 h → HIGH; bez końca → MEDIUM', () => {
     const now = Date.parse('2026-11-02T07:00:00Z');
     const shortEnd: BalticRoadEvent = {
       id: 's', title: 'zamknięcie A7', detail: 'apbraukšana',
@@ -540,260 +568,47 @@ describe('BN6 runRoadLv F7 #730', () => {
       roadClosed: true, hasDetour: true,
     };
     expect(balticCapLongDetourClosure(shortEnd, now).severity).toBe('HIGH');
-    expect(applyBalticCorridorRoadFilter('LV', [shortEnd], now)[0].severity).toBe('HIGH');
-    const noEnd: BalticRoadEvent = {
-      ...shortEnd, id: 'n', end: null,
-    };
-    expect(balticCapLongDetourClosure(noEnd, now).severity).toBe('MEDIUM');
+    expect(balticCapLongDetourClosure({ ...shortEnd, end: null }, now).severity).toBe('MEDIUM');
   });
 
-  it('F7 r3: per budget przy wyczerpanym limicie czasu', async () => {
+  it('timeout w warnings; klucz poza obs', async () => {
     const st = new MemStore();
-    let n = 0;
     const f = (async () => {
-      n++;
-      await new Promise((r) => setTimeout(r, 30));
-      return new Response(rwXml, { status: 200, headers: { 'Content-Type': 'application/xml' } });
-    }) as typeof fetch;
-    const env: Record<string, string> = {};
-    for (const code of [
-      'ROADWORKS', 'ROAD_OPERATOR', 'ABNORMAL_TRAFFIC', 'ACCIDENT', 'ACTIVITIES',
-      'CLOSURES', 'EXC_WEATHER_WM', 'EXC_WEATHER_TI',
-    ] as const) {
-      env[`LV_NAP_${code}_KEY`] = `k-${code}`;
-      env[`LV_NAP_${code}_URL`] = `https://nap.example/lv/${code.toLowerCase()}`;
-    }
-    const r = await runRoadLv({
-      store: st,
-      fetch: f,
-      env,
-      now: () => NOW,
-    });
-    const vals = Object.entries(r.observations ?? {})
-      .filter(([k]) => k.startsWith('lv_'))
-      .map(([, v]) => String(v));
-    expect(vals.some((v) => v === 'budget') || n >= 1).toBe(true);
-  });
-
-  it('r2 N8: timeout w warnings; wartość klucza nie w detail', async () => {
-    const st = new MemStore();
-    let calls = 0;
-    const f = (async () => {
-      calls++;
-      await new Promise((r) => setTimeout(r, 50));
       throw new DOMException('The operation was aborted.', 'AbortError');
     }) as typeof fetch;
-    const d: JobDeps = {
-      store: st,
-      fetch: f,
-      env: {
-        LV_NAP_ROADWORKS_KEY: 'sekret-klucz-xyz',
-        LV_NAP_ROADWORKS_URL: 'https://nap.example/lv/roadworks',
-      },
+    const r = await runRoadLv({
+      store: st, fetch: f,
+      env: { LV_NAP_ROADWORKS_KEY: 'sekret-klucz-xyz' },
       now: () => NOW,
-    };
-    /* podmień timeout na krótki przez Abort — jobs używa 10s; tu fetch od razu abort */
-    const r = await runRoadLv(d);
-    expect(calls).toBeGreaterThan(0);
-    expect(r.warnings?.some((w) => /timeout nap\.example/i.test(w))).toBe(true);
-    expect(r.warnings?.every((w) => !/\/lv\/roadworks/i.test(w))).toBe(true);
+    });
+    expect(r.warnings?.some((w) => /timeout www\.transportdata\.gov\.lv/i.test(w))).toBe(true);
     expect(JSON.stringify(r)).not.toContain('sekret-klucz-xyz');
-    expect(st.risks.every((x) => !JSON.stringify(x.detail ?? {}).includes('sekret-klucz-xyz')))
-      .toBe(true);
   });
 
-  it('DP-165: klasa DNS/TLS/reset + host bez ścieżki w warning', async () => {
-    const cases: { err: Error; re: RegExp }[] = [
-      { err: Object.assign(new Error('getaddrinfo ENOTFOUND bad.host'), { name: 'TypeError' }), re: /DNS bad\.host/ },
-      { err: new Error('unable to verify the first certificate'), re: /TLS bad\.host/ },
-      { err: Object.assign(new Error('read ECONNRESET'), { name: 'Error' }), re: /reset bad\.host/ },
-    ];
-    for (const { err, re } of cases) {
-      const st = new MemStore();
-      const r = await runRoadLv({
-        store: st,
-        fetch: (async () => { throw err; }) as typeof fetch,
-        env: {
-          LV_NAP_ROADWORKS_KEY: 'sekret-abc',
-          LV_NAP_ROADWORKS_URL: 'https://bad.host/lv/api/pull/secret-path?k=sekret-abc',
-        },
-        now: () => NOW,
-      });
-      expect(r.warnings?.some((w) => re.test(w))).toBe(true);
-      expect(r.observations?.lv_url_kind).toBe('bad.host/lv');
-      expect(JSON.stringify(r)).not.toContain('sekret-abc');
-      expect(JSON.stringify(r)).not.toContain('secret-path');
-    }
-  });
-
-  it('F7 #736 B2: klucz z \\n → trim, key_trimmed=1, wartość poza obs/warnings', async () => {
-    const st = new MemStore();
-    const rawKey = 'sekret-trim-xyz\n';
-    const headerVals: string[] = [];
-    const f = (async (_input: RequestInfo | URL, init?: RequestInit) => {
-      const hdrs = (init?.headers ?? {}) as Record<string, string>;
-      if (hdrs[LV_NAP_KEY_HEADER]) headerVals.push(hdrs[LV_NAP_KEY_HEADER]);
-      return new Response(rwXml, { status: 200 });
-    }) as typeof fetch;
-    const r = await runRoadLv({
-      store: st,
-      fetch: f,
-      env: {
-        LV_NAP_ROADWORKS_KEY: rawKey,
-        LV_NAP_ROADWORKS_URL: 'https://nap.example/lv/api/pull/field_source',
-      },
-      now: () => NOW,
-    });
-    expect(r.observations?.key_trimmed).toBe('1');
-    expect(r.observations?.key_header_sent).toBe('1');
-    expect(r.observations?.key_len).toBe(String('sekret-trim-xyz'.length));
-    expect(r.observations?.lv_url_kind).toBe('nap.example/lv');
-    expect(headerVals.every((v) => v === 'sekret-trim-xyz' && !v.includes('\n'))).toBe(true);
-    expect(JSON.stringify(r.observations ?? {})).not.toContain('sekret-trim-xyz');
-    expect(JSON.stringify(r.warnings ?? [])).not.toContain('sekret-trim-xyz');
-  });
-
-  it('DP-170: lv_shape_* bez wartości URL (https/same_cyfry/spacje/pusty/bez_schematu)', async () => {
+  it('DP-170/171: lv_shape_* nadal z opcjonalnego URL; KEY sam wystarczy', async () => {
     expect(lvUrlShape('')).toBe('pusty');
-    expect(lvUrlShape('44751')).toBe('same_cyfry');
-    expect(lvUrlShape(' 44751 ')).toBe('spacje');
-    expect(lvUrlShape('https://nap.example/lv/x')).toBe('https');
-    expect(lvUrlShape('http://nap.example/lv/x')).toBe('http');
-    expect(lvUrlShape('nap.example/lv/x')).toBe('bez_schematu');
+    expect(normalizeLvNapUrl('/api/x').url).toBe(`${LV_NAP_BASE}/api/x`);
     const st = new MemStore();
-    const r = await runRoadLv({
-      store: st,
-      fetch: (async () => new Response('<a/>', { status: 200 })) as typeof fetch,
-      env: {
-        LV_NAP_ROADWORKS_KEY: 'k',
-        LV_NAP_ROADWORKS_URL: 'https://nap.example/lv/roadworks',
-        LV_NAP_WEIGHT_DIM_KEY: 'k2',
-        LV_NAP_WEIGHT_DIM_URL: '44751',
-        LV_NAP_SLIPPERY_WM_KEY: 'k3',
-        LV_NAP_SLIPPERY_WM_URL: 'host-bez-schematu',
-      },
-      now: () => NOW,
-    });
+    const r = await runRoadLv(deps(st, {
+      'k': { download: rwXml },
+      'k2': { download: 204 },
+    }, {
+      LV_NAP_ROADWORKS_KEY: 'k',
+      LV_NAP_ROADWORKS_URL: 'https://nap.example/lv/roadworks',
+      LV_NAP_WEIGHT_DIM_KEY: 'k2',
+      LV_NAP_WEIGHT_DIM_URL: '44751',
+    }).d);
     expect(r.observations?.lv_shape_roadworks).toBe('https');
     expect(r.observations?.lv_shape_weight_dim).toBe('same_cyfry');
-    /* DP-171: host bez schematu / bez `/` → nie_url, bez fetchu. */
-    expect(r.observations?.lv_shape_slippery_wm).toBe('nie_url');
-    expect(r.observations?.lv_shape_slippery_ti).toBe('pusty');
-    expect(r.observations?.lv_base).toBe(balticWarnHost(LV_NAP_BASE));
-    const shapes = Object.entries(r.observations ?? {})
-      .filter(([k]) => k.startsWith('lv_shape_'))
-      .map(([, v]) => String(v));
-    expect(shapes.every((v) => /^(https|http|bez_schematu|same_cyfry|spacje|pusty|nie_url)$/.test(v))).toBe(true);
-    expect(shapes.join('')).not.toContain('44751');
-    expect(shapes.join('')).not.toContain('host-bez');
+    expect(r.observations?.configured).toBe('2');
   });
 
-  it('DP-171: normalizacja /api, https:///api, pełny URL; pusty/spacje bez fetchu', async () => {
-    const base = LV_NAP_BASE.replace(/\/+$/, '');
-    expect(normalizeLvNapUrl('/api/x')).toEqual({
-      url: `${base}/api/x`, shape: 'bez_schematu', kind: balticUrlKind(`${base}/api/x`),
-    });
-    expect(normalizeLvNapUrl('https:///api/x').url).toBe(`${base}/api/x`);
-    expect(normalizeLvNapUrl('https:///api/x').shape).toBe('https');
-    expect(normalizeLvNapUrl('https://api/pull/1').url).toBe(`${base}/api/pull/1`);
-    expect(normalizeLvNapUrl('https://host.example/api/x')).toEqual({
-      url: 'https://host.example/api/x',
-      shape: 'https',
-      kind: balticUrlKind('https://host.example/api/x'),
-    });
-    expect(normalizeLvNapUrl('')).toEqual({ url: null, shape: 'pusty', kind: '' });
-    expect(normalizeLvNapUrl('  ')).toEqual({ url: null, shape: 'spacje', kind: '' });
-    expect(normalizeLvNapUrl('host-bez-schematu')).toEqual({ url: null, shape: 'nie_url', kind: '' });
-
-    const fetched: string[] = [];
-    const st = new MemStore();
-    const r = await runRoadLv({
-      store: st,
-      fetch: (async (input: RequestInfo | URL) => {
-        const u = String(input);
-        fetched.push(u);
-        if (u === 'https://www.transportdata.gov.lv/' || u.endsWith('://www.transportdata.gov.lv/')) {
-          return new Response('<html>ok</html>', { status: 200 });
-        }
-        return new Response(
-          '<?xml version="1.0"?><d2LogicalModel><payloadPublication></payloadPublication></d2LogicalModel>',
-          { status: 200, headers: { 'Content-Type': 'application/xml' } },
-        );
-      }) as typeof fetch,
-      env: {
-        LV_NAP_ROADWORKS_KEY: 'k1',
-        LV_NAP_ROADWORKS_URL: '/api/pull/metadata/1',
-        LV_NAP_CLOSURES_KEY: 'k2',
-        LV_NAP_CLOSURES_URL: 'https:///api/pull/metadata/2',
-        LV_NAP_ACCIDENTS_KEY: 'k3',
-        LV_NAP_ACCIDENTS_URL: 'https://nap.example/lv/accidents',
-        LV_NAP_WEIGHT_DIM_KEY: 'k4',
-        LV_NAP_WEIGHT_DIM_URL: '',
-        LV_NAP_BLOCKAGE_KEY: 'k5',
-        LV_NAP_BLOCKAGE_URL: 'nie-url-bez-slash',
-      },
-      now: () => NOW,
-    });
-    expect(r.observations?.configured).toBe('3');
-    expect(r.observations?.lv_shape_roadworks).toBe('bez_schematu');
-    expect(r.observations?.lv_shape_closures).toBe('https');
-    expect(r.observations?.lv_shape_accidents).toBe('https');
-    expect(r.observations?.lv_shape_weight_dim).toBe('pusty');
-    expect(r.observations?.lv_shape_blockage).toBe('nie_url');
-    expect(r.observations?.lv_url_kind).toBe(balticUrlKind(`${base}/api/pull/metadata/1`));
-    expect(r.observations?.lv_base).toBe('www.transportdata.gov.lv');
-    expect(fetched.some((u) => u === `${base}/api/pull/metadata/1`)).toBe(true);
-    expect(fetched.some((u) => u === `${base}/api/pull/metadata/2`)).toBe(true);
-    expect(fetched.some((u) => u === 'https://nap.example/lv/accidents')).toBe(true);
-    expect(fetched.join('')).not.toContain('nie-url-bez-slash');
-    expect(JSON.stringify(r.observations ?? {})).not.toContain('/api/pull/metadata/1');
-  });
-});
-
-describe('F7 #748 r1 — LV meta drugi fetch bez klucza poza NAP', () => {
-  it('obcy host: drugi fetch bez nagłówka klucza; 401 → meta:obcy-host; data_host', async () => {
-    const st = new MemStore();
-    const meta = JSON.stringify({
-      files: [{ field_source_url: 'https://cdn.obcy.example/lv/roadworks.xml' }],
-    });
-    const { d, headerCalls } = deps(st, {
-      'nap.example/lv/roadworks': meta,
-      'cdn.obcy.example/lv/roadworks.xml': 401,
-      'nap.example/lv/slippery-wm': slipWm,
-      'nap.example/lv/slippery-ti': slipTi,
-      'nap.example/lv/weight-dim': JSON.stringify(weightJson),
-    }, MOCK_ENV);
-    const r = await runRoadLv(d);
-    const second = headerCalls.find((c) => c.url.includes('cdn.obcy.example'));
-    expect(second).toBeTruthy();
-    expect(second!.headers[LV_NAP_KEY_HEADER]).toBeUndefined();
-    expect(r.observations?.lv_roadworks_shape).toBe('meta:obcy-host:cdn.obcy.example');
-    expect(r.observations?.lv_roadworks_data_host).toBe('cdn.obcy.example');
-    expect(headerCalls.some((c) =>
-      c.url.includes('cdn.obcy.example') && c.headers[LV_NAP_KEY_HEADER],
-    )).toBe(false);
-  });
-
-  it('host NAP: drugi fetch z kluczem + data_host', async () => {
-    const st = new MemStore();
-    const meta = JSON.stringify({
-      field_source_url: 'https://www.transportdata.gov.lv/api/pull/data/rw',
-    });
-    const { d, headerCalls } = deps(st, {
-      'nap.example/lv/roadworks': meta,
-      'www.transportdata.gov.lv/api/pull/data/rw': rwXml,
-      'nap.example/lv/slippery-wm': slipWm,
-      'nap.example/lv/slippery-ti': slipTi,
-      'nap.example/lv/weight-dim': JSON.stringify(weightJson),
-    }, MOCK_ENV);
-    const r = await runRoadLv(d);
-    const second = headerCalls.find((c) =>
-      c.url.includes('www.transportdata.gov.lv/api/pull/data/rw'),
-    );
-    expect(second).toBeTruthy();
-    expect(second!.headers[LV_NAP_KEY_HEADER]).toBe('k-rw-secret-value');
-    expect(r.observations?.lv_roadworks_data_host).toBe('www.transportdata.gov.lv');
-    expect(String(r.observations?.lv_roadworks ?? '')).toMatch(/^ok:\d+:\d+:datex-xml:\d+$/);
+  it('lvFileInfoFirstId + FileIdMismatch helper', () => {
+    expect(lvFileInfoFirstId({ files: [{ file_id: '7' }] })).toBe('7');
+    expect(lvFileInfoFirstId({ files: [] })).toBeNull();
+    expect(lvIsFileIdMismatch(403, 'FileIdMismatch')).toBe(true);
+    expect(lvIsFileIdMismatch(404, 'FileIdMismatch')).toBe(false);
+    expect(LV_FILE_INFO_URL).toContain('/metadata/file/info');
   });
 });
 

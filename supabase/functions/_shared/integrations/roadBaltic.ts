@@ -1218,12 +1218,15 @@ export const CORRIDOR_LV: LatLon[] = [
 
 export const LV_ATTRIBUTION = "LVC / transportdata.gov.lv (CC0 / CC BY)";
 export const LV_UA = "WatchTower/BN6 (log-mar.pl; road-lv; +48 kontakt HHL)";
-/** Nagłówek klucza NAP LV (#589 — potwierdzenie na pierwszym przebiegu LIVE). */
-export const LV_NAP_KEY_HEADER = "Ocp-Apim-Subscription-Key";
+/**
+ * DP-200 / #773 — nagłówek klucza zbioru NAP LV (`x-api-key`).
+ * Stary `Ocp-Apim-Subscription-Key` + GET sekretu URL nie działa („No file”).
+ */
+export const LV_NAP_KEY_HEADER = "x-api-key";
 /** Publiczny URL atrybucji — nigdy sekretny endpoint w logach. */
 export const LV_SOURCE_REF = "https://transportdata.gov.lv/";
 
-/** 22 zbiory (#589) — sekrety `LV_NAP_<KOD>_KEY` + `LV_NAP_<KOD>_URL`. */
+/** 22 zbiory (#589) — sekrety `LV_NAP_<KOD>_KEY` (+ opcjonalny URL, DP-200: ignorowany). */
 export const LV_NAP_CODES = [
   "ROADWORKS",
   "ROADWORKS_SHORT",
@@ -1399,6 +1402,31 @@ export function lvUrlShape(raw: string | undefined | null): LvUrlShape {
  * (OpenAPI ZIP za logowaniem; endpointy w UI: `/api/pull/metadata/<nid>`).
  */
 export const LV_NAP_BASE = 'https://www.transportdata.gov.lv';
+/** DP-200 — snapshot REST (Data change stream: file_id „1”). */
+export const LV_DOWNLOAD_FILE_URL =
+  `${LV_NAP_BASE}/api/v1/get/file/download-file`;
+export const LV_FILE_INFO_URL =
+  `${LV_NAP_BASE}/api/v1/metadata/file/info`;
+export const LV_DOWNLOAD_FILE_BODY = '{"file_id":"1","format":"xml"}';
+
+/** DP-200 — 403 FileIdMismatch → pierwszy `file_id` z listy metadanych. */
+export function lvFileInfoFirstId(json: unknown): string | null {
+  if (!json || typeof json !== 'object') return null;
+  const files = (json as { files?: unknown }).files;
+  if (!Array.isArray(files)) return null;
+  for (const f of files) {
+    if (!f || typeof f !== 'object') continue;
+    const id = (f as { file_id?: unknown }).file_id;
+    if (typeof id === 'string' && id.trim()) return id.trim();
+    if (typeof id === 'number' && Number.isFinite(id)) return String(id);
+  }
+  return null;
+}
+
+export function lvIsFileIdMismatch(status: number, bodyText: string): boolean {
+  if (status !== 403) return false;
+  return /FileIdMismatch|file[_\s-]?id[_\s-]?mismatch/i.test(bodyText);
+}
 
 export type LvNapUrlResolved = {
   /** Pełny URL do fetchu albo null (pusty / nie_url / bez pary). */

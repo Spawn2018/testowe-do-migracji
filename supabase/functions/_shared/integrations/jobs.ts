@@ -101,7 +101,8 @@ import {
   EE_ATTRIBUTION, EE_DATEX_FEEDS, EE_DATEX_KEY_HEADER, EE_SOURCE_REF, EE_UA,
   FI_ANNOUNCEMENTS_URL, FI_ATTRIBUTION, FI_ROADWORKS_URL, FI_WEIGHT_URL,
   LT_ATTRIBUTION, LT_RESTRICTIONS_URL, LT_UA, LT_WEATHER_URL,
-  LV_ATTRIBUTION, LV_NAP_BASE, LV_NAP_CODES, LV_NAP_KEY_HEADER, LV_SOURCE_REF, LV_UA,
+  LV_ATTRIBUTION, LV_DOWNLOAD_FILE_URL, LV_FILE_INFO_URL,
+  LV_NAP_BASE, LV_NAP_CODES, LV_NAP_KEY_HEADER, LV_SOURCE_REF, LV_UA,
   BALTIC_FEED_BUDGET_MS, BALTIC_FEED_TIMEOUT_MS, EE_RESTRICTIONS_MAX_BYTES,
   EE_FEED_BUDGET_MS, EE_FEED_TIMEOUT_MS, EE_HEAVY_FEED_CACHE_TTL_MS,
   EE_RESTRICTIONS_TIMEOUT_MS,
@@ -112,8 +113,8 @@ import {
   eeDatexFeedUrl, fiCorridorBboxes, fiTrafficUrl, filterInEeBboxes, filterInFiBboxes,
   filterInLvBboxes, dimensionLimitRisk, filterInLtBboxes, getEeHeavyFeedCache, getEeSitesCache,
   isDimensionLimitEvent, isEeHeavyFeedCode,
-  isFiWeightLimitLike, ltWeatherToSlowdownEvents, lvMetadataDataUrl, lvNapKeyAllowedForUrl,
-  lvNapKeyEnv, lvNapUrlEnv,
+  isFiWeightLimitLike, ltWeatherToSlowdownEvents, lvFileInfoFirstId, lvIsFileIdMismatch,
+  lvNapKeyAllowedForUrl, lvNapKeyEnv, lvNapUrlEnv,
   normalizeLvNapUrl,
   lvWeatherToSlowdownEvents, parseEeFeedBody, parseFiTrafficMessages, parseLtRestrictions,
   parseLtWeather, parseLvFeedBody, probeBalticHost, probeEeDatexApi, readBalticFeedBody,
@@ -3990,10 +3991,11 @@ async function roadLtFailStreak(deps: JobDeps): Promise<number> {
 }
 
 /**
- * BN6 (#716) cz.3 / #589 — drogi LV (22 zbiory LV_NAP_*_KEY/URL).
- * F7 #730 / DP-168: wspólny fetch (5 MB strumień / 10 s / 65 s); równolegle limit 6;
- * fetchedOk dopiero po rozpoznanym formacie; resolveStale tylko przy komplecie;
- * SOURCE_DOWN po 3× fetched_ok===0 gdy configured>0 (N3: bez sekretów nie liczy streak).
+ * BN6 (#716) cz.3 / #589 — drogi LV (22 zbiory LV_NAP_*_KEY).
+ * DP-200 / #773: POST snapshot `/api/v1/get/file/download-file` + `x-api-key`
+ * (stary GET sekretu URL dawał „No file”). URL opcjonalny — ignorowany.
+ * F7 #730 / DP-168: 5 MB / 10 s / 65 s; równolegle 6; resolveStale przy komplecie;
+ * SOURCE_DOWN po 3× fetched_ok===0 gdy configured>0.
  */
 const LV_FEED_CONCURRENCY = 6;
 
@@ -4005,10 +4007,11 @@ function lvDiagObservations(
     key_header_sent: String(keyMeta.key_header_sent),
     key_len: String(keyMeta.key_len),
     key_trimmed: String(keyMeta.key_trimmed),
+    lv_mode: 'rest_snapshot',
   };
   if (opts.urlKind) o.lv_url_kind = opts.urlKind;
   if (opts.probe) o.probe_lv = opts.probe;
-  /* DP-170/171: lv_shape_<kod> (+ nie_url); bez wartości URL. */
+  /* DP-170/171: lv_shape_<kod> nadal (sekret URL opcjonalny); bez wartości URL. */
   if (opts.urlShapes) {
     for (const [code, shape] of Object.entries(opts.urlShapes)) {
       o[`lv_shape_${code.toLowerCase()}`] = shape;
@@ -4017,7 +4020,7 @@ function lvDiagObservations(
   return o;
 }
 
-/** DP-171 — kształt po normalizacji (raw → normalizeLvNapUrl). */
+/** DP-171 — kształt po normalizacji (raw → normalizeLvNapUrl); URL nie wymagany (DP-200). */
 function lvUrlShapesFromEnv(env: Record<string, string | undefined>): Record<string, string> {
   const out: Record<string, string> = {};
   for (const code of LV_NAP_CODES) {
@@ -4029,31 +4032,20 @@ function lvUrlShapesFromEnv(env: Record<string, string | undefined>): Record<str
 export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
   const now = deps.now().toISOString();
   const warnings: string[] = [];
-  const configured: { code: LvNapCode; url: string; key: string; keyMeta: BalticKeyMeta }[] = [];
+  const configured: { code: LvNapCode; key: string; keyMeta: BalticKeyMeta }[] = [];
   const urlShapes = lvUrlShapesFromEnv(deps.env as Record<string, string | undefined>);
   for (const code of LV_NAP_CODES) {
     const keyMeta = balticKeyMeta(deps.env[lvNapKeyEnv(code)]);
-    const resolved = normalizeLvNapUrl(deps.env[lvNapUrlEnv(code)]);
-    const key = keyMeta.key;
-    /* DP-171: pusty / nie_url = nieskonfigurowany (bez ostrzeżenia sieci). */
-    if (key && resolved.url) {
-      configured.push({ code, url: resolved.url, key, keyMeta });
-    } else if (key && !resolved.url && resolved.shape !== 'pusty') {
-      /* Klucz jest, URL bezużyteczny — nie fetch; shape w obs. */
-    } else if (!key && resolved.url) {
-      warnings.push(`LV ${code}: niepełna para sekretów KEY/URL`);
-    } else if (!key && resolved.shape !== 'pusty' && resolved.shape !== 'nie_url') {
-      warnings.push(`LV ${code}: niepełna para sekretów KEY/URL`);
-    }
+    /* DP-200: wystarczy KEY; URL (jeśli jest) — ignorowany, shape w obs. */
+    if (keyMeta.key) configured.push({ code, key: keyMeta.key, keyMeta });
   }
   const expectedFetches = configured.length;
   const first = configured[0];
   const lvBaseHost = balticWarnHost(LV_NAP_BASE);
   if (expectedFetches === 0) {
-    /* F7 #730 N3: configured:0 — nie ok:false, nie streak SOURCE_DOWN. */
     return {
       job: 'road-lv', mode: 'LIVE', ok: true, risks: 0,
-      warnings: [...warnings, 'LV: brak skonfigurowanych par LV_NAP_*_KEY/URL'],
+      warnings: [...warnings, 'LV: brak skonfigurowanych LV_NAP_*_KEY'],
       observations: {
         source: 'lvc_nap',
         fetched_ok: '0',
@@ -4061,20 +4053,27 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
         configured: '0',
         header: LV_NAP_KEY_HEADER,
         lv_base: lvBaseHost,
+        lv_mode: 'rest_snapshot',
         ...lvDiagObservations(balticKeyMeta(''), { urlShapes }),
       },
     };
   }
 
-  /* F7 #736 B1 — sonda hosta raz przed zbiorami (bez klucza). */
-  const probeLv = await probeBalticHost(
-    deps.fetch,
-    balticWarnHost(first!.url),
-    LV_UA,
-  );
+  if (!lvNapKeyAllowedForUrl(LV_DOWNLOAD_FILE_URL)) {
+    return {
+      job: 'road-lv', mode: 'LIVE', ok: false, risks: 0,
+      warnings: ['LV: host snapshot poza NAP'],
+      observations: {
+        source: 'lvc_nap', fetched_ok: '0', expected_fetches: String(expectedFetches),
+        configured: String(expectedFetches), header: LV_NAP_KEY_HEADER,
+        lv_base: lvBaseHost, lv_mode: 'rest_snapshot',
+      },
+    };
+  }
+
+  const probeLv = await probeBalticHost(deps.fetch, lvBaseHost, LV_UA);
   const diag = lvDiagObservations(first!.keyMeta, {
-    /* DP-171: lv_url_kind po normalizacji. */
-    urlKind: balticUrlKind(first!.url),
+    urlKind: balticUrlKind(LV_DOWNLOAD_FILE_URL),
     probe: probeLv,
     urlShapes,
   });
@@ -4092,64 +4091,121 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
     skipped: number;
     swapped: number;
     shape?: string;
-    /** F7 #748: host drugiego fetchu (bez ścieżki). */
-    dataHost?: string;
-    /** DP-188: treść JSON `error` (≤80 znaków) — tylko krótkie ciało. */
     err?: string;
   };
-  const parts = await mapPoolLimit(configured, LV_FEED_CONCURRENCY, async ({ code, url, key }): Promise<LvFeedPart> => {
+
+  const parts = await mapPoolLimit(configured, LV_FEED_CONCURRENCY, async ({ code, key }): Promise<LvFeedPart> => {
     if (Date.now() - started > BALTIC_FEED_BUDGET_MS) {
       return {
-        code,
-        ok: false,
-        warning: `niepobrany ${code} (budżet czasu)`,
-        per: 'budget',
-        format: '',
-        events: [],
-        skipped: 0,
-        swapped: 0,
+        code, ok: false, warning: `niepobrany ${code} (budżet czasu)`,
+        per: 'budget', format: '', events: [], skipped: 0, swapped: 0,
       };
     }
-    /* DP-188 helper — snippet error tylko przy krótkim JSON. */
     const errOf = (bodyText: string) => balticJsonErrorSnippet(bodyText) ?? undefined;
-    const baseHeaders: Record<string, string> = {
+    const keyHeaders = (): Record<string, string> => ({
       'User-Agent': LV_UA,
       Accept: 'application/json, application/xml, text/xml, */*',
-    };
-    const fetchOnce = async (
-      fetchUrl: string,
-      withKey: boolean,
-    ): Promise<{
+      [LV_NAP_KEY_HEADER]: key,
+    });
+
+    const postDownload = async (fileId: string): Promise<{
       res: Response;
-      body: Awaited<ReturnType<typeof readBalticFeedBody>> | null;
+      text: string;
+      bytes: number;
       ct: string | null;
+      bodyOk: boolean;
     }> => {
-      const headers: Record<string, string> = { ...baseHeaders };
-      if (withKey) headers[LV_NAP_KEY_HEADER] = key;
       const ctrl = new AbortController();
       const timer = setTimeout(() => ctrl.abort(), BALTIC_FEED_TIMEOUT_MS);
       try {
-        const res = await deps.fetch(fetchUrl, { headers, signal: ctrl.signal });
+        const res = await deps.fetch(LV_DOWNLOAD_FILE_URL, {
+          method: 'POST',
+          headers: {
+            ...keyHeaders(),
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ file_id: fileId, format: 'xml' }),
+          signal: ctrl.signal,
+        });
         const ct = res.headers.get('content-type');
-        if (!res.ok) return { res, body: null, ct };
+        if (res.status === 204) {
+          return { res, text: '', bytes: 0, ct, bodyOk: true };
+        }
+        if (!res.ok) {
+          const errBody = await res.text().catch(() => '');
+          return {
+            res, text: errBody.slice(0, 8_000), bytes: errBody.length, ct, bodyOk: false,
+          };
+        }
         const body = await readBalticFeedBody(res);
-        return { res, body, ct };
+        if (!body.ok) {
+          return { res, text: '', bytes: body.bytes, ct, bodyOk: false };
+        }
+        return { res, text: body.text, bytes: body.bytes, ct, bodyOk: true };
       } finally {
         clearTimeout(timer);
       }
     };
+
+    const getFileInfoId = async (): Promise<string | null> => {
+      const ctrl = new AbortController();
+      const timer = setTimeout(() => ctrl.abort(), BALTIC_FEED_TIMEOUT_MS);
+      try {
+        const res = await deps.fetch(LV_FILE_INFO_URL, {
+          method: 'GET',
+          headers: keyHeaders(),
+          signal: ctrl.signal,
+        });
+        if (!res.ok) return null;
+        const body = await readBalticFeedBody(res);
+        if (!body.ok) return null;
+        try {
+          return lvFileInfoFirstId(JSON.parse(body.text) as unknown);
+        } catch {
+          return null;
+        }
+      } finally {
+        clearTimeout(timer);
+      }
+    };
+
     try {
-      let { res, body, ct } = await fetchOnce(url, true);
-      if (!res.ok || body == null) {
+      let dl = await postDownload('1');
+      /* DP-200: 403 FileIdMismatch → lista plików → ponów z pierwszym file_id. */
+      if (dl.res.status === 403 && lvIsFileIdMismatch(dl.res.status, dl.text)) {
+        const fallbackId = await getFileInfoId();
+        if (fallbackId && fallbackId !== '1') {
+          dl = await postDownload(fallbackId);
+        } else {
+          return {
+            code, ok: false,
+            warning: `LV ${code}: HTTP 403`,
+            per: 'err:403', format: '', events: [], skipped: 0, swapped: 0,
+            err: errOf(dl.text) ?? 'FileIdMismatch',
+          };
+        }
+      }
+
+      if (dl.res.status === 204) {
         return {
-          code, ok: false,
-          warning: `LV ${code}: HTTP ${res.status}`,
-          per: `http_${res.status}`, format: '', events: [],
-          skipped: 0, swapped: 0,
+          code, ok: true, warning: null,
+          per: 'empty_204', format: 'empty', events: [], skipped: 0, swapped: 0,
         };
       }
-      if (!body.ok) {
-        const shape = balticFeedShapeObs(res.status, ct, body.bytes, '');
+
+      if (!dl.res.ok) {
+        const st = dl.res.status;
+        const warnHttp = st === 404 || st === 422 || st >= 500 || st === 403;
+        return {
+          code, ok: false,
+          warning: warnHttp ? `LV ${code}: HTTP ${st}` : `LV ${code}: HTTP ${st}`,
+          per: `err:${st}`, format: '', events: [], skipped: 0, swapped: 0,
+          err: errOf(dl.text),
+        };
+      }
+
+      if (!dl.bodyOk) {
+        const shape = balticFeedShapeObs(dl.res.status, dl.ct, dl.bytes, '');
         return {
           code, ok: false,
           warning: `nieczytelna odpowiedź ${code}`,
@@ -4157,49 +4213,10 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
           skipped: 0, swapped: 0, shape,
         };
       }
-      let text = body.text;
-      let bytes = body.bytes;
-      let shape = balticFeedShapeObs(res.status, ct, bytes, text);
-      let err = errOf(text);
-      let dataHost: string | undefined;
-      /* DP-178 / F7 #748: metadane JSON → plik; klucz tylko na host NAP. */
-      if (text.trim().startsWith('{')) {
-        try {
-          const meta = JSON.parse(text) as unknown;
-          const dataUrl = lvMetadataDataUrl(meta);
-          if (dataUrl && dataUrl !== url) {
-            dataHost = balticWarnHost(dataUrl);
-            const allowKey = lvNapKeyAllowedForUrl(dataUrl);
-            const second = await fetchOnce(dataUrl, allowKey);
-            if (!allowKey && (second.res.status === 401 || second.res.status === 403)) {
-              return {
-                code, ok: false,
-                warning: `nieczytelna odpowiedź ${code}`,
-                per: `bad:meta-obcy-host`, format: 'unknown', events: [],
-                skipped: 0, swapped: 0,
-                shape: `meta:obcy-host:${dataHost}`,
-                dataHost, err,
-              };
-            }
-            if (second.res.ok && second.body && second.body.ok) {
-              res = second.res;
-              ct = second.ct;
-              text = second.body.text;
-              bytes = second.body.bytes;
-              shape = balticFeedShapeObs(res.status, ct, bytes, text);
-              err = errOf(text);
-            } else if (second.res.ok && second.body && !second.body.ok) {
-              shape = balticFeedShapeObs(second.res.status, second.ct, second.body.bytes, '');
-              return {
-                code, ok: false,
-                warning: `nieczytelna odpowiedź ${code}`,
-                per: 'too_large', format: 'unknown', events: [],
-                skipped: 0, swapped: 0, shape, dataHost, err,
-              };
-            }
-          }
-        } catch { /* nie JSON obiektu — idź w parseLv */ }
-      }
+
+      const text = dl.text;
+      const shape = balticFeedShapeObs(dl.res.status, dl.ct, dl.bytes, text);
+      const err = errOf(text);
       const localStats = { parsed: 0, skipped: 0, swapped: 0 };
       const parsed = parseLvFeedBody(text, code, localStats);
       parseStats.parsed += localStats.parsed;
@@ -4209,32 +4226,27 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
         || parsed.format === 'datex-json'
         || parsed.format === 'geojson';
       if (!recognized) {
-        /* DP-178: html → host bramy inny (OpenAPI za logowaniem); shape w obs. */
         return {
           code, ok: false,
           warning: `nieczytelna odpowiedź ${code}`,
           per: `bad:${parsed.format}`, format: parsed.format, events: [],
-          skipped: localStats.skipped, swapped: localStats.swapped, shape, dataHost, err,
+          skipped: localStats.skipped, swapped: localStats.swapped, shape, err,
         };
       }
-      /* DP-168 / F7 #730: lv_<kod>=ok:<rekordy>:<pominięte>:<format>:<swapped> */
+      /* DP-200: lv_<kod>=ok:<rekordy> (+ szczegół formatu jak wcześniej dla diagnostyki). */
       return {
         code, ok: true, warning: null,
-        per: balticFeedObsOk(
-          parsed.events.length, localStats.skipped, parsed.format, localStats.swapped,
-        ),
+        per: `ok:${parsed.events.length}`,
         format: parsed.format, events: parsed.events,
-        skipped: localStats.skipped, swapped: localStats.swapped, dataHost, err,
+        skipped: localStats.skipped, swapped: localStats.swapped, err,
       };
     } catch (e) {
-      /* DP-165: klasa błędu + host bez ścieżki (klucz nie w warnings). */
       const klass = classifyBalticNetError(e);
       return {
         code, ok: false,
-        warning: balticNetWarning(`LV ${code}`, url, e),
+        warning: balticNetWarning(`LV ${code}`, LV_DOWNLOAD_FILE_URL, e),
         per: klass === 'timeout' ? 'timeout' : `error:${klass}`,
-        format: '', events: [],
-        skipped: 0, swapped: 0,
+        format: '', events: [], skipped: 0, swapped: 0,
       };
     }
   });
@@ -4243,13 +4255,11 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
   const allEvents: BalticRoadEvent[] = [];
   const perCode: Record<string, string> = {};
   const perShape: Record<string, string> = {};
-  const perDataHost: Record<string, string> = {};
   const formats: Record<string, string> = {};
   for (const p of parts) {
     perCode[p.code] = p.per;
     if (p.format) formats[p.code] = p.format;
     if (p.shape) perShape[p.code] = p.shape;
-    if (p.dataHost) perDataHost[p.code] = p.dataHost;
     if (p.warning) warnings.push(p.warning);
     if (p.ok) {
       fetchedOk++;
@@ -4257,11 +4267,6 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
     }
   }
 
-  /*
-   * DP-180: perCode / perShape / perDataHost na wszystkich ścieżkach powrotu.
-   * Uwaga nazw: lv_shape_<kod> (DP-170: kształt sekretu URL) ≠ lv_<kod>_shape (kształt odpowiedzi).
-   * DP-188: lv_<kod>_err — treść JSON error, max 3 kody (bez puchnięcia obserwacji).
-   */
   const lvErrObs = Object.fromEntries(
     parts.filter((p) => p.err).slice(0, 3)
       .map((p) => [`lv_${p.code.toLowerCase()}_err`, p.err!]),
@@ -4269,9 +4274,6 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
   const lvPerObs = {
     ...Object.fromEntries(Object.entries(perCode).map(([k, v]) => [`lv_${k.toLowerCase()}`, v])),
     ...Object.fromEntries(Object.entries(perShape).map(([k, v]) => [`lv_${k.toLowerCase()}_shape`, v])),
-    ...Object.fromEntries(
-      Object.entries(perDataHost).map(([k, v]) => [`lv_${k.toLowerCase()}_data_host`, v]),
-    ),
     ...lvErrObs,
   };
 
@@ -4320,13 +4322,11 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
   await deps.store.resolveRisks('SOURCE_DOWN:ROAD_LV:');
   const deduped = dedupeLvSlippery(allEvents);
   const near = applyBalticCorridorRoadFilter('LV', filterInLvBboxes(deduped));
-  /* DP-172: DeepL LV tylko na korytarzu. */
   await polishBalticCorridorEvents(deps, 'LV', near, now);
   const complete = fetchedOk === expectedFetches;
   let risks = 0;
   const keep: string[] = [];
   for (const e of near) {
-    /* DP-172: poza korytarzem bez freeText → bez pending. */
     const ev = e.corridorMatch === 'on' ? e : { ...e, freeText: null, note: null };
     const raw = ev.weightLimitT != null
       ? weightLimitRisk('LV', ev, null, LV_SOURCE_REF, LV_ATTRIBUTION)
@@ -4347,7 +4347,6 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
     await deps.store.resolveStaleRisks('ROAD_LV:', keep);
   }
 
-  /* F7 #730 r2: bez dublowania pogody (near już zawiera HIGH pogodę). */
   const weatherSlow = lvWeatherToSlowdownEvents(near);
   const slow = balticSlowdownMult(near);
   if (deps.store.saveCorridorCondition) {
@@ -4367,11 +4366,11 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
         records_skipped: parseStats.skipped,
         dedup_ver: 'v2',
         dp164: 'filtr A7/E67+A1/A4/A5 + ≤3 km',
+        lv_mode: 'rest_snapshot',
       },
     });
   }
 
-  /* N8: ostrzeżenia/observations bez wartości kluczy. */
   const safeWarnings = warnings.filter((w) =>
     !configured.some((c) => c.key && w.includes(c.key))
   );
@@ -4389,7 +4388,6 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
       configured: String(expectedFetches),
       header: LV_NAP_KEY_HEADER,
       records_skipped: String(parseStats.skipped),
-      /* F7 #730 r3 B2 — liczba zamian lat/lon. */
       lv_swapped: String(parseStats.swapped),
       ...diag,
       ...lvPerObs,
