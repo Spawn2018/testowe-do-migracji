@@ -4,10 +4,14 @@
 
 begin;
 
+-- F7 r1: usuwamy błędną ścieżkę (kopiowanie HERE → corridor_polylines / fresh po corridor_code).
+drop function if exists public.bn8b_here_corridor_fresh(text);
+drop function if exists public.bn8b_sync_corridor_polyline_from_here(text);
+
 -- ---------------------------------------------------------------------------
--- Pomocnicze: świeża geometria HERE, sync polilinii, bufor MUU/PLD
+-- Pomocnicze: świeża geometria HERE po LEGU trasy (D-81: bez kopiowania do corridor_polylines)
 -- ---------------------------------------------------------------------------
-create or replace function public.bn8b_here_corridor_fresh(p_corridor text)
+create or replace function public.bn8b_here_leg_fresh(p_leg text)
 returns boolean
 language sql
 stable
@@ -16,9 +20,8 @@ set search_path = public
 as $$
   select exists (
     select 1
-      from public.here_road_legs h
-      join public.here_road_geometry g on g.leg = h.leg
-     where h.corridor_code = p_corridor
+      from public.here_road_geometry g
+     where g.leg = p_leg
        and g.points is not null
        and jsonb_typeof(g.points) = 'array'
        and jsonb_array_length(g.points) >= 2
@@ -26,22 +29,19 @@ as $$
        and g.fetched_at >= now() - interval '7 days'
   );
 $$;
-comment on function public.bn8b_here_corridor_fresh(text) is
-  'BN8b/#720: świeża geometria HERE dla corridor_code (punkty ≥2, fetched_at ≤7 dni).';
-revoke all on function public.bn8b_here_corridor_fresh(text) from public, anon, authenticated;
-grant execute on function public.bn8b_here_corridor_fresh(text) to service_role;
+comment on function public.bn8b_here_leg_fresh(text) is
+  'BN8b/#720 F7: świeża geometria HERE dla legu (punkty ≥2, fetched_at ≤7 dni). Nie po corridor_code.';
+revoke all on function public.bn8b_here_leg_fresh(text) from public, anon, authenticated;
+grant execute on function public.bn8b_here_leg_fresh(text) to service_role;
 
-create or replace function public.bn8b_sync_corridor_polyline_from_here(p_corridor text)
-returns boolean
-language plpgsql
+create or replace function public.bn8b_here_leg_line(p_leg text)
+returns geometry
+language sql
+stable
 security definer
 set search_path = public
 as $$
-declare
-  v_geom geometry;
-  v_km numeric;
-begin
-  -- Najświeższy leg z tym corridor_code (HERE, nie przybliżenie OSM).
+  -- Tylko odczyt here_road_geometry — bez zapisu do corridor_polylines (D-81 / F7 B1).
   select st_setsrid(
            st_makeline(
              array_agg(
@@ -51,48 +51,63 @@ begin
            ),
            4326
          )
-    into v_geom
-    from (
-      select g.points, g.fetched_at
-        from public.here_road_legs h
-        join public.here_road_geometry g on g.leg = h.leg
-       where h.corridor_code = p_corridor
-         and g.points is not null
-         and jsonb_typeof(g.points) = 'array'
-         and jsonb_array_length(g.points) >= 2
-         and g.fetched_at is not null
-         and g.fetched_at >= now() - interval '7 days'
-       order by g.fetched_at desc
-       limit 1
-    ) g
-   cross join lateral jsonb_array_elements(g.points) with ordinality as t(p, ord);
+    from public.here_road_geometry g
+   cross join lateral jsonb_array_elements(g.points) with ordinality as t(p, ord)
+   where g.leg = p_leg
+     and g.points is not null
+     and jsonb_typeof(g.points) = 'array'
+     and jsonb_array_length(g.points) >= 2
+     and g.fetched_at is not null
+     and g.fetched_at >= now() - interval '7 days';
+$$;
+comment on function public.bn8b_here_leg_line(text) is
+  'BN8b/#720 F7: LineString z here_road_geometry dla legu (świeża HERE). Bez zapisu.';
+revoke all on function public.bn8b_here_leg_line(text) from public, anon, authenticated;
+grant execute on function public.bn8b_here_leg_line(text) to service_role;
 
-  if v_geom is null or st_npoints(v_geom) < 2 then
-    return false;
+create or replace function public.bn8b_here_leg_progress(p_leg text, p_geom geometry)
+returns table (remaining_frac numeric, off_m numeric, remaining_km numeric, total_km numeric, fetched_at timestamptz)
+language plpgsql
+stable
+security definer
+set search_path = public
+as $$
+declare
+  v_line geometry;
+  v_fetched timestamptz;
+  v_loc double precision;
+  v_total numeric;
+begin
+  if p_geom is null or p_leg is null then
+    return;
   end if;
-
-  v_km := round((st_length(v_geom::geography) / 1000.0)::numeric, 2);
-  insert into public.corridor_polylines (code, geom, total_km, source, attribution, updated_at)
-  values (
-    p_corridor, v_geom, v_km,
-    'HERE — sync BN8b (leg→corridor_code)',
-    '© HERE',
-    now()
-  )
-  on conflict (code) do update set
-    geom = excluded.geom,
-    total_km = excluded.total_km,
-    source = excluded.source,
-    attribution = excluded.attribution,
-    updated_at = now();
-  return true;
+  select g.fetched_at into v_fetched
+    from public.here_road_geometry g
+   where g.leg = p_leg
+     and g.fetched_at is not null
+     and g.fetched_at >= now() - interval '7 days'
+     and g.points is not null
+     and jsonb_typeof(g.points) = 'array'
+     and jsonb_array_length(g.points) >= 2;
+  v_line := public.bn8b_here_leg_line(p_leg);
+  if v_line is null or st_npoints(v_line) < 2 then
+    return;
+  end if;
+  v_total := round((st_length(v_line::geography) / 1000.0)::numeric, 2);
+  v_loc := st_linelocatepoint(v_line, st_setsrid(p_geom, 4326));
+  remaining_frac := least(1, greatest(0, 1.0 - v_loc));
+  off_m := st_distance(st_setsrid(p_geom, 4326)::geography, v_line::geography);
+  remaining_km := round((remaining_frac * v_total)::numeric, 2);
+  total_km := v_total;
+  fetched_at := v_fetched;
+  return next;
 end;
 $$;
-comment on function public.bn8b_sync_corridor_polyline_from_here(text) is
-  'BN8b/#720: nadpisuje corridor_polylines geometrią z here_road_geometry (świeża HERE).';
-revoke all on function public.bn8b_sync_corridor_polyline_from_here(text)
+comment on function public.bn8b_here_leg_progress(text, geometry) is
+  'BN8b/#720 F7: postęp/odległość względem geometrii HERE legu (nie corridor_polylines).';
+revoke all on function public.bn8b_here_leg_progress(text, geometry)
   from public, anon, authenticated;
-grant execute on function public.bn8b_sync_corridor_polyline_from_here(text) to service_role;
+grant execute on function public.bn8b_here_leg_progress(text, geometry) to service_role;
 
 create or replace function public.bn8b_near_muu_pld_terminal(p_geom geometry)
 returns boolean
@@ -101,20 +116,22 @@ stable
 security definer
 set search_path = public, extensions
 as $$
-  -- Muuga/Paldiski leżą poza końcem PL_EE_E67 — bufor 2 km jak terminal FI w BN4/BN6.
+  -- Muuga/Paldiski poza końcem PL_EE_E67 — bufor 2 km.
+  -- STO/KPS/HEL/VUO: strefy PORT_IN (0343) → l3_in_port_or_yard wystarczy (F7 W4).
   select p_geom is not null and exists (
     select 1
       from public.ferry_ports fp
      where fp.code in ('MUU', 'PLD')
        and coalesce(fp.active, true)
-       and st_distance(
+       and st_dwithin(
              p_geom::geography,
-             st_setsrid(st_makepoint(fp.lon, fp.lat), 4326)::geography
-           ) <= 2000
+             st_setsrid(st_makepoint(fp.lon, fp.lat), 4326)::geography,
+             2000
+           )
   );
 $$;
 comment on function public.bn8b_near_muu_pld_terminal(geometry) is
-  'BN8b/#720: punkt ≤2 km od terminalu MUU/PLD (bez fałszywego OFF_CORRIDOR).';
+  'BN8b/#720 F7: punkt ≤2 km od MUU/PLD (st_dwithin). Przypłynięcie HEL/VUO/STO/KPS = PORT_IN.';
 revoke all on function public.bn8b_near_muu_pld_terminal(geometry)
   from public, anon, authenticated;
 grant execute on function public.bn8b_near_muu_pld_terminal(geometry) to service_role;
@@ -318,13 +335,10 @@ begin
     select x.load_id, x.project_id, x.sailing_id, x.vessel,
            x.plan_arr, x.act_arr, x.tol_min, x.arr_country,
            case
-             -- Powrót (arrival PL/EE): bez gałęzi „actual” — świadomie tylko SE|FI.
+             -- Ląd SE|FI po ATA → bez alarmu (ani actual, ani plan — F7 W5d / §7.3).
              when x.act_arr is not null
                   and x.arr_country in ('SE', 'FI')
-                  and x.act_arr
-                      + make_interval(mins => greatest(coalesce(x.tol_min, 120), 1))
-                      < coalesce(p_now, now())
-                  and not exists (
+                  and exists (
                     select 1 from public.positions p
                      where p.load_id = x.load_id
                        and p.ts > x.act_arr
@@ -336,6 +350,13 @@ begin
                              and st_covers(public.sweden_land_geom(), p.geom_raw::geometry))
                        )
                   )
+             then null
+             -- Powrót (arrival PL/EE): bez gałęzi „actual” — świadomie tylko SE|FI.
+             when x.act_arr is not null
+                  and x.arr_country in ('SE', 'FI')
+                  and x.act_arr
+                      + make_interval(mins => greatest(coalesce(x.tol_min, 120), 1))
+                      < coalesce(p_now, now())
              then 'actual'
              when x.plan_arr
                   + make_interval(mins => greatest(coalesce(x.tol_min, 120), 1))
@@ -468,8 +489,12 @@ begin
        or exists (
          select 1 from public.geofences g
           where g.project_id = v_project
-            and g.country = coalesce(public.ferry_route_departure_country(v_route), g.country)
             and g.kind in ('PORT_OUT', 'LOADING')
+            and (
+              (v_route is not null
+               and g.country = public.ferry_route_departure_country(v_route))
+              or (v_route is null and g.country in ('PL', 'EE'))
+            )
             and st_covers(g.geom, p.geom_raw::geometry)
        )
      );
@@ -533,8 +558,11 @@ declare
   v_comp     jsonb := '[]'::jsonb;
   h_road numeric; sp_road numeric; h_rest numeric; sp_rest numeric; h_brk numeric; sp_brk numeric;
   h_road_eff numeric;
-  v_slow     numeric := 1.00;
-  v_slow_reason text;
+  h_pl_eff numeric;
+  v_slow_pl numeric := 1.00;
+  v_slow_se numeric := 1.00;
+  v_slow_reason_pl text;
+  v_slow_reason_se text;
   v_segs     jsonb := '[]'::jsonb;
   v_flags    text[] := '{}';
   v_seg      text;
@@ -573,8 +601,13 @@ declare
   v_family text;           -- BN8b: rodzina trasy (load_route_family)
   v_pl_corr text;          -- BN8b: korytarz przed promem
   v_se_corr text;          -- korytarz po promie / SE (SE_E22 / inland / SE_E4 / BN7)
+  v_pl_leg text;           -- BN8b F7: leg HERE przed promem (nie corridor_code)
+  v_se_leg text;           -- BN8b F7: leg HERE po promie
   v_se_road_code text;     -- kod godzin SE_ROAD(_KAA[_INLAND]) / FI_ROAD
   v_is_kaa boolean := false;
+  v_corridor_geom text := null;
+  v_here_fetched timestamptz := null;
+  v_method text := 'ETA v2 (OSM)';
 begin
   select * into l from loads where id = p_load;
   if not found then return; end if;
@@ -609,29 +642,26 @@ begin
   h_cross := coalesce(h_cross, 18); sp_cross := coalesce(sp_cross, 0.15);
   fresh_h := coalesce(fresh_h, 1.5);
 
-  -- BN8b: korytarz drogi z ferry_routes.road_corridor_* → here_road_legs.corridor_code.
+  -- BN8b F7 W2: leg trasy z ferry_routes.road_corridor_* (najpierw dokładny kod, nie family+limit 1).
   v_se_road_code := public.eta_obs_segment_code(v_family, 'SE_ROAD');
   v_is_kaa := coalesce(v_se_road_code, '') like '%KAA%';
   select ts, coalesce(geom_snapped, geom_raw) as g into p from positions where load_id = p_load order by ts desc limit 1;
 
-  select h.corridor_code into v_pl_corr
-    from public.ferry_routes fr
-    join public.here_road_legs h on h.leg = fr.road_corridor_pre
-   where fr.active
-     and fr.family_key = v_family
-     and public.ferry_route_is_outbound(fr.code)
-   order by fr.code
-   limit 1;
+  if v_load_route is not null then
+    select fr.road_corridor_pre, h.corridor_code
+      into v_pl_leg, v_pl_corr
+      from public.ferry_routes fr
+      join public.here_road_legs h on h.leg = fr.road_corridor_pre
+     where fr.active and fr.code = upper(btrim(v_load_route))
+     limit 1;
+    select fr.road_corridor_post, h.corridor_code
+      into v_se_leg, v_se_corr
+      from public.ferry_routes fr
+      join public.here_road_legs h on h.leg = fr.road_corridor_post
+     where fr.active and fr.code = upper(btrim(v_load_route))
+     limit 1;
+  end if;
   v_pl_corr := coalesce(v_pl_corr, 'PL_ROAD');
-
-  select h.corridor_code into v_se_corr
-    from public.ferry_routes fr
-    join public.here_road_legs h on h.leg = fr.road_corridor_post
-   where fr.active
-     and fr.family_key = v_family
-     and public.ferry_route_is_outbound(fr.code)
-   order by fr.code
-   limit 1;
 
   if v_is_kaa then
     v_se_corr := public.stena_se_eta_corridor(p.g);
@@ -648,41 +678,60 @@ begin
     v_se_corr := coalesce(v_se_corr, 'SE_E4');
   end if;
 
-  -- Spowolnienie: korytarz BN7 / SE + spowolnienia BN6 ROAD_* (LT/LV/EE/FI).
-  select slowdown_mult, reason into v_slow, v_slow_reason
+  -- F7 W1: v_slow_pl (ROAD_LT/LV/EE) × h_pl; v_slow_se (ROAD_FI / SE_*) × h_road.
+  -- ROAD_FI/SE_E4 zawsze w corridor_conditions (=1.00) — nie mogą zasłaniać PL.
+  select max(slowdown_mult), string_agg(reason, '; ' order by corridor)
+    into v_slow_pl, v_slow_reason_pl
+    from corridor_conditions
+   where corridor in ('ROAD_LT', 'ROAD_LV', 'ROAD_EE');
+  v_slow_pl := coalesce(v_slow_pl, 1.00);
+
+  select slowdown_mult, reason into v_slow_se, v_slow_reason_se
     from corridor_conditions where corridor = v_se_corr;
-  if v_slow is null and v_se_corr = 'FI_E75' then
-    select slowdown_mult, reason into v_slow, v_slow_reason
+  if v_slow_se is null and v_se_corr = 'FI_E75' then
+    select slowdown_mult, reason into v_slow_se, v_slow_reason_se
       from corridor_conditions where corridor = 'ROAD_FI';
   end if;
-  if v_slow is null and v_se_corr = 'PL_EE_E67' then
-    select max(slowdown_mult), string_agg(reason, '; ' order by corridor)
-      into v_slow, v_slow_reason
-      from corridor_conditions
-     where corridor in ('ROAD_LT', 'ROAD_LV', 'ROAD_EE');
-  end if;
-  if v_slow is null and v_se_corr in ('SE_E4_STO', 'SE_E18_KPS') then
-    select slowdown_mult, reason into v_slow, v_slow_reason
+  if v_slow_se is null and v_se_corr in ('SE_E4_STO', 'SE_E18_KPS', 'SE_E4') then
+    select slowdown_mult, reason into v_slow_se, v_slow_reason_se
       from corridor_conditions where corridor = 'SE_E4';
   end if;
-  if v_slow is null and v_is_kaa and v_se_corr is distinct from 'SE_E22' then
-    select slowdown_mult, reason into v_slow, v_slow_reason
+  if v_slow_se is null and v_is_kaa and v_se_corr is distinct from 'SE_E22' then
+    select slowdown_mult, reason into v_slow_se, v_slow_reason_se
       from corridor_conditions where corridor = 'SE_E22';
   end if;
-  -- Odcinek PL (PL_EE_E67): spowolnienie ROAD_* gdy jeszcze brak z post.
-  if v_slow is null and v_pl_corr = 'PL_EE_E67' then
-    select max(slowdown_mult), string_agg(reason, '; ' order by corridor)
-      into v_slow, v_slow_reason
-      from corridor_conditions
-     where corridor in ('ROAD_LT', 'ROAD_LV', 'ROAD_EE');
+  v_slow_se := coalesce(v_slow_se, 1.00);
+
+  if v_slow_pl > 1.00 then
+    v_flags := array_append(v_flags, format('spowolnienie PL ×%s (%s)', v_slow_pl, coalesce(v_slow_reason_pl, 'BN6')));
   end if;
-  v_slow := coalesce(v_slow, 1.00);
-  if v_slow > 1.00 then
-    v_weather_pct := round((v_slow - 1) * 100);
-    v_flags := array_append(v_flags, format('spowolnienie ×%s (%s)', v_slow, coalesce(v_slow_reason, 'BN6/BN8b')));
+  if v_slow_se > 1.00 then
+    v_flags := array_append(v_flags, format('spowolnienie SE ×%s (%s)', v_slow_se, coalesce(v_slow_reason_se, 'BN6/BN7')));
   end if;
-  h_road_eff := h_road * v_slow;
+  v_weather_pct := round((greatest(v_slow_pl, v_slow_se) - 1) * 100);
+  h_pl_eff := h_pl * v_slow_pl;
+  h_road_eff := h_road * v_slow_se;
   h_se := h_road_eff + h_rest + h_brk;
+
+  -- F7 W5: znacznik źródła geometrii korytarza BN7 (here+fetched_at albo brak).
+  if v_status = 'IN_TRANSIT_SE' and v_se_corr in ('FI_E75', 'SE_E4_STO', 'SE_E18_KPS') then
+    if public.bn8b_here_leg_fresh(v_se_leg) then
+      v_corridor_geom := 'here';
+      select g.fetched_at into v_here_fetched from public.here_road_geometry g where g.leg = v_se_leg;
+      v_method := 'ETA v2 (HERE)';
+    else
+      v_corridor_geom := 'brak';
+    end if;
+  elsif v_status in ('IN_TRANSIT_PL', 'AT_PORT_GDANSK', 'READY', 'AT_LOADING')
+        and v_pl_corr = 'PL_EE_E67' then
+    if public.bn8b_here_leg_fresh(v_pl_leg) then
+      v_corridor_geom := 'here';
+      select g.fetched_at into v_here_fetched from public.here_road_geometry g where g.leg = v_pl_leg;
+      v_method := 'ETA v2 (HERE)';
+    else
+      v_corridor_geom := 'brak';
+    end if;
+  end if;
 
   -- H-4: stan kierowcy z GPS (bez tachografu); flagi dołączamy na końcu, po fladze korytarza
   select * into st from h4_driver_state_from_gps(p_load, p_now);
@@ -869,7 +918,7 @@ begin
     -- H-4: niepewność odpoczynku > 0 (earlier/later); I-15 ±0% nie dotyczy rest z GPS
     v_var := v_var + (sch.rest_h * 60 * v_h4_rest_spread)^2; v_sum := v_sum + (sch.rest_h * 60 * v_h4_rest_spread);
     v_comp := v_comp || jsonb_build_object('code','H4_EU_REST','min',round(sch.rest_h * 60 * v_h4_rest_spread));
-    v_segs := v_segs || jsonb_build_object('code',coalesce(v_se_road_code,'SE_ROAD'),'hours',round(sch.drive_h, 1),'spread_pct',round(sp_road * 100),'slowdown_mult',v_slow,'corridor',v_se_corr)
+    v_segs := v_segs || jsonb_build_object('code',coalesce(v_se_road_code,'SE_ROAD'),'hours',round(sch.drive_h, 1),'spread_pct',round(sp_road * 100),'slowdown_mult',v_slow_se,'corridor',v_se_corr)
                      || jsonb_build_object('code','H4_EU_REST','hours',round(sch.rest_h, 1),'spread_pct',round(v_h4_rest_spread * 100))
                      || jsonb_build_object('code','H4_EU_BREAKS','hours',round(sch.break_h, 1),'spread_pct',round(sp_brk * 100))
                      || jsonb_build_object('code','H4_SEGMENTS','items',sch.segments);
@@ -919,20 +968,20 @@ begin
             v_flags := array_append(v_flags, 'pozycja GPS — odległość do portu w linii prostej'::text);
           else
             v_flags := array_append(v_flags, 'brak świeżej pozycji — połowa odcinka PL'::text);
-            v_var := v_var + (h_pl * 60 * 0.25)^2; v_sum := v_sum + (h_pl * 60 * 0.25);
-            v_comp := v_comp || jsonb_build_object('code','PL_NO_GPS','min',round(h_pl * 60 * 0.25));
+            v_var := v_var + (h_pl_eff * 60 * 0.25)^2; v_sum := v_sum + (h_pl_eff * 60 * 0.25);
+            v_comp := v_comp || jsonb_build_object('code','PL_NO_GPS','min',round(h_pl_eff * 60 * 0.25));
           end if;
         else
           v_flags := array_append(v_flags, 'brak świeżej pozycji — połowa odcinka PL'::text);
-          v_var := v_var + (h_pl * 60 * 0.25)^2; v_sum := v_sum + (h_pl * 60 * 0.25);
-          v_comp := v_comp || jsonb_build_object('code','PL_NO_GPS','min',round(h_pl * 60 * 0.25));
+          v_var := v_var + (h_pl_eff * 60 * 0.25)^2; v_sum := v_sum + (h_pl_eff * 60 * 0.25);
+          v_comp := v_comp || jsonb_build_object('code','PL_NO_GPS','min',round(h_pl_eff * 60 * 0.25));
         end if;
       end if;
       if v_status < 'IN_TRANSIT_PL' and v_start > p_now then v_flags := array_append(v_flags, 'przed załadunkiem — start z planu załadunku'::text); end if;
-      v_drive_h := round(h_pl * v_frac, 2);
+      v_drive_h := round(h_pl_eff * v_frac, 2);
       v_checkin_h := case when v_status = 'AT_PORT_GDANSK' then 0 else h_ci end;
-      v_segs := v_segs || jsonb_build_object('code','PL_ROAD','hours',round(h_pl * v_frac, 1),'spread_pct',round(sp_pl * 100));
-      v_start := v_start + make_interval(secs => ((h_pl * v_frac + v_checkin_h) * 3600)::int);
+      v_segs := v_segs || jsonb_build_object('code','PL_ROAD','hours',round(h_pl_eff * v_frac, 1),'spread_pct',round(sp_pl * 100),'slowdown_mult',v_slow_pl,'corridor',v_pl_corr);
+      v_start := v_start + make_interval(secs => ((h_pl_eff * v_frac + v_checkin_h) * 3600)::int);
       if v_has then
         v_dep := v_sail.dep; v_arr := v_sail.arr; v_sail_src := 'przypisany';
         v_var := v_var + (30)^2; v_sum := v_sum + (30); v_comp := v_comp || jsonb_build_object('code','SAILING','min',round(30));
@@ -975,7 +1024,7 @@ begin
     v_eta := v_arr + make_interval(secs => (sch.total_h * 3600)::int);
     v_flags := array_append(v_flags, 'H-4 po promie — odpoczynek D-9, zegar od zera'::text);
     if sch.flags is not null then v_flags := v_flags || sch.flags; end if;
-    v_segs := v_segs || jsonb_build_object('code',coalesce(v_se_road_code,'SE_ROAD'),'hours',round(sch.drive_h, 1),'spread_pct',round(sp_road * 100),'slowdown_mult',v_slow,'corridor',v_se_corr)
+    v_segs := v_segs || jsonb_build_object('code',coalesce(v_se_road_code,'SE_ROAD'),'hours',round(sch.drive_h, 1),'spread_pct',round(sp_road * 100),'slowdown_mult',v_slow_se,'corridor',v_se_corr)
                      || jsonb_build_object('code','H4_EU_REST','hours',round(sch.rest_h, 1),'spread_pct',round(v_h4_rest_spread * 100))
                      || jsonb_build_object('code','H4_EU_BREAKS','hours',round(sch.break_h, 1),'spread_pct',round(sp_brk * 100))
                      || jsonb_build_object('code','H4_SEGMENTS','items',sch.segments);
@@ -987,8 +1036,8 @@ begin
     v_var := v_var + (sch.rest_h * 60 * v_h4_rest_spread)^2; v_sum := v_sum + (sch.rest_h * 60 * v_h4_rest_spread);
     v_comp := v_comp || jsonb_build_object('code','H4_EU_REST','min',round(sch.rest_h * 60 * v_h4_rest_spread));
     if v_status < 'FERRY' then
-      v_var := v_var + (h_pl * 60 * sp_pl)^2; v_sum := v_sum + (h_pl * 60 * sp_pl);
-      v_comp := v_comp || jsonb_build_object('code','PL_ROAD','min',round(h_pl * 60 * sp_pl));
+      v_var := v_var + (h_pl_eff * 60 * sp_pl)^2; v_sum := v_sum + (h_pl_eff * 60 * sp_pl);
+      v_comp := v_comp || jsonb_build_object('code','PL_ROAD','min',round(h_pl_eff * 60 * sp_pl));
     end if;
   end if;
 
@@ -1008,11 +1057,18 @@ begin
     'rest_h', v_rest_h,
     'breaks_h', v_break_h,
     'weather_slowdown_pct', v_weather_pct,
+    'slowdown_pl', v_slow_pl,
+    'slowdown_se', v_slow_se,
     'progress', v_progress,
     'remaining_km', v_rem_km,
     'off_corridor_m', v_off,
+    'pl_corridor', v_pl_corr,
+    'pl_leg', v_pl_leg,
     'se_corridor', v_se_corr,
+    'se_leg', v_se_leg,
     'se_road_code', v_se_road_code,
+    'corridor_geom', v_corridor_geom,
+    'here_fetched_at', v_here_fetched,
     'h4', true,
     'h4_source', coalesce(st.source, 'n/a'),
     'h4_cautious', coalesce(st.cautious, false),
@@ -1020,11 +1076,15 @@ begin
   );
 
   return query select v_eta, round(sqrt(v_var))::int, jsonb_build_object(
-    'method', 'ETA v2 (OSM)', 'segment', v_seg, 'segments', v_segs,
+    'method', v_method, 'segment', v_seg, 'segments', v_segs,
     'band', jsonb_build_object('method', 'RSS', 'min', round(sqrt(v_var)), 'linear_sum_min', round(v_sum),
                                'components', (select coalesce(jsonb_agg(c), '[]'::jsonb) from jsonb_array_elements(v_comp) c where (c->>'min')::numeric > 0)),
     'flags', to_jsonb(v_flags), 'sailing', v_sail_src,
-    'attribution', v_attr, 'causes', v_causes, 'computed_at', p_now);
+    'attribution', v_attr, 'causes', v_causes,
+    'corridor_geom', v_corridor_geom,
+    'here_leg', coalesce(v_se_leg, v_pl_leg),
+    'here_fetched_at', v_here_fetched,
+    'computed_at', p_now);
 end $function$;
 
 -- ---------------------------------------------------------------------------
@@ -1045,6 +1105,7 @@ declare
   v_samples int := 0;
   v_blocked boolean := false;
   v_corr text;
+  v_leg text;
   v_eta_ok boolean;
   v_op text;
   v_route text;
@@ -1052,6 +1113,8 @@ declare
   v_bn7 boolean := false;
   v_bn7_no_here boolean := false;
   v_here_fresh boolean := false;
+  v_here_fetched timestamptz;
+  v_src_label text := 'OSM';
 begin
   select * into r from compute_load_eta(p_load);
   select * into l from loads where id = p_load;
@@ -1061,60 +1124,15 @@ begin
   v_delay := case when r.eta is null or v_end is null then null
                   else greatest(0, round(extract(epoch from (r.eta - v_end)) / 60))::int end;
 
-  perform set_config('tower.eta_ctx', 'on', true);
-  update loads set eta_site = r.eta, eta_confidence_min = r.conf_min, eta_basis = r.basis, eta_computed_at = now(),
-         delay_minutes = v_delay
-   where id = p_load
-     and (eta_site is distinct from r.eta or eta_confidence_min is distinct from r.conf_min
-          or (eta_basis - 'computed_at') is distinct from (r.basis - 'computed_at')
-          or delay_minutes is distinct from v_delay);
-  perform set_config('tower.eta_ctx', '', true);
-
-  v_has := exists (select 1 from positions p where p.load_id = p_load)
-    or l.status in (
-      'READY','AT_LOADING','IN_TRANSIT_PL','AT_PORT_GDANSK',
-      'FERRY','AT_PORT_NYNASHAMN','IN_TRANSIT_SE','AT_SITE'
-    );
-  -- #590: wyklucz CANCELLED i REMOVED (strażnik import.sh; 0315 przepisało 0298 — nie zgub przy replace)
-  v_eta_ok := l3_eta_alarm(r.eta, v_end, v_has)
-    and l.actual_delivery_at is null
-    and l.status::text not in ('CANCELLED', 'REMOVED')
-    and public.load_status_rank(l.status) < public.load_status_rank('AT_SITE'::public.load_status);
-
-  if v_eta_ok then
-    perform l3_upsert_alarm(l.project_id, p_load, 'ETA_BREACH', 'ETA_BREACH:' || p_load,
-      format('Opóźnienie %s min wobec planu dostawy (próg %s)', v_delay, l3_ops('DELAY_MIN')),
-      'rk_eta_breach', true, true, now() + interval '2 hours',
-      jsonb_build_object('params', jsonb_build_object('minutes', v_delay, 'threshold', l3_ops('DELAY_MIN'))),
-      now());
-  else
-    perform l3_upsert_alarm(l.project_id, p_load, 'ETA_BREACH', 'ETA_BREACH:' || p_load,
-      'ETA', 'rk_eta_breach', false, false, null, '{}'::jsonb, now());
-    update risk_signals set resolved_at = now()
-     where load_id = p_load and kind = 'ETA_BREACH' and resolved_at is null
-       and dedup_key = 'ETA_BREACH:' || p_load and coalesce(detail->>'l3', '') <> '1';
-  end if;
-
   v_blocked := l.status = 'FERRY' or l.status not in ('IN_TRANSIT_PL', 'IN_TRANSIT_SE');
-  v_op := null;
-  v_route := null;
   v_route := public.load_route_family(p_load);
   v_op := public.eta_obs_operator_key(v_route);
 
-  -- BN8a: korytarz z ferry_routes.road_corridor_* → here_road_legs.corridor_code;
-  -- brak kodu = brak alarmu (v_blocked). Regresja PL/SE: corridor_code legów core.
+  -- F7 B2: leg z dokładnego kodu trasy (nie family + order by code limit 1).
   if l.status = 'IN_TRANSIT_SE' then
     v_kind := 'ROAD_SE'::risk_kind;
-    select h.corridor_code into v_corr
-      from public.ferry_routes fr
-      join public.here_road_legs h on h.leg = fr.road_corridor_post
-     where fr.active
-       and fr.family_key = public.eta_obs_route_family(v_route)
-       and public.ferry_route_is_outbound(fr.code)
-     order by fr.code
-     limit 1;
-    if v_corr is null and v_route is not null then
-      select h.corridor_code into v_corr
+    if v_route is not null then
+      select fr.road_corridor_post, h.corridor_code into v_leg, v_corr
         from public.ferry_routes fr
         join public.here_road_legs h on h.leg = fr.road_corridor_post
        where fr.active and fr.code = upper(btrim(v_route))
@@ -1126,16 +1144,8 @@ begin
     end if;
   elsif l.status = 'IN_TRANSIT_PL' then
     v_kind := 'ROAD_PL'::risk_kind;
-    select h.corridor_code into v_corr
-      from public.ferry_routes fr
-      join public.here_road_legs h on h.leg = fr.road_corridor_pre
-     where fr.active
-       and fr.family_key = public.eta_obs_route_family(v_route)
-       and public.ferry_route_is_outbound(fr.code)
-     order by fr.code
-     limit 1;
-    if v_corr is null and v_route is not null then
-      select h.corridor_code into v_corr
+    if v_route is not null then
+      select fr.road_corridor_pre, h.corridor_code into v_leg, v_corr
         from public.ferry_routes fr
         join public.here_road_legs h on h.leg = fr.road_corridor_pre
        where fr.active and fr.code = upper(btrim(v_route))
@@ -1144,11 +1154,10 @@ begin
   else
     v_kind := 'ROAD_PL'::risk_kind;
     v_corr := null;
+    v_leg := null;
   end if;
 
-  -- W1/F7 r4: bez trasy — PL_ROAD tylko gdy oba ostatnie punkty (jak corridor_progress)
-  -- leżą w prostokącie PL; wcześniejszy wyjazd z PL nie wystarcza (Bałtyk bez rejsu).
-  -- SE bez trasy → null (0339: brak v_op ⇒ brak v_corr; nie SE_E4 na Stena/FI).
+  -- W1/F7 r4: bez trasy — PL_ROAD tylko gdy oba ostatnie punkty w bbox PL.
   if v_corr is null and v_route is null and l.status = 'IN_TRANSIT_PL' then
     select case
              when count(*) >= 1
@@ -1168,31 +1177,93 @@ begin
       ) s;
   end if;
 
-  -- BN8b/#720 §7: kody BN7 tylko przy świeżej geometrii HERE (≤7 dni, ≥2 pkt).
-  -- Brak/stara → bez alarmu + eta_basis.corridor_geom=brak. PL_ROAD/SE_E4/Stena dual bez zmian.
+  -- BN8b F7 B1/B2/B3: BN7 po legu HERE (bez kopiowania do corridor_polylines);
+  -- corridor_geom dołączamy do r.basis PRZED pierwszym UPDATE.
   v_bn7 := v_corr in ('PL_EE_E67', 'FI_E75', 'SE_E4_STO', 'SE_E18_KPS');
   v_bn7_no_here := false;
-  if v_bn7 and v_blocked is not true then
-    v_here_fresh := public.bn8b_here_corridor_fresh(v_corr);
+  if v_bn7 then
+    v_here_fresh := public.bn8b_here_leg_fresh(v_leg);
     if v_here_fresh is not true then
       v_bn7_no_here := true;
-      v_blocked := true;
-      v_samples := 0;
-      v_max_off := 0;
-      v_span := 0;
-      perform set_config('tower.eta_ctx', 'on', true);
-      update loads
-         set eta_basis = coalesce(eta_basis, '{}'::jsonb)
-                        || jsonb_build_object('corridor_geom', 'brak')
-       where id = p_load;
-      perform set_config('tower.eta_ctx', '', true);
+      r.basis := coalesce(r.basis, '{}'::jsonb)
+                 || jsonb_build_object('corridor_geom', 'brak', 'here_leg', v_leg);
+      if v_blocked is not true then
+        v_blocked := true;
+        v_samples := 0;
+        v_max_off := 0;
+        v_span := 0;
+      end if;
     else
-      perform public.bn8b_sync_corridor_polyline_from_here(v_corr);
+      select g.fetched_at into v_here_fetched
+        from public.here_road_geometry g where g.leg = v_leg;
+      r.basis := coalesce(r.basis, '{}'::jsonb)
+                 || jsonb_build_object(
+                      'corridor_geom', 'here',
+                      'here_leg', v_leg,
+                      'here_fetched_at', v_here_fetched
+                    );
+      v_src_label := 'HERE';
     end if;
   end if;
 
+  perform set_config('tower.eta_ctx', 'on', true);
+  update loads set eta_site = r.eta, eta_confidence_min = r.conf_min, eta_basis = r.basis, eta_computed_at = now(),
+         delay_minutes = v_delay
+   where id = p_load
+     and (eta_site is distinct from r.eta or eta_confidence_min is distinct from r.conf_min
+          or (eta_basis - 'computed_at') is distinct from (r.basis - 'computed_at')
+          or delay_minutes is distinct from v_delay);
+  perform set_config('tower.eta_ctx', '', true);
+
+  v_has := exists (select 1 from positions p where p.load_id = p_load)
+    or l.status in (
+      'READY','AT_LOADING','IN_TRANSIT_PL','AT_PORT_GDANSK',
+      'FERRY','AT_PORT_NYNASHAMN','IN_TRANSIT_SE','AT_SITE'
+    );
+  v_eta_ok := l3_eta_alarm(r.eta, v_end, v_has)
+    and l.actual_delivery_at is null
+    and l.status::text not in ('CANCELLED', 'REMOVED')
+    and public.load_status_rank(l.status) < public.load_status_rank('AT_SITE'::public.load_status);
+
+  if v_eta_ok then
+    perform l3_upsert_alarm(l.project_id, p_load, 'ETA_BREACH', 'ETA_BREACH:' || p_load,
+      format('Opóźnienie %s min wobec planu dostawy (próg %s)', v_delay, l3_ops('DELAY_MIN')),
+      'rk_eta_breach', true, true, now() + interval '2 hours',
+      jsonb_build_object('params', jsonb_build_object('minutes', v_delay, 'threshold', l3_ops('DELAY_MIN'))),
+      now());
+  else
+    perform l3_upsert_alarm(l.project_id, p_load, 'ETA_BREACH', 'ETA_BREACH:' || p_load,
+      'ETA', 'rk_eta_breach', false, false, null, '{}'::jsonb, now());
+    update risk_signals set resolved_at = now()
+     where load_id = p_load and kind = 'ETA_BREACH' and resolved_at is null
+       and dedup_key = 'ETA_BREACH:' || p_load and coalesce(detail->>'l3', '') <> '1';
+  end if;
+
   if v_bn7_no_here then
-    null; -- już zablokowane: bez pomiaru na przybliżeniu OSM z 0381
+    null; -- bez pomiaru na przybliżeniu OSM; corridor_polylines zostaje OSM (D-81)
+  elsif v_bn7 and v_blocked is not true then
+    -- F7 B1: dystans bezpośrednio z here_road_geometry legu trasy.
+    select count(*)::int,
+           max(hp.off_m),
+           min(hp.off_m),
+           coalesce(extract(epoch from (max(s.ts) - min(s.ts))) / 60.0, 0),
+           coalesce(bool_or(
+             l3_in_port_or_yard(s.g)
+             or public.bn8b_near_muu_pld_terminal(s.g)
+           ), false)
+      into v_samples, v_max_off, v_off, v_span, v_has
+      from (
+        select ts, coalesce(geom_snapped, geom_raw) as g
+          from positions
+         where load_id = p_load
+         order by ts desc
+         limit 2
+      ) s
+      cross join lateral public.bn8b_here_leg_progress(v_leg, s.g) hp;
+    if coalesce(v_off, 0) <= l3_ops('OFFROUTE_KM') * 1000 then
+      v_max_off := 0;
+    end if;
+    v_blocked := v_blocked or coalesce(v_has, false);
   elsif v_stena_dual is not true
      and (v_corr is null
           or not exists (
@@ -1235,7 +1306,6 @@ begin
         ) s
         cross join lateral stena_se_corridor_nearest(s.g) n;
     else
-      -- OFFROUTE_KM 2 km, ostatnie 2 punkty; MUU/PLD bufor 2 km (terminal poza końcem PL_EE_E67).
       select count(*)::int,
              max(cp.off_m),
              min(cp.off_m),
@@ -1262,10 +1332,12 @@ begin
 
   if l3_deviation_alarm(v_max_off, v_samples, v_span, v_blocked) then
     perform l3_upsert_alarm(l.project_id, p_load, v_kind, 'OFF_CORRIDOR:' || p_load,
-      format('Zjazd z trasy z zezwolenia: %s m od korytarza OSM (próg %s m)', round(v_max_off), l3_ops('OFFROUTE_KM') * 1000),
+      format('Zjazd z trasy z zezwolenia: %s m od korytarza %s (próg %s m)',
+             round(v_max_off), v_src_label, l3_ops('OFFROUTE_KM') * 1000),
       'rk_off_corridor', true, true, now() + interval '1 hour',
       jsonb_build_object('params', jsonb_build_object(
-        'meters', round(v_max_off), 'threshold', l3_ops('OFFROUTE_KM') * 1000, 'corridor', v_corr)),
+        'meters', round(v_max_off), 'threshold', l3_ops('OFFROUTE_KM') * 1000,
+        'corridor', v_corr, 'leg', v_leg, 'source', v_src_label)),
       now());
   else
     update risk_signals set resolved_at = now()
@@ -1278,16 +1350,20 @@ end $$;
 revoke all on function public.compute_load_eta(uuid, timestamptz) from public, anon, authenticated;
 grant execute on function public.compute_load_eta(uuid, timestamptz) to service_role;
 comment on function public.compute_load_eta(uuid, timestamptz) is
-  'BN8b/#720: load_route_family; PORT_CHECKIN per port; korytarze road_corridor_*→corridor_code; corridor_conditions BN6/BN7.';
+  'BN8b/#720 F7: load_route_family; leg trasy; v_slow_pl×h_pl / v_slow_se×h_road; corridor_geom here|brak.';
 
 revoke all on function public.refresh_load_eta(uuid) from public, anon, authenticated;
 grant execute on function public.refresh_load_eta(uuid) to service_role;
 comment on function public.refresh_load_eta(uuid) is
-  'BN8b/#720: OFF_CORRIDOR BN7 tylko przy świeżej HERE; PL_ROAD/SE_E4/Stena dual; MUU/PLD bufor 2 km; brak HERE→corridor_geom=brak.';
+  'BN8b/#720 F7: OFF_CORRIDOR BN7 z here_road_geometry legu (bez sync polyline); jeden UPDATE z corridor_geom; MUU/PLD st_dwithin.';
 
 revoke all on function public.promote_ferry_departures(timestamptz) from public, anon, authenticated;
 grant execute on function public.promote_ferry_departures(timestamptz) to service_role;
 comment on function public.promote_ferry_departures(timestamptz) is
   'BN8b: FERRY po AIS / plan+assume_dep_min (parametr trasy, nie sztywne +1 h); outbound ze słownika.';
+
+-- F7 drobne: przywróć komentarz 0373 (0382 nadpisał skrótem BN1).
+comment on function public.apply_ferry_ais_arrival_backup(uuid, double precision, double precision, timestamptz) is
+  'BN4/DP-138 F7 r2: FERRY wymaga ATA; AT_PORT→IN_TRANSIT: p_ts > coalesce(ATA, STATUS→AT_PORT).';
 
 commit;
