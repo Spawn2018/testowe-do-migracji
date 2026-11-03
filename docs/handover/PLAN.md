@@ -2566,6 +2566,8 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 03.11.2026 00:45 | #740 SCALONE `4b2c6f08`; #743 konflikt (rebase wyglądu); #741 F7 r6: cleanup L820* `load_events` via replica; DP-175/177 | pętla / F7 #741 |
 | 03.11.2026 01:45 | #741 SCALONE `f4c4e2ab`; #743 SCALONE `606eaad0` (F7); start DP-171 (`pakiet/dp171-ee-lv-timeout-url`) | pętla / DP-171 |
 | 03.11.2026 02:15 | #744 DP-171 SCALONE `4ae40c5b` (F7 @ 877af4e5); start DP-172 (`pakiet/dp172-deepl-baltic` / **0383**) | pętla / DP-172 |
+| 03.11.2026 02:40 | #745 DP-172 SCALONE `162b4aa1`; start cron_fetch=true **0384** (#746) | pętla / BN7 |
+| 03.11.2026 03:10 | #746 SCALONE `638abbf4` / **0384** (F7 @ b0015e90); start BN8 front `src/lib` (82-C, DP-143/144) | pętla / BN8 |
 | 31.10.2026 — | Decyzja 73: TLLA-HEL ETA−150 min / HELA-TLL ETD+160 min (fixture Cargo; nocny 165 min OK). Decyzja 74: `sailings.source_ref` 0359; Digitraffic `digitraffic:portcall:<id>:<route>`; HTML/RECZNIE/DANE_STARTOWE wygrywają; #685-b RPC zastępuje digitraffic:% w ±3 h | F7 #688 r1–r4 |
 | 31.10.2026 — | F7 #683 nieblokujące (osobna poprawka): Scheduler grudzień + „on 2 January” → rok bieżący, ciche wygaśnięcie; Alert INFO bez ryzyka/historii — świadomie | F7 #683 r7 |
 | 31.10.2026 — | F7 #683 r8 nieblokujące (osobno): Alert poza Schedulerem obok Schedulera; sprzeczne bloki (resume→cofnięcie auto); rok przy długim oknie Schedulera; mutanty M10/M15–M17/M22 świadomie bez testów | F7 #683 r8 |
