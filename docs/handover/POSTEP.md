@@ -1,4 +1,11 @@
 
+## 2026-11-03 08:25 — DP-181 CI visual telefon
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie.
+- Scalanie: brak F7 „gotowe” (#755). Bez push na main.
+- **Krok:** visual @ `0f515a22` — zrzuty/bramy ✔; telefon FAIL: `e8-phone-gate` P7-d oczekiwał „Stena…, Polferries…” po `reachOf`→`catalogOperators` (POLFERRIES, STENA). Asercja → Polferries, Stena Line (jak `sail-view.test.ts`).
+- **Dalej:** push → CI → F7. Po F7: DP-184.
+
 ## 2026-11-03 08:05 — DP-181 F7 #755 r1
 
 - Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720/#735 w planie.
