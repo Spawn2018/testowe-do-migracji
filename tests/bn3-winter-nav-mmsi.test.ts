@@ -190,24 +190,62 @@ describe('BN3 winter-nav / MMSI / DP-11', () => {
     expect(high.dedup).not.toBe(winterNavRiskDedup(hit));
   });
 
-  it('DP-120: IBNet PL + klasa 1A Super spełnia I 2000; dzień rejsu', () => {
+  it('DP-120 / F7 #777: I=IC; 1C spełnia I; IB nie; IA Super 2000; złożone; zła data', () => {
     const ib = parseIbnetRestriction('I 2000');
-    expect(ib.polish).toBe('klasa lodowa I, min. 2000 DWT');
+    expect(ib.polish).toBe('klasa lodowa IC lub wyższa, min. 2000 DWT');
+    expect(ib.classCode).toBe('I');
+    expect(vesselMeetsIbnetIceClass('1C', ib)).toBe(true);
     expect(vesselMeetsIbnetIceClass('1A Super', ib)).toBe(true);
     expect(vesselMeetsIbnetIceClass('II', ib)).toBe(false);
     expect(vesselMeetsIbnetIceClass(null, ib)).toBe(false);
+    /* I = IC — 1C spełnia „I”, nie spełnia „IB”. */
+    expect(vesselMeetsIbnetIceClass('1C', parseIbnetRestriction('IB 2000'))).toBe(false);
+
+    const iaSuper = parseIbnetRestriction('IA Super 2000');
+    expect(iaSuper.classCode).toBe('IAS');
+    expect(iaSuper.minDwt).toBe(2000);
+    expect(iaSuper.polish).toMatch(/IA Super.*2000/);
+
+    const compound = parseIbnetRestriction('IC 1300 / II 2000');
+    expect(compound.alternatives).toHaveLength(2);
+    expect(compound.polish).toMatch(/IC.*1300/);
+    expect(compound.polish).toMatch(/II.*2000/);
+    expect(vesselMeetsIbnetIceClass('1C', compound)).toBe(true);
+    expect(vesselMeetsIbnetIceClass('II', compound)).toBe(true);
+    expect(vesselMeetsIbnetIceClass('III', compound)).toBe(false);
+    /* minDwt > 2000 → nie pomijaj (brak vessels.dwt). */
+    expect(vesselMeetsIbnetIceClass('1A', parseIbnetRestriction('IA 4000'))).toBe(false);
+
     const dep = Date.parse('2026-02-15T18:00:00Z');
     expect(isWinterNavWindowActiveOnSailingDay(
       '2026-02-01T00:00:00Z', '2026-02-20T00:00:00Z', dep,
     )).toBe(true);
-    /* Ograniczenie tylko „teraz”, nie w dniu rejsu. */
     expect(isWinterNavWindowActiveOnSailingDay(
       '2026-02-01T00:00:00Z', '2026-02-10T00:00:00Z', dep,
     )).toBe(false);
+    /* Niepoprawna data → jak otwarte. */
+    expect(isWinterNavWindowActiveOnSailingDay('not-a-date', null, dep)).toBe(true);
+    /* Rejs przed północą UTC vs okno od 22/23Z tego dnia. */
+    const lateDep = Date.parse('2026-02-15T23:30:00Z');
+    expect(isWinterNavWindowActiveOnSailingDay(
+      '2026-02-15T22:00:00Z', '2026-02-16T06:00:00Z', lateDep,
+    )).toBe(true);
+
     expect(winterNavIceRisk({
       locode: 'FIHEL', name: 'HELSINKI', kind: 'RESTRICTION',
       summary: 'I 2000', startTime: '2026-02-01T00:00:00Z', endTime: null,
-    }, '2026-02-10T12:00:00Z').title).toMatch(/klasa lodowa I, min\. 2000 DWT/);
+    }, '2026-02-10T12:00:00Z').title).toMatch(/klasa lodowa IC lub wyższa, min\. 2000 DWT/);
+
+    const low = ferryIceRisk({
+      hit: {
+        locode: 'SENYN', name: 'NYNASHAMN', kind: 'RESTRICTION',
+        summary: 'IB 2000', startTime: '2026-02-01T00:00:00Z', endTime: null,
+      },
+      sailingId: 's1', vessel: 'Estelle', route: 'GDY-KAA',
+      departureUtc: '2026-02-10T12:00:00Z', nowIso: '2026-02-10T12:00:00Z',
+      vesselIceClass: '1C',
+    });
+    expect(low.title).toMatch(/klasa 1C < wymagana IB/);
   });
 
   it('parseWinterNavigationLocations: aktywne ograniczenie FIHEL → hit; przeszłe pominięte', () => {

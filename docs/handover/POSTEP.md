@@ -1,4 +1,12 @@
 
+## 2026-11-03 21:35 — #775 SCALONE; DP-120 F7 r1 niegotowe → poprawki seed/IC/dzień przypłynięcia
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
+- Scalanie: **#775 SCALONE** `b4a8dab9` (DP-196 wygląd Armator; F7 @ `e709023e`; CI unit/visual ✔). Bez `supabase/**`. `deploy-main` robi resztę. Bez push na main.
+- **#777 F7 r1 niegotowe** @ `4eca485b`: seed Portnet/Deltamarin (IA / 1C / NULL / Cinderella+Gabriella); I=IC; regex IAS przed IA; port docelowy wg dnia przypłynięcia; untilMs = koniec doby najpóźniejszego arrival; złożone „X / Y”; minDwt>2000 informacyjnie; tytuł za niskiej klasy.
+- **Krok:** poprawki w tym samym PR; vitest bn3-winter + integrations ✔. Dalej: push → CI (unit/db/visual) → F7.
+- **Dalej:** po F7 gotowe → DP-121.
+
 ## 2026-11-03 20:50 — #776 SCALONE; start DP-120 (klasa lodowa / dzień rejsu)
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie; #773 zamknięte. Bez nowego `pilne`.

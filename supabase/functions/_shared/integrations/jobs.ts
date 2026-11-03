@@ -32,9 +32,9 @@ import {
 export { DIGITRAFFIC_USER };
 import {
   FERRY_ICE_ATTRIBUTION, PORT_CALL_V2_CANCELLED_URL, WINTER_NAV_LOCATIONS_URL,
-  ferryIceRisk, isWinterNavWindowActiveOnSailingDay, parseIbnetRestriction,
-  parseWinterNavigationLocations, portCallV2CancelledHasFihel,
-  vesselMeetsIbnetIceClass, winterLocodesForRoute, winterNavIceRisk,
+  ferryIceRisk, ibnetRestrictionStrictness, isWinterNavWindowActiveOnSailingDay,
+  parseIbnetRestriction, parseWinterNavigationLocations, portCallV2CancelledHasFihel,
+  utcDayEndMs, vesselMeetsIbnetIceClass, winterLocodeEndsForRoute, winterNavIceRisk,
 } from '../ferry/winterNavigation.ts';
 import {
   cancelSuspectRisk, cancelSuspectRiskDedup, cancelSuspectTrigger,
@@ -5145,9 +5145,13 @@ export async function runFerryWeather(deps: JobDeps): Promise<JobResult> {
   }
   await deps.store.resolveRisks('SOURCE_DOWN:MARINE_WEATHER:');
 
-  /* BN5 cz.3: Digitraffic winter-nav przed zapisem korytarzy (atrybucja + detail.ice).
-   * Pusto poza sezonem = brak ograniczeń (nie błąd). Awaria HTTP → ostrzeżenie, bez SOURCE_DOWN. */
-  const iceSnap = await fetchWinterNavIceSnapshot(deps, nowIso);
+  /* BN5 cz.3 / F7 #777: horyzont = koniec doby UTC najpóźniejszego przypłynięcia. */
+  let iceUntilMs = Date.parse(nowIso) + 72 * 3600_000;
+  for (const s of upcoming) {
+    const arrMs = Date.parse(s.delayed_arrival_at ?? s.arrival_at);
+    if (Number.isFinite(arrMs)) iceUntilMs = Math.max(iceUntilMs, utcDayEndMs(arrMs));
+  }
+  const iceSnap = await fetchWinterNavIceSnapshot(deps, nowIso, iceUntilMs);
   warnings.push(...iceSnap.warnings);
 
   const nearTo = new Date(now.getTime() + 24 * 3600_000).toISOString();
@@ -5179,6 +5183,8 @@ export async function runFerryWeather(deps: JobDeps): Promise<JobResult> {
           punkty: [...pts],
           ice: {
             ok: iceSnap.ok,
+            /* F7 #777: okna w horyzoncie (do końca doby najpóźniejszego przypłynięcia), nie tylko „teraz”. */
+            horizon: 'do końca doby UTC najpóźniejszego przypłynięcia',
             hits: iceSnap.hits.map((h) => ({
               locode: h.locode, kind: h.kind, summary: h.summary,
               start: h.startTime, end: h.endTime,
@@ -5248,6 +5254,7 @@ type WinterNavIceSnapshot = {
 async function fetchWinterNavIceSnapshot(
   deps: JobDeps,
   nowIso: string,
+  untilMs: number,
 ): Promise<WinterNavIceSnapshot> {
   const page = await readText(deps, WINTER_NAV_LOCATIONS_URL, {
     headers: {
@@ -5272,8 +5279,7 @@ async function fetchWinterNavIceSnapshot(
       attribution: null,
     };
   }
-  /* DP-120: horyzont 72 h — filtr dnia rejsu w raiseFerryIceRisks. */
-  const untilMs = Date.parse(nowIso) + 72 * 3600_000;
+  /* F7 #777: untilMs = koniec doby najpóźniejszego przypłynięcia (filtr dnia w raiseFerryIceRisks). */
   const parsed = parseWinterNavigationLocations(json, nowIso, {
     mode: 'open_until', untilMs,
   });
@@ -5292,13 +5298,24 @@ async function fetchWinterNavIceSnapshot(
   };
 }
 
+type IceSailing = {
+  id: string;
+  vessel_id: string;
+  route: string;
+  departure_at: string;
+  arrival_at: string;
+  delayed_departure_at?: string | null;
+  delayed_arrival_at?: string | null;
+};
+
 /**
- * BN5 cz.3 / DP-120 — FERRY_ICE per rejs:
- * ograniczenie w dniu odejścia + porównanie klasy lodowej z `vessels`.
+ * BN5 cz.3 / DP-120 / F7 #777 — FERRY_ICE per rejs:
+ * port wyjścia wg dnia odejścia, docelowy wg dnia przypłynięcia;
+ * porównanie klasy lodowej; dwa okna → najsurowsze.
  */
 async function raiseFerryIceRisks(
   deps: JobDeps,
-  upcoming: { id: string; vessel_id: string; route: string; departure_at: string }[],
+  upcoming: IceSailing[],
   vesselById: Map<string, { name: string; ice_class?: string | null }>,
   nowIso: string,
   hits: WinterNavIceSnapshot['hits'],
@@ -5312,23 +5329,31 @@ async function raiseFerryIceRisks(
   const keep: string[] = [];
   let risks = 0;
   for (const s of upcoming) {
-    const locodes = winterLocodesForRoute(s.route);
-    if (!locodes.length) continue;
-    const depMs = Date.parse(s.departure_at);
+    const ends = winterLocodeEndsForRoute(s.route);
+    if (!ends.length) continue;
+    const depMs = Date.parse(s.delayed_departure_at ?? s.departure_at);
+    const arrMs = Date.parse(s.delayed_arrival_at ?? s.arrival_at);
     const v = vesselById.get(s.vessel_id);
     const vesselLabel = v?.name ?? s.vessel_id;
     const iceClass = v?.ice_class ?? null;
+
+    /* Per locode: zawieszenia wszystkie; ograniczenia → jedno najsurowsze. */
+    const locodes = [...new Set(ends.map((e) => e.locode))];
     for (const locode of locodes) {
-      for (const hit of byLocode.get(locode) ?? []) {
-        /* DP-120: tylko gdy ograniczenie przecina dzień UTC rejsu. */
-        if (!isWinterNavWindowActiveOnSailingDay(hit.startTime, hit.endTime, depMs)) {
-          continue;
-        }
-        /* Zawieszenie zawsze; ograniczenie — pomiń gdy klasa spełnia IBNet. */
-        if (hit.kind === 'RESTRICTION') {
-          const req = parseIbnetRestriction(hit.summary);
-          if (vesselMeetsIbnetIceClass(iceClass, req)) continue;
-        }
+      const dayMsFor = (end: 'dep' | 'arr') => (end === 'dep' ? depMs : arrMs);
+      const activeHits = (byLocode.get(locode) ?? []).filter((hit) => {
+        /* Ten sam LOCODE na obu końcach (np. pętla) — wystarczy przecięcie któregoś dnia. */
+        const roles = ends.filter((e) => e.locode === locode).map((e) => e.end);
+        return roles.some((role) =>
+          isWinterNavWindowActiveOnSailingDay(hit.startTime, hit.endTime, dayMsFor(role))
+        );
+      });
+      if (!activeHits.length) continue;
+
+      const suspensions = activeHits.filter((h) => h.kind === 'SUSPENSION');
+      const restrictions = activeHits.filter((h) => h.kind === 'RESTRICTION');
+
+      for (const hit of suspensions) {
         const risk = ferryIceRisk({
           hit,
           sailingId: s.id,
@@ -5340,6 +5365,33 @@ async function raiseFerryIceRisks(
         });
         keep.push(risk.dedup);
         if (await deps.store.raiseRisk(risk)) risks += 1;
+      }
+
+      if (restrictions.length) {
+        let best = restrictions[0]!;
+        let bestScore = ibnetRestrictionStrictness(parseIbnetRestriction(best.summary));
+        for (let i = 1; i < restrictions.length; i++) {
+          const cand = restrictions[i]!;
+          const score = ibnetRestrictionStrictness(parseIbnetRestriction(cand.summary));
+          if (score > bestScore) {
+            best = cand;
+            bestScore = score;
+          }
+        }
+        const req = parseIbnetRestriction(best.summary);
+        if (!vesselMeetsIbnetIceClass(iceClass, req)) {
+          const risk = ferryIceRisk({
+            hit: best,
+            sailingId: s.id,
+            vessel: vesselLabel,
+            route: s.route,
+            departureUtc: s.departure_at,
+            nowIso,
+            vesselIceClass: iceClass,
+          });
+          keep.push(risk.dedup);
+          if (await deps.store.raiseRisk(risk)) risks += 1;
+        }
       }
     }
   }

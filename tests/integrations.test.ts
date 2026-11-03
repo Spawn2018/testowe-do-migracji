@@ -1115,10 +1115,11 @@ describe('ferry-weather — II-8 FMI+DMI+SMHI', () => {
     expect(ice).toHaveLength(1);
     expect(ice[0]!.dedup).toBe('FERRY_ICE:s-muu:FIHEL:RESTRICTION');
     expect(ice[0]!.severity).toBe('MEDIUM');
-    expect(ice[0]!.title).toMatch(/klasa lodowa I, min\. 2000 DWT/);
+    expect(ice[0]!.title).toMatch(/klasa lodowa IC lub wyższa, min\. 2000 DWT/);
   });
 
-  it('DP-120: 1A Super spełnia I 2000 → brak FERRY_ICE; koniec przed dniem rejsu → brak', async () => {
+  it('DP-120 / F7 #777: IAS spełnia I 2000; Wawel bez klasy; nocny rejs — dzień przypłynięcia; zawieszenie mimo klasy', async () => {
+    const MEGA = 'v-mega';
     const restr = JSON.stringify({
       type: 'FeatureCollection',
       features: [{
@@ -1137,14 +1138,16 @@ describe('ferry-weather — II-8 FMI+DMI+SMHI', () => {
     class StoreIce extends MemStore {
       override async vessels() {
         return [
-          { id: WAW, name: 'M/F Wawel', mmsi: null, ice_class: '1A Super' },
-          { id: NS, name: 'M/F Nova Star', mmsi: 311000787, ice_class: '1A' },
+          /* F7 #777: Wawel bez publicznej klasy → NULL; IAS tylko gdzie Portnet IAS. */
+          { id: WAW, name: 'M/F Wawel', mmsi: null, ice_class: null },
+          { id: NS, name: 'M/F Nova Star', mmsi: 311000787, ice_class: null },
+          { id: MEGA, name: 'M/F Viking XPRS', mmsi: 230705000, ice_class: '1A Super' },
         ];
       }
     }
     const okClass = new StoreIce();
     okClass.sailings = [{
-      id: 's-muu', vessel_id: WAW, route: 'MUU-VUO',
+      id: 's-muu', vessel_id: MEGA, route: 'MUU-VUO',
       departure_at: '2026-10-02T10:00:00.000Z', arrival_at: '2026-10-02T12:00:00.000Z',
       delayed_departure_at: null, delayed_arrival_at: null, status: 'ZAPLANOWANY', source: 'ECKERO',
     }];
@@ -1168,11 +1171,43 @@ describe('ferry-weather — II-8 FMI+DMI+SMHI', () => {
         },
       }],
     });
-    const st2 = new MemStore();
+    const st2 = new StoreIce();
     st2.sailings = okClass.sailings;
     const r2 = await runFerryWeather(deps(st2, { ...wxPages(), 'winter-navigation': ended }, {}, WX_NOW).d);
     expect(r2.ok).toBe(true);
     expect(st2.risks.filter((x) => x.dedup.startsWith('FERRY_ICE:'))).toHaveLength(0);
+
+    /* Nocny GDN→NYN: zawieszenie SENYN w dniu przypłynięcia (nie odejścia). */
+    const nightSusp = JSON.stringify({
+      type: 'FeatureCollection',
+      features: [{
+        type: 'Feature',
+        properties: {
+          name: 'NYNASHAMN',
+          locodeList: 'SENYN',
+          suspensions: [{
+            startTime: '2026-10-03T05:00:00Z',
+            endTime: '2026-10-03T16:00:00Z',
+            textCompilation: 'closed',
+          }],
+          restrictions: [],
+        },
+      }],
+    });
+    const night = new StoreIce();
+    night.sailings = [{
+      id: 's-gdn-night', vessel_id: MEGA, route: 'GDN-NYN',
+      departure_at: '2026-10-02T16:00:00.000Z', arrival_at: '2026-10-03T10:00:00.000Z',
+      delayed_departure_at: null, delayed_arrival_at: null, status: 'ZAPLANOWANY', source: 'POLFERRIES',
+    }];
+    const r3 = await runFerryWeather(deps(night, { ...wxPages(), 'winter-navigation': nightSusp }, {}, WX_NOW).d);
+    expect(r3.ok).toBe(true);
+    const nightIce = night.risks.filter((x) => x.dedup.startsWith('FERRY_ICE:'));
+    expect(nightIce).toHaveLength(1);
+    expect(nightIce[0]!.dedup).toBe('FERRY_ICE:s-gdn-night:SENYN:SUSPENSION');
+    expect(nightIce[0]!.severity).toBe('HIGH');
+    /* Zawieszenie przy klasie spełniającej ograniczenie — nadal HIGH. */
+    expect(nightIce[0]!.title).toMatch(/Viking XPRS/);
   });
 
   it('BN5 pkt 4: fala 4 m na GULF_FI → FERRY_WEATHER TLL-HEL/MUU-VUO, nie GDN-NYN', async () => {

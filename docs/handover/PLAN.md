@@ -1293,7 +1293,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-118 | Cursor | `store.resolveStaleRisks` — `risk_signals` bez limitu (`max_rows`) → część nieaktualnych ryzyk niezamknięta | F7 #693 r1 | BN3 / ryzyka | w kolejce |
 | DP-119 | Cursor | Front `documents`/`invoices` bez `range` (max_rows); RPC zwracające zbiory też `max_rows` (`latest_vehicle_positions` itd.) *(rej. koord.: DP-116 cz. 2)* | F7 #693 r1 | front / API | SCALONE (#774 `5f0c4bce`) |
 | DP-200 | Cursor | Łotwa: snapshot REST `POST …/download-file` + `x-api-key` (zamiast GET sekretu URL → „No file”); 204=empty; 403 FileIdMismatch→file/info; URL opcjonalny | #773 | BN6 / ROAD_LV | SCALONE (#776 `e023c2ba`) |
-| DP-120 | Cursor | Ryzyko zimowe liczone „teraz”, nie na dzień rejsu, i bez klasy lodowej statku — ograniczenie w dniu rejsu + porównanie z klasą lodową `vessels` (ro-pax 1A Super zwykle spełnia „I 2000”); objaśnienie kodu IBNet po polsku | F7 #694 r1 | BN3 / winter-nav | W TOKU (`pakiet/c2-dp-120-winter-ice-class` / **0391**) |
+| DP-120 | Cursor | Ryzyko zimowe: dzień odejścia/przypłynięcia + klasa lodowa `vessels` (Portnet/Deltamarin; I=IC); IBNet PL; F7 #777 r1 | F7 #694 r1; F7 #777 r1 | BN3 / winter-nav | W TOKU (`pakiet/c2-dp-120-winter-ice-class` / **0391**; F7 r1 poprawki) |
 | DP-121 | Cursor | Digitraffic `port-call/v2/visits?status=cancelled&locode=FIHEL` → HTTP 400; właściwy endpoint + filtr MMSI/IMO naszych ± okno rejsu + dedup bez daty (F7 #694 nazwał „DP-119” — numer zajęty) | F7 #694 r1 | BN3 / Portnet | w kolejce (po BN3 cz. 4) |
 | DP-99 | Cursor | `operatorFromSailingSource` fallback MUU-VUO → VIKING (prod tylko ECKERO), domyślnie TALLINK → z `data-company` ts.ee albo `ferry_route_operators` (DP-1) | F7 #683 | BN3 | w kolejce |
 | DP-100 | Cursor | dedup AUTO tylko aplikacyjny → partial unique index `(sailing_id, kind) where source='AUTO'` albo `.neq('status','ODWOLANY')` w update | F7 #683 | BN3 | w kolejce |
@@ -1444,7 +1444,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 ### #762 · Kolejka drobnych poprawek Cursora — pakiety C1–C5 (do wydania 1.0)
 Źródło: #762 (Spawn2018; 03.11). Po #760 → #756 (DP-187/188) → C1…. Koordynator: pakiety DP-A/B/C (front) — nie brać.
 1. **C1 — Korytarz bałtycki:** ~~DP-179~~ DONE; ~~143/144~~ DONE; ~~DP-146~~ SCALONE (#769 `1a523a5f`); ~~152~~ SCALONE (#768 `0abe9a8f`); ~~155/156~~ SCALONE (#766 `272e0afc` / **0388**); ~~157/158~~ DONE (LT/LV/EE/FI etykiety, szum FI; przed BN10).
-2. **C2 — telematyka / ETA:** ~~**DP-193+194**~~ SCALONE (#770 / **0389**); ~~**DP-197**~~ SCALONE (#771 `18c05217` / **0390**); ~~**DP-198**~~ SCALONE (#772 `ee54ad20`); ~~**DP-119**~~ SCALONE (#774 `5f0c4bce`; rej. koord. DP-116 cz. 2); ~~**DP-200**~~ SCALONE (#776 `e023c2ba`). **Bieżące:** **DP-120** (klasa lodowa / dzień rejsu / IBNet PL) W TOKU; dalej 121, 123, 124, 126, 129, 132, 140.
+2. **C2 — telematyka / ETA:** ~~**DP-193+194**~~ SCALONE (#770 / **0389**); ~~**DP-197**~~ SCALONE (#771 `18c05217` / **0390**); ~~**DP-198**~~ SCALONE (#772 `ee54ad20`); ~~**DP-119**~~ SCALONE (#774 `5f0c4bce`; rej. koord. DP-116 cz. 2); ~~**DP-200**~~ SCALONE (#776 `e023c2ba`); ~~**DP-196**~~ SCALONE (#775 `b4a8dab9`). **Bieżące:** **DP-120** (#777 / **0391**; F7 r1 poprawki seed/IC/dzień przypłynięcia) W TOKU; dalej 121, 123, 124, 126, 129, 132, 140.
 3. **C3 — stare pozycje backendu:** DP-2, 10, 12, 22, 24, 29–32, 38–40, 43, 46, 47, 53–58 (+ **DP-195** tor KAA po #764).
 4. **C4 — reszta:** DP-69, 70, 81–83, 90–93, 97, 99–103, 105–109, 111, 112.
 5. **C5 — warunkowe:** DP-186 (decyzja 04.11 ~07:00 po 24 h odbioru #753).
@@ -2639,6 +2639,8 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 03.11.2026 19:45 | #774 DP-119 CI unit: TS2352 `as BillRow[]` → `as unknown as` (jak fetchAllSailings) | pętla / C2 CI |
 | 03.11.2026 20:20 | #774 SCALONE `5f0c4bce` (DP-119; F7 @ `32a8ec0c`); start DP-200 (#773 Łotwa REST snapshot) przed resztą C2 | pętla / C2 |
 | 03.11.2026 20:50 | #776 SCALONE `e023c2ba` (DP-200; F7 @ `dc319c52`); start DP-120 **0391** (ice_class / dzień rejsu / IBNet PL) | pętla / C2 |
+| 03.11.2026 21:05 | #775 SCALONE `b4a8dab9` (DP-196 Armator; F7 @ `e709023e`) | pętla / wyglad |
+| 03.11.2026 21:35 | #777 F7 r1 niegotowe → seed Portnet/Deltamarin, I=IC, dzień przypłynięcia, złożone IBNet | pętla / C2 F7 |
 | 31.10.2026 — | Decyzja 73: TLLA-HEL ETA−150 min / HELA-TLL ETD+160 min (fixture Cargo; nocny 165 min OK). Decyzja 74: `sailings.source_ref` 0359; Digitraffic `digitraffic:portcall:<id>:<route>`; HTML/RECZNIE/DANE_STARTOWE wygrywają; #685-b RPC zastępuje digitraffic:% w ±3 h | F7 #688 r1–r4 |
 | 31.10.2026 — | F7 #683 nieblokujące (osobna poprawka): Scheduler grudzień + „on 2 January” → rok bieżący, ciche wygaśnięcie; Alert INFO bez ryzyka/historii — świadomie | F7 #683 r7 |
 | 31.10.2026 — | F7 #683 r8 nieblokujące (osobno): Alert poza Schedulerem obok Schedulera; sprzeczne bloki (resume→cofnięcie auto); rok przy długim oknie Schedulera; mutanty M10/M15–M17/M22 świadomie bez testów | F7 #683 r8 |

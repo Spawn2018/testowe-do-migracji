@@ -108,70 +108,128 @@ export function isWinterNavWindowActive(
 }
 
 /**
- * DP-120 — ograniczenie obowiązuje w dniu UTC rejsu (nie tylko „teraz”).
- * Okno przecina dobę odejścia [00:00, 24:00) UTC.
+ * DP-120 / F7 #777 — ograniczenie w dniu UTC zdarzenia portowego (nie tylko „teraz”).
+ * Okno przecina dobę [00:00, 24:00) UTC dnia `dayUtcMs`.
+ * Niepoprawna data okna → traktuj jak otwarte (jak `isWinterNavWindowActive`).
  */
 export function isWinterNavWindowActiveOnSailingDay(
   startTime: string | null,
   endTime: string | null,
-  departureUtcMs: number,
+  dayUtcMs: number,
 ): boolean {
-  if (!Number.isFinite(departureUtcMs)) return false;
+  if (!Number.isFinite(dayUtcMs)) return false;
   const dayStart = Date.UTC(
-    new Date(departureUtcMs).getUTCFullYear(),
-    new Date(departureUtcMs).getUTCMonth(),
-    new Date(departureUtcMs).getUTCDate(),
+    new Date(dayUtcMs).getUTCFullYear(),
+    new Date(dayUtcMs).getUTCMonth(),
+    new Date(dayUtcMs).getUTCDate(),
   );
   const dayEnd = dayStart + 24 * 3600_000;
-  const winStart = startTime ? Date.parse(startTime) : Number.NEGATIVE_INFINITY;
-  const winEnd = endTime ? Date.parse(endTime) : Number.POSITIVE_INFINITY;
-  if (!Number.isFinite(winStart) && startTime) return false;
-  if (!Number.isFinite(winEnd) && endTime) return false;
+  let winStart = Number.NEGATIVE_INFINITY;
+  let winEnd = Number.POSITIVE_INFINITY;
+  if (startTime) {
+    const s = Date.parse(startTime);
+    winStart = Number.isFinite(s) ? s : Number.NEGATIVE_INFINITY;
+  }
+  if (endTime) {
+    const e = Date.parse(endTime);
+    winEnd = Number.isFinite(e) ? e : Number.POSITIVE_INFINITY;
+  }
   /* Przecięcie [winStart, winEnd) ∩ [dayStart, dayEnd). */
   return winStart < dayEnd && winEnd > dayStart;
 }
 
-/** Ranga fińsko-szwedzka / IBNet (wyższa = silniejsza). */
+/** Koniec doby UTC dnia `ms` (wyłącznie). */
+export function utcDayEndMs(ms: number): number {
+  const d = new Date(ms);
+  return Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()) + 24 * 3600_000;
+}
+
+/**
+ * Ranga fińsko-szwedzka / IBNet (wyższa = silniejsza).
+ * F7 #777: Digitraffic „I” = Sjöfartsverket minimum **IC** (nie IA).
+ */
 const ICE_CLASS_RANK: Record<string, number> = {
   '1A SUPER': 5, 'IA SUPER': 5, IAS: 5,
-  '1A': 4, IA: 4, I: 4,
+  '1A': 4, IA: 4,
   '1B': 3, IB: 3,
-  '1C': 2, IC: 2,
+  '1C': 2, IC: 2, I: 2,
   II: 1,
   III: 0,
 };
 
 export type IbnetRestriction = {
-  /** Znormalizowany kod klasy (I / II / IA / …) albo null. */
+  /** Znormalizowany kod klasy (IC / II / IA / …) albo null. */
   classCode: string | null;
   minDwt: number | null;
-  /** Objaśnienie po polsku, np. „klasa lodowa I, min. 2000 DWT”. */
+  /** Objaśnienie po polsku, np. „klasa lodowa IC lub wyższa, min. 2000 DWT”. */
   polish: string;
+  /** Warianty z „X / Y” — spełnia którykolwiek. */
+  alternatives?: IbnetRestriction[];
 };
 
-/** DP-120 — „I 2000” / „II 1300” / „IA Super” → kod + PL. */
-export function parseIbnetRestriction(summary: string): IbnetRestriction {
-  const raw = (summary ?? '').trim();
-  if (!raw) return { classCode: null, minDwt: null, polish: 'ograniczenie lodowe' };
-  const m = raw.match(
-    /\b((?:IA|IB|IC|IAS|1A\s*SUPER|1A|1B|1C|II|III|I))\s*[\/,]?\s*(\d{3,5})?\b/i,
-  );
-  if (!m) {
-    return { classCode: null, minDwt: null, polish: raw.slice(0, 80) };
-  }
-  let classCode = m[1]!.replace(/\s+/g, ' ').toUpperCase();
-  if (classCode === '1A SUPER') classCode = 'IAS';
+function normalizeIceClassToken(raw: string): string {
+  let classCode = raw.replace(/\s+/g, ' ').toUpperCase();
+  if (classCode === '1A SUPER' || classCode === 'IA SUPER') classCode = 'IAS';
   if (classCode === '1A') classCode = 'IA';
   if (classCode === '1B') classCode = 'IB';
   if (classCode === '1C') classCode = 'IC';
-  const minDwt = m[2] ? Number(m[2]) : null;
-  const label = classCode === 'IAS' ? 'IA Super'
-    : classCode === 'IA' || classCode === 'I' ? (classCode === 'I' ? 'I' : 'IA')
-    : classCode;
-  const polish = minDwt != null && Number.isFinite(minDwt)
+  return classCode;
+}
+
+function ibnetLabel(classCode: string): string {
+  if (classCode === 'IAS') return 'IA Super';
+  if (classCode === 'I') return 'IC lub wyższa';
+  return classCode;
+}
+
+function formatIbnetPolish(classCode: string, minDwt: number | null): string {
+  const label = ibnetLabel(classCode);
+  return minDwt != null && Number.isFinite(minDwt)
     ? `klasa lodowa ${label}, min. ${minDwt} DWT`
     : `klasa lodowa ${label}`;
-  return { classCode, minDwt: Number.isFinite(minDwt) ? minDwt : null, polish };
+}
+
+/** Jedna część „IA Super 2000” / „IC 1300” — bez składników po „/”. */
+function parseIbnetPart(part: string): IbnetRestriction | null {
+  const raw = part.trim();
+  if (!raw) return null;
+  /* F7 #777: IAS | IA SUPER | 1A SUPER przed IA (inaczej „IA Super 2000” → IA bez DWT). */
+  const m = raw.match(
+    /\b((?:IAS|IA\s*SUPER|1A\s*SUPER|IB|IC|IA|1A|1B|1C|II|III|I))\s*[\/,]?\s*(\d{3,5})?\b/i,
+  );
+  if (!m) return null;
+  const classCode = normalizeIceClassToken(m[1]!);
+  const minDwt = m[2] ? Number(m[2]) : null;
+  return {
+    classCode,
+    minDwt: minDwt != null && Number.isFinite(minDwt) ? minDwt : null,
+    polish: formatIbnetPolish(classCode, minDwt != null && Number.isFinite(minDwt) ? minDwt : null),
+  };
+}
+
+/**
+ * DP-120 / F7 #777 — „I 2000” / „II 1300” / „IA Super 2000” / „IC 1300 / II 2000”.
+ * Złożone: spełnia którąkolwiek; w tytule obie.
+ */
+export function parseIbnetRestriction(summary: string): IbnetRestriction {
+  const raw = (summary ?? '').trim();
+  if (!raw) return { classCode: null, minDwt: null, polish: 'ograniczenie lodowe' };
+  const chunks = raw.split(/\s*\/\s*/).map((c) => c.trim()).filter(Boolean);
+  const alts: IbnetRestriction[] = [];
+  for (const chunk of chunks.length ? chunks : [raw]) {
+    const one = parseIbnetPart(chunk);
+    if (one) alts.push(one);
+  }
+  if (!alts.length) {
+    return { classCode: null, minDwt: null, polish: raw.slice(0, 80) };
+  }
+  if (alts.length === 1) return alts[0]!;
+  return {
+    classCode: alts[0]!.classCode,
+    minDwt: alts[0]!.minDwt,
+    polish: alts.map((a) => a.polish).join(' / '),
+    alternatives: alts,
+  };
 }
 
 export function iceClassRank(raw: string | null | undefined): number | null {
@@ -183,19 +241,36 @@ export function iceClassRank(raw: string | null | undefined): number | null {
   return ICE_CLASS_RANK[compact] ?? null;
 }
 
+/** Surowość wymogu (wyższa = trudniejszy) — do wyboru najsurowszego okna. */
+export function ibnetRestrictionStrictness(req: IbnetRestriction): number {
+  const alts = req.alternatives?.length ? req.alternatives : [req];
+  let best = -1;
+  for (const a of alts) {
+    const rank = iceClassRank(a.classCode) ?? -1;
+    const dwt = a.minDwt ?? 0;
+    best = Math.max(best, rank * 100_000 + dwt);
+  }
+  return best;
+}
+
 /**
- * DP-120 — czy klasa statku spełnia wymóg IBNet (bez DWT — brak nośności w vessels).
- * Ro-pax 1A Super zwykle spełnia „I 2000”.
+ * DP-120 / F7 #777 — klasa ≥ wymóg; przy złożonych — którykolwiek wariant.
+ * `minDwt > 2000`: nie pomijaj ryzyka (brak `vessels.dwt` — tylko informacja).
  */
 export function vesselMeetsIbnetIceClass(
   vesselIceClass: string | null | undefined,
   required: IbnetRestriction,
 ): boolean {
-  if (!required.classCode) return false;
+  const alts = required.alternatives?.length ? required.alternatives : [required];
   const have = iceClassRank(vesselIceClass);
-  const need = iceClassRank(required.classCode);
-  if (have == null || need == null) return false;
-  return have >= need;
+  if (have == null) return false;
+  return alts.some((alt) => {
+    if (!alt.classCode) return false;
+    const need = iceClassRank(alt.classCode);
+    if (need == null || have < need) return false;
+    if (alt.minDwt != null && alt.minDwt > 2000) return false;
+    return true;
+  });
 }
 
 function locodesOf(list: string | null): string[] {
@@ -254,6 +329,23 @@ export function winterLocodesForRoute(route: string | null | undefined): string[
   return out;
 }
 
+/**
+ * F7 #777 — port wyjścia / docelowy osobno (dzień odejścia vs dzień przypłynięcia).
+ */
+export function winterLocodeEndsForRoute(
+  route: string | null | undefined,
+): { locode: string; end: 'dep' | 'arr' }[] {
+  if (!route) return [];
+  const ports = ROUTE_AIS_PORTS[route.trim().toUpperCase()];
+  if (!ports) return [];
+  const out: { locode: string; end: 'dep' | 'arr' }[] = [];
+  const depLoc = PORT_TO_WINTER_LOCODE[ports.dep];
+  const arrLoc = PORT_TO_WINTER_LOCODE[ports.arr];
+  if (depLoc) out.push({ locode: depLoc, end: 'dep' });
+  if (arrLoc) out.push({ locode: arrLoc, end: 'arr' });
+  return out;
+}
+
 export function ferryIceRiskDedup(sailingId: string, hit: WinterNavHit): string {
   return `FERRY_ICE:${sailingId}:${hit.locode}:${hit.kind}`;
 }
@@ -262,6 +354,7 @@ export function ferryIceRiskDedup(sailingId: string, hit: WinterNavHit): string 
  * BN5 cz.3 / DP-120 — ryzyko FERRY_ICE per rejs (MEDIUM; HIGH przy zawieszeniu).
  * DP-120: treść IBNet po polsku; klasa z `vessels` (brak → „sprawdź klasę lodową”).
  * Gdy klasa spełnia wymóg — wołający nie podnosi ryzyka (patrz `vesselMeetsIbnetIceClass`).
+ * F7 #777: za niska klasa → „klasa 1C < wymagana IC+…”; nierozpoznana = jak brak.
  */
 export function ferryIceRisk(args: {
   hit: WinterNavHit;
@@ -279,10 +372,27 @@ export function ferryIceRisk(args: {
   const since = hit.startTime ? hit.startTime.slice(0, 16) : '—';
   const ibnet = parseIbnetRestriction(hit.summary);
   const summaryPl = !suspension && ibnet.classCode ? ibnet.polish : hit.summary;
-  const hasClass = !!args.vesselIceClass?.trim();
-  const checkClass = hasClass
-    ? ` · klasa ${args.vesselIceClass!.trim()}`
-    : ' — sprawdź klasę lodową statku';
+  const rawClass = args.vesselIceClass?.trim() ?? '';
+  const haveRank = iceClassRank(rawClass);
+  const needRank = iceClassRank(ibnet.classCode);
+  let checkClass: string;
+  let klasaDetail: string;
+  if (!rawClass || haveRank == null) {
+    /* Brak albo nierozpoznana — informacyjne. */
+    checkClass = ' — sprawdź klasę lodową statku';
+    klasaDetail = 'brak — sprawdź klasę lodową statku';
+  } else if (
+    !suspension
+    && needRank != null
+    && haveRank < needRank
+  ) {
+    const needLabel = ibnet.classCode ? ibnetLabel(ibnet.classCode) : '?';
+    checkClass = ` · klasa ${rawClass} < wymagana ${needLabel}+…`;
+    klasaDetail = rawClass;
+  } else {
+    checkClass = ` · klasa ${rawClass}`;
+    klasaDetail = rawClass;
+  }
   return {
     kind: 'FERRY',
     severity: suspension ? 'HIGH' : 'MEDIUM',
@@ -309,9 +419,7 @@ export function ferryIceRisk(args: {
       sailing_id: args.sailingId,
       trasa: args.route,
       odejscie: args.departureUtc,
-      klasa_lodowa: hasClass
-        ? args.vesselIceClass!.trim()
-        : 'brak — sprawdź klasę lodową statku',
+      klasa_lodowa: klasaDetail,
       atrybucja: FERRY_ICE_ATTRIBUTION,
       czas: args.nowIso,
     },
@@ -373,10 +481,12 @@ export function parseWinterNavigationLocations(
         const include = mode === 'active_now'
           ? isWinterNavWindowActive(win.startTime, win.endTime, nowMs)
           : (() => {
-            /* Nie zakończone przed now; zaczyna się przed until. */
+            /* Nie zakończone przed now; zaczyna się przed until.
+             * Niepoprawna data → jak otwarte (F7 #777). */
             if (win.endTime) {
               const e = Date.parse(win.endTime);
               if (Number.isFinite(e) && e <= nowMs) return false;
+              /* niepoprawny end → nie odrzucaj */
             }
             if (win.startTime) {
               const s = Date.parse(win.startTime);
