@@ -2511,10 +2511,12 @@ q "insert into load_events (load_id, event_type, occurred_at) values
     ('$L820g','MILESTONE_LOADED','2026-10-20 08:00+00');
    insert into positions (load_id, ts, geom_raw, source) values
     ('$L820g', '2026-10-21 09:00+00', st_setsrid(st_makepoint(24.94, 60.17), 4326), 'TELEMATICS_API');" >/dev/null
-# F7 r5: detect_ferry_overdue w rollback — bez ryzyka na innych ładunkach.
-chk "BN8a W5d: ląd FI po ATA → bez ferry_check_after" \
+# F7 r5/BN8b §7.3: detect_ferry_overdue w rollback — oba klucze (check_after + overdue).
+chk "BN8a W5d: ląd FI po ATA → bez ferry_check_after/overdue" \
   "begin; select detect_ferry_overdue('2026-10-21 12:00+00');
-   select count(*) from risk_signals where load_id='$L820g' and title_key='rk_ferry_check_after_arrival' and resolved_at is null;
+   select count(*) from risk_signals where load_id='$L820g'
+     and title_key in ('rk_ferry_check_after_arrival','rk_ferry_overdue')
+     and resolved_at is null;
    rollback" 0
 # F7 r5/r6: sprzątanie tylko L820* (wzorzec #487); bez globalnego title_key.
 # load_events = append-only → DELETE tylko przy session_replication_role=replica (i2.sh).
@@ -2547,6 +2549,106 @@ chk "BN8a W5e: assign grant authenticated" \
   "select has_function_privilege('authenticated','sailing_mismatch_assign(uuid,uuid)','execute')" t
 chk "BN8a W5f: ferry_sailings_map bez coalesce GDN" \
   "select pg_get_functiondef('public.ferry_sailings_map()'::regprocedure) not like '%coalesce(fr.port_from%'" t
+
+# BN8b (#720 / 0385): OFF_CORRIDOR BN7 tylko przy świeżej HERE; ETA rodzina/PORT_CHECKIN.
+# UUID 821* — nie koliduje z L820* BN8a. HERE fixture w transakcji + rollback.
+chk "BN8b: PORT_CHECKIN_TLL = 2 h (82-C)" \
+  "select hours::text from eta_segment_params where code='PORT_CHECKIN_TLL'" 2.0
+chk "BN8b: compute_load_eta używa load_route_family" \
+  "select pg_get_functiondef('public.compute_load_eta(uuid,timestamptz)'::regprocedure) like '%load_route_family%'" t
+chk "BN8b: refresh_load_eta wymaga świeżego HERE dla BN7" \
+  "select pg_get_functiondef('public.refresh_load_eta(uuid)'::regprocedure) like '%bn8b_here_corridor_fresh%'" t
+L821a=aaaaaaaa-0000-0000-0000-00000000821a
+L821b=aaaaaaaa-0000-0000-0000-00000000821b
+L821c=aaaaaaaa-0000-0000-0000-00000000821c
+L821d=aaaaaaaa-0000-0000-0000-00000000821d
+# TLL-HEL / PL_EE_E67: bez HERE → 0; z HERE na korytarzu → 0; 10 km obok → 1.
+chk "BN8b TLL-HEL: brak HERE → 0 OFF_CORRIDOR" \
+  "begin;
+   insert into loads (id, project_id, carrier_org_id, hhl_order_no, carrier_order_no, status, plan_load_date, plan_delivery_date, ferry_route)
+    values ('$L821a','$P','$SCXO','HHL/BN8B-821A','SCX/BN8B-821A','IN_TRANSIT_PL', current_date, current_date + 5, 'TLL-HEL');
+   insert into positions (load_id, ts, geom_raw, source) values
+    ('$L821a', now() - interval '20 minutes', st_setsrid(st_makepoint(24.465, 58.26), 4326), 'TELEMATICS_API'),
+    ('$L821a', now() - interval '5 minutes', st_setsrid(st_makepoint(24.50, 58.39), 4326), 'TELEMATICS_API');
+   select public.refresh_load_eta('$L821a');
+   select count(*) from risk_signals where load_id='$L821a' and dedup_key like 'OFF_CORRIDOR%';
+   rollback" 0
+chk "BN8b TLL-HEL: HERE + na korytarzu → 0" \
+  "begin;
+   insert into here_road_geometry (leg, points, summary, fetched_at, length_m, duration_s)
+    values ('PL-TLL',
+      '[[52.083,17.017],[53.13,23.16],[54.10,22.93],[54.90,23.90],[56.41,24.19],[57.87,24.36],[58.39,24.50],[59.437,24.753]]'::jsonb,
+      'BN8b fixture TLL', now(), 1350000, 72000)
+    on conflict (leg) do update set points=excluded.points, fetched_at=excluded.fetched_at, summary=excluded.summary;
+   select public.bn8b_sync_corridor_polyline_from_here('PL_EE_E67');
+   insert into loads (id, project_id, carrier_org_id, hhl_order_no, carrier_order_no, status, plan_load_date, plan_delivery_date, ferry_route)
+    values ('$L821a','$P','$SCXO','HHL/BN8B-821A','SCX/BN8B-821A','IN_TRANSIT_PL', current_date, current_date + 5, 'TLL-HEL');
+   insert into positions (load_id, ts, geom_raw, source) values
+    ('$L821a', now() - interval '20 minutes', st_setsrid(st_makepoint(24.465, 58.26), 4326), 'TELEMATICS_API'),
+    ('$L821a', now() - interval '5 minutes', st_setsrid(st_makepoint(24.50, 58.39), 4326), 'TELEMATICS_API');
+   select public.refresh_load_eta('$L821a');
+   select count(*) from risk_signals where load_id='$L821a' and dedup_key like 'OFF_CORRIDOR%';
+   rollback" 0
+chk "BN8b TLL-HEL: HERE + 10 km obok → 1" \
+  "begin;
+   insert into here_road_geometry (leg, points, summary, fetched_at, length_m, duration_s)
+    values ('PL-TLL',
+      '[[52.083,17.017],[53.13,23.16],[54.10,22.93],[54.90,23.90],[56.41,24.19],[57.87,24.36],[58.39,24.50],[59.437,24.753]]'::jsonb,
+      'BN8b fixture TLL', now(), 1350000, 72000)
+    on conflict (leg) do update set points=excluded.points, fetched_at=excluded.fetched_at, summary=excluded.summary;
+   select public.bn8b_sync_corridor_polyline_from_here('PL_EE_E67');
+   insert into loads (id, project_id, carrier_org_id, hhl_order_no, carrier_order_no, status, plan_load_date, plan_delivery_date, ferry_route)
+    values ('$L821b','$P','$SCXO','HHL/BN8B-821B','SCX/BN8B-821B','IN_TRANSIT_PL', current_date, current_date + 5, 'TLL-HEL');
+   insert into positions (load_id, ts, geom_raw, source) values
+    ('$L821b', now() - interval '20 minutes', st_setsrid(st_makepoint(24.65, 58.26), 4326), 'TELEMATICS_API'),
+    ('$L821b', now() - interval '5 minutes', st_setsrid(st_makepoint(24.70, 58.39), 4326), 'TELEMATICS_API');
+   select public.refresh_load_eta('$L821b');
+   select count(*) from risk_signals where load_id='$L821b' and dedup_key like 'OFF_CORRIDOR%';
+   rollback" 1
+# MUU-VUO / PLD-KPS / TLL-STO — brak HERE → 0 (bez fałszywego alarmu na OSM).
+chk "BN8b MUU-VUO: brak HERE → 0" \
+  "begin;
+   insert into loads (id, project_id, carrier_org_id, hhl_order_no, carrier_order_no, status, plan_load_date, plan_delivery_date, ferry_route)
+    values ('$L821c','$P','$SCXO','HHL/BN8B-821C','SCX/BN8B-821C','IN_TRANSIT_PL', current_date, current_date + 5, 'MUU-VUO');
+   insert into positions (load_id, ts, geom_raw, source) values
+    ('$L821c', now() - interval '20 minutes', st_setsrid(st_makepoint(24.10, 56.95), 4326), 'TELEMATICS_API'),
+    ('$L821c', now() - interval '5 minutes', st_setsrid(st_makepoint(24.12, 56.96), 4326), 'TELEMATICS_API');
+   select public.refresh_load_eta('$L821c');
+   select count(*) from risk_signals where load_id='$L821c' and dedup_key like 'OFF_CORRIDOR%';
+   rollback" 0
+chk "BN8b PLD-KPS: brak HERE → 0" \
+  "begin;
+   insert into loads (id, project_id, carrier_org_id, hhl_order_no, carrier_order_no, status, plan_load_date, plan_delivery_date, ferry_route)
+    values ('$L821d','$P','$SCXO','HHL/BN8B-821D','SCX/BN8B-821D','IN_TRANSIT_PL', current_date, current_date + 5, 'PLD-KPS');
+   insert into positions (load_id, ts, geom_raw, source) values
+    ('$L821d', now() - interval '20 minutes', st_setsrid(st_makepoint(24.10, 56.95), 4326), 'TELEMATICS_API'),
+    ('$L821d', now() - interval '5 minutes', st_setsrid(st_makepoint(24.12, 56.96), 4326), 'TELEMATICS_API');
+   select public.refresh_load_eta('$L821d');
+   select count(*) from risk_signals where load_id='$L821d' and dedup_key like 'OFF_CORRIDOR%';
+   rollback" 0
+chk "BN8b TLL-STO: brak HERE → 0" \
+  "begin;
+   insert into loads (id, project_id, carrier_org_id, hhl_order_no, carrier_order_no, status, plan_load_date, plan_delivery_date, ferry_route)
+    values ('$L821a','$P','$SCXO','HHL/BN8B-821E','SCX/BN8B-821E','IN_TRANSIT_PL', current_date, current_date + 5, 'TLL-STO');
+   insert into positions (load_id, ts, geom_raw, source) values
+    ('$L821a', now() - interval '20 minutes', st_setsrid(st_makepoint(24.10, 56.95), 4326), 'TELEMATICS_API'),
+    ('$L821a', now() - interval '5 minutes', st_setsrid(st_makepoint(24.12, 56.96), 4326), 'TELEMATICS_API');
+   select public.refresh_load_eta('$L821a');
+   select count(*) from risk_signals where load_id='$L821a' and dedup_key like 'OFF_CORRIDOR%';
+   rollback" 0
+# Regresja GDN-NYN (core) bez zmian względem BN8a W5b — poza korytarzem → 1.
+chk "BN8b regresja GDN-NYN poza korytarzem → OFF_CORRIDOR" \
+  "begin;
+   insert into loads (id, project_id, carrier_org_id, hhl_order_no, carrier_order_no, status, plan_load_date, plan_delivery_date, ferry_route)
+    values ('$L821b','$P','$SCXO','HHL/BN8B-821F','SCX/BN8B-821F','IN_TRANSIT_PL', current_date, current_date + 3, 'GDN-NYN');
+   insert into positions (load_id, ts, geom_raw, source) values
+    ('$L821b', now() - interval '20 minutes', st_setsrid(st_makepoint(14.0, 52.0), 4326), 'TELEMATICS_API'),
+    ('$L821b', now() - interval '5 minutes', st_setsrid(st_makepoint(14.0, 52.0), 4326), 'TELEMATICS_API');
+   select public.refresh_load_eta('$L821b');
+   select count(*) from risk_signals where load_id='$L821b' and dedup_key like 'OFF_CORRIDOR%';
+   rollback" 1
+chk "BN8b propose_id używa ferry_route_departure_country" \
+  "select pg_get_functiondef('public.sailing_mismatch_propose_id(uuid)'::regprocedure) like '%ferry_route_departure_country%'" t
 
 # F7 #649 r2: AIS backup — OTHER/TLL-HEL false; NYN-GDN/GDN-NYN true (rodzina z SE).
 # PORT_IN wyłączony tylko na backup (inaczej early-return „strefa aktywna”).

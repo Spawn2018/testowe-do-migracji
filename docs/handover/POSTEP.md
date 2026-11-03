@@ -1,4 +1,18 @@
 
+## 2026-11-03 04:45 — BN8b start (#720 §7 / 0385)
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie.
+- Scalanie: **#748 SCALONE** `462af010` (DP-178; F7 gotowe @ `6989c9a6`, CI 8/8). `deploy-main` OK.
+- **Krok BN8b** (`pakiet/bn8b-eta-off-corridor`): migracja **0385** — OFF_CORRIDOR BN7 przy świeżym HERE (≤7 d) + sync polilinii; `compute_load_eta` z `load_route_family` / PORT_CHECKIN EE 2 h; drobne 7.3 (propose/overdue/promote); status **615** (+11).
+- **Dalej:** push → CI → F7. Bez push na main.
+
+## 2026-11-03 04:30 — #748 SCALONE + start BN8b
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720 w planie. DP-178 SCALONE.
+- Scalanie: **#748 SCALONE** `462af010` (DP-178; F7 gotowe @ `6989c9a6`, CI 8/8). `deploy-main` robi resztę.
+- **Krok BN8b** (`pakiet/bn8b-eta-off-corridor`): §7 #720 — OFF_CORRIDOR z geometrii HERE BN7 + `compute_load_eta` bałtyckie.
+- **Dalej:** migracja **0385** → push → CI → F7. Bez push na main.
+
 ## 2026-11-03 04:05 — DP-178 F7 r1 (#748): klucz LV tylko host NAP
 
 - Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720/#735 w planie.
