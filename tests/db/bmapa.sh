@@ -272,6 +272,8 @@ val "BN7 spec=dict = 7" "select count(*)::text from here_road_legs where map_gro
 # 0384: po froncie BN9-c5 + DP-171/172 — cron_fetch=true (punkty nadal null do pierwszego crona).
 val "BN7 cron_fetch=true = 7" "select count(*)::text from here_road_legs where map_group='bn7' and active and cron_fetch" "7"
 val "core cron_fetch=true = 5" "select count(*)::text from here_road_legs where map_group='core' and active and cron_fetch" "5"
+# DP-183: zakresy FI-HEL/FI-VUO/SE-STO po odrzuceniu pierwszego HERE
+val "DP-183 zakresy FI/SE-STO" "select count(*)::text from here_road_legs where (leg in ('FI-HEL','FI-VUO') and min_km=800 and max_km=1100) or (leg='SE-STO' and min_km=820 and max_km=1030)" "3"
 val "cron_fetch default = false" "select (column_default like '%false%')::text from information_schema.columns where table_schema='public' and table_name='here_road_legs' and column_name='cron_fetch'" "true"
 val "BN7 corridor OSM = 4" "select count(*)::text from corridor_polylines where code in ('PL_EE_E67','FI_E75','SE_E4_STO','SE_E18_KPS')" "4"
 val "PL_EE_E67 ≥ 80 pkt (≤15 km)" "select (st_npoints(geom) >= 80)::text from corridor_polylines where code='PL_EE_E67'" "true"

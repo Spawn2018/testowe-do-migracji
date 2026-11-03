@@ -12,7 +12,7 @@ import {
   roadKaaSpecFromVia,
   looseRoadOk,
   roadGeometryOk,
-  roadSpecFromDict,
+  dictGeomRejectReason,
   kaaDeviationOk,
   type LatLng,
 } from '../map/draw.ts';
@@ -284,13 +284,15 @@ export async function refreshRoadLegs(
           : leg.spec === 'se' ? ROAD_SE
             : leg.spec === 'dict' ? 'dict'
               : 'loose';
+    const dictOpts = {
+      via: dictVia,
+      minKm: leg.minKm ?? 0,
+      maxKm: leg.maxKm ?? Number.POSITIVE_INFINITY,
+    };
+    const dictReason = geomSpec === 'dict' ? dictGeomRejectReason(line, dictOpts) : null;
     const okGeom =
       geomSpec === 'dict'
-        ? roadSpecFromDict(line, {
-          via: dictVia,
-          minKm: leg.minKm ?? 0,
-          maxKm: leg.maxKm ?? Number.POSITIVE_INFINITY,
-        })
+        ? dictReason == null
         : geomSpec === 'loose'
           ? looseRoadOk(line)
           : roadGeometryOk(line, geomSpec);
@@ -318,13 +320,17 @@ export async function refreshRoadLegs(
       );
     if (!okGeom || !okDev) {
       const retryIso = new Date(nowMs + RETRY_REJECT_MS).toISOString();
+      // DP-183: powód z liczbami (km/zakres/via/punkty) — bez geometrii w ostrzeżeniu.
+      const detail = okGeom
+        ? `odchyłka od ${corridorLabel}`
+        : (dictReason ?? 'geometria odrzucona');
       await store.storeRoad(
         leg.leg,
         null,
-        leg.summary + (okGeom ? ` — odchyłka od ${corridorLabel}` : ' — geometria odrzucona'),
+        `${leg.summary} — ${detail}`,
         retryIso,
       );
-      warnings.push(`${leg.leg}: geometria odrzucona`);
+      warnings.push(`${leg.leg}: ${detail}`);
       continue;
     }
     const meta =
