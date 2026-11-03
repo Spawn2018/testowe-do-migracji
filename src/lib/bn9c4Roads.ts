@@ -9,7 +9,8 @@
  * - TLL-HEL / MUU-VUO (Zatoka Fińska): LT, LV, EE przed promem i FI po promie;
  * - PLD-KPS, TLL-STO: LT, LV, EE przed promem;
  * - GDN-NYN, GDY-KAA: bez krajów bałtyckich.
- * Gdy żaden aktywny transport nie jedzie trasą bałtycką — bez sekcji bałtyckich (Ryzyka › Drogi jak dotąd).
+ * DP-189 (#757): sekcje LT/LV/EE/FI zawsze widoczne (jak Drogi SE) — także bez transportu bałtyckiego.
+ * `onRoute` = oznaczenie kraju na trasie aktywnego transportu i kolejność sekcji (te kraje wyżej), nie filtr.
  */
 import type { Load, Risk, Sailing } from '../types';
 import { waterTrackOf, type WaterTrackId } from './ferryCatalog';
@@ -208,9 +209,9 @@ export function sortBalticRows(rows: readonly BalticRoadRow[], nowIso?: string):
 }
 
 /**
- * Sekcje „Drogi LT / LV / EE / FI” (F7 r1 N4): tylko kraje na trasie aktywnego transportu (wszystkie wiersze, a bez wierszy —
- * stan źródła); kraj spoza trasy — tylko ryzyka przypięte do transportu (`loadId`), które są widoczne zawsze.
- * Bez transportów bałtyckich i bez ryzyk przy transporcie — pusta lista (wygląd jak dotąd).
+ * Sekcje „Drogi LT / LV / EE / FI” (DP-189 / #757): zawsze cztery kraje (jak Drogi SE).
+ * Wszystkie ryzyka kraju w sekcji; bez wierszy — stan źródła. `onRoute` tylko do oznaczenia i kolejności
+ * (kraje z aktywnym transportem bałtyckim wyżej; w grupie — kolejność makiety LT→LV→EE→FI).
  */
 export function balticRoadSections(
   risks: readonly Risk[],
@@ -219,10 +220,11 @@ export function balticRoadSections(
   nowIso: string = new Date().toISOString(),
 ): BalticRoadSection[] {
   const all = risks.map((r) => ({ r, row: balticRoadRow(r) })).filter((x): x is { r: Risk; row: BalticRoadRow } => !!x.row);
+  const rank = new Map(BALTIC_ROAD_COUNTRIES.map((c, i) => [c, i]));
   return BALTIC_ROAD_COUNTRIES
     .map((country): BalticRoadSection => {
       const on = onRoute.has(country);
-      const list = sortBalticRows(all.filter((x) => x.row.country === country && (on || !!x.r.loadId)).map((x) => x.row), nowIso);
+      const list = sortBalticRows(all.filter((x) => x.row.country === country).map((x) => x.row), nowIso);
       const c = corridors?.find((k) => k.corridor === `ROAD_${country}`);
       const state = sourceStateOf(c, corridors != null, nowIso);
       return {
@@ -231,7 +233,7 @@ export function balticRoadSections(
         slowdownPct: c && c.slowdownMult > 1 ? Math.round((c.slowdownMult - 1) * 100) : null,
       };
     })
-    .filter((s) => s.onRoute || s.rows.length > 0);
+    .sort((a, b) => Number(b.onRoute) - Number(a.onRoute) || (rank.get(a.country)! - rank.get(b.country)!));
 }
 
 /**

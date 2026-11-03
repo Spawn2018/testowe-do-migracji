@@ -1,10 +1,9 @@
 /**
  * @vitest-environment jsdom
  * BN9-c4 (#573 „Ekrany po BN6”) — Ryzyka › Drogi: Litwa, Łotwa, Estonia, Finlandia. Sekcje krajów (ten sam wygląd wierszy
- * co Drogi SE), „Brak utrudnień na korytarzu” tylko dla krajów na trasie aktywnego transportu, bez transportów bałtyckich —
- * bez sekcji (jak dotąd), limit masy wyróżniony z dopiskiem, atrybucja z `detail.zrodlo`, regresja Drogi PL/SE, telefon 390 px.
- * BN9-c4b (decyzja 89, 02.11 22:32): sekcja kraju działa jak Drogi SE — otwarta, pierwsze 4 (`FIRST_ROADS`), „Pokaż wszystkie”,
- * wspólny wiersz `RoadRow` z oryginałem / „Tłumaczenie w toku”.
+ * co Drogi SE). DP-189 (#757): cztery sekcje zawsze (jak Drogi SE), także bez transportu bałtyckiego; `onRoute` =
+ * oznaczenie + kolejność, nie filtr. Limit masy wyróżniony z dopiskiem, atrybucja z `detail.zrodlo`, regresja Drogi PL/SE,
+ * telefon 390 px. BN9-c4b (decyzja 89): otwarta, pierwsze 4 (`FIRST_ROADS`), „Pokaż wszystkie”, `RoadRow` z oryginałem.
  * Dane wymyślone (G-09).
  */
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -166,19 +165,29 @@ describe('BN9-c4 — Ryzyka › Drogi: sekcje krajów', () => {
     expect(el.querySelectorAll('[data-panel="road-fi"] [data-baltic-road]').length).toBe(1);
     expect(el.querySelector('[data-baltic-all]')).toBeNull();
   });
-  it('transport PLD-KPS: LT, LV, EE; FI poza trasą — bez sekcji także z ryzykami (N4); ryzyko FI przy transporcie — widoczne', () => {
+  it('transport PLD-KPS (DP-189): LT/LV/EE na trasie; FI też sekcja z wszystkimi ryzykami (nie tylko loadId)', () => {
     const only = panel({ loads: [load('L-kps', 's-kps')], sailings: SAILS, risks: [road('fi1', 'FI')] });
-    expect(panels(only).filter((p) => /^road-(lt|lv|ee|fi)$/.test(p!))).toEqual(['road-lt', 'road-lv', 'road-ee']);
+    expect(panels(only).filter((p) => /^road-(lt|lv|ee|fi)$/.test(p!))).toEqual(['road-lt', 'road-lv', 'road-ee', 'road-fi']);
+    expect(only.querySelector('[data-panel="road-lt"]')!.getAttribute('data-on-route')).toBe('1');
+    expect(only.querySelector('[data-panel="road-fi"]')!.getAttribute('data-on-route')).toBe('0');
+    expect(only.querySelector('[data-baltic-road="fi1"]')).not.toBeNull();
     act(() => root?.unmount());
     host?.remove();
     const withLoad = expand(panel({ loads: [load('L-kps', 's-kps')], sailings: SAILS, risks: [road('fi1', 'FI'), road('fi2', 'FI', { loadId: 'L-x' })] }));
-    expect(panels(withLoad)).toContain('road-fi');
-    expect([...withLoad.querySelectorAll('[data-panel="road-fi"] [data-baltic-road]')].map((x) => x.getAttribute('data-baltic-road'))).toEqual(['fi2']);
+    expect([...withLoad.querySelectorAll('[data-panel="road-fi"] [data-baltic-road]')].map((x) => x.getAttribute('data-baltic-road')).sort())
+      .toEqual(['fi1', 'fi2']);
   });
-  it('bez transportów bałtyckich: sekcji bałtyckich nie ma — nawet z ryzykami (wygląd jak dotąd)', () => {
-    const el = panel({ loads: [load('L-nyn', 's-nyn')], sailings: SAILS, risks: [road('fi1', 'FI'), road('lt1', 'LT')] });
-    expect(panels(el)).toEqual(['ferry', 'marine', 'road-pl', 'road-se']);
-    expect(el.querySelector('[data-baltic]')).toBeNull();
+  it('DP-189: bez transportów bałtyckich + ryzyka FI/LT → obie sekcje (i EE/LV) widoczne; Do zrobienia bez wzrostu', () => {
+    const baseTodo = todoQueue('HHL', [risk({ id: 'a', loadId: 'L1', title: 'Brak kierowcy' })]);
+    const risks = [road('fi1', 'FI'), road('lt1', 'LT'), risk({ id: 'a', loadId: 'L1', title: 'Brak kierowcy' })];
+    const el = panel({ loads: [load('L-nyn', 's-nyn')], sailings: SAILS, risks });
+    expect(panels(el).filter((p) => /^road-(lt|lv|ee|fi)$/.test(p!))).toEqual(['road-lt', 'road-lv', 'road-ee', 'road-fi']);
+    expect(el.querySelector('[data-baltic-road="fi1"]')).not.toBeNull();
+    expect(el.querySelector('[data-baltic-road="lt1"]')).not.toBeNull();
+    expect(el.querySelector('[data-empty="road-ee"]')).not.toBeNull();
+    expect(el.querySelector('[data-empty="road-lv"]')).not.toBeNull();
+    expect([...el.querySelectorAll('[data-baltic]')].every((s) => s.getAttribute('data-on-route') === '0')).toBe(true);
+    expect(todoQueue('HHL', risks)).toEqual(baseTodo);
   });
   it('wiersz jak Drogi SE: pole kraju, tytuł zdarzenia, wpływ (kolory rk-alert), kiedy; najpierw większy wpływ', () => {
     const el = panel({
@@ -241,9 +250,9 @@ describe('BN9-c4 — Ryzyka › Drogi: sekcje krajów', () => {
     const src = readFileSync('src/components/risks/BalticRoads.tsx', 'utf8');
     expect(src).not.toMatch(/Fintraffic|digitraffic|Lietuva|eismoinfo|transportdata|Tark Tee|tarktee|dangerouslySetInnerHTML/);
   });
-  it('ryzyko drogowe bałtyckie przy transporcie widoczne zawsze — także bez transportów bałtyckich (N4)', () => {
+  it('ryzyko drogowe bałtyckie przy transporcie widoczne zawsze — także bez transportów bałtyckich (N4 / DP-189: 4 sekcje)', () => {
     const el = expand(panel({ risks: [road('x', 'FI', { loadId: 'L-hel' })] }));
-    expect(panels(el).filter((p) => /^road-(lt|lv|ee|fi)$/.test(p!))).toEqual(['road-fi']);
+    expect(panels(el).filter((p) => /^road-(lt|lv|ee|fi)$/.test(p!))).toEqual(['road-lt', 'road-lv', 'road-ee', 'road-fi']);
     expect(el.querySelector('[data-baltic-road="x"]')!.getAttribute('data-risk-id')).toBe('x');
   });
   it('sortowanie przy równym wpływie (BN9-c4b, decyzja 89): trwające od najświeższego początku, potem najbliższe, bez początku na końcu; dalej `to`, id', () => {
@@ -387,14 +396,15 @@ describe('BN9-c4 — Ryzyka › Drogi: sekcje krajów', () => {
     expect(ph.querySelector('[data-baltic] details')).toBeNull();
     expect(ph.querySelector('[data-baltic] [data-road-note]')).toBeNull();
   });
-  it('balticDemo przy VITE_AUTH_MODE=supabase nie dodaje nic (N8)', () => {
+  it('balticDemo przy VITE_AUTH_MODE=supabase: sample* puste (N8); DP-189: 4 sekcje bez wierszy z sample', () => {
     vi.stubEnv('VITE_AUTH_MODE', 'supabase');
     try {
       expect(sampleBalticRoadRisksOf(NOW)).toEqual([]);
       expect(sampleBalticRoutesOf()).toEqual([]);
       expect(sampleBalticCorridorsOf(NOW)).toBeNull();
       const el = panel({ balticDemo: true });
-      expect(el.querySelector('[data-baltic]')).toBeNull();
+      expect(panels(el).filter((p) => /^road-(lt|lv|ee|fi)$/.test(p!))).toEqual(['road-lt', 'road-lv', 'road-ee', 'road-fi']);
+      expect(el.querySelectorAll('[data-baltic-road]').length).toBe(0);
     } finally {
       vi.unstubAllEnvs();
     }
@@ -476,8 +486,16 @@ describe('BN9-c4 — Ryzyka › Drogi: sekcje krajów', () => {
     expect(textHits(text, '/ryzyka')).toEqual([]);
     expect(text).toContain('licencja CC BY 4.0');
   });
-  it('sekcje z modułu: bez krajów na trasie → pusta lista', () => {
-    expect(balticRoadSections([road('f', 'FI')], new Set())).toEqual([]);
+  it('DP-189: bez krajów na trasie → 4 sekcje; FI z wierszami, pozostałe ze stanem źródła', () => {
+    const secs = balticRoadSections([road('f', 'FI')], new Set(), FRESH, NOW);
+    expect(secs.map((s) => s.country)).toEqual(['LT', 'LV', 'EE', 'FI']);
+    expect(secs.every((s) => !s.onRoute)).toBe(true);
+    expect(secs.find((s) => s.country === 'FI')!.rows.map((r) => r.id)).toEqual(['f']);
+    expect(secs.filter((s) => s.country !== 'FI').every((s) => s.rows.length === 0 && s.source === 'FRESH')).toBe(true);
+  });
+  it('DP-189: kraje onRoute wyżej, w grupie kolejność makiety LT→LV→EE→FI', () => {
+    const secs = balticRoadSections([], new Set(['FI', 'EE']), FRESH, NOW);
+    expect(secs.map((s) => `${s.country}:${s.onRoute ? 1 : 0}`)).toEqual(['EE:1', 'FI:1', 'LT:0', 'LV:0']);
   });
 });
 

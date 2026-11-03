@@ -358,3 +358,6 @@ przebieg 41579509837, commit `da98169`, artefakt `visual-artifacts`). Pozostałe
 Przyczyna: DP-176 — w Kokpicie kadr całej sieci z marginesem 12 px (zamiast 24 px), a dopisek „Trasa orientacyjna…” u góry z prawej liczony jako margines prawy (sieć obok dopisku, nie pod nim). Mini-mapa 727 × 360: przybliżenie ok. 3 → 4; w kadrze bez Islandii, sieć (Śrem – Boden, Bałtyk, Finlandia) w lewej części mapy, dopisek nie zasłania tras.
 Różnice tylko w obszarze mini-mapy (w kadrze migawki jej górny pas, prostokąt x 1180–1907, y 932–1080): 91 469 px (jasny) i 90 952 px (ciemny) — Boden i znacznik „3” wyżej i bliżej lewej krawędzi, widoczne Szwecja i Finlandia w większej skali zamiast morza od Islandii. Dopisek w tym samym miejscu; reszta Kokpitu bez zmian.
 DP-182 (awizacja) nie zmienia migawek — pokrycie testem jsdom `tests/dp-176-182.jsdom.test.ts`. Kokpitu na telefonie nie ma w migawkach smoke (kadr telefonu: margines górny na dopisek jak dotąd — test jsdom). Wzorca `shots-baseline` nie zmieniano.
+
+## DP-189 (03.11.2026) — Ryzyka › Drogi LT/LV/EE/FI zawsze (jak SE)
+Bez odświeżenia migawek: `drogi-baltyckie-*` już pokazują 4 sekcje w demo (trasa TLL–HEL). Zmiana behawioru bez transportu bałtyckiego — jsdom `tests/bn9-c4-roads.jsdom.test.ts` (DP-189).
