@@ -95,6 +95,13 @@ export interface BalticRoadEvent {
   kind: string;
   start: string | null;
   end: string | null;
+  /**
+   * DP-172: wolny tekst źródłowy do DeepL (LT opis, LV/EE komentarz, FI titleFi).
+   * Bez nazw miejsc osobno — jak SE `freeText`; tytuł typu PL nie idzie do tłumacza.
+   */
+  freeText?: string | null;
+  /** DP-172: tłumaczenie PL wolnego tekstu (po polishRoadFreeText). */
+  note?: string | null;
   /** Numer drogi z street/roadNumber/opisu (A5, E67, 134…). */
   road?: string | null;
   /**
@@ -393,6 +400,8 @@ export function parseFiTrafficMessages(json: unknown): BalticRoadEvent[] {
       /* DP-158: polska etykieta w title/params; fiński w detail. */
       title: labelPl,
       detail: titleFi,
+      /* DP-172: fiński opis → DeepL; title (PL typ) bez tłumaczenia. */
+      freeText: titleFi.trim() || null,
       severity: sig.severity,
       lat: pt?.[0] ?? null,
       lon: pt?.[1] ?? null,
@@ -441,6 +450,12 @@ export function balticRoadRisk(
   /* BN6: brak końca zdarzenia → 24 h od teraz (odświeżenie przy następnym odczycie). */
   const validUntil = e.end
     ?? new Date(Date.now() + 24 * 3600_000).toISOString();
+  const free = (e.freeText ?? '').trim() || null;
+  const note = (e.note ?? '').trim() || null;
+  /* DP-172 / #742: oryginal = tekst do tłumaczenia; kody restrictionType osobno (nie „tłumaczenie w toku”). */
+  const pending = Boolean(free && !note);
+  const opis = note
+    ?? (free ? e.title || e.detail : e.detail);
   return {
     kind,
     severity: e.severity,
@@ -448,7 +463,7 @@ export function balticRoadRisk(
     titleKey: 'rk_road_baltic',
     params: { country, event: e.title },
     detail: {
-      opis: e.detail,
+      opis,
       rodzaj: e.kind,
       lat: e.lat,
       lon: e.lon,
@@ -458,7 +473,9 @@ export function balticRoadRisk(
       weight_limit_t: e.weightLimitT ?? null,
       height_limit_m: e.heightLimitM ?? null,
       width_limit_m: e.widthLimitM ?? null,
-      ...(e.unknownCodes?.length ? { oryginal: e.unknownCodes.join(',') } : {}),
+      ...(free ? { oryginal: free } : {}),
+      ...(pending ? { pending: true } : {}),
+      ...(e.unknownCodes?.length ? { kody: e.unknownCodes.join(',') } : {}),
     },
     dedup: `${kind}:${BALTIC_RISK_DEDUP_VER}:${e.id}`,
     sourceUrl,
@@ -1006,6 +1023,8 @@ export function parseLtRestrictions(json: unknown): BalticRoadEvent[] {
       desc,
       street ? `ul. ${street}` : '',
     ].filter(Boolean);
+    /* DP-172: wolny tekst LT = shortDescription/description (bez ulicy — nie tłumaczymy adresu). */
+    const freeText = (desc || String(o.shortDescription ?? '').trim() || '').trim() || null;
     /* F7 #727 N2: uwaga o wypadkach tylko w corridor / risk.uwaga_wypadki, nie w każdym detail. */
     const textForSev = `${title} ${desc}`;
     /* F7 #730 r2 B1: numer najpierw ze street; opis bez fragmentu objazdu. */
@@ -1018,6 +1037,7 @@ export function parseLtRestrictions(json: unknown): BalticRoadEvent[] {
       id,
       title,
       detail: detailParts.join(' · '),
+      freeText,
       severity: ltSeverity(type, subtype, metaClosed, textForSev),
       lat: pt?.[0] ?? null,
       lon: pt?.[1] ?? null,
@@ -1865,10 +1885,13 @@ export function parseLvDatexXml(
       ? (extractBalticRoadRef(roadRaw) ?? roadRaw.trim())
       : extractBalticRoadRefPreferStreet(null, comment);
     const label = lvTypeLabel(String(type));
+    /* DP-172: komentarz publiczny → DeepL; etykieta typu PL w title bez tłumaczenia. */
+    const freeText = (lvPublicComment(rec) || '').trim() || null;
     out.push({
       id: lvIsSlipperyCode(code) ? lvSlipperyId(lat, lon) : id,
       title: road ? `${label} · ${road}` : label,
       detail: comment,
+      freeText,
       severity,
       lat,
       lon,
@@ -2022,10 +2045,22 @@ export function parseLvDatexJson(
       ? (extractBalticRoadRef(String(roadRaw)) ?? String(roadRaw).trim())
       : extractBalticRoadRefPreferStreet(null, comment);
     const label = lvTypeLabel(type.replace(/^.*:/, ''));
+    /* DP-172: tylko prawdziwy komentarz (nie etykieta typu) → DeepL. */
+    let freeText: string | null = null;
+    if (typeof gpc === 'string' && gpc.trim()) freeText = decodeXmlEntities(gpc.trim());
+    else if (gpc && typeof gpc === 'object') {
+      const v = JSON.stringify(gpc).match(/"value"\s*:\s*"([^"]*)"/)?.[1];
+      if (v?.trim()) freeText = decodeXmlEntities(v.trim());
+    } else if (typeof rec.comment === 'string' && rec.comment.trim()) {
+      freeText = decodeXmlEntities(String(rec.comment).trim());
+    } else if (typeof rec.description === 'string' && rec.description.trim()) {
+      freeText = decodeXmlEntities(String(rec.description).trim());
+    }
     out.push({
       id: lvIsSlipperyCode(code) ? lvSlipperyId(lat, lon) : id,
       title: road ? `${label} · ${road}` : label,
       detail: comment,
+      freeText,
       severity,
       lat,
       lon,
@@ -2627,10 +2662,13 @@ export function parseEeDatexXml(
       if (road) roadFromOpis++;
     }
     const label = eeTypeLabel(String(type));
+    /* DP-172: publicComment EE → DeepL (ET); etykieta typu bez tłumaczenia. */
+    const freeText = (lvPublicComment(rec) || '').trim() || null;
     out.push({
       id,
       title: road ? `${label} · ${road}` : label,
       detail: comment,
+      freeText,
       severity,
       lat,
       lon,
@@ -2933,10 +2971,17 @@ export function parseEeSrtiJson(
       if (road && stats) stats.roadFromOpis = (stats.roadFromOpis ?? 0) + 1;
     }
     const label = eeTypeLabel(type.replace(/^.*:/, ''));
+    let freeText: string | null = null;
+    if (typeof gpc === 'string' && gpc.trim()) freeText = decodeXmlEntities(gpc.trim());
+    else if (gpc && typeof gpc === 'object') {
+      const v = JSON.stringify(gpc).match(/"value"\s*:\s*"([^"]*)"/)?.[1];
+      if (v?.trim()) freeText = decodeXmlEntities(v.trim());
+    }
     out.push({
       id,
       title: road ? `${label} · ${road}` : label,
       detail: comment,
+      freeText,
       severity,
       lat,
       lon,

@@ -136,7 +136,11 @@ import {
   seWeekendBanHit, plSundayBanHit, banRiskTitle,
 } from '../here/windAndBans.ts';
 import { unknownCodeRiskInput } from '../../../../src/lib/pl/describe.ts';
-import { deeplTranslate, textHash, translateFreeText, usageLevel, DEEPL_MONTHLY_LIMIT } from '../../../../src/lib/pl/deepl.ts';
+import {
+  deeplTranslate, textHash, translateFreeText, usageLevel, DEEPL_MONTHLY_LIMIT,
+  deeplSourceForBalticCountry,
+  type DeeplSourceLang,
+} from '../../../../src/lib/pl/deepl.ts';
 import {
   emtrackLoginFail, emtrackLoginFresh, emtrackLoginOk, emtrackLoginSkipped, emtrackNextTryAt, emtrackSecretFp,
   unquoteSecret,
@@ -442,14 +446,14 @@ export interface SyncStore {
     detail: unknown;
     observedAt: string;
   }): Promise<void>;
-  /** PL-DATA: pamięć tłumaczeń i zużycie DeepL. Brak = bez wywołań DeepL. */
+  /** PL-DATA / DP-172: pamięć tłumaczeń i zużycie DeepL. Brak = bez wywołań DeepL. */
   translationGet?(hash: string): Promise<string | null>;
-  translationPut?(hash: string, source: string, pl: string, lang: 'SV' | 'EN'): Promise<void>;
-  translationEnqueue?(hash: string, source: string, lang: 'SV' | 'EN', reason: string): Promise<void>;
+  translationPut?(hash: string, source: string, pl: string, lang: DeeplSourceLang): Promise<void>;
+  translationEnqueue?(hash: string, source: string, lang: DeeplSourceLang, reason: string): Promise<void>;
   /** B9: lista kolejki do ponowienia; delete po sukcesie. */
-  translationListQueue?(reasons: string[]): Promise<{ hash: string; source: string; lang: 'SV' | 'EN'; reason: string; createdAt: string }[]>;
+  translationListQueue?(reasons: string[]): Promise<{ hash: string; source: string; lang: DeeplSourceLang; reason: string; createdAt: string }[]>;
   translationDequeue?(hash: string): Promise<void>;
-  /** B9: uzupełnij opis PL w otwartych ryzykach drogi po udanym ponowieniu. */
+  /** B9 / DP-172: uzupełnij opis PL w otwartych ryzykach drogi po udanym ponowieniu. */
   patchRoadRiskOpis?(original: string, pl: string): Promise<number>;
   deeplUsage?(): Promise<{ characters: number; limit: number }>;
   deeplAddUsage?(n: number): Promise<number>;
@@ -3410,7 +3414,18 @@ export async function runFerryAisListen(deps: JobDeps): Promise<JobResult> {
  * Pusta lista sytuacji nie jest uzupełniana. Bez klucza: DEMO.
  */
 
-async function polishRoadFreeText(deps: JobDeps, events: { title: string; detail: string; freeText?: string | null; note?: string | null }[], nowIso: string): Promise<void> {
+/**
+ * PL-DATA / DP-172 — DeepL wolnego tekstu sytuacji drogowych.
+ * `source` = SV (SE) albo LT/LV/ET/FI (BN6). Tylko zdarzenia z freeText; nazwy miejsc w freeText
+ * zostają w oryginale (jak SE — bez osobnego słownika bałtyckiego).
+ */
+async function polishRoadFreeText(
+  deps: JobDeps,
+  events: { title: string; detail: string; freeText?: string | null; note?: string | null }[],
+  nowIso: string,
+  source: DeeplSourceLang = 'SV',
+  usageRiskKind: string = 'ROAD_SE',
+): Promise<void> {
   const key = deps.env.DEEPL_API_KEY;
   const store = deps.store;
   if (!key || !store.translationGet || !store.translationPut || !store.translationEnqueue || !store.deeplUsage || !store.deeplAddUsage) return;
@@ -3420,14 +3435,14 @@ async function polishRoadFreeText(deps: JobDeps, events: { title: string; detail
     if (!e.freeText || e.note) continue;
     const result = await translateFreeText({
       text: e.freeText,
-      source: 'SV',
+      source,
       used: usage.characters,
       limit: usage.limit || DEEPL_MONTHLY_LIMIT,
       memoryGet: (hash) => store.translationGet!(hash),
-      memoryPut: (hash, source, pl) => store.translationPut!(hash, source, pl, 'SV'),
-      enqueue: (hash, reason) => store.translationEnqueue!(hash, e.freeText || '', 'SV', reason),
+      memoryPut: (hash, src, pl) => store.translationPut!(hash, src, pl, source),
+      enqueue: (hash, reason) => store.translationEnqueue!(hash, e.freeText || '', source, reason),
       addUsage: async (n) => { usage = { ...usage, characters: await store.deeplAddUsage!(n) }; return usage.characters; },
-      deepl: (text, source) => deeplTranslate(deps.fetch, key, text, source),
+      deepl: (text, src) => deeplTranslate(deps.fetch, key, text, src),
     });
     if (result.pl) {
       e.note = result.pl;
@@ -3442,17 +3457,37 @@ async function polishRoadFreeText(deps: JobDeps, events: { title: string; detail
     if (!warned && (level === 'warn' || level === 'full')) {
       warned = true;
       await store.raiseRisk({
-        kind: 'ROAD_SE', severity: level === 'full' ? 'MEDIUM' : 'LOW',
+        kind: usageRiskKind, severity: level === 'full' ? 'MEDIUM' : 'LOW',
         title: level === 'full'
           ? 'Limit tłumaczeń wyczerpany — opisy z kodów, teksty czekają w kolejce'
           : 'Tłumaczenia komunikatów drogowych powyżej 80% limitu miesięcznego',
         titleKey: 'rk_deepl_usage',
         params: { used: result.used, limit: result.limit },
-        detail: { zrodlo: 'DeepL', poziom: level, czas: nowIso },
+        detail: { zrodlo: 'DeepL', poziom: level, czas: nowIso, jezyk: source },
         dedup: `DEEPL_USAGE:${nowIso.slice(0, 7)}:${level}`,
       });
     }
   }
+}
+
+/** DP-172: tłumacz tylko zdarzenia na korytarzu (corridorMatch=on) z wolnym tekstem. */
+async function polishBalticCorridorEvents(
+  deps: JobDeps,
+  country: 'LT' | 'LV' | 'EE' | 'FI',
+  events: BalticRoadEvent[],
+  nowIso: string,
+): Promise<void> {
+  const onCorridor = events.filter((e) => e.corridorMatch === 'on' && e.freeText);
+  if (!onCorridor.length) return;
+  try {
+    await polishRoadFreeText(
+      deps,
+      onCorridor,
+      nowIso,
+      deeplSourceForBalticCountry(country),
+      `ROAD_${country}`,
+    );
+  } catch { /* DeepL nie przerywa odczytu drogi */ }
 }
 
 export async function runRoadSe(deps: JobDeps): Promise<JobResult> {
@@ -3721,6 +3756,8 @@ export async function runRoadFi(deps: JobDeps): Promise<JobResult> {
   const near = applyFiCorridorRoadFilter(
     filterInFiBboxes([...byId.values()].map((x) => x.event)),
   );
+  /* DP-172: DeepL wolnego tekstu FI tylko na korytarzu. */
+  await polishBalticCorridorEvents(deps, 'FI', near, now);
   const complete = fetchedOk === expectedFetches;
   let risks = 0;
   const keep: string[] = [];
@@ -3860,15 +3897,19 @@ export async function runRoadLt(deps: JobDeps): Promise<JobResult> {
   /* DP-164: filtr numerów dróg korytarza (A5/A8/A10/E67 + A1 przy Kownie) do BN7. */
   const near = applyBalticCorridorRoadFilter('LT', filterInLtBboxes(restrictionEvents));
   const weatherOn = applyBalticCorridorRoadFilter('LT', weatherSlow);
+  /* DP-172: DeepL LT tylko na korytarzu. */
+  await polishBalticCorridorEvents(deps, 'LT', near, now);
   const complete = fetchedOk === expectedFetches;
   let risks = 0;
   const keep: string[] = [];
   for (const e of near) {
-    const raw = e.weightLimitT != null
-      ? weightLimitRisk('LT', e, null, LT_RESTRICTIONS_URL, LT_ATTRIBUTION)
-      : isDimensionLimitEvent(e)
-        ? dimensionLimitRisk('LT', e, LT_RESTRICTIONS_URL, LT_ATTRIBUTION)
-        : balticRoadRisk('LT', e, LT_RESTRICTIONS_URL, LT_ATTRIBUTION);
+    /* DP-172: poza korytarzem bez freeText → bez pending (tłumaczymy tylko on). */
+    const ev = e.corridorMatch === 'on' ? e : { ...e, freeText: null, note: null };
+    const raw = ev.weightLimitT != null
+      ? weightLimitRisk('LT', ev, null, LT_RESTRICTIONS_URL, LT_ATTRIBUTION)
+      : isDimensionLimitEvent(ev)
+        ? dimensionLimitRisk('LT', ev, LT_RESTRICTIONS_URL, LT_ATTRIBUTION)
+        : balticRoadRisk('LT', ev, LT_RESTRICTIONS_URL, LT_ATTRIBUTION);
     const risk = capBalticRiskSeverity(raw, e.corridorMatch);
     /* F7 #727 N2: jedna uwaga o braku wypadków w ryzyku (nie w każdym detail zdarzenia). */
     if (risk.detail && typeof risk.detail === 'object') {
@@ -4163,15 +4204,19 @@ export async function runRoadLv(deps: JobDeps): Promise<JobResult> {
   await deps.store.resolveRisks('SOURCE_DOWN:ROAD_LV:');
   const deduped = dedupeLvSlippery(allEvents);
   const near = applyBalticCorridorRoadFilter('LV', filterInLvBboxes(deduped));
+  /* DP-172: DeepL LV tylko na korytarzu. */
+  await polishBalticCorridorEvents(deps, 'LV', near, now);
   const complete = fetchedOk === expectedFetches;
   let risks = 0;
   const keep: string[] = [];
   for (const e of near) {
-    const raw = e.weightLimitT != null
-      ? weightLimitRisk('LV', e, null, LV_SOURCE_REF, LV_ATTRIBUTION)
-      : isDimensionLimitEvent(e)
-        ? dimensionLimitRisk('LV', e, LV_SOURCE_REF, LV_ATTRIBUTION)
-        : balticRoadRisk('LV', e, LV_SOURCE_REF, LV_ATTRIBUTION);
+    /* DP-172: poza korytarzem bez freeText → bez pending. */
+    const ev = e.corridorMatch === 'on' ? e : { ...e, freeText: null, note: null };
+    const raw = ev.weightLimitT != null
+      ? weightLimitRisk('LV', ev, null, LV_SOURCE_REF, LV_ATTRIBUTION)
+      : isDimensionLimitEvent(ev)
+        ? dimensionLimitRisk('LV', ev, LV_SOURCE_REF, LV_ATTRIBUTION)
+        : balticRoadRisk('LV', ev, LV_SOURCE_REF, LV_ATTRIBUTION);
     const risk = capBalticRiskSeverity(raw, e.corridorMatch);
     if (risk.detail && typeof risk.detail === 'object') {
       if (e.road) (risk.detail as Record<string, unknown>).droga = e.road;
@@ -4543,6 +4588,8 @@ export async function runRoadEe(deps: JobDeps): Promise<JobResult> {
 
   await deps.store.resolveRisks('SOURCE_DOWN:ROAD_EE:');
   const near = applyBalticCorridorRoadFilter('EE', filterInEeBboxes(allEvents));
+  /* DP-172: DeepL EE (ET) tylko na korytarzu. */
+  await polishBalticCorridorEvents(deps, 'EE', near, now);
   /* F7 #733 r2 B2: 0 stacji albo >50% pomiarów bez stacji → pogoda niekompletna. */
   const wxBlocks = parseStats.weatherBlocks ?? 0;
   const wxNoSite = parseStats.weatherNoSite ?? 0;

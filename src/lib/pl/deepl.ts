@@ -1,13 +1,30 @@
 /**
  * PL-DATA — tekst wolny komunikatu drogowego.
- * Kolejność: 1) słownik zwrotów, 2) pamięć tłumaczeń, 3) DeepL API Free (SV/EN → PL).
+ * Kolejność: 1) słownik zwrotów, 2) pamięć tłumaczeń, 3) DeepL API Free (SV/EN/LT/LV/ET/FI → PL).
  * Do DeepL idzie wyłącznie publiczny komunikat drogowy. Nigdy dane transportu, kierowcy ani firmy.
  * Ten sam tekst nie jest wysyłany drugi raz. Błąd albo limit: opis z kodów, tekst w kolejce, bez wyjątku.
+ * DP-172 (#742): LT/LV/ET/FI jak Szwecja (decyzja 89).
  */
 import { applyPhrases } from './phrases.ts';
 
 export const DEEPL_MONTHLY_LIMIT = 1_000_000;
 export const DEEPL_WARN_AT = 0.8;
+
+/** Języki źródłowe DeepL Free używane w Watch Tower (komunikaty drogowe). */
+export type DeeplSourceLang = 'SV' | 'EN' | 'LT' | 'LV' | 'ET' | 'FI';
+
+export const DEEPL_SOURCE_LANGS: readonly DeeplSourceLang[] = [
+  'SV', 'EN', 'LT', 'LV', 'ET', 'FI',
+] as const;
+
+export function isDeeplSourceLang(v: string): v is DeeplSourceLang {
+  return (DEEPL_SOURCE_LANGS as readonly string[]).includes(v);
+}
+
+/** Mapowanie kraju BN6 → kod źródła DeepL (Estonia = ET). */
+export function deeplSourceForBalticCountry(country: 'LT' | 'LV' | 'EE' | 'FI'): DeeplSourceLang {
+  return country === 'EE' ? 'ET' : country;
+}
 
 export interface MemoryRow { hash: string; pl: string }
 export interface TranslateResult {
@@ -48,7 +65,7 @@ export async function deeplTranslate(
   fetchFn: typeof fetch,
   apiKey: string,
   text: string,
-  source: 'SV' | 'EN',
+  source: DeeplSourceLang,
 ): Promise<{ text: string; billed: number }> {
   const body = new URLSearchParams({ text, source_lang: source, target_lang: 'PL' });
   const res = await fetchFn('https://api-free.deepl.com/v2/translate', {
@@ -68,14 +85,14 @@ export async function deeplTranslate(
 
 export async function translateFreeText(args: {
   text: string;
-  source: 'SV' | 'EN';
+  source: DeeplSourceLang;
   used: number;
   limit?: number;
   memoryGet: (hash: string) => Promise<string | null> | string | null;
   memoryPut: (hash: string, source: string, pl: string) => Promise<void> | void;
   enqueue: (hash: string, reason: string) => Promise<void> | void;
   addUsage?: (n: number) => Promise<number> | number;
-  deepl?: (text: string, source: 'SV' | 'EN') => Promise<{ text: string; billed: number }>;
+  deepl?: (text: string, source: DeeplSourceLang) => Promise<{ text: string; billed: number }>;
 }): Promise<TranslateResult> {
   const limit = args.limit ?? DEEPL_MONTHLY_LIMIT;
   const hash = textHash(args.text);
@@ -84,9 +101,12 @@ export async function translateFreeText(args: {
     await args.enqueue(hash, 'odrzucone');
     return { ...base, pl: null, from: 'codes', queued: true, level: usageLevel(args.used, limit) };
   }
-  const phrased = applyPhrases(args.text);
-  if (phrased.covered) {
-    return { ...base, pl: phrased.pl, from: 'phrase', level: usageLevel(args.used, limit) };
+  /* DP-172: słownik zwrotów tylko SV (EN bez szwedzkich fraz) — LT/LV/ET/FI nie mają „covered” bez DeepL. */
+  if (args.source === 'SV' || args.source === 'EN') {
+    const phrased = applyPhrases(args.text);
+    if (phrased.covered) {
+      return { ...base, pl: phrased.pl, from: 'phrase', level: usageLevel(args.used, limit) };
+    }
   }
   const remembered = await args.memoryGet(hash);
   if (remembered) {

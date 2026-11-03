@@ -1,4 +1,12 @@
 
+## 2026-11-03 02:15 — DP-172 start (DeepL LT/LV/ET/FI) + #744 SCALONE
+
+- Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720/#735/#742 w planie.
+- Scalanie: **#744 SCALONE** `4ae40c5b` (DP-171; F7 gotowe @ `877af4e5`).
+- **Krok DP-172** (`pakiet/dp172-deepl-baltic` / **0383**): `source_lang` LT/LV/ET/FI; `deeplTranslate`/`translateFreeText`; `polishBalticCorridorEvents` w road-lt/lv/ee/fi (tylko `corridorMatch=on`); `detail.kody` zamiast kodów w `oryginal`; `pending`/`oryginal`/`opis` jak SE; `patchRoadRiskOpis` dla ROAD_LT…FI.
+- **Dalej:** push → CI → F7. Po F7: cron_fetch=true → front `src/lib` / BN8b.
+- Bez push na main.
+
 ## 2026-11-03 01:45 — DP-171 start (EE 30 s / LV URL) + #741+#743 SCALONE
 
 - Skrzynka: bez nowego `pilne` (#550 WSTRZYMANE). #716/#718/#720/#735/#742 w planie.

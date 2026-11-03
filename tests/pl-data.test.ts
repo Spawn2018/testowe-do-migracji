@@ -308,4 +308,39 @@ describe('PL-DATA', () => {
     expect(url).toBe('https://api-free.deepl.com/v2/translate');
     expect(url).not.toContain('klucz');
   });
+
+  it('DP-172: źródła LT/LV/ET/FI + mapowanie EE→ET; brak klucza → oryginał bez błędu', async () => {
+    const { deeplSourceForBalticCountry, isDeeplSourceLang, DEEPL_SOURCE_LANGS } = await import('../src/lib/pl/deepl');
+    expect(DEEPL_SOURCE_LANGS).toEqual(['SV', 'EN', 'LT', 'LV', 'ET', 'FI']);
+    expect(deeplSourceForBalticCountry('EE')).toBe('ET');
+    expect(deeplSourceForBalticCountry('LT')).toBe('LT');
+    expect(isDeeplSourceLang('ET')).toBe(true);
+    expect(isDeeplSourceLang('XX')).toBe(false);
+
+    const queue: string[] = [];
+    const lt = await translateFreeText({
+      text: 'Kelias A5 laikinai uzdarytas del avarijos',
+      source: 'LT', used: 0,
+      memoryGet: () => null, memoryPut: () => {},
+      enqueue: (_h, reason) => { queue.push(reason); },
+      /* brak deepl = jak brak klucza */
+    });
+    expect(lt.pl).toBeNull();
+    expect(lt.queued).toBe(true);
+    expect(queue).toContain('brak');
+
+    const fetch = vi.fn(async (_url: string, init?: RequestInit) => {
+      const body = String(init?.body ?? '');
+      expect(body).toContain('source_lang=ET');
+      expect(body).toContain('target_lang=PL');
+      return new Response(JSON.stringify({ translations: [{ text: 'Roboty na E67' }] }), { status: 200 });
+    });
+    const et = await deeplTranslate(
+      fetch as unknown as typeof globalThis.fetch,
+      'klucz',
+      'Tee remont E67',
+      'ET',
+    );
+    expect(et.text).toBe('Roboty na E67');
+  });
 });
