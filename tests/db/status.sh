@@ -2587,6 +2587,12 @@ L824c=aaaaaaaa-0000-0000-0000-00000000824c
 L824d=aaaaaaaa-0000-0000-0000-00000000824d
 L825a=aaaaaaaa-0000-0000-0000-00000000825a
 L825b=aaaaaaaa-0000-0000-0000-00000000825b
+L826a=aaaaaaaa-0000-0000-0000-00000000826a
+L826b=aaaaaaaa-0000-0000-0000-00000000826b
+L826c=aaaaaaaa-0000-0000-0000-00000000826c
+L826d=aaaaaaaa-0000-0000-0000-00000000826d
+L827a=aaaaaaaa-0000-0000-0000-00000000827a
+L827b=aaaaaaaa-0000-0000-0000-00000000827b
 S823t=77777777-0000-0000-0000-00000000823a
 S823g=77777777-0000-0000-0000-00000000823b
 V823=66666666-0000-0000-0000-00000000823a
@@ -2596,6 +2602,8 @@ HERE_PL_EE='[[52.083,17.017],[53.13,23.16],[54.10,22.93],[54.90,23.90],[56.41,24
 HERE_FI='[[60.154,24.914],[60.212,25.188],[61.50,24.00],[65.00,25.50],[65.825,24.15]]'
 HERE_SE_STO='[[59.35,18.11],[59.50,18.00],[60.00,17.50],[65.825,24.15]]'
 HERE_SE_KPS='[[59.723,19.066],[59.80,18.80],[60.00,17.50],[65.825,24.15]]'
+# DP-194: SE-NYN (obserwacja HERE); alarm SE_E4 = OSM (F7 #770 decyzja 97 → DP-197).
+HERE_SE_NYN='[[58.90,17.95],[59.50,18.00],[60.00,17.50],[65.825,24.15]]'
 
 chk "BN8b TLL-HEL: brak HERE → 0 OFF_CORRIDOR" \
   "begin;
@@ -3032,7 +3040,91 @@ chk "BN8b F7 W3f: założony rejs tylko z rodziny TLL" \
      from public.compute_load_eta('$L823f') c;
    rollback" t
 
-chk "BN8b po teście brak risk_signals/loads L821*/L822*/L823*/L824*" \
+# DP-194 F7 #770 decyzja 97: SE_E4 OFF_CORRIDOR = OSM; HERE = obserwacja corridor_geom (alarm → DP-197).
+# Wierzchołek OSM SE_E4 (F7): 17.6389/59.8586; obok = Karlstad (jak 27B).
+chk "DP-194: brak HERE SE_E4 wierzchołek OSM → 0, corridor_geom null" \
+  "begin;
+   delete from here_road_geometry where leg = 'SE-NYN';
+   insert into loads (id, project_id, carrier_org_id, hhl_order_no, carrier_order_no, status, plan_load_date, plan_delivery_date, ferry_route)
+    values ('$L826a','$P','$SCXO','HHL/DP194-826A','SCX/DP194-826A','IN_TRANSIT_SE', current_date, current_date + 3, 'GDN-NYN');
+   insert into positions (load_id, ts, geom_raw, source) values
+    ('$L826a', now() - interval '20 minutes', st_setsrid(st_makepoint(17.6389, 59.8586), 4326), 'TELEMATICS_API'),
+    ('$L826a', now() - interval '5 minutes', st_setsrid(st_makepoint(17.6389, 59.8586), 4326), 'TELEMATICS_API');
+   select public.refresh_load_eta('$L826a');
+   select (select count(*) from risk_signals where load_id='$L826a' and dedup_key like 'OFF_CORRIDOR%')::text
+       || ':' || coalesce((select eta_basis->>'corridor_geom' from loads where id='$L826a'), 'null');
+   rollback" 0:null
+chk "DP-194: brak HERE SE_E4 obok OSM → 1 source=OSM" \
+  "begin;
+   delete from here_road_geometry where leg = 'SE-NYN';
+   insert into loads (id, project_id, carrier_org_id, hhl_order_no, carrier_order_no, status, plan_load_date, plan_delivery_date, ferry_route)
+    values ('$L826b','$P','$SCXO','HHL/DP194-826B','SCX/DP194-826B','IN_TRANSIT_SE', current_date, current_date + 3, 'GDN-NYN');
+   insert into positions (load_id, ts, geom_raw, source) values
+    ('$L826b', now() - interval '20 minutes', st_setsrid(st_makepoint(13.5115, 59.3793), 4326), 'TELEMATICS_API'),
+    ('$L826b', now() - interval '5 minutes', st_setsrid(st_makepoint(13.5115, 59.3793), 4326), 'TELEMATICS_API');
+   select public.refresh_load_eta('$L826b');
+   select (select count(*) from risk_signals where load_id='$L826b' and dedup_key like 'OFF_CORRIDOR%' and resolved_at is null)::text
+       || ':' || coalesce((select detail->'params'->>'source' from risk_signals
+            where load_id='$L826b' and dedup_key='OFF_CORRIDOR:$L826b' and resolved_at is null), '?');
+   rollback" 1:OSM
+chk "DP-194: świeży HERE + wierzchołek OSM → 0, corridor_geom=here (obserwacja)" \
+  "begin;
+   select public.here_store_road('SE-NYN', '$HERE_SE_NYN'::jsonb, 'DP-194 SE-NYN obs', now(), 980000, 52000);
+   insert into loads (id, project_id, carrier_org_id, hhl_order_no, carrier_order_no, status, plan_load_date, plan_delivery_date, ferry_route)
+    values ('$L826c','$P','$SCXO','HHL/DP194-826C','SCX/DP194-826C','IN_TRANSIT_SE', current_date, current_date + 3, 'GDN-NYN');
+   insert into positions (load_id, ts, geom_raw, source) values
+    ('$L826c', now() - interval '20 minutes', st_setsrid(st_makepoint(17.6389, 59.8586), 4326), 'TELEMATICS_API'),
+    ('$L826c', now() - interval '5 minutes', st_setsrid(st_makepoint(17.6389, 59.8586), 4326), 'TELEMATICS_API');
+   select public.refresh_load_eta('$L826c');
+   select (select count(*) from risk_signals where load_id='$L826c' and dedup_key like 'OFF_CORRIDOR%')::text
+       || ':' || coalesce((select eta_basis->>'corridor_geom' from loads where id='$L826c'), '?');
+   rollback" 0:here
+chk "DP-194: świeży HERE + obok OSM → 1 source=OSM (nie HERE)" \
+  "begin;
+   select public.here_store_road('SE-NYN', '$HERE_SE_NYN'::jsonb, 'DP-194 SE-NYN osm-alarm', now(), 980000, 52000);
+   insert into loads (id, project_id, carrier_org_id, hhl_order_no, carrier_order_no, status, plan_load_date, plan_delivery_date, ferry_route)
+    values ('$L826d','$P','$SCXO','HHL/DP194-826D','SCX/DP194-826D','IN_TRANSIT_SE', current_date, current_date + 3, 'GDN-NYN');
+   insert into positions (load_id, ts, geom_raw, source) values
+    ('$L826d', now() - interval '20 minutes', st_setsrid(st_makepoint(13.5115, 59.3793), 4326), 'TELEMATICS_API'),
+    ('$L826d', now() - interval '5 minutes', st_setsrid(st_makepoint(13.5115, 59.3793), 4326), 'TELEMATICS_API');
+   select public.refresh_load_eta('$L826d');
+   select (select count(*) from risk_signals where load_id='$L826d' and dedup_key like 'OFF_CORRIDOR%' and resolved_at is null)::text
+       || ':' || coalesce((select detail->'params'->>'source' from risk_signals
+            where load_id='$L826d' and dedup_key='OFF_CORRIDOR:$L826d' and resolved_at is null), '?');
+   rollback" 1:OSM
+
+# DP-193 F7 #770: behawioralne przez compute_load_eta (collapse + „brak pozycji GPS”).
+chk "DP-193: brak pozycji GPS bez zmian" \
+  "begin;
+   insert into loads (id, project_id, carrier_org_id, hhl_order_no, carrier_order_no, status, plan_load_date, plan_delivery_date, ferry_route)
+    values ('$L827a','$P','$SCXO','HHL/DP193-827A','SCX/DP193-827A','IN_TRANSIT_SE', current_date, current_date + 3, 'GDN-NYN');
+   select coalesce(c.basis->'flags'->>0, '?') from public.compute_load_eta('$L827a') c;
+   rollback" "brak pozycji GPS"
+chk "DP-193: wiele przerw → flags zwinięte (przerwy ×N)" \
+  "begin;
+   insert into loads (id, project_id, carrier_org_id, hhl_order_no, carrier_order_no, status, plan_load_date, plan_delivery_date, ferry_route)
+    values ('$L827b','$P','$SCXO','HHL/DP193-827B','SCX/DP193-827B','IN_TRANSIT_SE', current_date, current_date + 3, 'GDN-NYN');
+   insert into load_events (load_id, event_type, occurred_at, payload) values
+    ('$L827b','GEOFENCE_EXIT', now() - interval '20 hours',
+      jsonb_build_object('geofence_kind','PORT_SE','code','FERRY_ARRIVED'));
+   insert into positions (load_id, ts, geom_raw, speed_kmh, source) values
+    ('$L827b', now() - interval '18 hours', st_setsrid(st_makepoint(17.64, 59.86), 4326), 70, 'TELEMATICS_API'),
+    ('$L827b', now() - interval '17 hours 10 minutes', st_setsrid(st_makepoint(17.64, 59.86), 4326), 0, 'TELEMATICS_API'),
+    ('$L827b', now() - interval '16 hours', st_setsrid(st_makepoint(17.70, 59.90), 4326), 70, 'TELEMATICS_API'),
+    ('$L827b', now() - interval '15 hours 10 minutes', st_setsrid(st_makepoint(17.70, 59.90), 4326), 0, 'TELEMATICS_API'),
+    ('$L827b', now() - interval '14 hours', st_setsrid(st_makepoint(17.75, 59.95), 4326), 70, 'TELEMATICS_API'),
+    ('$L827b', now() - interval '13 hours 10 minutes', st_setsrid(st_makepoint(17.75, 59.95), 4326), 0, 'TELEMATICS_API'),
+    ('$L827b', now() - interval '12 hours', st_setsrid(st_makepoint(17.80, 60.00), 4326), 70, 'TELEMATICS_API'),
+    ('$L827b', now() - interval '11 hours 10 minutes', st_setsrid(st_makepoint(17.80, 60.00), 4326), 0, 'TELEMATICS_API'),
+    ('$L827b', now() - interval '10 hours', st_setsrid(st_makepoint(17.85, 60.05), 4326), 70, 'TELEMATICS_API'),
+    ('$L827b', now() - interval '5 minutes', st_setsrid(st_makepoint(17.6389, 59.8586), 4326), 60, 'TELEMATICS_API');
+   select exists (
+     select 1 from jsonb_array_elements_text(coalesce(c.basis->'flags','[]'::jsonb)) f
+      where f like 'przerwy z GPS ×%'
+   )::text from public.compute_load_eta('$L827b') c;
+   rollback" true
+
+chk "BN8b po teście brak risk_signals/loads L821*/L822*/L823*/L824*/L826*/L827*" \
   "select (select count(*) from risk_signals where load_id::text like 'aaaaaaaa-0000-0000-0000-0000000082%')
         + (select count(*) from loads where id::text like 'aaaaaaaa-0000-0000-0000-0000000082%')" 0
 

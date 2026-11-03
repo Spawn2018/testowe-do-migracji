@@ -1,4 +1,38 @@
 
+## 2026-11-03 16:40 — #770 CI zielone @ e1f7e29b — czekam F7
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720/#762 w planie. Bez nowego `pilne`. PR do scalenia: brak „F7: gotowe” (po ostatnim commicie).
+- CI @ `e1f7e29b`: unit×2 ✔, db ✔ (`tests/db/gate.sh` 19m13s), visual×5 ✔.
+- **Krok:** odnotowanie zielonego CI; komentarz w #770 — czekam „F7: gotowe do scalenia”. Bez push na main.
+- **Dalej:** F7 → merge #770 → C2: DP-197, potem 119….
+
+## 2026-11-03 16:15 — #770 CI db: DP-193 expected `true` (nie `t`)
+
+- Skrzynka: #550 WSTRZYMANE; bez nowego `pilne`. PR do scalenia: brak „F7: gotowe”.
+- CI @ `b91f9a05`: unit/visual ✔; db status **639/1** — `DP-193: wiele przerw…` dostał `true` (`exists(…)::text`), oczekiwano `t`.
+- **Krok:** oczekiwane → `true` (jak pozostałe chk w `status.sh`). Liczba asercji bez zmian (**640** / h4 **26**).
+- **Dalej:** push → CI db → F7. Potem C2: DP-197 / 119….
+
+## 2026-11-03 15:45 — #770 F7 r1: decyzja 97 + DP-193 behawioralne
+
+- Skrzynka: #550 WSTRZYMANE; bez nowego `pilne`. PR do scalenia: brak „F7: gotowe” (r1 niegotowe @ 45fd452).
+- CI na `d2bda3eb` (fix punkt OSM): unit/db/visual ✔ — potem poprawki F7.
+- **Krok F7 #770 r1:** (1) test OSM wierzchołek 17.6389/59.8586 + obok→1 source=OSM; (2) SE_E4 bez HERE → `corridor_geom` null (nie `brak`); (3) wyłączony alarm HERE SE_E4 — zostaje OSM; `corridor_geom=here` tylko obserwacja; **DP-197** w PLAN; (4) DP-193: null/pusta/+N + compute_load_eta (brak GPS, przerwy ×N). status **640**, h4 **26**.
+- **Dalej:** push → CI → odpowiedź punkt po punkcie → F7. Potem C2: DP-197 / 119….
+
+## 2026-11-03 15:15 — #770 CI db FAIL → fix DP-194 punkt OSM
+
+- Skrzynka: #550 WSTRZYMANE; bez nowego `pilne`. PR do scalenia: brak F7.
+- **Krok C2 #770:** status FAIL `DP-194: brak HERE…` (1:brak vs 0:brak) — punkt 17.50/60.00 z linii HERE poza OSM SE_E4. Test bez HERE → Sztokholm 18.0686/59.3293 (jak 27B). unit/visual ✔; db status **637**.
+- **Dalej:** push → CI → F7. Potem C2: DP-119….
+
+## 2026-11-03 14:45 — #769 SCALONE; start C2 DP-193+194
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720/#762 w planie. Bez nowego `pilne`.
+- Scalanie: **#769 SCALONE** `1a523a5f` (DP-146 wait kart faktur; F7 @ `554401d5`, CI unit×2 visual×5 ✔). `deploy-main` robi resztę. Bez push na main.
+- **Krok C2** PR **#770** (`pakiet/c2-dp-193-194-eta-corridor` / **0389**): DP-193 `eta_flags_collapse` (×N, max 12) + H-4/`compute_load_eta`; DP-194 SE_E4/SE-NYN HERE OFF_CORRIDOR gdy świeży geom (bez HERE → OSM). status **637**, h4 **23**.
+- **Dalej:** CI (db status+h4) → F7. Potem C2 reszta (121→124→…).
+
 ## 2026-11-03 14:15 — #768 SCALONE; start DP-146
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
