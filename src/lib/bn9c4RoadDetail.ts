@@ -9,13 +9,14 @@ export const BALTIC_ROAD_KINDS: ReadonlySet<string> = new Set(['ROAD_LT', 'ROAD_
 const num = (v: unknown): number | null => (typeof v === 'number' && Number.isFinite(v) ? v : null);
 const str = (v: unknown): string | null => (typeof v === 'string' && v.trim() ? v.trim() : null);
 
-/* #716 LT: nieznane kody restrictionType („LD,SVKD”) w `detail.oryginal` — to nie tekst do tłumaczenia, bez podglądu oryginału */
+/* #716 / DP-172: stare ryzyka z kodami w `detail.oryginal` — to nie tekst do tłumaczenia; nowe mają `detail.kody`. */
 const CODE_LIST = /^[A-Z0-9_]{1,8}(?:\s*,\s*[A-Z0-9_]{1,8})*$/;
 
 /**
- * BN9-c4b (decyzja 89): oryginał i „tłumaczenie w toku” w tym samym kształcie co Drogi SE (`corridorConditionsDb.guardSwedish`):
+ * BN9-c4b (decyzja 89) / DP-172: oryginał i „tłumaczenie w toku” w tym samym kształcie co Drogi SE:
  * `detail.oryginal` — tekst w języku kraju, `detail.opis` — opis po polsku; brak opisu albo opis równy oryginałowi
  * (albo `detail.pending === true`) → tłumaczenie w toku. Bez oryginału — oba pola puste (nic nie pokazujemy).
+ * Kody restrictionType (`detail.kody` / stary CODE_LIST w oryginal) nie oznaczają „w toku”.
  */
 export function roadTranslationOf(d: Record<string, unknown>): { original: string | null; pending: boolean } {
   const raw = str(d.oryginal) ?? str(d.original);

@@ -182,12 +182,16 @@ describe('BN6 road-lt — eismoinfo', () => {
     expect(eventInLtBboxes(far)).toBe(false);
   });
 
-  it('balticRoadRisk → ROAD_LT + detail.oryginal; N2 bez wypadkow w opis', () => {
+  it('balticRoadRisk → ROAD_LT + detail.kody (DP-172); N2 bez wypadkow w opis', () => {
     const w = parseLtRestrictions(rest).find((e) => e.id === 'bn6-lt-weight-panevezys')!;
     const r = balticRoadRisk('LT', w, LT_RESTRICTIONS_URL, LT_ATTRIBUTION);
     expect(r.kind).toBe('ROAD_LT');
     expect(r.dedup).toBe('ROAD_LT:v2:bn6-lt-weight-panevezys');
-    expect(r.detail.oryginal).toBe('LD,SVKD');
+    /* DP-172: kody restrictionType w `kody`, nie w `oryginal` (inaczej „tłumaczenie w toku”). */
+    expect(r.detail.kody).toBe('LD,SVKD');
+    expect(r.detail.oryginal).toBeTruthy();
+    expect(r.detail.oryginal).not.toBe('LD,SVKD');
+    expect(r.detail.pending).toBe(true);
     expect(r.detail.zrodlo).toBe(LT_ATTRIBUTION);
     expect(String(r.detail.opis)).not.toMatch(/nie podaje wypadkow/);
   });
@@ -439,7 +443,9 @@ describe('BN6 runRoadLt', () => {
     expect(constr?.severity).toBe('LOW');
     expect(stOk.risks.some((x) => x.dedup === 'ROAD_LT:v2:bn6-lt-far-vilnius-east')).toBe(false);
     const weightRisk = stOk.risks.find((x) => x.dedup === 'ROAD_LT:v2:bn6-lt-weight-panevezys');
-    expect(weightRisk?.detail?.oryginal).toBe('LD,SVKD');
+    /* DP-172: kody w `kody`; off-corridor bez oryginal/pending. */
+    expect(weightRisk?.detail?.kody).toBe('LD,SVKD');
+    expect(weightRisk?.detail?.oryginal).toBeUndefined();
     expect(weightRisk?.detail?.uwaga_wypadki).toMatch(/nie podaje wypadkow/);
     /* DP-164: A2 poza listą korytarza → maks. LOW (było MEDIUM z weightLimitRisk). */
     expect(weightRisk?.severity).toBe('LOW');
@@ -448,6 +454,9 @@ describe('BN6 runRoadLt', () => {
     expect(heightRisk?.severity).toBe('MEDIUM');
     expect(heightRisk?.titleKey).toBe('rk_road_baltic_dim_check');
     expect(heightRisk?.detail?.korytarz_droga).toBe('on');
+    /* DP-172: na korytarzu freeText → pending (brak DEEPL w teście). */
+    expect(heightRisk?.detail?.pending).toBe(true);
+    expect(heightRisk?.detail?.oryginal).toBeTruthy();
     /* F7 #730 r2 B3: stare ROAD_LT:<id> zamyka resolveStale (nowe = v2). */
     expect(stOk.risks.some((x) => x.dedup === 'ROAD_LT:OLD')).toBe(false);
 
