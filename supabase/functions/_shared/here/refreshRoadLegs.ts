@@ -17,8 +17,8 @@ import {
   type LatLng,
 } from '../map/draw.ts';
 
-/** Cron odświeża przy wieku ≥ 21 d, żeby purge 30 d nie zostawił mapy bez linii. */
-export const ROAD_CRON_REFRESH_MS = 21 * 864e5;
+/** Cron odświeża przy wieku ≥ 6 d (DP-198) — poniżej świeżości alarmu 7 d (`bn8b_here_leg_fresh`); purge 30 d bez zmian. */
+export const ROAD_CRON_REFRESH_MS = 6 * 864e5;
 
 const RETRY_REJECT_MS = 24 * 3600e3;
 
@@ -128,7 +128,7 @@ export type RefreshRoadOpts = {
   fetch: typeof fetch;
   hereApiKey: string;
   nowMs?: number;
-  /** Domyślnie 30 d (przeglądarka); cron podaje ROAD_CRON_REFRESH_MS (21 d). */
+  /** Domyślnie 30 d (przeglądarka); cron podaje ROAD_CRON_REFRESH_MS (6 d, DP-198). */
   maxAgeMs?: number;
   /** true = tylko browser_fetch (Edge JWT); false/undefined = wszystkie (cron). */
   browserOnly?: boolean;

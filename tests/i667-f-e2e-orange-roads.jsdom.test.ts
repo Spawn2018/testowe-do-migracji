@@ -526,8 +526,9 @@ describe('#667 F e2e — brak POST przy komplecie + BN7 (B3) + cron', () => {
     expect(getSession).not.toHaveBeenCalled();
   });
 
-  it('cron 21 d: attempted obejmuje SE-KAA (nie tylko liczba 5)', async () => {
-    expect(ROAD_CRON_REFRESH_MS).toBe(21 * 864e5);
+  it('cron 6 d (DP-198): attempted obejmuje SE-KAA (nie tylko liczba 5)', async () => {
+    expect(ROAD_CRON_REFRESH_MS).toBe(6 * 864e5);
+    expect(ROAD_CRON_REFRESH_MS).toBeLessThan(7 * 864e5);
     expect(ROAD_CRON_REFRESH_MS).toBeLessThan(30 * 864e5);
 
     function geom(leg: string, ageMs: number, points: unknown = [[1, 2], [3, 4]]): RoadGeomRow {
