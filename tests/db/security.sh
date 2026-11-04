@@ -1703,5 +1703,64 @@ chk6 "#588 C9: authenticated ma EXECUTE auth_email_allowed" "$(psql "$PGURL" -At
 val "#588 C9: SCX — v_load_price_client 0 wierszy" $SCX "select count(*) from v_load_price_client" 0
 chk6 "#588 C9: anon bez SELECT v_load_price_client" "$(psql "$PGURL" -Atq -c "select has_table_privilege('anon','public.v_load_price_client','select')::text")" "false"
 
+# --- DP-206 / F7 #791 B1: e49_detour_cases — HHL+SCX przewoźnika; KSH i obcy SCX = 0; anon bez SELECT ---
+echo; echo "[DP-206] e49_detour_cases RLS (F7 #791 B1)"
+SCX2_AUTH=11111111-0000-0000-0000-00000000000b
+sys "insert into organizations (id, code, name, kind)
+     values ('00000000-0000-0000-0000-00000000a00b','CX3','Inny przewoźnik 3','CARRIER')
+     on conflict do nothing;
+     insert into app_users (auth_id, org_id, email, role)
+     values ('$SCX2_AUTH','00000000-0000-0000-0000-00000000a00b','cx3@test','CARRIER_DISPATCH')
+     on conflict (auth_id) do nothing" >/dev/null
+sys "delete from e49_detour_cases where dedup_key='E49_DETOUR_TEST_DP206';
+     insert into e49_detour_cases (
+       load_id, dedup_key, country, place, reason, source,
+       notice_at, decide_by, payload
+     ) values (
+       '$L2', 'E49_DETOUR_TEST_DP206', 'SE', 'Most testowy', 'WIND', 'TRAFIKVERKET',
+       now(), now() + interval '2 hours', '{}'::jsonb
+     )" >/dev/null
+val "DP-206: HHL widzi sprawę objazdu" $HHL "select count(*) from e49_detour_cases where dedup_key='E49_DETOUR_TEST_DP206'" 1
+val "DP-206: SCX przewoźnika widzi sprawę" $SCX "select count(*) from e49_detour_cases where dedup_key='E49_DETOUR_TEST_DP206'" 1
+val "DP-206: KSH nie widzi spraw objazdu (RLS)" $KSH "select count(*) from e49_detour_cases where dedup_key='E49_DETOUR_TEST_DP206'" 0
+val "DP-206: SCX innego przewoźnika nie widzi" $SCX2_AUTH "select count(*) from e49_detour_cases where dedup_key='E49_DETOUR_TEST_DP206'" 0
+err "DP-206: anon bez SELECT e49_detour_cases" "" "set local role anon; select count(*) from e49_detour_cases" "permission denied"
+# cz.2 / B11: decyzja tylko SCX przewoźnika lub HHL_ADMIN (commit — bez ROLLBACK!)
+CASE206=$(sys "select id::text from e49_detour_cases where dedup_key='E49_DETOUR_TEST_DP206' limit 1" | tail -1)
+err "DP-206: KSH nie decyduje e49_detour_decide" $KSH "select e49_detour_decide('$CASE206'::uuid,'HOLD',null)" "brak uprawnień"
+err "DP-206 B11: HHL_OPS nie decyduje" $OPS_D1525 "select e49_detour_decide('$CASE206'::uuid,'HOLD',null)" "brak uprawnień"
+err "DP-206 B11: SCX innego nie decyduje" $SCX2_AUTH "select e49_detour_decide('$CASE206'::uuid,'HOLD',null)" "brak uprawnień"
+err "DP-206 B11: anon nie decyduje" "" "set local role anon; select e49_detour_decide('$CASE206'::uuid,'HOLD',null)" "permission denied|Brak aktywnego konta|brak uprawnień"
+val "DP-206: SCX decyduje HOLD" $SCX "select e49_detour_decide('$CASE206'::uuid,'HOLD','uwaga-scx')::text" "true" commit
+err "DP-206 B11: druga decyzja odmowa" $SCX "select e49_detour_decide('$CASE206'::uuid,'HOLD',null)" "już rozstrzygnięta"
+# F7 #791 B1: Historia E49_DETOUR_DECISION bez KSH (visible_to FORWARDER+CARRIER)
+val "DP-206 B1: KSH 0 zdarzeń E49_DETOUR_DECISION" $KSH "select count(*) from load_events where load_id='$L2' and event_type='E49_DETOUR_DECISION'" 0
+val "DP-206 B1: HHL widzi E49_DETOUR_DECISION" $HHL "select count(*) from load_events where load_id='$L2' and event_type='E49_DETOUR_DECISION' and dedup_key like 'e49-detour:%'" 1
+# B11: powiadomienia HHL + SCX + KSH; KSH bez note
+val "DP-206 B11: dzwonek HHL po decyzji" $HHL "select count(*) from notifications where template='SCX_DETOUR_CHOICE' and dedup_key like 'e49-detour-n:$CASE206:%' and user_id=(select id from app_users where auth_id='$HHL')" 1
+val "DP-206 B11: dzwonek SCX po decyzji" $SCX "select count(*) from notifications where template='SCX_DETOUR_CHOICE' and dedup_key like 'e49-detour-n:$CASE206:%' and user_id=(select id from app_users where auth_id='$SCX')" 1
+val "DP-206 B11: dzwonek KSH po decyzji" $KSH "select count(*) from notifications where template='SCX_DETOUR_CHOICE' and dedup_key like 'e49-detour-n:$CASE206:%' and user_id=(select id from app_users where auth_id='$KSH')" 1
+val "DP-206 B11: payload KSH bez note" $KSH "select coalesce(payload->>'note','') from notifications where template='SCX_DETOUR_CHOICE' and dedup_key like 'e49-detour-n:$CASE206:%' and user_id=(select id from app_users where auth_id='$KSH') limit 1" ""
+# F7 #791 B2: upsert po decyzji nie otwiera nowej sprawy (brak risk / risk otwarte)
+sys "select set_config('role', 'service_role', true);
+     select e49_detour_case_upsert(
+       '$L2'::uuid, 'E49_DETOUR_TEST_DP206', 'SE', 'Most testowy', 'WIND', null, 'TRAFIKVERKET',
+       now(), null, now() + interval '2 hours', '{}'::jsonb, null)" >/dev/null
+val "DP-206 B2: po decyzji 0 otwartych spraw tego dedup" $HHL "select count(*) from e49_detour_cases where dedup_key='E49_DETOUR_TEST_DP206' and closed_at is null" 0
+# B11: HHL_ADMIN może zdecydować (osobna sprawa)
+sys "delete from e49_detour_cases where dedup_key='E49_DETOUR_TEST_DP206_ADM';
+     insert into e49_detour_cases (
+       load_id, dedup_key, country, place, reason, source,
+       notice_at, decide_by, payload
+     ) values (
+       '$L2', 'E49_DETOUR_TEST_DP206_ADM', 'SE', 'Most admin', 'WIND', 'TRAFIKVERKET',
+       now(), now() + interval '2 hours', '{}'::jsonb
+     )" >/dev/null
+CASE206A=$(sys "select id::text from e49_detour_cases where dedup_key='E49_DETOUR_TEST_DP206_ADM' limit 1" | tail -1)
+val "DP-206 B11: HHL_ADMIN decyduje HOLD" $HHL "select e49_detour_decide('$CASE206A'::uuid,'HOLD',null)::text" "true" commit
+sys "delete from load_events where dedup_key like 'e49-detour:%' and load_id='$L2';
+     delete from notifications where dedup_key like 'e49-detour-n:%';
+     delete from e49_detour_cases where dedup_key like 'E49_DETOUR_TEST_DP206%'" >/dev/null
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

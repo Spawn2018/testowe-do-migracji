@@ -430,10 +430,12 @@ export function renderNotice(row: NotifyRow, localeOverride?: NotifyLocale): Ren
       const code = String(p.code ?? p.load_code ?? '');
       const choice = String(p.choice ?? '');
       const closure = String(p.closure ?? '');
+      const who = String(p.who ?? 'SCX');
       const author = String(p.author ?? '');
+      const whoLine = author ? `${who} wybrał: ${choice} (${author})` : `${who} wybrał: ${choice}`;
       return {
-        subject: `${code}: decyzja SCX — ${choice}`,
-        body: `Na trasie: ${closure}. SCX wybrał: ${choice} (${author}). ETA liczy ten wybór.`,
+        subject: `${code}: decyzja ${who} — ${choice}`,
+        body: `Na trasie: ${closure}. ${whoLine}. ETA liczy ten wybór.`,
         severity: 'MEDIUM',
         view: null,
       };

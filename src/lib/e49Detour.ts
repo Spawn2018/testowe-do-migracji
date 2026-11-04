@@ -10,7 +10,14 @@ import { minText } from './e49Wx';
 export { minText };
 
 export type ClosureReason = 'WIND' | 'ACCIDENT' | 'WORKS' | 'OTHER';
-export type ClosureSource = 'TRAFIKVERKET' | 'HERE';
+/** Źródła zamknięć całej trasy (E49-b / #783): SE Trafikverket, PL HERE, bałtyckie — lokalne API dróg. */
+export type ClosureSource =
+  | 'TRAFIKVERKET'
+  | 'HERE'
+  | 'EISMOINFO'
+  | 'LVC'
+  | 'TARKTEE'
+  | 'DIGITRAFFIC';
 
 /** Ryzyko jednej możliwości — zdanie z serwera; `warn` = trzeba wziąć pod uwagę, `ok` = sprawdzone, bez przeszkód. */
 export type DetourRiskKind = 'PERMIT' | 'LIMITS' | 'BAN' | 'WORKS' | 'WIND' | 'HOURS' | 'FERRY' | 'WINDOW' | 'PILOT';

@@ -79,17 +79,22 @@ describe('teksty i źródło', () => {
     const all = [E49_PL, E49_WX_PL].map((o) => Object.keys(o).join('\n') + Object.values(o).join('\n')).join('\n').toLowerCase();
     for (const bad of ['sms:', 'mailto:', 'supabase', '15 m/s']) expect(all).not.toContain(bad);
   });
-  it('produkcja przed podłączeniem: brak spraw, zapis zablokowany, linie ETA z bazy', async () => {
+  it('produkcja (DP-206 DETOUR_E49): sprawy z cache RPC (puste bez danych), zapis przez e49_detour_decide', async () => {
     vi.stubEnv('VITE_AUTH_MODE', 'supabase');
+    vi.resetModules();
     try {
+      const { setLiveDetourCases } = await import('../src/lib/e49Live');
+      setLiveDetourCases([]);
       const m = await import('../src/lib/e49Source');
       const l = load('T-17');
       expect(m.detourCasesOf('SCX', [l], NOW, new Set([l.id]))).toEqual([]);
-      expect(m.detourDecideOf()).toBeNull();
+      expect(m.detourDecideOf()).not.toBeNull(); /* DP-206: podłączone */
       expect(m.etaWxOf(l, [l], NOW)).toEqual([]);
       expect(m.demoDetourLoadId([l], null)).toBeNull();
+      expect(m.detourCasesOf('KSH', [l], NOW, new Set([l.id]))).toEqual([]);
     } finally {
       vi.unstubAllEnvs();
+      vi.resetModules();
     }
   });
   it('demo: sprawa przy transporcie w drodze przez Szwecję, który ma kartę; KSH bez spraw; po decyzji sprawa znika', async () => {

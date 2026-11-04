@@ -49,7 +49,8 @@ fi
 
 n=0; rows=0; bad=""
 for t in $TABLES; do
-  [[ "$t" =~ ^[a-z_]+$ ]] || { echo "RESTORE FAIL: nazwa tabeli $t" >&2; exit 2; }
+  # Jak backupTables (core.ts): litery, cyfry, podkreślnik — np. e49_detour_cases (DP-206).
+  [[ "$t" =~ ^[a-z_][a-z0-9_]*$ ]] || { echo "RESTORE FAIL: nazwa tabeli $t" >&2; exit 2; }
   # #498: duże tabele w częściach (manifest.table_parts) albo pojedynczy plik t.csv.gz.age
   PARTS=$(python3 -c "
 import json,sys

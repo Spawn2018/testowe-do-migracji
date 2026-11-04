@@ -38,6 +38,7 @@ import type { DbSailing, RiskInput, SailingInsert, SailingPatch, VesselRow } fro
 import { ROAD_LEGS } from '../here/refreshRoadLegs.ts';
 import { legDefFromRow } from '../here/legDefFromRow.ts';
 import { windThresholdsFromOps } from '../e49/etaWeather.ts';
+import { hoursLeftFromH4Segments } from '../e49/detourCaseJob.ts';
 
 export {
   filterLoadsReassignedFromSailing,
@@ -977,6 +978,260 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
         source: (row.source === 'FMI' ? 'FMI' : 'SMHI') as 'SMHI' | 'FMI',
         samples: Array.isArray(row.samples) ? row.samples : [],
       }));
+    },
+    /** E49-b: otwarte ROAD_* z lat/lon — kandydaci na sprawę „Objazd czy postój?”. */
+    async listOpenRoadClosures() {
+      const { countryFromRoadKind, corridorFromRoadKind, placeFromRoadTitle } = await import('../e49/detourCaseJob.ts');
+      const r = await sb.from('risk_signals')
+        .select('dedup_key,kind,title,detail,detected_at,valid_until')
+        .is('resolved_at', null)
+        .in('kind', ['ROAD_SE', 'ROAD_PL', 'ROAD_LT', 'ROAD_LV', 'ROAD_EE', 'ROAD_FI'])
+        .limit(400);
+      if (r.error) throw new Error(`risk_signals closures: ${r.error.message}`);
+      const out: import('../e49/detourCaseJob.ts').RoadClosureCandidate[] = [];
+      for (const row of r.data ?? []) {
+        const detail = (row.detail && typeof row.detail === 'object')
+          ? row.detail as Record<string, unknown>
+          : {};
+        const lat = Number(detail.lat);
+        const lon = Number(detail.lon);
+        if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+        const kind = String(row.kind ?? '');
+        const country = countryFromRoadKind(kind);
+        if (!country) continue;
+        const road = detail.droga != null ? String(detail.droga)
+          : (detail.road != null ? String(detail.road) : null);
+        const title = String(row.title ?? '');
+        const detailText = [
+          detail.opis, detail.oryginal, detail.note, detail.rodzaj,
+        ].filter(Boolean).map(String).join(' ');
+        out.push({
+          closureRef: String(row.dedup_key ?? `${kind}:${lat},${lon}`),
+          country,
+          place: placeFromRoadTitle(title, road),
+          title,
+          detailText,
+          lat,
+          lon,
+          noticeIso: String(row.detected_at ?? new Date().toISOString()),
+          untilIso: row.valid_until ? String(row.valid_until) : (detail.do != null ? String(detail.do) : null),
+          roadClosed: detail.roadClosed === true || detail.rodzaj === 'zamkniecie',
+          corridor: corridorFromRoadKind(kind, road),
+          atKm: detail.at_km != null && Number.isFinite(Number(detail.at_km))
+            ? Number(detail.at_km) : null,
+          obokTrasy: detail.obok_trasy === true,
+          korytarzDroga: detail.korytarz_droga != null ? String(detail.korytarz_droga) : null,
+        });
+      }
+      return out;
+    },
+    /** E49-b: korytarze + wymiary + pozycja (HERE truck) + riskCtx (F7 r4 B8). */
+    async e49DetourLoadLegs() {
+      const legs = await this.e49WindLoadCorridors!();
+      const ids = [...new Set(legs.map((l) => l.loadId))];
+      if (!ids.length) return [];
+      const loadsR = await sb.from('loads')
+        .select('id,status,eta_site,eta_basis,permit_kind,sailing_id,plan_delivery_to,combo_length_m,combo_width_m,combo_height_m,combo_weight_t,combo_axle_count,combo_axle_load_t')
+        .in('id', ids);
+      if (loadsR.error) throw new Error(`loads detour: ${loadsR.error.message}`);
+      const byId = new Map((loadsR.data ?? []).map((row) => [String(row.id), row]));
+      const sailingIds = [...new Set(
+        (loadsR.data ?? [])
+          .map((r) => r.sailing_id != null ? String(r.sailing_id) : null)
+          .filter((x): x is string => !!x),
+      )];
+      const sailById = new Map<string, { operator: string | null; dep: string | null }>();
+      if (sailingIds.length) {
+        // F7 #791 r5 B8a: armator = vessels.operator (nie name).
+        const sR = await sb.from('sailings')
+          .select('id,departure_at,delayed_departure_at,vessel_id,vessels(operator,name)')
+          .in('id', sailingIds);
+        if (sR.error) throw new Error(`sailings detour: ${sR.error.message}`);
+        for (const s of sR.data ?? []) {
+          const v = (s as { vessels?: { operator?: string; name?: string } | null }).vessels;
+          sailById.set(String(s.id), {
+            operator: v?.operator != null && String(v.operator).trim()
+              ? String(v.operator)
+              : (v?.name != null ? String(v.name) : null),
+            dep: s.delayed_departure_at
+              ? String(s.delayed_departure_at)
+              : (s.departure_at ? String(s.departure_at) : null),
+          });
+        }
+      }
+      // F7 r5 B8c: kraje pilotów z awizacji (load_escorts PL/SE).
+      const pilotsByLoad = new Map<string, string[]>();
+      if (ids.length) {
+        const pR = await sb.from('load_escorts')
+          .select('load_id,scope')
+          .in('load_id', ids)
+          .in('scope', ['PL', 'SE']);
+        if (pR.error) throw new Error(`load_escorts detour: ${pR.error.message}`);
+        for (const row of pR.data ?? []) {
+          const lid = String((row as { load_id: string }).load_id);
+          const scope = String((row as { scope: string }).scope).toUpperCase();
+          if (scope !== 'PL' && scope !== 'SE') continue;
+          const list = pilotsByLoad.get(lid) ?? [];
+          if (!list.includes(scope)) list.push(scope);
+          pilotsByLoad.set(lid, list);
+        }
+      }
+      const windPeak = new Map<string, number>();
+      const codes = [...new Set(legs.map((l) => l.code))];
+      for (const code of codes) {
+        try {
+          const rows = await this.listCorridorWindForecast!(code, 360);
+          let peak = 0;
+          for (const row of rows) {
+            for (const sample of row.samples as Array<{ gustMs?: number; gust_ms?: number }>) {
+              const g = Number(sample.gustMs ?? sample.gust_ms);
+              if (Number.isFinite(g) && g > peak) peak = g;
+            }
+          }
+          if (peak > 0) windPeak.set(code, peak);
+        } catch {
+          /* brak prognozy → warn w riskCtx */
+        }
+      }
+      const out: import('../e49/detourCaseJob.ts').DetourLoadLeg[] = [];
+      for (const leg of legs) {
+        const row = byId.get(leg.loadId);
+        if (!row) continue;
+        let position: [number, number] | null = null;
+        const posR = await sb.from('positions')
+          .select('geom_snapped,geom_raw,ts')
+          .eq('load_id', leg.loadId)
+          .gte('ts', new Date(Date.now() - 2 * 3600_000).toISOString())
+          .order('ts', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        const g = (posR.data as { geom_snapped?: unknown; geom_raw?: unknown } | null)?.geom_snapped
+          ?? (posR.data as { geom_raw?: unknown } | null)?.geom_raw;
+        /* GeoJSON Point albo WKT — uproszczenie: [lon,lat] w coordinates. */
+        if (g && typeof g === 'object' && Array.isArray((g as { coordinates?: unknown }).coordinates)) {
+          const c = (g as { coordinates: number[] }).coordinates;
+          if (c.length >= 2 && Number.isFinite(c[0]) && Number.isFinite(c[1])) {
+            position = [c[1]!, c[0]!];
+          }
+        }
+        const pk = String(row.permit_kind ?? '').toUpperCase();
+        const permitMode = (pk === 'TRASA' || pk === 'FIRMA' || pk === 'NONE')
+          ? pk as 'TRASA' | 'FIRMA' | 'NONE'
+          : 'UNKNOWN';
+        const basis = (row.eta_basis && typeof row.eta_basis === 'object')
+          ? row.eta_basis as Record<string, unknown>
+          : {};
+        const segs = Array.isArray(basis.segments) ? basis.segments as Array<Record<string, unknown>> : [];
+        const h4Seg = segs.find((s) => String(s.code ?? '') === 'H4_SEGMENTS');
+        const h4Items = h4Seg && Array.isArray(h4Seg.items) ? h4Seg.items : null;
+        // F7 r5 B8b: jazda do najbliższego EU_DAILY_REST z H4_SEGMENTS (nie fikcyjny remaining_drive_min).
+        let hoursLeft = hoursLeftFromH4Segments(h4Items);
+        if (hoursLeft == null) {
+          const causes = (basis.causes && typeof basis.causes === 'object')
+            ? basis.causes as Record<string, unknown>
+            : {};
+          const driveH = Number(basis.drive_h ?? causes.drive_h ?? NaN);
+          if (Number.isFinite(driveH) && driveH >= 0) hoursLeft = Math.round(driveH * 60);
+        }
+        const crossing = segs.find((s) => String(s.code ?? '') === 'CROSSING');
+        const crossingDep = crossing && crossing.departure != null
+          ? String(crossing.departure)
+          : null;
+        const sail = row.sailing_id ? sailById.get(String(row.sailing_id)) : undefined;
+        const status = String(row.status ?? '');
+        const ferryPast = /IN_TRANSIT_SE|AT_SITE|UNLOADED|DELIVERED/.test(status);
+        // ETA do portu: baza ≈ odejście rejsu − zapas; wariant przesuwa w jobie o addMin.
+        // Gdy auto jest przed promem: portEtaBase = now + (ferryDep − now) − 0 = ferryDep
+        // gdy znamy godzinę dojazdu z PL_ROAD — użyj now+hours; inaczej ferryDep jako planowany deadline.
+        const plRoad = segs.find((s) => /PL_ROAD|TO_PORT|PRE_PORT/.test(String(s.code ?? '')));
+        const plHours = plRoad != null ? Number(plRoad.hours) : NaN;
+        const ferryDepIso = sail?.dep ?? crossingDep;
+        let ferryPortEtaBaseIso: string | null = null;
+        if (!ferryPast && ferryDepIso && Number.isFinite(Date.parse(ferryDepIso))) {
+          if (Number.isFinite(plHours) && plHours >= 0) {
+            ferryPortEtaBaseIso = new Date(Date.now() + plHours * 3600_000).toISOString();
+          } else {
+            // Plan: zdążyć na przypisany rejs (deadline = dep); wariant +addMin porównujemy z dep.
+            ferryPortEtaBaseIso = new Date(Date.parse(ferryDepIso) - 30 * 60_000).toISOString();
+          }
+        }
+        const pilots = pilotsByLoad.get(leg.loadId) ?? [];
+        const riskCtx: import('../e49/detourCaseJob.ts').DetourRiskCtx = {
+          windGustMs: windPeak.has(leg.code) ? windPeak.get(leg.code)! : null,
+          hoursLeftMin: hoursLeft,
+          ferryOperator: sail?.operator ?? null,
+          ferryDepIso,
+          ferryPortEtaBaseIso,
+          ferryPast,
+          windowEndIso: row.plan_delivery_to ? String(row.plan_delivery_to) : null,
+          pilotCountries: pilots.length ? pilots : null,
+        };
+        out.push({
+          loadId: leg.loadId,
+          code: leg.code,
+          fromKm: leg.fromKm,
+          currentLeg: leg.currentLeg,
+          status: String(row.status ?? ''),
+          baseEtaIso: row.eta_site ? String(row.eta_site) : null,
+          dims: {
+            lengthM: row.combo_length_m != null ? Number(row.combo_length_m) : null,
+            widthM: row.combo_width_m != null ? Number(row.combo_width_m) : null,
+            heightM: row.combo_height_m != null ? Number(row.combo_height_m) : null,
+            weightT: row.combo_weight_t != null ? Number(row.combo_weight_t) : null,
+            axleCount: row.combo_axle_count != null ? Number(row.combo_axle_count) : null,
+            axleLoadT: row.combo_axle_load_t != null ? Number(row.combo_axle_load_t) : null,
+          },
+          position,
+          permitMode,
+          riskCtx,
+        });
+      }
+      return out;
+    },
+    /** F7 #791 r4 B6: pamięć HERE między przebiegami. */
+    async getOpenDetourCache(dedupKey: string) {
+      const r = await sb.from('e49_detour_cases')
+        .select('payload')
+        .eq('dedup_key', dedupKey)
+        .is('closed_at', null)
+        .is('decision', null)
+        .maybeSingle();
+      if (r.error || !r.data?.payload || typeof r.data.payload !== 'object') return null;
+      const payload = r.data.payload as import('../e49/detourCaseJob.ts').DetourCasePayload;
+      const closure = payload.closure;
+      const pos = payload.positionAtCalc;
+      return {
+        payload,
+        position: pos && pos.length >= 2 ? [pos[0]!, pos[1]!] as [number, number] : null,
+        closureLat: Number(closure?.lat ?? NaN),
+        closureLon: Number(closure?.lon ?? NaN),
+      };
+    },
+    async upsertE49DetourCase(row: import('../e49/detourCaseJob.ts').DetourCaseUpsert) {
+      const r = await sb.rpc('e49_detour_case_upsert', {
+        p_load: row.loadId,
+        p_dedup: row.dedupKey,
+        p_country: row.country,
+        p_place: row.place,
+        p_reason: row.reason,
+        p_reason_detail: row.reasonDetail,
+        p_source: row.source,
+        p_notice_at: row.noticeAt,
+        p_until_at: row.untilAt,
+        p_decide_by: row.decideBy,
+        p_payload: row.payload,
+        p_risk_dedup: row.riskDedupKey,
+      });
+      if (r.error) throw new Error(`e49_detour_case_upsert: ${r.error.message}`);
+      return r.data != null;
+    },
+    async closeStaleE49DetourCases(keepDedup: string[]) {
+      const r = await sb.rpc('e49_detour_cases_close_stale', {
+        p_keep: keepDedup,
+        p_reason: 'closure_cleared',
+      });
+      if (r.error) throw new Error(`e49_detour_cases_close_stale: ${r.error.message}`);
+      return Number(r.data ?? 0) || 0;
     },
     async loadInTrackingWindow(loadId: string, at?: string) {
       const r = await sb.rpc('load_in_tracking_window', {

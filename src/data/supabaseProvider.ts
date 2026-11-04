@@ -287,6 +287,24 @@ export function createSupabaseProvider(sb: SupabaseClient, opts: SupabaseProvide
     if (ferryDictOk !== true) {
       console.warn('[BN1] ferry_dict_snapshot niedostępny — katalog seed (TLLA-HEL z seeda)');
     }
+    /* E49-b DP-206: otwarte sprawy „Objazd czy postój?” (KSH dostaje [] z RLS/RPC). */
+    {
+      const { setLiveDetourCases, detourCaseFromRow } = await import('../lib/e49Live');
+      if (orgKind === 'KSH') {
+        setLiveDetourCases([]);
+      } else {
+        const dq = await sb.rpc('e49_detour_cases_open');
+        if (dq.error) {
+          if (!/e49_detour_cases_open|PGRST202|schema cache|Could not find/i.test(dq.error.message ?? '')) {
+            console.warn('[E49-b] e49_detour_cases_open:', dq.error.message);
+          }
+          setLiveDetourCases([]);
+        } else {
+          const rows = (Array.isArray(dq.data) ? dq.data : []) as Parameters<typeof detourCaseFromRow>[0][];
+          setLiveDetourCases(rows.map(detourCaseFromRow).filter((c): c is NonNullable<typeof c> => !!c));
+        }
+      }
+    }
     /* brak tabeli lub odmowa (okno przed migracją) nie gasi zrzutu — widok wraca do stanu bez tabeli */
     setSymbolSpecsFromServer(symQ.error ? null : ((symQ.data ?? []) as SymbolSpecRow[]));
     {

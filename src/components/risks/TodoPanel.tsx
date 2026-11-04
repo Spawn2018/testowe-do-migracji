@@ -297,7 +297,8 @@ export function TodoPanel({ role, kind, locale, phone, nowIso, loads, risks, geo
       const save = detourDecideOf();
       const c = i.detour;
       return {
-        canDecide: role === 'SCX',
+        // B11 / F7 r5 B13: tylko SCX albo jawna rola HHL_ADMIN (demo HHL bez roli = bez przycisków).
+        canDecide: role === 'SCX' || accountRole(role) === 'HHL_ADMIN',
         busy: detourBusy === i.id,
         onDecide: save && c ? (pick, note) => {
           setDetourBusy(i.id);
@@ -305,15 +306,18 @@ export function TodoPanel({ role, kind, locale, phone, nowIso, loads, risks, geo
           void save(c.id, { pick, by, atIso: nowIso, note }).then((r) => {
             setDetourBusy(null);
             if (!r.ok) return;
-            const what = (pick === 'HOLD'
-              ? (c.hold.untilIso ? e49t('e49_hist_hold', { t: timeOnly(c.hold.untilIso), place: c.place }) : e49t('e49_hist_hold_unknown', { place: c.place }))
-              : e49t('e49_hist_detour', {
-                via: 'none' in c.detour ? '' : c.detour.via,
-                km: 'none' in c.detour ? '' : kmText(c.detour.addKm),
-                d: 'none' in c.detour ? '' : minText(c.detour.addMin),
-                place: c.place,
-              })) + (note ? e49t('e49_hist_note', { n: note }) : '');
-            useTowerStore.getState().appendEvent({ loadId: c.loadId, type: 'NOTE', at: nowIso, actor: role, note: what });
+            // F7 #791 B10 / D-20261016-0305-01 §1: na produkcji Historii pisze serwer (e49_detour_decide).
+            if (import.meta.env.VITE_AUTH_MODE !== 'supabase') {
+              const what = (pick === 'HOLD'
+                ? (c.hold.untilIso ? e49t('e49_hist_hold', { t: timeOnly(c.hold.untilIso), place: c.place }) : e49t('e49_hist_hold_unknown', { place: c.place }))
+                : e49t('e49_hist_detour', {
+                  via: 'none' in c.detour ? '' : c.detour.via,
+                  km: 'none' in c.detour ? '' : kmText(c.detour.addKm),
+                  d: 'none' in c.detour ? '' : minText(c.detour.addMin),
+                  place: c.place,
+                })) + (note ? e49t('e49_hist_note', { n: note }) : '');
+              useTowerStore.getState().appendEvent({ loadId: c.loadId, type: 'NOTE', at: nowIso, actor: role, note: what });
+            }
             useTowerStore.getState().pushToast(e49t(pick === 'HOLD' ? 'e49_done_hold' : 'e49_done_detour'), 'LOW', c.loadId);
             setDetourDone((s) => new Set(s).add(c.id));
           });

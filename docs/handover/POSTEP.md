@@ -1,4 +1,63 @@
 
+## 2026-11-04 14:55 — #791 F7 r5 B8a/b/c + B6b + B13 (0405)
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
+- Scalanie: brak (F7 r5 niegotowe @ `b75e4a6d`; visual telefon FAIL = B13).
+- CI @ `b75e4a6d`: unit ✔ · db ✔ · **visual** FAIL — HHL demo z przyciskami `[data-detour-pick]`.
+- **Krok F7 r5:** **0405** upsert bez `stale_at=now`; job: FERRY vs ETA portu (+ pastFerry / następny); HOURS z `H4_SEGMENTS`; PILOT z `load_escorts`; pamięć HERE kotwica tylko przy liczeniu + notices + >2 h; `needDriveMin` = wariant; e-mail `who`. Front: `canDecide` tylko SCX|`HHL_ADMIN` (B13). Vitest e49-detour* 33/33.
+- **Dalej:** push → CI (+`db`) → F7. Bez push na main.
+
+## 2026-11-04 14:30 — #791 F7 r4 B8/B4/B6/B12 (0404)
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
+- Scalanie: brak (F7 r4 niegotowe @ `769375b8`). „F7: gotowe” @ bb440979 nie obowiązuje.
+- CI @ `769375b8`: unit ✔ · visual ✔ · **db** FAIL — security 521≠520 (B12).
+- **Krok F7 r4:** migracja **0404** — B6 upsert tylko przy `baseMissing`; decide uprawnienia przed „brak sprawy”; KSH payload bez `author`; szablon `{{who}}`. Job: B8 WIND/HOURS/FERRY/WINDOW/PILOT z danymi; B4 tylko IN_TRANSIT_*/ON_FERRY + świeża pozycja + zawsze rzut 25 km; B6 pamięć HERE (<10 km); store `riskCtx` + `getOpenDetourCache`. Front demo HHL_ADMIN. security **521** / TEST **517**. Vitest e49-detour* 33/33.
+- **Dalej:** push → CI (+`db`) → F7. Bez push na main.
+
+## 2026-11-04 13:45 — #791 F7 r3 + B11 (0403) + CI db B1/B2
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
+- Scalanie: brak (F7 r2/r3 niegotowe; „F7: gotowe” @ bb440979 nie obowiązuje).
+- CI @ `829d2c90`: unit ✔ · visual ✔ · **db** FAIL — B1/B2: `e49_detour_decide` w teście bez `commit` → ROLLBACK.
+- **Krok:** migracja **0403** B11 (właściciel 12:37–12:38): decide tylko SCX przewoźnika / `HHL_ADMIN`; Historia z autorem; macierz scx_detour + CARRIER + CLIENT; `matrix_notify` HHL+SCX+KSH (KSH bez `note`); upsert B6 nie nadpisuje dobrego objazdu; B2 unblock po `resolved_at` ryzyka. Job r3: B3 tylko `korytarz=on` + wszystkie nogi + SE_KAA_*; B4 bez pozycji / rzut >25 km; B6 bez trasy bazowej; B8 brak danych → `warn`. Front `canDecide` SCX|HHL_ADMIN. security **520** / TEST **516**.
+- **Dalej:** push → CI (+`db`) → F7. Bez push na main.
+
+## 2026-11-04 13:25 — #791 F7 r2 B1–B10 (0402 + job + TodoPanel)
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`. CI @ `97d58b95` unit/visual/db ✔ (przed tym krokiem). Brak „F7: gotowe”.
+- Scalanie: brak (F7 r2 niegotowe; B5/B7 przyjęte wcześniej).
+- **Krok F7 r2:** **0402** — B1 `visible_to` HHL+SCX w Historii; B2 upsert bez reopen po decyzji; `close_stale` null=0. Job: B3 `corridorMatchesLeg` (LT/LV/EE→PL_EE_E67, FI→FI_E75, SE_E4_STO/E18); B4 `projectKmOnCorridor` + pomijanie za autem; B6 nadwyżka vs trasa bazowa (2× HERE, punkty wzdłuż korytarza); B8 `buildNineRisks` (9 rodzajów); B9 `viaFromHereSummary` (spans.names). B10 TodoPanel: bez `appendEvent` w supabase. Testy vitest + security +3 (512/508).
+- **Dalej:** push → CI (+`db`) → F7 cz.2. Bez push na main.
+
+## 2026-11-04 12:30 — #791 CI db FAIL cz.2 → 0401 + sections notices
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`. F7 cz.1 @ `bb440979` nie obowiązuje po cz.2 (`5a96a7ed`); czekam F7 cz.2.
+- Scalanie: brak. CI @ `5a96a7ed`: unit ✔ · visual ✔ · **db** FAIL — security B5 (1 zapisujący bez `assert_not_preview`); nullguard `e49_detour_decide` aktywny HHL łapał wzorzec `e49_detour_decide` przy „brak sprawy”.
+- **Krok:** migracja **0401** — `assert_not_preview` + `Brak aktywnego konta`; null-guard GUARD → `Brak aktywnego konta`; `summarizeHereRoute` czyta `sections[].notices` + `spans[].notices` (warunek F7 cz.2) + vitest; EXPECTED security **509** / nullguard **914** (TEST security **505**).
+- **Dalej:** push → CI (+`db`) → F7 cz.2. Bez push na main.
+
+## 2026-11-04 11:25 — #791 DP-206 E49-b cz.2: job + decide + DETOUR_E49
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`. Bez „F7: gotowe”.
+- Scalanie: brak. CI F7 r1 @ `bb440979`: unit ✔ · visual ✔ · **db** ✔ (`41809600570`).
+- **Krok cz.2:** migracja **0400** — `e49_detour_case_upsert`, `e49_detour_cases_close_stale`, `e49_detour_decide` (Historia `E49_DETOUR_DECISION` + macierz `DECISION`/`SCX_DETOUR_CHOICE`→`scx_detour`); `detourCaseJob` + podpięcie w `route-hazards` (HERE truck, maskApiKey, limit 8/przebieg); store list/upsert; front `e49Live` + `e49Source` + `DETOUR_E49=true`; vitest `e49-detour-job`; allowlist/nullguard decide.
+- **Dalej:** push → CI (+`db`) → F7. ETA linie CLOSURE_HOLD/DETOUR i mapa E45 — kolejne dopracowanie po F7 gdy trzeba.
+
+## 2026-11-04 10:40 — #791 F7 r1: B1 RLS + U1–U3 + restore cyfry + pl-t
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`. Bez „F7: gotowe”.
+- Scalanie: brak (F7 #791 r1 niegotowe @ `97531eab`). CI @ `97531eab`: unit FAIL (`lt` ← eismoinfo.lt); visual ✔; **db** FAIL backup 40/4 — `restore.sh` odrzucał `e49_detour_cases` (`^[a-z_]+$` bez cyfr).
+- **Krok F7 r1:** (B1) RLS bez CLIENT + 5 testów security; (U1) `maskHereApiKey` + vitest; (U2) `noDetourWhy` po kodzie HERE + notice informacyjne; (U3) `begin`/`commit` zostaje jak 0397/0398; restore/dr-test — `^[a-z_][a-z0-9_]*$`; pl-t wyjątek `lt`; security **507** / TEST **503**.
+- **Dalej:** push → CI (+`db`) → F7. Potem cz.2: job `roadClosed` → sprawy + HERE + `DETOUR_E49=true`.
+
+## 2026-11-04 10:05 — #785 SCALONE; start DP-206 E49-b cz.1
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
+- Scalanie: **#785 SCALONE** `7ef4bc3c` (DP-205 / **0396**+**0397**+**0398**; F7: gotowe @ `d1775048`; CI unit/visual/db ✔). `deploy-main` robi resztę. Bez push na main.
+- **Krok DP-206 cz.1** `pakiet/c2-dp-206-e49b-detour`: migracja **0399** `e49_detour_cases` + RLS + `e49_detour_cases_open`; `_shared/e49/detourPlan.ts` + `detourHere.ts` (avoid[areas]); źródła ClosureSource bałtyckie + i18n; vitest `e49-detour-plan`; nullguard **909**. `DETOUR_E49` nadal false.
+- **Dalej:** job z `roadClosed` → sprawy + HERE truck objazd + decyzja SCX / macierz `scx_detour` → `DETOUR_E49=true`.
+
 ## 2026-11-04 09:35 — #785 CI zielone @ 9e0a8c3c → prośba o F7 r3
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`. Bez „F7: gotowe”.

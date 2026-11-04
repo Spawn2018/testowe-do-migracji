@@ -78,7 +78,8 @@ try {
   const bad = [];
 
   for (const t of tables) {
-    if (!/^[a-z_]+$/.test(t)) throw new Error(`nazwa tabeli ${t}`);
+    // Jak backupTables / restore.sh — cyfry w nazwie (e49_detour_cases, DP-206).
+    if (!/^[a-z_][a-z0-9_]*$/.test(t)) throw new Error(`nazwa tabeli ${t}`);
     const csv = join(TMP, `${t}.csv`);
     await ageDecryptGunzip(join(DIR, `${t}.csv.gz.age`), csv);
     const header = readFileSync(csv, 'utf8').split(/\r?\n/, 1)[0];
