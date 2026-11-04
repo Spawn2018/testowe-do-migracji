@@ -34,26 +34,33 @@ describe('BN9-b — ekrany Korytarza bałtyckiego', () => {
     expect(nearestCrossingByOperator([s], NOW).ECKERO?.map((x) => x.id)).toEqual(['e1']);
   });
 
-  it('oś statusów: nazwy portów dla nowych przepraw, Stena/Polferries bez zmian (25A)', () => {
+  it('oś statusów: nazwy portów dla wszystkich przepraw (DP-215 / 25A)', () => {
     expect(routeStatusLabel('AT_PORT', undefined, 'pl', 'TLLA-HEL')).toBe('Port wypłynięcia — Tallinn A');
     expect(routeStatusLabel('AT_PORT_SE', undefined, 'pl', 'TLL-HEL')).toBe('Port przypłynięcia — Helsinki');
-    for (const st of ['AT_PORT', 'AT_PORT_SE', 'IN_TRANSIT_PL', 'IN_TRANSIT_SE'] as const) {
+    expect(routeStatusLabel('AT_PORT', undefined, 'pl', 'GDN-NYN')).toBe('Port wypłynięcia — Gdańsk');
+    expect(routeStatusLabel('AT_PORT_SE', undefined, 'pl', 'GDN-NYN')).toBe('Port przypłynięcia — Nynäshamn');
+    for (const st of ['IN_TRANSIT_PL', 'IN_TRANSIT_SE'] as const) {
       expect(routeStatusLabel(st, undefined, 'pl', 'GDN-NYN')).toBe(statusLabel(st, undefined, 'pl'));
       expect(routeStatusLabel(st, undefined, 'pl', null)).toBe(statusLabel(st, undefined, 'pl'));
     }
+    expect(routeStatusLabel('AT_PORT', undefined, 'pl', null)).toBe('Port wypłynięcia');
+    expect(routeStatusLabel('AT_PORT_SE', undefined, 'pl', null)).toBe('Port przypłynięcia');
   });
 
-  /* DP-137 / F7 #708: enum IN_TRANSIT_SE i synthetic_port_se zostają; UI FI ≠ „Droga SE”. */
-  it('DP-137: IN_TRANSIT_SE / Port SE na trasie FI → Droga do placu / Port przypłynięcia', () => {
+  /* DP-137 / F7 #708: enum IN_TRANSIT_SE i synthetic_port_se zostają; UI ≠ „Droga SE”. */
+  it('DP-137 / DP-215: IN_TRANSIT_SE / porty — Droga do placu / Port przypłynięcia (także Polferries)', () => {
     expect(routeStatusLabel('IN_TRANSIT_SE', 'SE_ROAD', 'pl', 'TLL-HEL')).toBe('Droga do placu');
     expect(routeStatusLabel('IN_TRANSIT_SE', 'SE_ROAD', 'pl', 'MUU-VUO')).toBe('Droga do placu');
     expect(routeStatusLabel('IN_TRANSIT_SE', undefined, 'pl', 'TLLA-HEL')).toBe('Droga do placu');
     expect(routeStatusLabel('IN_TRANSIT_PL', 'TO_PORT', 'pl', 'TLL-HEL')).toBe('Droga do portu');
     expect(routeStatusLabel('AT_PORT_SE', 'APPROACH', 'pl', 'MUU-VUO')).toBe('Port przypłynięcia — Vuosaari');
-    expect(routeStatusLabel('IN_TRANSIT_SE', 'SE_ROAD', 'pl', 'GDN-NYN')).toBe('Droga SE');
+    expect(routeStatusLabel('IN_TRANSIT_SE', 'SE_ROAD', 'pl', 'GDN-NYN')).toBe('Droga do placu');
     expect(routeStageLabel('SE_ROAD', 'pl', 'TLL-HEL')).toBe('Droga do placu');
     expect(routeStageLabel('APPROACH', 'pl', 'TLL-HEL')).toBe('Port przypłynięcia — Helsinki');
-    expect(routeStageLabel('SE_ROAD', 'pl', 'GDN-NYN')).toBe('Droga SE');
+    /* DP-215: etap GDN-NYN — Port wyjścia / Port docelowy (kafelki); status — Port wypłynięcia */
+    expect(routeStageLabel('SE_ROAD', 'pl', 'GDN-NYN')).toBe('Droga do placu');
+    expect(routeStageLabel('GDANSK', 'pl', 'GDN-NYN')).toBe('Port wyjścia');
+    expect(routeStageLabel('APPROACH', 'pl', 'GDN-NYN')).toBe('Port docelowy');
   });
 
   it('mapa: tory nowych przepraw w warstwie promu (BN9-c5: tylko dla tras z zakresu), Terminal A na torze Tallinn–Helsinki', () => {

@@ -304,7 +304,7 @@ export function sampleOf(load: Pick<Load, 'code' | 'hhlOrderNo' | 'plannedLoadDa
     author: 'Jan Nowak (SCX)',
     message: 'Kierowca będzie o 14:00.',
     statusFrom: 'Na promie',
-    statusTo: 'Port SE',
+    statusTo: 'Port przypłynięcia',
     time: '13:05',
     side: 'HHL',
     missing: 'kierowca, ciągnik',

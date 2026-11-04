@@ -1,4 +1,53 @@
 
+## 2026-11-05 00:25 — DP-215 (#800): odświeżenie 11× stan-* Harmonogram (StageBar)
+
+- Skrzynka: #550 WSTRZYMANE; #798 DP-215; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: brak (brak „F7: gotowe”; visual zrzuty ✖ 41927587305 @ `318accc3` — `stan-najechanie-dark` 4277 px StageBar; telefon/bramy ✔, unit ✔).
+- **Krok:** 11 wzorców `stan-*.png` z `visual.yml` update=true 41930872357 (Harmonogram HHL 1440 — StageBar E28). Kokpit+mapa 1920 już wcześniej. Bez migracji. Matrycy 280 nie ruszano.
+- **Dalej:** push → CI → F7. DP-210 nie zaczynać.
+
+## 2026-11-04 23:40 — DP-215 (#800): odświeżenie Mapa dark (StageBar)
+
+- Skrzynka: #550 WSTRZYMANE; #798 DP-215; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: brak (brak „F7: gotowe”; visual zrzuty ✖ 41924308018 @ `b13d126e` — telefon/bramy ✔, unit ✔).
+- **Krok:** `mapa-hhl-pl-1920-dark-default.png` z actual (2060 px — StageBar E28). Komplet 4 smoke z paskiem (kokpit+mapa × light/dark 1920) gotowy; matrycy 280 nie ruszano. Bez migracji.
+- **Dalej:** push → CI → F7. DP-210 nie zaczynać.
+
+## 2026-11-04 23:15 — DP-215 (#800): odświeżenie Mapa light (StageBar)
+
+- Skrzynka: #550 WSTRZYMANE; #798 DP-215; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: brak (brak „F7: gotowe”; visual zrzuty ✖ 41919939041 @ `e02f7e42` — telefon/bramy ✔, unit ✔).
+- **Krok:** `mapa-hhl-pl-1920-light.png` z actual (2047 px — StageBar E28 na Mapie); G4_WZORZEC. Dark mapa bez failu. Bez migracji.
+- **Dalej:** push → CI → F7. DP-210 nie zaczynać.
+
+## 2026-11-04 22:50 — DP-215 (#800): odświeżenie dark Kokpit (StageBar)
+
+- Skrzynka: #550 WSTRZYMANE; #798 DP-215; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: brak (brak „F7: gotowe”; visual zrzuty ✖ 41915265123 @ `3ef8c0d0` — telefon/bramy ✔, unit ✔).
+- **Krok:** `kokpit-hhl-pl-1920-dark-default.png` z actual (366 px — StageBar E28); G4_WZORZEC. Bez migracji. Innych faili zrzutów brak (statusy poza 15 migawkami).
+- **Dalej:** push → CI → F7. DP-210 nie zaczynać.
+
+## 2026-11-04 22:20 — DP-215 (#800): statusy jak EE (decyzja właściciela 21:10)
+
+- Skrzynka: #550 WSTRZYMANE; #798 DP-215; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: brak (brak „F7: gotowe”; visual zrzuty ✖ @ `f7023d44` / 41910697985 — telefon/bramy ✔).
+- **Krok:** `routeStatusLabel` dla wszystkich tras + bez rejsu: Droga do portu / Port wypłynięcia[ — port] / Port przypłynięcia[ — port] / Droga do placu; `s_*` i18n; `p8c_*` / `p4c_wf_zt_*` / Pomoc `gf_off_ask_port`. Bez `cal_c_*` / `a6_map_road_se`. Testy dp-215, bn9b, status-label, p6-history, w-naprawy-2. Bez migracji. Zrzuty statusów — po visual (wypis w PR).
+- **Dalej:** push → CI → F7. DP-210 nie zaczynać.
+
+## 2026-11-04 21:45 — DP-215 (#800): odświeżenie migawki Kokpit (StageBar)
+
+- Skrzynka: #550 WSTRZYMANE; #798 DP-215; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: brak (brak „F7: gotowe do scalenia” po `07bfd8d3`; visual zrzuty ✖ @ 41906263605).
+- **Krok:** `kokpit-hhl-pl-1920-light.png` z actual (399 px — nazwy etapów E28); G4_WZORZEC DP-215. Bez migracji.
+- **Dalej:** CI → F7. Po scaleniu kolejka C2…; DP-210 nie zaczynać.
+
+## 2026-11-04 21:05 — #799 SCALONE; start DP-215 (#798)
+
+- Skrzynka: #550 WSTRZYMANE; #797 zamknięte po merge; #798 DP-215; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: **#799 SCALONE** `181b70b2` (#797 / **0407**; F7 zgoda od razu po CI ✔ @ `9f10859b`). `deploy-main` robi resztę. Bez push na main.
+- **Krok DP-215** `pakiet/c2-dp-215-neutral-stage-names`: kafelki/`stage_*` → Droga do portu / Port wyjścia / Port docelowy / Droga do placu; `STAGE_KEYS` na `stage_*` (4 etapy); statusy `s_road_pl`/`s_port_*` bez zmiany (lista w PR). Vitest dp-215 + bn9b + status-label. Bez migracji. EN/SV brak (E43).
+- **Dalej:** push → CI → F7; zrzuty StageBar przy failu visual. Potem kolejka C2…; DP-210 nie zaczynać.
+
 ## 2026-11-04 20:25 — #799 F7: test bn1_seed (perform → select)
 
 - Skrzynka: #550 WSTRZYMANE; #797 `pilne` / PR #799; #798 DP-215 po scaleniu. Bez innego nowego `pilne`.

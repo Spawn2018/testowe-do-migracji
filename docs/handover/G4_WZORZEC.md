@@ -391,3 +391,10 @@ Z workflowu `visual` (`update=true`, gałąź `wyglad/dp-196-awizacja-armator`, 
 Przyczyna: uwaga z Pakietu DP-C — siatka `.am-2` rozciągała pola na wysokość wiersza, więc „Armator” dostawał wysokość kolumny „Rejs promem” (pole + dwie linie podpowiedzi). Teraz `align-items: start` na `.am-2` (`src/components/drawer/p7.css`); `.am-lock` zostaje `align-self: end`.
 - `awizacja-rejs-przed-zaladunkiem-hhl-pl-1440-light.png` (560×960, bez zmiany rozmiaru): pole „Armator” (Polferries) ma zwykłą wysokość i stoi w jednej linii z polem „Rejs promem”; pod nim pusto, podpowiedzi rejsu („Wybrany rejs odpływa przed planowanym załadunkiem.”, „Rejs można dodać później…”) bez zmian w prawej kolumnie. Reszta okna bez zmian.
 Wzorca `shots-baseline` nie zmieniano.
+
+## DP-215 (04.11.2026) — E28 / StageBar: neutralne nazwy etapów
+Odświeżone `tests/__screenshots__/kokpit-hhl-pl-1920-{light,dark-default}.png` z artefaktów `visual-artifacts` po failach zrzutów (light: 41906263605; dark: 41915265123 @ `3ef8c0d0`, gałąź `pakiet/c2-dp-215-neutral-stage-names`). Telefon i bramy zielone bez zmian migawek.
+Przyczyna: DP-215 (#798) — kafelki paska E28: Droga do portu / Port wyjścia / Port docelowy / Droga do placu (zamiast Droga PL / Port PL / Port SE / Droga SE). Light 399 px, dark 366 px (ratio 0,01) w pasku statusów u góry Kokpitu. Statusy Polferries/Stena (Port wypłynięcia/przypłynięcia) — poza tymi 15 migawkami (brak osobnego failu zrzutów statusów).
+Dodatkowo `mapa-hhl-pl-1920-{light,dark-default}.png` z actual (light: 41919939041 @ `e02f7e42`, 2047 px; dark: 41924308018 @ `b13d126e`, 2060 px) — StageBar E28 na Mapie.
+Harmonogram III-2 (`visual-states`): 11× `stan-*.png` (najechanie/fokus/pusty × light+dark; wciśnięty/zablokowany/ładowanie/błąd/walidacja dark) z `visual.yml` `update=true` run 41930872357 @ `318accc3` — StageBar E28 na Harmonogramie 1440 (fail PR 41927587305: `stan-najechanie-dark`, 4277 px). Pozostałe z 15 smoke (pasek-na-promie = tracking bar, nie StageBar; awizacja/karty/drogi/pogoda/rejsy/ryzyka) bez zmian bajt w bajt. Matrycy 280/`shots-baseline` nie ruszano (P11).
+Wzorca `shots-baseline` nie zmieniano.
