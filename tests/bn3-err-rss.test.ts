@@ -248,6 +248,7 @@ ${itemXml({
     expect(risk.sourceUrl).toBe(hit.item.link);
     expect(risk.dedup).toBe(`FERRY_ERR_RSS:${hit.item.guid}`);
     const d = risk.detail as Record<string, unknown>;
+    expect(d.audience).toBe('HHL');
     expect(d.tytul).toBe(hit.item.title);
     expect(d.link).toBe(hit.item.link);
     expect(d.pubDate).toBeTruthy();

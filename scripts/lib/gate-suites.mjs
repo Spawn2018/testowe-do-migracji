@@ -13,7 +13,7 @@ const ROOT = resolve(import.meta.dirname, '../..');
 /** Oczekiwane OK na lokalnym Postgresie (gate.sh). */
 export const EXPECTED_LOCAL = {
   security: 496, // F7 #780 r3: +1 memory_auto_24h w deepl_usage_view; #662-b → 495
-  status: 643, // F7 #780 r2: +1 risk_audience_for TV_CODE=HHL; DP-197 → 642
+  status: 648, // F7 #782 r2: +5 FERRY audience HHL (+ RLS KSH/SCX); #780 → 643
   storage: 37,
   money: 200, // DP-167 F7 #734 r2: +2 title_key zmiana; było 198 (r1 +4 od 194 / DP-167 +3 od 191)
   release: 146,

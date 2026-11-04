@@ -31,9 +31,11 @@ import {
 } from '../ferry/digitrafficPortCalls.ts';
 export { DIGITRAFFIC_USER };
 import {
-  FERRY_ICE_ATTRIBUTION, PORT_CALL_V2_CANCELLED_URL, WINTER_NAV_LOCATIONS_URL,
+  FERRY_ICE_ATTRIBUTION, WINTER_NAV_LOCATIONS_URL,
   ferryIceRisk, ibnetRestrictionStrictness, isWinterNavWindowActiveOnSailingDay,
-  parseIbnetRestriction, parseWinterNavigationLocations, portCallV2CancelledHasFihel,
+  isPortCallV2Reissued, matchPortCallV2CancelledFleet, parseIbnetRestriction, parsePortCallV2Visits,
+  parseWinterNavigationLocations, portCallV2ActiveVisitsUrl, portCallV2CancelledFleetRisk,
+  portCallV2CancelledUrl,
   utcDayEndMs, vesselMeetsIbnetIceClass, winterLocodeEndsForRoute, winterNavIceRisk,
 } from '../ferry/winterNavigation.ts';
 import {
@@ -2053,8 +2055,8 @@ export async function runFerryPortnet(deps: JobDeps): Promise<JobResult> {
   warnings.push(...winter.warnings);
   risks += winter.risks;
 
-  /* BN3 pkt 7 / F7 #694 R1-B1: sonda v2 cancelled — tylko observations (bez ryzyka). */
-  const v2c = await observePortCallV2Cancelled(deps, now);
+  /* DP-121 / decyzja 100: v2 cancelled → ryzyko HIGH HHL; bez ODWOLANY / notice. */
+  const v2c = await applyPortCallV2Cancelled(deps, since, now);
   warnings.push(...v2c.warnings);
   risks += v2c.risks;
 
@@ -2072,7 +2074,10 @@ export async function runFerryPortnet(deps: JobDeps): Promise<JobResult> {
       ...(closed ? { closed_without_ata: String(closed) } : {}),
       ...(winter.hits ? { winter_hits: String(winter.hits) } : {}),
       ...(v2c.fihel ? { port_call_v2_fihel_cancelled: '1' } : {}),
+      port_call_v2_fleet_n: String(v2c.fleet),
       port_call_v2_cancelled_n: String(v2c.count),
+      ...(v2c.matched ? { port_call_v2_matched: String(v2c.matched) } : {}),
+      ...(v2c.reissued ? { port_call_v2_reissued: String(v2c.reissued) } : {}),
       umg_stena_rows: String(umg.rows),
       ...(umg.updated ? { umg_stena_updated: String(umg.updated) } : {}),
       ...(suspect.hits ? { cancel_suspect_hits: String(suspect.hits) } : {}),
@@ -2338,30 +2343,87 @@ async function applyUmgdyStenaBackup(deps: JobDeps, sinceIso: string): Promise<{
 }
 
 /**
- * BN3 / F7 #694 R1-B1: sonda port-call v2 cancelled FIHEL — tylko observations.
- * Żywy endpoint → HTTP 400; właściwy filtr/endpoint → DP-121 (po BN3 cz. 4).
+ * DP-121 / decyzja 100 (F7 #782 r1): Digitraffic port-call v2 `status=cancelled`.
+ * Filtr floty FIHEL/FIVUO ±3 h → ryzyko HIGH HHL; **bez** `updateSailing(ODWOLANY)`
+ * i **bez** `insertOperatorNotice`. Re-zgłoszenie (aktywna wizyta ±3 h) → bez ryzyka.
+ * Drugi GET bez `status` (OpenAPI „active visits”); HTTP≠OK → bez filtra, wpis w warnings.
  */
-async function observePortCallV2Cancelled(deps: JobDeps, _nowIso: string): Promise<{
-  count: number; fihel: boolean; risks: number; warnings: string[];
+async function applyPortCallV2Cancelled(deps: JobDeps, sinceIso: string, nowIso: string): Promise<{
+  count: number; fleet: number; matched: number; reissued: number;
+  fihel: boolean; risks: number; warnings: string[];
 }> {
-  const page = await readText(deps, PORT_CALL_V2_CANCELLED_URL, {
-    headers: {
-      'User-Agent': USER_AGENT,
-      Accept: 'application/json',
-      'Accept-Encoding': 'gzip',
-      'Digitraffic-User': DIGITRAFFIC_USER,
-    },
-  });
-  /* HTTP ≠ OK (dziś 400): bez ostrzeżenia co przebieg i bez ryzyka. */
-  if (!page.ok) {
-    return { count: 0, fihel: false, risks: 0, warnings: [] };
-  }
+  const empty = {
+    count: 0, fleet: 0, matched: 0, reissued: 0, fihel: false, risks: 0, warnings: [] as string[],
+  };
+  const nowMs = Date.parse(nowIso);
+  const fromIso = new Date(nowMs - 14 * 864e5).toISOString();
+  const toIso = new Date(nowMs + 21 * 864e5).toISOString();
+  const url = portCallV2CancelledUrl(fromIso, toIso);
+  const headers = {
+    'User-Agent': USER_AGENT,
+    Accept: 'application/json',
+    'Accept-Encoding': 'gzip',
+    'Digitraffic-User': DIGITRAFFIC_USER,
+  };
+  const page = await readText(deps, url, { headers });
+  /* HTTP ≠ OK: bez ostrzeżenia co przebieg (F7 #694); stary URL 400 nie spamuje. */
+  if (!page.ok) return empty;
   let json: unknown;
   try { json = JSON.parse(page.text); } catch {
-    return { count: 0, fihel: false, risks: 0, warnings: ['port-call v2 cancelled: nieczytelny JSON'] };
+    return { ...empty, warnings: ['port-call v2 cancelled: nieczytelny JSON'] };
   }
-  const obs = portCallV2CancelledHasFihel(json);
-  return { count: obs.count, fihel: obs.hasFihel, risks: 0, warnings: obs.warnings };
+  const parsed = parsePortCallV2Visits(json, 'cancelled');
+  const warnings = [...parsed.warnings];
+
+  /* Re-zgłoszenie: aktywne wizyty w tym samym oknie (bez status=cancelled). */
+  let activeVisits: ReturnType<typeof parsePortCallV2Visits>['visits'] = [];
+  const activeUrl = portCallV2ActiveVisitsUrl(fromIso, toIso);
+  const activePage = await readText(deps, activeUrl, { headers });
+  if (!activePage.ok) {
+    warnings.push(
+      'port-call v2 active: niedostępne — bez filtra re-zgłoszenia (decyzja 100)',
+    );
+  } else {
+    try {
+      const activeJson = JSON.parse(activePage.text) as unknown;
+      const activeParsed = parsePortCallV2Visits(activeJson, 'active');
+      activeVisits = activeParsed.visits;
+      warnings.push(...activeParsed.warnings);
+    } catch {
+      warnings.push('port-call v2 active: nieczytelny JSON — bez filtra re-zgłoszenia');
+    }
+  }
+
+  const [vessels, sailings] = await Promise.all([
+    deps.store.vessels(), deps.store.sailingsSince(sinceIso),
+  ]);
+  const hits = matchPortCallV2CancelledFleet(parsed.visits, vessels, sailings);
+  const fihel = hits.some((h) => h.visit.portOfCall === 'FIHEL' || h.visit.portOfCall === 'FIVUO')
+    || parsed.visits.some((v) => v.portOfCall === 'FIHEL' || v.portOfCall === 'FIVUO');
+  let risks = 0;
+  let matched = 0;
+  let reissued = 0;
+  const keepDedup: string[] = [];
+  for (const hit of hits) {
+    if (isPortCallV2Reissued(hit.visit, activeVisits)) {
+      reissued += 1;
+      continue;
+    }
+    matched += 1;
+    const risk = portCallV2CancelledFleetRisk(hit, nowIso, url);
+    keepDedup.push(risk.dedup);
+    if (await deps.store.raiseRisk(risk)) risks += 1;
+  }
+  await deps.store.resolveStaleRisks('FERRY_PORTCALL_V2_CANCELLED:', keepDedup);
+  return {
+    count: parsed.visits.length,
+    fleet: hits.length,
+    matched,
+    reissued,
+    fihel,
+    risks,
+    warnings,
+  };
 }
 
 

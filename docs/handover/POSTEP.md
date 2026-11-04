@@ -1,4 +1,26 @@
 
+## 2026-11-04 01:40 — #782 F7 r2 niegotowe → 0394 audience HHL
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
+- Scalanie: brak „F7: gotowe” po `cc1e0d04`. **#782 F7 r2 niegotowe** — FERRY → WSZYSCY mimo sygnału HHL.
+- **Krok F7 r2:** migracja **0394** `risk_audience_for` FERRY+`detail.audience=HHL`→HHL; `audience:'HHL'` w port-call v2 / cancel-suspect / ERR; tytuł bez dopasowania „(bez dopasowania)”; status.sh +5 (EXPECTED 648); vitest audience. Bez push na main.
+- **Dalej:** push → CI (unit/db/visual) → F7. Po scaleniu: DP-204, potem C2: 123….
+
+## 2026-11-04 01:15 — #782 F7 r1 niegotowe → decyzja 100 (tylko HIGH HHL)
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
+- Scalanie: brak „F7: gotowe” po `32608820`. **#782 F7 r1 niegotowe** — auto-ODWOLANY poza DP-121; decyzja **100**.
+- **Krok F7 r1:** usunięte `updateSailing(ODWOLANY)` + `insertOperatorNotice`; ryzyko HIGH HHL z `{dep}`; drugi GET aktywnych wizyt → re-zgłoszenie bez ryzyka (`port_call_v2_reissued`); obs. `port_call_v2_matched`. vitest bn3-winter-nav-mmsi **15**. Bez migracji. Bez push na main.
+- **Dalej:** push → CI → F7. Po scaleniu: #781 DP-204, potem C2: 123….
+
+## 2026-11-04 00:45 — #780 SCALONE; start DP-121 (Digitraffic v2 cancelled)
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
+- Scalanie: **#780 SCALONE** `642a9b21` (DP-202+203 / **0392**+**0393**; F7: gotowe @ `c1187089`; CI unit/db/visual ✔). `deploy-main` robi resztę. Bez push na main.
+- F7 #780 nieblokujące → rejestr **DP-204…208** (korytarz LV E67, DeepL limit/timeout, LV opis km, `rk_road_se` E22, domyślne `{road}`/`{limit}`).
+- **Krok DP-121** `pakiet/c2-dp-121-digitraffic-cancelled`: URL `status=cancelled` (+ okno czasu; bez `locode`→400); filtr FIHEL/FIVUO + MMSI/IMO floty ±3 h; ryzyko dedup `FERRY_PORTCALL_V2_CANCELLED:<visitId>`; matched → ODWOLANY. vitest bn3-winter-nav-mmsi **14**. Bez migracji.
+- **Dalej:** push → CI → F7. Potem C2: 123….
+
 ## 2026-11-03 23:50 — #780 F7 r3: auto DeepL zamiast RESOURCE_MISSING:TV_CODE
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.

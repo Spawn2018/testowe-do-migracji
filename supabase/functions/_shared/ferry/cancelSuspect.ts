@@ -331,6 +331,7 @@ export function cancelSuspectRisk(o: {
     titleKey: 'rk_ferry_cancel_suspect',
     params: { vessel: o.vessel, dep: o.departureAt.slice(0, 16) },
     detail: {
+      audience: 'HHL',
       zrodlo: 'DIGITRAFFIC_AIS',
       powod: o.reason,
       trasa: o.route,
