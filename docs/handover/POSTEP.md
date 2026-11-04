@@ -1,4 +1,11 @@
 
+## 2026-11-05 00:25 — DP-215 (#800): odświeżenie 11× stan-* Harmonogram (StageBar)
+
+- Skrzynka: #550 WSTRZYMANE; #798 DP-215; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: brak (brak „F7: gotowe”; visual zrzuty ✖ 41927587305 @ `318accc3` — `stan-najechanie-dark` 4277 px StageBar; telefon/bramy ✔, unit ✔).
+- **Krok:** 11 wzorców `stan-*.png` z `visual.yml` update=true 41930872357 (Harmonogram HHL 1440 — StageBar E28). Kokpit+mapa 1920 już wcześniej. Bez migracji. Matrycy 280 nie ruszano.
+- **Dalej:** push → CI → F7. DP-210 nie zaczynać.
+
 ## 2026-11-04 23:40 — DP-215 (#800): odświeżenie Mapa dark (StageBar)
 
 - Skrzynka: #550 WSTRZYMANE; #798 DP-215; BN5–8 w planie. Bez nowego `pilne`.
