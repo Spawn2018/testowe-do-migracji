@@ -1,4 +1,12 @@
 
+## 2026-11-04 15:25 — #791 SCALONE; start DP-123
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
+- Scalanie: **#791 SCALONE** `4e5ffc99` (DP-206 / **0399**–**0405**; F7: gotowe @ `3735049a`; CI unit/visual/db ✔). `deploy-main` robi resztę. Bez push na main.
+- Rejestr F7 #791 nieblokujące: **DP-207** (piloci LT/LV/EE/FI), **DP-208** (BAN/WORKS źródła), **DP-209** (WIND okno + N+1).
+- **Krok DP-123:** test vitest — Portnet zniknął + SOG 1,5 kn w geofence TLL przed ETA+45 → 0 alarmów (mutacja „zniknięcie bez wymogu stoi”). Gałąź `pakiet/c2-dp-123-cancel-suspect-test`.
+- **Dalej:** push → CI → F7. Bez push na main.
+
 ## 2026-11-04 14:55 — #791 F7 r5 B8a/b/c + B6b + B13 (0405)
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.

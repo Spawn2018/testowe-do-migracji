@@ -584,6 +584,38 @@ describe('BN3 ferry-portnet × cancel-suspect AIS (F7 #696 r3)', () => {
     expect(st.risks.filter((x) => x.dedup.startsWith('FERRY_CANCEL_SUSPECT:'))).toHaveLength(0);
   });
 
+  /**
+   * DP-123 / F7 #696 r4 nieblokujące: mutacja „zniknięcie bez wymogu stoi”
+   * przeżywa przy SOG 0,5–3 kn w geofence + Portnet zniknął. Kod OK — brakowało testu.
+   * Przed ETA+45 tylko gałąź zniknięcia; manewr przy kei ≠ stoi → 0 alarmów.
+   */
+  it('DP-123: zniknięcie + SOG 0,5–3 kn w geofence → brak alarmu (wymaga stoi)', async () => {
+    const sogManeuver = 1.5;
+    expect(sogManeuver).toBeGreaterThan(CANCEL_SUSPECT_MAX_SOG_KN);
+    expect(sogManeuver).toBeLessThan(CANCEL_SUSPECT_CLEAR_MIN_SOG_KN);
+    expect(isStandingAtDeparturePort(
+      { lat: 59.443, lon: 24.77, sogKn: sogManeuver },
+      'TLL-HEL',
+    )).toBe(false);
+    const early = new Date('2026-10-30T09:00:00Z'); /* dep+45…ETA+45: tylko disappeared */
+    expect(cancelSuspectDue(ETA, early.getTime())).toBe(false);
+    expect(cancelSuspectDisappearDue(DEP, ETA, early.getTime())).toBe(true);
+    const st = new MemStore();
+    st.sailings.push(gulfSailing({
+      id: 's-dp123-gone-sog',
+      source_ref: 'digitraffic:portcall:999123:TLL-HEL',
+      source: 'VIKING',
+    }));
+    await runFerryPortnet(deps(st, {
+      'port-calls': PORTNET_OTHER,
+      'locations?mmsi=': aisJson({
+        lat: 59.443, lon: 24.77, sog: sogManeuver,
+        tsMs: Date.parse('2026-10-30T08:50:00Z'),
+      }),
+    }, early));
+    expect(st.risks.filter((x) => x.dedup.startsWith('FERRY_CANCEL_SUSPECT:'))).toHaveLength(0);
+  });
+
   it('N11: bez openCancelSuspectSailings — ryzyko spoza since + ruch nie zamknięte', async () => {
     const st = new MemStore();
     const dep25h = new Date(NOW.getTime() - 25 * 3600_000).toISOString();
