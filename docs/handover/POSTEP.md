@@ -1,4 +1,11 @@
 
+## 2026-11-04 19:05 — #795 SCALONE; start DP-124 (UMG pusta ATA)
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
+- Scalanie: **#795 SCALONE** `9ab5b2cb` (DP-209; F7: gotowe @ `b35fd767`; CI unit/visual/db ✔). `deploy-main` robi resztę. Bez push na main.
+- **Krok DP-124** `pakiet/c2-dp-124-umg-empty-ata`: pusta / sama data ATA UMG → `atUtc=null` (obecność w porcie); bez `actual_arrival` / DOPLYNAL; blokuje past ETD→actual. Vitest bn3-umg-gdynia **20**/20. Bez migracji.
+- **Dalej:** push → CI → F7. Potem kolejka C2…; DP-210 nie zaczynać.
+
 ## 2026-11-04 18:40 — #795 DP-209 F7 B1 + odświeżenie CI
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.

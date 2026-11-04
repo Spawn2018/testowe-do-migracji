@@ -31,8 +31,12 @@ export interface UmgShipRow {
   callId: string;
   vessel: string;
   imo: number | null;
-  /** Czas zdarzenia w UTC. */
-  atUtc: string;
+  /**
+   * Czas zdarzenia w UTC.
+   * DP-124: na liście „w porcie” UMG bywa pusta kolumna ATA — wtedy `null`
+   * (obecność w porcie bez godziny; nie wolno zapisać jako actual_arrival).
+   */
+  atUtc: string | null;
   /**
    * Surowy tekst z ostatniej kolumny: nabrzeże (w porcie),
    * poprzedni port (spodziewane / wychodzące — na stronie „wychodzące” nagłówek to „Poprzedni port”).
@@ -55,14 +59,22 @@ export function extractPortGdyniaHtml(html: string): string | null {
   return m ? m[1]! : null;
 }
 
+/** DP-124: pusta / placeholder godzina UMG (nie ATA/ETD/ETA). */
+export function isUmgTimeEmpty(raw: string | null | undefined): boolean {
+  const t = (raw ?? '').trim();
+  return !t || /^(?:[-–—.…]|n\/?a|brak)$/i.test(t);
+}
+
 /** ISO z offsetem albo „DD.MM.RRRR HH:MM:SS” (Europe/Warsaw). */
 export function parseUmgLocalTime(raw: string): string | null {
   const t = raw.trim();
-  if (!t) return null;
+  if (isUmgTimeEmpty(t)) return null;
   if (/^\d{4}-\d{2}-\d{2}T/.test(t)) {
     const ms = Date.parse(t);
     return Number.isFinite(ms) ? new Date(ms).toISOString() : null;
   }
+  /* Samo DD.MM.RRRR bez godziny = pusta godzina (DP-124), nie północ. */
+  if (/^\d{1,2}\.\d{1,2}\.\d{4}$/.test(t)) return null;
   const m = t.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?/);
   if (!m) return null;
   const dd = m[1]!.padStart(2, '0');
@@ -118,19 +130,31 @@ export function parseUmgdyGdyniaHtml(html: string, kind: UmgKind): UmgParseResul
     dataRows += 1;
     const vessel = mapStenaVessel(cells[1]!, cells[2] ?? '');
     if (!vessel) continue;
-    const atUtc = parseUmgLocalTime(cells[4]!);
+    const timeRaw = cells[4] ?? '';
+    const atUtc = parseUmgLocalTime(timeRaw);
+    const imoN = Number((cells[2] ?? '').replace(/\D/g, ''));
+    const imo = Number.isFinite(imoN) && imoN > 0 ? imoN : null;
+    const note = cells[5]?.trim() || null;
+    /* DP-124: ATA bez godziny = obecność w porcie, nie actual. ETA/ETD bez godziny = pomijamy. */
     if (!atUtc) {
-      warnings.push(`UMG ${kind}: nieczytelny czas „${cells[4]}” (${vessel}).`);
+      if (kind === 'ATA' && isUmgTimeEmpty(timeRaw)) {
+        rows.push({ kind, callId: cells[0]!, vessel, imo, atUtc: null, note });
+        continue;
+      }
+      if (kind === 'ATA' && /^\d{1,2}\.\d{1,2}\.\d{4}$/.test(timeRaw.trim())) {
+        rows.push({ kind, callId: cells[0]!, vessel, imo, atUtc: null, note });
+        continue;
+      }
+      warnings.push(`UMG ${kind}: nieczytelny czas „${timeRaw}” (${vessel}).`);
       continue;
     }
-    const imoN = Number((cells[2] ?? '').replace(/\D/g, ''));
     rows.push({
       kind,
       callId: cells[0]!,
       vessel,
-      imo: Number.isFinite(imoN) && imoN > 0 ? imoN : null,
+      imo,
       atUtc,
-      note: cells[5]?.trim() || null,
+      note,
     });
   }
   if (!hasHeader) {

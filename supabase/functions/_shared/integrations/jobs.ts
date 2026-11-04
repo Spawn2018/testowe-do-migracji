@@ -2254,6 +2254,9 @@ async function applyUmgdyStenaBackup(deps: JobDeps, sinceIso: string): Promise<{
   for (const c of candidates) {
     const vesselId = byName.get(c.vessel);
     if (!vesselId) continue;
+    /* DP-124: ATA bez godziny — tylko obecność w porcie (inPortNames); bez actual. */
+    if (c.kind === 'ATA' && !c.atUtc) continue;
+    if (!c.atUtc) continue;
     const t = Date.parse(c.atUtc);
     if (!Number.isFinite(t)) continue;
 
