@@ -1,4 +1,11 @@
 
+## 2026-11-04 18:40 — #795 DP-209 F7 B1 + odświeżenie CI
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
+- Scalanie: brak (brak „F7: gotowe do scalenia” po `b3bec3fb`; checki PR zombie po sukcesie kroków → ten commit odświeża CI).
+- **Krok F7 B1:** `EE_ROAD_DISPLAY` E263/2/T2 → droga 2 (E263), E264/3/T3 → droga 3 (E264); nieznane E → droga {n}; vitest bn6-road-ee 37/37. Bez migracji.
+- **Dalej:** CI unit/visual → F7. Potem DP-124…; DP-210 nie zaczynać.
+
 ## 2026-11-04 17:40 — #794 SCALONE; start DP-209 (#789)
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
