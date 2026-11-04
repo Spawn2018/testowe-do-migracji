@@ -1554,7 +1554,9 @@ DP786_N3=$(sys "set session_replication_role=replica;
   returning id;
   set session_replication_role=origin" | grep -E '^[0-9]+$' | head -1)
 DP786_RES=$(sys "select dp786_mark_road_ee_wx_in_app_read()::text" | tail -1)
-echo "$DP786_RES" | grep -q '"count":2' && { ok=$((ok+1)); echo "  OK    DP-786: mark zwraca count=2"; } \
+# jsonb::text ma spację po „:” — „\"count\": 2”, nie „\"count\":2”.
+echo "$DP786_RES" | grep -Eq '"count"[[:space:]]*:[[:space:]]*2([,}]|$)' \
+  && { ok=$((ok+1)); echo "  OK    DP-786: mark zwraca count=2"; } \
   || { fail=$((fail+1)); echo "  FAIL  DP-786 wynik: $DP786_RES"; }
 chk6 "DP-786: ee-wx A przeczytane" "$(sys "select (read_at is not null)::text from notifications where id=$DP786_N1" | tail -1)" "true"
 chk6 "DP-786: ee-wx B przeczytane" "$(sys "select (read_at is not null)::text from notifications where id=$DP786_N2" | tail -1)" "true"

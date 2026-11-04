@@ -1,4 +1,11 @@
 
+## 2026-11-04 05:25 — #787 CI db: asercja count ze spacją jsonb
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne` (poza #550). #786 otwarte.
+- Scalanie: brak F7 „gotowe” po `17d8e72b`. unit+visual ✔; **db** FAIL security 501/502 — DP-786 `grep '"count":2'` vs jsonb::text `"count": 2` (funkcja OK, count=2).
+- **Krok:** `security.sh` — `grep -Eq` ze spacjami wokół `:`. Bez zmiany EXPECTED 502.
+- **Dalej:** push → CI `db` → F7. Po wdrożeniu: #785 rebase + ETA/Z2/`WIND_E49`.
+
 ## 2026-11-04 04:45 — #787 F7 r1 niegotowe: mark przez risk_signals
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne` (poza #550). #786 nadal otwarte.
