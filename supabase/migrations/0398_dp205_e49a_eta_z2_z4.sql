@@ -388,19 +388,18 @@ grant execute on function public.e49_slip_weather_local(uuid, text, timestamptz)
   to service_role;
 
 -- Opakowanie: Z4 wycofuje globalny slowdown z ETA; Z1 dokłada wiatr + lokalną śliskość.
+-- Rename przez to_regprocedure (nie pg_get_function_identity_arguments) —
+-- RETURNS TABLE ma OUT w katalogu; porównanie identity bywa mylące i pomija rename.
 do $$
 begin
-  if exists (
-    select 1 from pg_proc p
-      join pg_namespace n on n.oid = p.pronamespace
-     where n.nspname = 'public' and p.proname = 'compute_load_eta'
-       and pg_get_function_identity_arguments(p.oid) = 'uuid, timestamp with time zone'
-  ) and not exists (
-    select 1 from pg_proc p
-      join pg_namespace n on n.oid = p.pronamespace
-     where n.nspname = 'public' and p.proname = 'compute_load_eta_core'
-  ) then
+  if to_regprocedure('public.compute_load_eta_core(uuid, timestamptz)') is null then
+    if to_regprocedure('public.compute_load_eta(uuid, timestamptz)') is null then
+      raise exception 'DP-205 0398: brak compute_load_eta(uuid, timestamptz) do rename';
+    end if;
     execute 'alter function public.compute_load_eta(uuid, timestamptz) rename to compute_load_eta_core';
+  end if;
+  if to_regprocedure('public.compute_load_eta_core(uuid, timestamptz)') is null then
+    raise exception 'DP-205 0398: compute_load_eta_core nie istnieje po rename';
   end if;
 end $$;
 

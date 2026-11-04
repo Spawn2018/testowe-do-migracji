@@ -1,4 +1,11 @@
 
+## 2026-11-04 07:15 — #785 db FAIL: rename compute_load_eta_core
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
+- Scalanie: brak F7 „gotowe”. CI @ `5a458e4b`: unit ✔; **db** FAIL tower_boot 0398 — `compute_load_eta_core` nie istnieje (warunek rename na `pg_get_function_identity_arguments` nie trafił RETURNS TABLE). Visual anulowany (G-15, zepsuty SHA).
+- **Krok:** 0398 — rename przez `to_regprocedure` + wyjątek gdy brak po rename. Bez nowego numeru migracji (nie nałożona).
+- **Dalej:** push → CI (+`db`) → F7. Po scaleniu: E49-b DP-206.
+
 ## 2026-11-04 07:05 — #785 E49-a cz.3: ETA/Z2/Z4 + WIND_E49
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`. #787 już SCALONE.
