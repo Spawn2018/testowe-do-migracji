@@ -105,6 +105,11 @@ export interface BalticRoadEvent {
   /** Numer drogi z street/roadNumber/opisu (A5, E67, 134…). */
   road?: string | null;
   /**
+   * DP-204.5 / #781 pkt 10c: nazwa miejsca / stacji, gdy numer drogi nieznany
+   * (tytuł „stacja Kose (EE)” zamiast „droga b.d.”).
+   */
+  placeName?: string | null;
+  /**
    * DP-164: dopasowanie do listy dróg korytarza (do BN7).
    * `on` — A5/A8/A10/E67 (+ A1 przy Kownie LT; A7/A1 LV); `off` — znany numer poza listą;
    * `unknown` — numer nie wynika z danych.
@@ -459,17 +464,67 @@ function balticWarsawDt(iso: string | null | undefined): string {
   return `${day}.${month}.${year}, ${hour}:${minute}`;
 }
 
-/** DP-203: etykieta drogi w tytule (A5 / droga 138 / droga b.d.). */
+/** DP-204.5 / #781 pkt 8: „E 4” → „E4”. */
+export function compactEuroRoad(road: string): string {
+  return String(road ?? '').replace(/\bE\s+(\d{1,3})\b/gi, 'E$1').trim();
+}
+
+/**
+ * DP-204.5 / #781 pkt 8: krótkie miejsce w tytule (≤ 40 znaków).
+ * Bez wykonawcy/telefonu; bez powtórzonego numeru drogi / typu zdarzenia.
+ */
+export function balticShortPlace(
+  detail: string | null | undefined,
+  opts?: { road?: string | null; typePl?: string | null; maxLen?: number },
+): string {
+  let s = String(detail ?? '').replace(/\s+/g, ' ').trim();
+  if (!s) return '';
+  s = s
+    .replace(/\bWykonawca\s*:?\s*[^,.;]*/giu, ' ')
+    .replace(/\b(?:UAB|AB|AS|Oy|SIA)\s*[„"']?[^,.;]*/giu, ' ')
+    .replace(/\btel\.?\s*:?\s*\+?[\d\s()./-]{6,}/giu, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  const road = compactEuroRoad(opts?.road ?? '');
+  if (road) {
+    const esc = road.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    s = s.replace(new RegExp(`(?:^|[\\s,.;:·])${esc}\\b`, 'gi'), ' ').trim();
+  }
+  const typePl = (opts?.typePl ?? '').trim();
+  if (typePl && s.toLowerCase().startsWith(typePl.toLowerCase())) {
+    s = s.slice(typePl.length).replace(/^[\s,.:;·-]+/, '').trim();
+  }
+  s = s.replace(/^[·,.;:\s-]+|[·,.;:\s-]+$/g, '').trim();
+  const maxLen = opts?.maxLen ?? 40;
+  if (s.length > maxLen) s = `${s.slice(0, Math.max(1, maxLen - 1)).trimEnd()}…`;
+  return s;
+}
+
+/**
+ * DP-203 / DP-204.5: etykieta drogi w tytule (A5 / droga 138 / stacja Kose).
+ * „droga b.d.” tylko ostatecznie; nigdy w tytule HIGH (#781 pkt 10c).
+ */
 export function balticRoadLabel(
   country: BalticRoadCountry,
   road: string | null | undefined,
+  opts?: { placeName?: string | null; severity?: RiskSeverity },
 ): string {
-  const r = (road ?? '').trim();
-  if (!r) return 'droga b.d.';
-  if (/^[AET]\d+/i.test(r) || /^E\d+/i.test(r)) return r.toUpperCase().replace(/^([AET])0+(\d)/i, '$1$2');
-  if (/^\d+$/.test(r)) return `droga ${r}`;
-  if (/^T\d+/i.test(r)) return r.toUpperCase();
-  return r;
+  const r = compactEuroRoad((road ?? '').trim());
+  if (r) {
+    if (/^[AET]\d+/i.test(r) || /^E\d+/i.test(r)) {
+      return r.toUpperCase().replace(/^([AET])0+(\d)/i, '$1$2');
+    }
+    if (/^\d+$/.test(r)) return `droga ${r}`;
+    if (/^T\d+/i.test(r)) return r.toUpperCase();
+    return r;
+  }
+  const place = String(opts?.placeName ?? '').replace(/\s+/g, ' ').trim();
+  if (place) {
+    const withCountry = /\(([A-Z]{2})\)$/.test(place) ? place : `${place} (${country})`;
+    return withCountry.length > 48 ? `${withCountry.slice(0, 47)}…` : withCountry;
+  }
+  if (opts?.severity === 'HIGH') return `okolice trasy (${country})`;
+  return 'droga b.d.';
 }
 
 /**
@@ -526,8 +581,27 @@ export function balticEventTypePl(e: BalticRoadEvent): string {
 }
 
 /**
+ * DP-204.2: dopisek techniczny LV „, A7, km 6,2” (droga + km z LVC; przecinek dziesiętny PL).
+ */
+export function formatLvTechSuffix(e: BalticRoadEvent): string {
+  const road = (e.road ?? extractBalticRoadRefPreferStreet(null, e.title, e.detail) ?? '').trim();
+  const km = extractLvRoadKm(e.title, e.detail, e.freeText);
+  const bits: string[] = [];
+  if (road) bits.push(balticRoadLabel('LV', road));
+  if (km != null) {
+    const kmPl = Number.isInteger(km)
+      ? String(km)
+      : String(Math.round(km * 10) / 10).replace('.', ',');
+    bits.push(`km ${kmPl}`);
+  }
+  return bits.length ? `, ${bits.join(', ')}` : '';
+}
+
+/**
  * DP-203 / decyzja 99: tytuł jak SE — `Warunki drogowe <droga> (<KRAJ>): …`;
  * poza trasą: `… (KRAJ) · obok trasy: …` (EN off route / SV vid sidan av rutten w `{off}`).
+ * DP-204.2: LV — typ z drogą i km („Ograniczenie masy 40 t, A7, km 6,2”).
+ * DP-204.5 / #781 pkt 8: miejsce ≤ 40 znaków, bez wykonawcy/telefonu.
  */
 export function formatBalticRoadTitle(
   country: BalticRoadCountry,
@@ -543,7 +617,17 @@ export function formatBalticRoadTitle(
     if (note) type = note;
     else if ((e.freeText ?? '').trim()) type = 'Tłumaczenie w toku';
   }
-  const roadLabel = balticRoadLabel(country, e.road);
+  /* EE pogoda: tytuł zdarzenia = ryzyko gołoledzi / słaba widoczność (#781 pkt 11). */
+  if (country === 'EE' && String(e.kind ?? '').startsWith('EE_WEATHER') && e.title) {
+    type = String(e.title).trim() || type;
+  }
+  const roadLabel = balticRoadLabel(country, e.road, {
+    placeName: e.placeName, severity: e.severity,
+  });
+  if (country === 'LV') {
+    const suffix = formatLvTechSuffix(e);
+    if (suffix && !/,\s*km\s*\d/i.test(type)) type = `${type}${suffix}`;
+  }
   const from = balticWarsawDt(e.start);
   const to = balticWarsawDt(e.end);
   const when = from && to ? `od ${from} do ${to}` : from ? `od ${from}` : to ? `do ${to}` : '';
@@ -551,7 +635,15 @@ export function formatBalticRoadTitle(
   let place = '';
   const det = String(e.detail ?? '').replace(/\s+/g, ' ').trim();
   if (det && !/^(mass|width|height|virtual|restriction)/i.test(det)) {
-    place = det.length > 80 ? `${det.slice(0, 77)}…` : det;
+    /* DP-204.2: surowy „A7_L · km 6.2” nie jako place — jest w formatLvTechSuffix. */
+    const lvcKm = country === 'LV'
+      && /^(?:[AVP]\d+(?:_[A-Za-z]+)?\s*[·,]\s*)?km\s*\d/i.test(det);
+    /* EE pogoda: detail = jednostki PL — nie powielaj w tytule jako place. */
+    const eeWx = country === 'EE'
+      && /temperatura nawierzchni|wilgotność|widoczność/i.test(det);
+    if (!lvcKm && !eeWx) {
+      place = balticShortPlace(det, { road: e.road ?? roadLabel, typePl: type, maxLen: 40 });
+    }
   }
   const bits = [type, place, when].filter(Boolean);
   const offRoute = opts?.offRoute === true || e.corridorMatch === 'off';
@@ -852,6 +944,78 @@ export function minDistToCorridorKm(
   return best;
 }
 
+/** DP-204.5 / #781 pkt 10b: odcinek korytarza z numerem drogi. */
+export type CorridorRoadSeg = { from: LatLon; to: LatLon; road: string };
+
+/**
+ * Via Baltica LV (E67): A7 → A5 (Ķekava–Salaspils) → A6 (≤ km 24) → A4 → A1.
+ * Punkty jak CORRIDOR_LV.
+ */
+export const CORRIDOR_LV_ROAD_SEGS: CorridorRoadSeg[] = [
+  { from: [56.25, 24.45], to: [56.55, 24.20], road: 'A7' },
+  { from: [56.55, 24.20], to: [56.72, 24.25], road: 'A7' },
+  { from: [56.72, 24.25], to: [56.83, 24.23], road: 'A7' },
+  { from: [56.83, 24.23], to: [56.86, 24.35], road: 'A5' },
+  { from: [56.86, 24.35], to: [56.88, 24.45], road: 'A6' },
+  { from: [56.88, 24.45], to: [56.95, 24.30], road: 'A4' },
+  { from: [56.95, 24.30], to: [57.02, 24.30], road: 'A4' },
+  { from: [57.02, 24.30], to: [57.35, 24.40], road: 'A1' },
+  { from: [57.35, 24.40], to: [57.75, 24.55], road: 'A1' },
+  { from: [57.75, 24.55], to: [57.90, 24.40], road: 'A1' },
+];
+
+/** Via Baltica EE: T4/E67 → T11 → T1 (Muuga) / T8 (Paldiski). */
+export const CORRIDOR_EE_ROAD_SEGS: CorridorRoadSeg[] = [
+  { from: [57.87, 24.36], to: [58.385, 24.498], road: 'T4' },
+  { from: [58.385, 24.498], to: [58.904, 24.425], road: 'T4' },
+  { from: [58.904, 24.425], to: [59.35, 24.56], road: 'T4' },
+  { from: [59.35, 24.56], to: [59.354, 24.893], road: 'T11' },
+  { from: [59.354, 24.893], to: [59.413, 24.884], road: 'T11' },
+  { from: [59.413, 24.884], to: [59.50, 24.96], road: 'T1' },
+  { from: [59.44, 24.75], to: [59.308, 24.413], road: 'T8' },
+  { from: [59.308, 24.413], to: [59.352, 24.058], road: 'T8' },
+];
+
+/** LT Via Baltica — A5 (punkty jak CORRIDOR_LT). */
+export const CORRIDOR_LT_ROAD_SEGS: CorridorRoadSeg[] = [
+  { from: [54.40, 22.90], to: [54.56, 23.35], road: 'A5' },
+  { from: [54.56, 23.35], to: [54.90, 23.90], road: 'A5' },
+  { from: [54.90, 23.90], to: [55.30, 24.15], road: 'A5' },
+  { from: [55.30, 24.15], to: [55.73, 24.35], road: 'A5' },
+  { from: [55.73, 24.35], to: [56.05, 24.40], road: 'A5' },
+  { from: [56.05, 24.40], to: [56.25, 24.45], road: 'A5' },
+];
+
+/**
+ * DP-204.5 / #781 pkt 10b: najbliższa droga korytarza ≤ maxKm (domyślnie 300 m).
+ * Zwraca numer drogi albo null.
+ */
+export function nearestCorridorRoad(
+  country: 'LT' | 'LV' | 'EE',
+  lat: number,
+  lon: number,
+  maxKm = 0.3,
+): string | null {
+  const segs = country === 'EE'
+    ? CORRIDOR_EE_ROAD_SEGS
+    : country === 'LV'
+      ? CORRIDOR_LV_ROAD_SEGS
+      : CORRIDOR_LT_ROAD_SEGS;
+  let bestRoad: string | null = null;
+  let bestDist = Infinity;
+  for (const seg of segs) {
+    const dens = densifyCorridor([seg.from, seg.to], 1);
+    for (const p of dens) {
+      const d = haversineKm([lat, lon], p);
+      if (d < bestDist) {
+        bestDist = d;
+        bestRoad = seg.road;
+      }
+    }
+  }
+  return bestDist <= maxKm ? bestRoad : null;
+}
+
 /**
  * F7 #730 r2 B2 / r3 B3 / decyzja 85: HIGH zamknięcie z objazdem tylko gdy
  * czas trwania (koniec − start; bez startu → od `nowMs`) ≤ 72 h.
@@ -906,13 +1070,72 @@ export function ltRoadOnCorridor(
 }
 
 /**
- * LV: A7/E67 + A1 (do EE) + obwodnica Rygi A4/A5 (F7 #730 B7).
+ * DP-204: km z kodu LVC (`· km 22.97` / `km 6,2`).
+ * Bez dopasowania → null (nie zgadujemy).
+ */
+export function extractLvRoadKm(...texts: Array<string | null | undefined>): number | null {
+  for (const raw of texts) {
+    const t = String(raw ?? '');
+    const m = t.match(/(?:^|[·|,;\s])km\s*(\d+(?:[.,]\d+)?)\b/i);
+    if (m) {
+      const n = Number(String(m[1]).replace(',', '.'));
+      if (Number.isFinite(n)) return n;
+    }
+  }
+  return null;
+}
+
+/** DP-204: A6 na E67 — Salaspils–Saulkalne (ok. km 0–24). */
+export const LV_A6_E67_KM_MAX = 24;
+
+/**
+ * DP-204: A5 na E67 tylko Ķekava–Salaspils (wschód).
+ * Zachód (Babīte / Salaspils–Babīte, lon ≲ 24,05) → off.
+ */
+export function lvA5OnE67(lat?: number | null, lon?: number | null): BalticCorridorRoadMatch {
+  if (lat == null || lon == null) return 'on';
+  if (lon < 24.05) return 'off';
+  if (lat >= 56.80 && lat <= 56.96 && lon >= 24.05 && lon <= 24.45) return 'on';
+  return 'off';
+}
+
+/**
+ * DP-204: A6 na E67 — km ≤ 24 albo geometria Salaspils–Saulkalne.
+ * Bez km i bez współrzędnych → off (dawniej cały A6 = off).
+ */
+export function lvA6OnE67(
+  km?: number | null,
+  lat?: number | null,
+  lon?: number | null,
+): BalticCorridorRoadMatch {
+  if (km != null && Number.isFinite(km)) return km <= LV_A6_E67_KM_MAX ? 'on' : 'off';
+  if (lat != null && lon != null) {
+    if (lat >= 56.84 && lat <= 56.92 && lon >= 24.30 && lon <= 24.55) return 'on';
+    return 'off';
+  }
+  return 'off';
+}
+
+export type LvRoadCorridorOpts = {
+  km?: number | null;
+  lat?: number | null;
+  lon?: number | null;
+};
+
+/**
+ * LV: E67 = A7 (LT→Ķekava) + A5 (Ķekava–Salaspils) + A6 (Salaspils–Saulkalne km 0–24)
+ * + A4 (Saulkalne–Baltezers) + A1 (Baltezers→Ainaži). DP-204; wcześniej F7 #730 B7.
  * Znany numer poza listą (P/V, A12…) → off.
  */
-export function lvRoadOnCorridor(road: string | null | undefined): BalticCorridorRoadMatch {
+export function lvRoadOnCorridor(
+  road: string | null | undefined,
+  opts?: LvRoadCorridorOpts,
+): BalticCorridorRoadMatch {
   if (road == null || road === '') return 'unknown';
   const r = road.toUpperCase().replace(/\s+/g, '');
-  if (r === 'A7' || r === 'E67' || r === 'A1' || r === 'A4' || r === 'A5') return 'on';
+  if (r === 'A7' || r === 'E67' || r === 'A1' || r === 'A4') return 'on';
+  if (r === 'A5') return lvA5OnE67(opts?.lat, opts?.lon);
+  if (r === 'A6') return lvA6OnE67(opts?.km, opts?.lat, opts?.lon);
   return 'off';
 }
 
@@ -954,20 +1177,47 @@ export function applyBalticCorridorRoadFilter(
     if (weatherLike) {
       const nearWx = capped.lat != null && capped.lon != null
         && minDistToCorridorKm(capped.lat, capped.lon, corridor, densified) <= nearKm;
+      /* DP-204.5: pogoda bez numeru → droga z korytarza ≤ 300 m. */
+      let wxRoad = capped.road ?? null;
+      let wxPlace = capped.placeName ?? null;
+      if (!wxRoad && capped.lat != null && capped.lon != null) {
+        wxRoad = nearestCorridorRoad(country, capped.lat, capped.lon);
+        if (wxRoad) {
+          /* numer z geometrii → on gdy blisko korytarza pogodowego */
+        } else if (!wxPlace) {
+          wxPlace = capped.placeName ?? null;
+        }
+      }
       return {
         ...capped,
         corridorMatch: (nearWx ? 'on' : 'off') as BalticCorridorRoadMatch,
-        road: capped.road ?? null,
+        road: wxRoad,
+        placeName: wxPlace,
         severity: nearWx ? capped.severity : 'LOW' as RiskSeverity,
       };
     }
-    const road = capped.road
+    let road = capped.road
       ?? extractBalticRoadRefPreferStreet(null, capped.title, capped.detail);
-    let corridorMatch: BalticCorridorRoadMatch = country === 'LT'
-      ? ltRoadOnCorridor(road, capped)
-      : country === 'LV'
-        ? lvRoadOnCorridor(road)
-        : eeRoadOnCorridor(road, capped);
+    let placeName = capped.placeName ?? null;
+    let fromCorridorGeom = false;
+    /* DP-204.5 / #781 pkt 10b: brak numeru → najbliższa droga korytarza ≤ 300 m → on. */
+    if (!road && capped.lat != null && capped.lon != null) {
+      const nearRoad = nearestCorridorRoad(country, capped.lat, capped.lon);
+      if (nearRoad) {
+        road = nearRoad;
+        fromCorridorGeom = true;
+      }
+    }
+    const lvKm = country === 'LV'
+      ? extractLvRoadKm(capped.title, capped.detail, capped.freeText)
+      : null;
+    let corridorMatch: BalticCorridorRoadMatch = fromCorridorGeom
+      ? 'on'
+      : country === 'LT'
+        ? ltRoadOnCorridor(road, capped)
+        : country === 'LV'
+          ? lvRoadOnCorridor(road, { km: lvKm, lat: capped.lat, lon: capped.lon })
+          : eeRoadOnCorridor(road, capped);
     /* EE: bez numeru ≤ 2 km od portów → on (F7 #733 B3); odległość korytarza → unknown (DP-203). */
     if (
       country === 'EE'
@@ -978,9 +1228,19 @@ export function applyBalticCorridorRoadFilter(
     ) {
       corridorMatch = 'on';
     }
+    /* DP-204.5 pkt 10c: bez drogi — nazwa miejsca zamiast „droga b.d.”. */
+    if (!road && !placeName) {
+      const short = balticShortPlace(capped.detail ?? capped.title, { maxLen: 40 });
+      if (short && !/^(mass|width|height|virtual)/i.test(short)) {
+        placeName = short.startsWith('stacja ') || short.startsWith('okolice ')
+          ? short
+          : `okolice ${short}`;
+      }
+    }
     return {
       ...capped,
       road,
+      placeName,
       corridorMatch,
       severity: balticCapSeverity(capped.severity, corridorMatch),
     };
@@ -1436,11 +1696,19 @@ export function ltWeatherToSlowdownEvents(
 
 /* ---------- Łotwa — LVC / transportdata.gov.lv (#716 cz.3 / #589) ---------- */
 
-/** Via Baltica LT→LV→EE (granica LT → Rīga → granica EE ku Tallinn/Muuga/Paldiski). */
+/**
+ * Via Baltica LT→LV→EE po E67 (DP-204): A7 → Ķekava → A5 → Salaspils → A6 → Saulkalne → A4 → Baltezers → A1.
+ * Gęstsze punkty wokół obwodnicy Rygi — próg 300 m dla `unknown` (BALTIC_UNKNOWN_NEAR_KM).
+ */
 export const CORRIDOR_LV: LatLon[] = [
   [56.25, 24.45], // granica LT/LV
   [56.55, 24.20], // Bauska
-  [56.95, 24.10], // Rīga A7/A1
+  [56.72, 24.25], // Iecava / A7
+  [56.83, 24.23], // Ķekava A7/A5
+  [56.86, 24.35], // Salaspils A5/A6
+  [56.88, 24.45], // Saulkalne A6/A4 (~km 24)
+  [56.95, 24.30], // A4 ku Baltezers
+  [57.02, 24.30], // Baltezers A4/A1
   [57.35, 24.40], // Saulkrasti / A1
   [57.75, 24.55], // Salacgrīva
   [57.90, 24.40], // granica LV/EE
@@ -2708,28 +2976,88 @@ export function eeDatexFeedUrl(path: string): string {
 export const EE_PROBE_API_TIMEOUT_MS = 45_000;
 export const EE_PROBE_API_PATH = 'srti/animalObstacle';
 
+/** DP-204.5 / #781 pkt 10a: metadane stacji Tark Tee (droga + nazwa). */
+export type EeSiteInfo = {
+  lat: number;
+  lon: number;
+  road: string | null;
+  name: string | null;
+};
+
 /** DP-171 — ostatnia dobra mapa measurementSites (TTL 24 h). */
-let eeSitesCache: { fetchedAt: number; sites: Map<string, [number, number]> } | null = null;
+let eeSitesCache: { fetchedAt: number; sites: Map<string, EeSiteInfo> } | null = null;
 
 export function clearEeSitesCache(): void {
   eeSitesCache = null;
 }
 
+/** Współrzędne stacji (kompatybilne z pogodą / jobem). */
 export function getEeSitesCache(
   nowMs: number,
   ttlMs: number = EE_SITES_CACHE_TTL_MS,
 ): Map<string, [number, number]> | null {
+  const info = getEeSitesInfoCache(nowMs, ttlMs);
+  if (!info) return null;
+  const out = new Map<string, [number, number]>();
+  for (const [id, s] of info) out.set(id, [s.lat, s.lon]);
+  return out;
+}
+
+/** DP-204.5: pełne metadane stacji (road / name). */
+export function getEeSitesInfoCache(
+  nowMs: number,
+  ttlMs: number = EE_SITES_CACHE_TTL_MS,
+): Map<string, EeSiteInfo> | null {
   if (!eeSitesCache || eeSitesCache.sites.size === 0) return null;
   if (nowMs - eeSitesCache.fetchedAt > ttlMs) return null;
   return new Map(eeSitesCache.sites);
 }
 
 export function setEeSitesCache(
-  sites: Map<string, [number, number]>,
+  sites: Map<string, [number, number]> | Map<string, EeSiteInfo>,
   fetchedAt: number,
 ): void {
   if (sites.size === 0) return;
-  eeSitesCache = { fetchedAt, sites: new Map(sites) };
+  const norm = new Map<string, EeSiteInfo>();
+  for (const [id, v] of sites) {
+    if (Array.isArray(v)) {
+      const prev = eeSitesCache?.sites.get(id);
+      norm.set(id, {
+        lat: v[0], lon: v[1],
+        road: prev?.road ?? roadFromEeSiteId(id),
+        name: prev?.name ?? nameFromEeSiteId(id),
+      });
+    } else {
+      norm.set(id, {
+        lat: v.lat, lon: v.lon,
+        road: v.road ?? roadFromEeSiteId(id),
+        name: v.name ?? nameFromEeSiteId(id),
+      });
+    }
+  }
+  eeSitesCache = { fetchedAt, sites: norm };
+}
+
+/** DP-204.5: T4 / E67 z id stacji (`ee-site-t4-marjamaa`). */
+export function roadFromEeSiteId(id: string): string | null {
+  const t = id.match(/(?:^|[-_])t(\d{1,3})(?:[-_]|$)/i);
+  if (t) return `T${t[1]}`;
+  const e = id.match(/(?:^|[-_])e(\d{2,3})(?:[-_]|$)/i);
+  if (e) return `E${e[1]}`;
+  return extractBalticRoadRef(id.replace(/[-_]/g, ' '));
+}
+
+/** DP-204.5: „Marjamaa” / „Kose” z id stacji. */
+export function nameFromEeSiteId(id: string): string | null {
+  const parts = id.split(/[-_]/).filter(Boolean);
+  const skip = new Set(['ee', 'site', 'wx', 'station', 'tee']);
+  const nameParts: string[] = [];
+  for (const p of parts) {
+    if (skip.has(p.toLowerCase())) continue;
+    if (/^t?\d{1,3}$/i.test(p) || /^e\d{2,3}$/i.test(p)) continue;
+    nameParts.push(p.charAt(0).toUpperCase() + p.slice(1).toLowerCase());
+  }
+  return nameParts.length ? nameParts.join(' ') : null;
 }
 
 /** DP-180 — ostatnia dobra kopia RESTRICTIONS/SAFETY (TTL 60 min; pusta = OK). */
@@ -3141,9 +3469,13 @@ export function parseEeDatexXml(
   return out;
 }
 
-/** Mapa id stacji → współrzędne (measurementSites / MeasurementSiteTablePublication). */
-export function parseEeMeasurementSites(xml: string): Map<string, LatLon> {
-  const map = new Map<string, LatLon>();
+/**
+ * DP-204.5 / #781 pkt 10a: mapa id stacji → współrzędne + numer drogi + nazwa
+ * (measurementSites / MeasurementSiteTablePublication).
+ * Zwraca też LatLon-kompatybilny widok przez getEeSitesCache po setEeSitesCache.
+ */
+export function parseEeMeasurementSites(xml: string): Map<string, EeSiteInfo> {
+  const map = new Map<string, EeSiteInfo>();
   if (!xml || typeof xml !== 'string') return map;
   const chunks = xml.split(/<(?:\w+:)?measurementSiteRecord\b/i).slice(1);
   for (const raw of chunks) {
@@ -3156,9 +3488,84 @@ export function parseEeMeasurementSites(xml: string): Map<string, LatLon> {
     if (!id) continue;
     const coords = eeCoordsFromRecord(rec);
     if (!coords) continue;
-    map.set(id, [coords.lat, coords.lon]);
+    const roadRaw = lvTag(rec, 'roadNumber')
+      || lvTag(rec, 'roadName')
+      || '';
+    const road = normalizeEeRoadRef(
+      roadRaw
+        ? (extractBalticRoadRef(roadRaw) ?? roadRaw.trim())
+        : roadFromEeSiteId(id),
+    );
+    const nameRaw = (
+      lvTag(rec, 'measurementSiteName')
+      || lvTag(rec, 'measurementSiteIdentification')
+      || nameFromEeSiteId(id)
+      || ''
+    ).trim();
+    const name = nameRaw && nameRaw !== id
+      ? nameRaw.replace(/^ee-site[-_]?/i, '').replace(/[-_]/g, ' ').trim()
+      : nameFromEeSiteId(id);
+    map.set(id, {
+      lat: coords.lat,
+      lon: coords.lon,
+      road,
+      name: name ? (name.match(/^stacja\b/i) ? name : `stacja ${name}`) : null,
+    });
   }
   return map;
+}
+
+/**
+ * DP-204.5 / #781 pkt 11: polski opis pogody EE z °C i przecinkiem.
+ * Widoczność w km gdy ≥ 1000 m.
+ */
+export function formatEeWeatherDetailPl(opts: {
+  icyText?: string | null;
+  surfaceTempC?: number | null;
+  humidityPct?: number | null;
+  visibilityM?: number | null;
+}): string {
+  const bits: string[] = [];
+  const icy = String(opts.icyText ?? '').trim();
+  if (icy) bits.push(icy.slice(0, 120));
+  if (opts.surfaceTempC != null && Number.isFinite(opts.surfaceTempC)) {
+    const t = opts.surfaceTempC;
+    const abs = Math.abs(t);
+    const body = Number.isInteger(abs)
+      ? String(abs)
+      : String(Math.round(abs * 10) / 10).replace('.', ',');
+    const sign = t < 0 ? '−' : t > 0 ? '' : '';
+    /* −0 → „−0” tylko gdy ujemne zero z pomiaru; 0 → „0”. */
+    const shown = t === 0 ? '0' : `${sign}${body}`;
+    bits.push(`temperatura nawierzchni ${shown} °C`);
+  }
+  if (opts.humidityPct != null && Number.isFinite(opts.humidityPct)) {
+    bits.push(`wilgotność ${Math.round(opts.humidityPct)}%`);
+  }
+  if (opts.visibilityM != null && Number.isFinite(opts.visibilityM) && opts.visibilityM > 0) {
+    if (opts.visibilityM >= 1000) {
+      const km = opts.visibilityM / 1000;
+      const kmPl = Number.isInteger(km)
+        ? String(km)
+        : String(Math.round(km * 10) / 10).replace('.', ',');
+      bits.push(`widoczność ${kmPl} km`);
+    } else {
+      bits.push(`widoczność ${Math.round(opts.visibilityM)} m`);
+    }
+  }
+  return bits.join(' · ') || 'pogoda drogowa';
+}
+
+/** DP-204.5 / #781 pkt 11: tytuł ryzyka pogodowego EE. */
+export function eeWeatherRiskTitle(opts: {
+  icyText?: boolean;
+  coldWet?: boolean;
+  lowVis?: boolean;
+}): string {
+  if (opts.lowVis && !opts.icyText && !opts.coldWet) return 'słaba widoczność';
+  if (opts.icyText || opts.coldWet) return 'ryzyko gołoledzi';
+  if (opts.lowVis) return 'słaba widoczność';
+  return 'warunki pogodowe';
 }
 
 /**
@@ -3188,13 +3595,13 @@ function eeNestedMeasure(
 }
 
 /**
- * F7 #733 B5 / r2 B1 — MeasuredDataPublication: połącz z measurementSites;
- * niekorzystne: lód/śnieg/szron w treści, temp. ≤ 0 °C + (RH≥90 | opad | mokra nawierzchnia),
- * widoczność < 200 m. „märg” samo → nie. Zimno+mokro → HIGH (spowolnienie).
+ * F7 #733 B5 / r2 B1 / DP-204.5 — MeasuredDataPublication: połącz z measurementSites;
+ * ryzyko tylko przy zagrożeniu (#781 pkt 11): lód/śnieg/szron, temp. ≤ 0 °C + (RH≥90 | opad),
+ * widoczność < 1 km. „märg” samo → nie. Tytuł: ryzyko gołoledzi / słaba widoczność.
  */
 export function parseEeWeatherData(
   xml: string,
-  sites: Map<string, LatLon>,
+  sites: Map<string, LatLon> | Map<string, EeSiteInfo>,
   stats?: EeParseStats,
 ): BalticRoadEvent[] {
   if (!xml || typeof xml !== 'string') return [];
@@ -3202,6 +3609,23 @@ export function parseEeWeatherData(
   let skipped = 0;
   let weatherBlocks = 0;
   let weatherNoSite = 0;
+  const siteOf = (ref: string): { lat: number; lon: number; road: string | null; name: string | null } | null => {
+    const raw = sites.get(ref);
+    if (!raw) return null;
+    if (Array.isArray(raw)) {
+      const info = getEeSitesInfoCache(Date.now(), Number.POSITIVE_INFINITY)?.get(ref);
+      return {
+        lat: raw[0], lon: raw[1],
+        road: info?.road ?? roadFromEeSiteId(ref),
+        name: info?.name ?? nameFromEeSiteId(ref),
+      };
+    }
+    return {
+      lat: raw.lat, lon: raw.lon,
+      road: raw.road ?? roadFromEeSiteId(ref),
+      name: raw.name ?? nameFromEeSiteId(ref),
+    };
+  };
   const blocks = xml.split(/<(?:\w+:)?siteMeasurements\b/i).slice(1);
   for (const raw of blocks) {
     weatherBlocks++;
@@ -3211,9 +3635,9 @@ export function parseEeWeatherData(
     )?.[1]
       ?? block.match(/<(?:\w+:)?measurementSiteReference\b[^>]*>([^<]+)</i)?.[1]
       ?? '').trim();
-    const site = ref ? sites.get(ref) : undefined;
+    const site = ref ? siteOf(ref) : null;
     if (!site) { skipped++; weatherNoSite++; continue; }
-    const [lat, lon] = site;
+    const { lat, lon } = site;
     const textBlob = [
       ...[...block.matchAll(/<(?:\w+:)?value\b[^>]*>([^<]*)</gi)].map((m) => m[1]),
       ...[...block.matchAll(/<(?:\w+:)?weatherRelatedRoadConditionType\b[^>]*>([^<]*)</gi)].map((m) => m[1]),
@@ -3243,30 +3667,34 @@ export function parseEeWeatherData(
       || /<(?:\w+:)?precipitation\b/i.test(block);
     const wetSurface = /wet|moisture|niisk|märg/i.test(textBlob)
       || /roadSurfaceConditionType[^>]*>\s*wet/i.test(block);
-    /* F7 r2 B1: wilgoć tylko RH≥90 albo opad / mokra nawierzchnia — nie dowolny <humidity>. */
+    /* F7 r2 B1 / #781 pkt 11: wilgoć RH≥90 albo opad / mokra nawierzchnia. */
     const moist = (humidityPct != null && Number.isFinite(humidityPct) && humidityPct >= 90)
       || precip
       || wetSurface;
+    /* #781 pkt 11: słaba widoczność < 1 km (wcześniej < 200 m tylko do spowolnienia HIGH). */
     const lowVis = visibilityM != null && Number.isFinite(visibilityM)
-      && visibilityM > 0 && visibilityM < 200;
+      && visibilityM > 0 && visibilityM < 1000;
     const icyText = EE_ICY_CONTENT_RE.test(textBlob)
       || LV_ICY_DATEX_TYPE_RE.test(textBlob);
     const coldWet = surfaceTempC != null && Number.isFinite(surfaceTempC)
       && surfaceTempC <= 0 && moist;
-    /* Samo „märg” bez lodu / zimna / niskiej widoczności → pomiń. */
+    /* Odczyt bez zagrożenia → nie jest ryzykiem (#781 pkt 11). */
     if (!icyText && !lowVis && !coldWet) { skipped++; continue; }
-    const bits = [
-      icyText ? textBlob.trim().slice(0, 120) : '',
-      surfaceTempC != null ? `temp nawierzchni ${surfaceTempC} C` : '',
-      humidityPct != null ? `wilgotnosc ${humidityPct} %` : '',
-      visibilityM != null ? `widocznosc ${visibilityM} m` : '',
-    ].filter(Boolean);
-    const detail = bits.join(' · ') || 'pogoda drogowa';
-    /* F7 r2 B1: zimno+mokro → HIGH (spowolnienie); nie MEDIUM. */
+    const detail = formatEeWeatherDetailPl({
+      icyText: icyText ? textBlob.trim() : null,
+      surfaceTempC,
+      humidityPct,
+      visibilityM,
+    });
+    /* F7 #784 r2: gołoledź HIGH; widoczność <200 m HIGH; <1 km MEDIUM (bez push bez transportu). */
     let severity = eeSeverityForRecord('EE_WEATHER', detail, {
       contentText: detail, visibilityM,
     });
-    if (coldWet || icyText || lowVis) severity = 'HIGH';
+    if (coldWet || icyText) {
+      severity = 'HIGH';
+    } else if (lowVis) {
+      severity = (visibilityM != null && visibilityM < 200) ? 'HIGH' : 'MEDIUM';
+    }
     const measuredAt = (
       lvTag(block, 'measurementTimeDefault')
       || lvTag(block, 'timeDefault')
@@ -3275,9 +3703,12 @@ export function parseEeWeatherData(
     ).trim();
     /* F7 r2 drobne: dwa pomiary tej samej stacji — id z czasem; dedup po gorszej wadze. */
     const id = measuredAt ? `ee-wx:${ref}:${measuredAt}` : `ee-wx:${ref}`;
+    const placeName = site.name
+      ? (site.name.startsWith('stacja ') ? site.name : `stacja ${site.name}`)
+      : (nameFromEeSiteId(ref) ? `stacja ${nameFromEeSiteId(ref)}` : null);
     const next: BalticRoadEvent = {
       id,
-      title: 'Pogoda drogowa',
+      title: eeWeatherRiskTitle({ icyText, coldWet, lowVis }),
       detail,
       severity,
       lat,
@@ -3285,6 +3716,8 @@ export function parseEeWeatherData(
       kind: 'EE_WEATHER',
       start: measuredAt || null,
       end: null,
+      road: site.road,
+      placeName,
       visibilityM: visibilityM != null && Number.isFinite(visibilityM) ? visibilityM : null,
       corridorMatch: 'on',
     };
@@ -3460,8 +3893,8 @@ export function parseEeFeedBody(
   code: EeDatexFeedCode,
   prefer: 'xml' | 'json',
   stats?: EeParseStats,
-  sites?: Map<string, LatLon>,
-): { events: BalticRoadEvent[]; format: string; sites?: Map<string, LatLon> } {
+  sites?: Map<string, LatLon> | Map<string, EeSiteInfo>,
+): { events: BalticRoadEvent[]; format: string; sites?: Map<string, EeSiteInfo> } {
   const t = String(text ?? '').trim();
   if (!t) return { events: [], format: 'empty' };
   const c0 = t[0]!;

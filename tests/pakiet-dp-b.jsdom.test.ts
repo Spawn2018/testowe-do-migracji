@@ -74,7 +74,8 @@ describe('DP-177 · Drogi bałtyckie: twarda spacja między liczbą a jednostką
     expect(title.textContent).toContain('E75');
     expect(title.textContent).toContain('Warunki drogowe');
     expect(title.textContent).not.toMatch(/\d (?:km|m|h|min|t|dni|%)(?![\p{L}\p{N}])/u);
-    expect(row.querySelector('[data-limit-tag]')!.textContent).toBe('Limit masy 12 t');
+    /* DP-204/#781 pkt 6: bez dublowania „Limit masy” + „Ograniczenie masy” — tag ukryty. */
+    expect(row.querySelector('[data-limit-tag]')).toBeNull();
     expect(title.getAttribute('title')).toContain('12 t');
     const check = row.querySelector('[data-limit-check]')?.textContent ?? '';
     expect(check).not.toMatch(/\d t(?![\p{L}\p{N}])/u);

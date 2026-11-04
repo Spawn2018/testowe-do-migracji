@@ -1,4 +1,25 @@
 
+## 2026-11-04 02:55 — #784 F7 r2: widoczność MEDIUM / <200 m HIGH
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
+- Scalanie: brak „F7: gotowe” po `8ce89f65`. **#784 F7 r2** — jedna zmiana przed F7: słaba widoczność = MEDIUM (bez powiadomień bez transportu); gołoledź HIGH; widoczność < 200 m = HIGH.
+- **Krok:** `parseEeWeatherData` — `coldWet`/`icyText` → HIGH; `lowVis` <200 → HIGH, inaczej MEDIUM; fixture 800/150 m; test 800→MEDIUM, 150→HIGH, −1 °C+95%→HIGH. Bez migracji.
+- **Dalej:** push → CI → F7. Po scaleniu: DP-205/206 E49 (#783), potem DP-123….
+
+## 2026-11-04 02:35 — #784 F7 r1 niegotowe → DP-204.5 (p.8–12)
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`. #783 E49 bez `dla-cursora` — w rejestrze jako **DP-205/206**.
+- Scalanie: brak „F7: gotowe” po `6a3f5184`. **#784 F7 r1 niegotowe** — brak p.8–12 #781; kolizja numeracji z E49.
+- **Krok F7 r2:** miejsce≤40 bez wykonawcy/tel.; „E 4”→„E4”; DeepL 429→`rate_limit` (+ retry); EE droga z `getEeSitesCache`/geometrii ≤300 m; nazwa miejsca zamiast „b.d.” (nigdy w HIGH); pogoda EE PL (°C, km); tytuły gołoledź/widoczność; DP-205/206 = E49-a/b; stare 205–208 → 204.1–204.4. Bez migracji.
+- **Dalej:** push → CI → F7. Po scaleniu: E49 DP-205/206 albo DP-123….
+
+## 2026-11-04 02:20 — #782 SCALONE; start DP-204 (#781)
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`. #783 E49 (D-20261104-0105-01) bez etykiety `dla-cursora` — nie w skrzynce; kolejność po #781.
+- Scalanie: **#782 SCALONE** `4b9e0d9a` (DP-121 / **0394**; F7: gotowe @ `76da43be`; CI unit/db/visual ✔). `deploy-main` robi resztę. Bez push na main.
+- **Krok DP-204** `pakiet/c2-dp-204-lv-e67-corridor` (#781): A6 km≤24 `on` / km>24 `off`; A5 Babīte `off`; gęstszy `CORRIDOR_LV`; DeepL max 40/przebieg + timeout 8 s; LV „…, A7, km 6,2”; `rk_road_se`=`{road}: {event}`; `riskText` domyślne road/limit; bez dublowania tagu limitu. Bez migracji.
+- **Dalej:** push → CI → F7. Po scaleniu: DP-123… (C2); E49 (#783) po #781.
+
 ## 2026-11-04 01:40 — #782 F7 r2 niegotowe → 0394 audience HHL
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.

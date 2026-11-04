@@ -1083,8 +1083,13 @@ export function tp(requested: Locale, key: string, params: TParams = {}): string
 
 /** Tytuł / opis ryzyka: klucz słownika z parametrami, a bez klucza — tekst zapisany (dziennik, PL). */
 export function riskText(locale: Locale, text: string, key?: string, params?: TParams): string {
-  /* DP-203 / decyzja 99: `{off}` w rk_road_baltic* — puste gdy brak (stare ryzyka / demo). */
-  return key && hasKey(locale, key) ? tp(locale, key, { off: '', ...(params ?? {}) }) : text;
+  /* DP-203 / decyzja 99: `{off}` w rk_road_baltic* — puste gdy brak (stare ryzyka / demo).
+   * DP-204.4: brak `{road}` / `{limit}` w UI (stare ryzyka, FI kelirikko limit=null). */
+  if (!(key && hasKey(locale, key))) return text;
+  const p: TParams = { off: '', ...(params ?? {}) };
+  if (p.road === undefined || p.road === null || p.road === '') p.road = 'droga';
+  if (p.limit === undefined || p.limit === null || p.limit === '') p.limit = '—';
+  return tp(locale, key, p);
 }
 
 export function navLabel(locale: Locale, key: NavKey, role?: import('../types').RoleId): string {

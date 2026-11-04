@@ -49,6 +49,9 @@ function rowLabel(locale: Locale, r: BalticRoadRow): string {
 function Row({ r, locale, phone }: { r: BalticRoadRow; locale: Locale; phone: boolean }) {
   const tag = limitLabel(locale, r);
   const label = rowLabel(locale, r);
+  /* DP-204/#781 pkt 6: nie dubluj „Limit masy 40 t” + „Ograniczenie masy 40 t”. */
+  const tagDup = Boolean(tag) && /(?:Ograniczenie|Limit)\s+(?:masy|wysokości|szerokości)|sprawdź wysokość/i.test(label);
+  const showTag = Boolean(tag) && !tagDup;
   return (
     <RoadRow
       locale={locale}
@@ -62,8 +65,8 @@ function Row({ r, locale, phone }: { r: BalticRoadRow; locale: Locale; phone: bo
       }}
       box={r.country}
       /* długi tytuł ze źródła — jedna linia z wielokropkiem, pełny tekst w podpowiedzi (React sam koduje znaki) */
-      titleTip={keepUnits([tag, label].filter(Boolean).join(' · '))}
-      title={<>{r.limit ? <span className="rk-limit-tag" data-limit-tag>{tag}</span> : null}{label}</>}
+      titleTip={keepUnits([showTag ? tag : null, label].filter(Boolean).join(' · '))}
+      title={<>{showTag ? <span className="rk-limit-tag" data-limit-tag>{tag}</span> : null}{label}</>}
       impact={r.impact}
       when={rowWhen(locale, r)}
       note={r.note}

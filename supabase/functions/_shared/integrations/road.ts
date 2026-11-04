@@ -261,23 +261,26 @@ export function seRoadSlowdownMult(args: {
   return { mult: Math.round((1 + pct / 100) * 100) / 100, reason: bits.join(', '), adverseConditions, adverseWeather };
 }
 export function roadConditionRisk(c: RoadConditionReading): RiskInput {
+  const road = c.road || 'E4';
   return {
     kind: 'ROAD_SE', severity: 'MEDIUM',
-    title: `Warunki drogowe ${c.road || 'E4'}: ${c.text}`,
-    titleKey: 'rk_road_se', params: { event: c.text },
-    detail: { opis: c.location || c.text, rodzaj: 'RoadCondition', kod: c.code, lat: c.lat, lon: c.lon, od: c.start, zrodlo: 'Trafikverket RoadCondition (CC0)' },
+    title: `Warunki drogowe ${road}: ${c.text}`,
+    /* DP-204.3: params.road (E4/E22), nie stałe „E4:” w słowniku. */
+    titleKey: 'rk_road_se', params: { road, event: c.text },
+    detail: { opis: c.location || c.text, rodzaj: 'RoadCondition', kod: c.code, droga: road, lat: c.lat, lon: c.lon, od: c.start, zrodlo: 'Trafikverket RoadCondition (CC0)' },
     dedup: `ROAD_SE:RC:${c.id}`, sourceUrl: 'https://www.trafikverket.se/trafikinformation/', validUntil: null,
   };
 }
 export function weatherRisk(w: WeatherReading): RiskInput {
   const event = w.snow ? 'śnieg' : w.rain ? 'deszcz / mróz' : 'ślisko / mróz';
+  const road = 'E4';
   return {
     kind: 'ROAD_SE', severity: w.snow ? 'HIGH' : 'MEDIUM',
-    title: `Warunki drogowe E4: ${event}, ${w.name}`,
-    titleKey: 'rk_road_se', params: { event },
+    title: `Warunki drogowe ${road}: ${event}, ${w.name}`,
+    titleKey: 'rk_road_se', params: { road, event },
     detail: {
       opis: `powietrze ${w.airC ?? '—'}°C, nawierzchnia ${w.surfaceC ?? '—'}°C, wiatr ${w.windMs ?? '—'} m/s`,
-      rodzaj: 'WeatherMeasurepoint', lat: w.lat, lon: w.lon, zrodlo: 'Trafikverket WeatherMeasurepoint (CC0)',
+      rodzaj: 'WeatherMeasurepoint', droga: road, lat: w.lat, lon: w.lon, zrodlo: 'Trafikverket WeatherMeasurepoint (CC0)',
     },
     dedup: `ROAD_SE:WX:${w.id}`, sourceUrl: 'https://www.trafikverket.se/trafikinformation/', validUntil: null,
   };
@@ -340,9 +343,15 @@ export function markSeOffRoute(risk: RiskInput): RiskInput {
   };
 }
 
+/** DP-204.5 / #781 pkt 8: „E 4” → „E4” w etykiecie SE. */
+function compactSeRoadLabel(road: string | null | undefined): string {
+  const r = String(road ?? '').replace(/\bE\s+(\d{1,3})\b/gi, 'E$1').trim();
+  return r || 'E4';
+}
+
 export function roadRisk(country: 'SE' | 'PL', e: RoadEvent, sourceUrl: string): RiskInput {
   const offSe = country === 'SE' && seIsOffMainCorridor(e);
-  const roadLabel = e.road || 'E4';
+  const roadLabel = country === 'SE' ? compactSeRoadLabel(e.road) : (e.road || 'E4');
   const seTitle = offSe
     ? `Warunki drogowe ${roadLabel} · obok trasy: ${e.title}`
     : `Warunki drogowe ${roadLabel}: ${e.title}`;

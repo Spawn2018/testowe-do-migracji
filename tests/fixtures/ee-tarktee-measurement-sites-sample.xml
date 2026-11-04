@@ -5,11 +5,25 @@
     <measurementSiteTable>
       <measurementSiteRecord id="ee-site-t4-marjamaa">
         <measurementSiteIdentification>ee-site-t4-marjamaa</measurementSiteIdentification>
+        <measurementSiteName>Märjamaa</measurementSiteName>
+        <roadNumber>T4</roadNumber>
         <measurementSiteLocation>
           <pointByCoordinates>
             <pointCoordinates>
               <latitude>58.904000</latitude>
               <longitude>24.425000</longitude>
+            </pointCoordinates>
+          </pointByCoordinates>
+        </measurementSiteLocation>
+      </measurementSiteRecord>
+      <measurementSiteRecord id="ee-site-kose">
+        <measurementSiteIdentification>ee-site-kose</measurementSiteIdentification>
+        <measurementSiteName>Kose</measurementSiteName>
+        <measurementSiteLocation>
+          <pointByCoordinates>
+            <pointCoordinates>
+              <latitude>59.182000</latitude>
+              <longitude>25.168000</longitude>
             </pointCoordinates>
           </pointByCoordinates>
         </measurementSiteLocation>
