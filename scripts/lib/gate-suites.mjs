@@ -32,7 +32,7 @@ export const EXPECTED_LOCAL = {
   'dec-fx': 13, // #384: actor/visible_to NULL; resolve-all = count(*)
   dec3: 16, // #411 F7 B1: +2 trigger UPDATE→RESOLVED czyści DECISION_OPEN
   dec5: 11,
-  dec6: 30, // +3 WIND_* E49-a (DP-205 / 0396); +2 C4; +2 B7 ETA_CONF_*; wcześniej 27
+  dec6: 32, // +2 SLIP_* E49-a (0398); +3 WIND_* (0396); +2 C4; +2 B7; wcześniej 27
   adm10: 8,
   hist11: 13, // #484: +2 (OPS + KSH zakres/redakcja zamiast odmowy); było 11
   workflows: 90, // #505 F7: +route null/OPS set_enabled|soft_delete/po/_reason/re-apply (było 86)
@@ -68,8 +68,8 @@ export const EXPECTED_TEST = {
   ...EXPECTED_LOCAL,
   security: 498, // 502 - 4 SKIP (B6); F7 #787 +6 DP-786
   risks: 44, // 46 − 2 SKIP (C1)
-  // dec6: 30 − 4 SKIP — wstawki auth.sessions dla kont seeda (FK → auth.users); lokalnie/CI bez FK (stub)
-  dec6: 26,
+  // dec6: 32 − 4 SKIP — wstawki auth.sessions dla kont seeda (FK → auth.users); lokalnie/CI bez FK (stub)
+  dec6: 28,
   backup: 36, // 44 − 8 SKIP (eksport/odtworzenie / CREATE DATABASE); #516 F7 r2 +2
 };
 

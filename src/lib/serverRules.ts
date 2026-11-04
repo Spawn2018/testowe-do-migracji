@@ -19,8 +19,8 @@ export type ServerRule = 'TRACKING_WINDOW' | 'SITE_EXIT_DELIVERED' | 'WIND_E49' 
 const ON_IN_PRODUCTION: Record<ServerRule, boolean> = {
   TRACKING_WINDOW: true /* A1 */,
   SITE_EXIT_DELIVERED: true /* A2 */,
-  WIND_E49: false /* P6 E49 Z1 */,
-  DETOUR_E49: false /* P6 E49 Z3 */,
+  WIND_E49: true /* E49-a DP-205 Z1/Z2/Z4 (#785) */,
+  DETOUR_E49: false /* E49-b DP-206 Z3 */,
   ROAD_PL_HERE: false /* P6 E2 */,
   ROAD_SITUATIONS_MAP: false /* P9 E29 pkt 3 */,
   INVOICE_A4: true /* A4 register_invoice */,

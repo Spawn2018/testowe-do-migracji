@@ -924,6 +924,32 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
       if (r.error) return 0;
       return r.count ?? 0;
     },
+    async listCorridorWindForecast(corridor: string, maxAgeMin = 180) {
+      const since = new Date(Date.now() - maxAgeMin * 60_000).toISOString();
+      const r = await sb.from('corridor_wind_forecast')
+        .select('corridor,km,lon,lat,bearing_deg,source,samples')
+        .eq('corridor', corridor)
+        .gte('fetched_at', since)
+        .order('km');
+      if (r.error) throw new Error(`corridor_wind_forecast: ${r.error.message}`);
+      return (r.data ?? []).map((row) => ({
+        corridor: String(row.corridor),
+        km: Number(row.km),
+        lon: Number(row.lon),
+        lat: Number(row.lat),
+        bearingDeg: Number(row.bearing_deg),
+        source: (row.source === 'FMI' ? 'FMI' : 'SMHI') as 'SMHI' | 'FMI',
+        samples: Array.isArray(row.samples) ? row.samples : [],
+      }));
+    },
+    async loadInTrackingWindow(loadId: string, at?: string) {
+      const r = await sb.rpc('load_in_tracking_window', {
+        p_load: loadId,
+        p_ts: at ?? new Date().toISOString(),
+      });
+      if (r.error) return false;
+      return r.data === true;
+    },
     async processPosition(row: {
       loadId: string; lat: number; lon: number; ts: string;
       source: 'EMTRACK_WEB' | 'TELEMATICS_API' | 'SUBCONTRACTOR_LINK' | 'SAFEFLEET';

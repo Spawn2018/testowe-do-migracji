@@ -1,4 +1,11 @@
 
+## 2026-11-04 07:05 — #785 E49-a cz.3: ETA/Z2/Z4 + WIND_E49
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`. #787 już SCALONE.
+- Scalanie: brak F7 „gotowe” (cz.3 po zielonym CI @ `24f67712`). Bez push na main.
+- **Krok cz.3:** migracja **0398** — `compute_load_eta` wrapper (`_core`): Z4 bez globalnego slowdown, Z1 `causes.weather` z `corridor_wind_forecast` + lokalna śliskość; SLIP_* w `ops_thresholds`; `route-hazards` sprawy Z2; `WIND_E49=true`; vitest `e49-eta-weather`; dec6 31/32.
+- **Dalej:** push → CI (+`db`) → F7. Po scaleniu: E49-b DP-206.
+
 ## 2026-11-04 06:20 — #787 SCALONE; #785 rebase (0396+0397)
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne` (poza #550). #786 zamknięte.
