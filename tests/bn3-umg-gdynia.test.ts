@@ -7,8 +7,8 @@
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import {
-  extractPortGdyniaHtml, isKarlskronaNote, parseUmgLocalTime, parseUmgdyGdyniaHtml,
-  stenaUmgCandidates,
+  extractPortGdyniaHtml, isKarlskronaNote, isUmgTimeAbsent, isUmgTimeEmpty, parseUmgLocalTime,
+  parseUmgdyGdyniaHtml, stenaUmgCandidates,
 } from '../supabase/functions/_shared/ferry/umgdyShipMovements';
 import {
   runFerryPortnet, type JobDeps, type JobResult, type SyncStore,
@@ -168,6 +168,17 @@ describe('BN3 UMG Gdynia parser', () => {
     expect(parseUmgLocalTime('31.10.2026 08:50:00')).toMatch(/^2026-10-31T/);
   });
 
+  /* DP-124: pusta godzina ATA — nie północ, nie „nieczytelny” dla Steny w porcie. */
+  it('DP-124: pusta / sama data → null; isUmgTimeEmpty / isUmgTimeAbsent', () => {
+    expect(isUmgTimeEmpty('')).toBe(true);
+    expect(isUmgTimeEmpty('—')).toBe(true);
+    expect(isUmgTimeAbsent('31.10.2026')).toBe(true);
+    expect(isUmgTimeAbsent('12:xx')).toBe(false);
+    expect(parseUmgLocalTime('')).toBeNull();
+    expect(parseUmgLocalTime('31.10.2026')).toBeNull();
+    expect(parseUmgLocalTime('-')).toBeNull();
+  });
+
   it('parseUmgdyGdyniaHtml ATA: tylko Stena Ebba', () => {
     const p = parseUmgdyGdyniaHtml(UMG_IN, 'ATA');
     expect(p.rows).toHaveLength(1);
@@ -189,6 +200,54 @@ describe('BN3 UMG Gdynia parser', () => {
     const empty = parseUmgdyGdyniaHtml(EMPTY_TABLE, 'ATA');
     expect(empty.rows).toHaveLength(0);
     expect(empty.warnings.some((w) => /pusta tabela/i.test(w))).toBe(true);
+  });
+
+  it('DP-124: Stena w porcie bez godziny ATA → wiersz z atUtc=null, bez ostrzeżenia', () => {
+    const html = `<!DOCTYPE html><html><body>
+<h2>Port Gdynia</h2>
+<table class="table table-striped">
+<thead><tr>
+<th>Call ID</th><th>Nazwa statku</th><th>IMO</th><th>Agent</th><th>ATA (LT)</th><th>Nabrzeże</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>7377814</td><td>STENA EBBA</td><td>9863003</td><td>Stena</td>
+<td></td><td>Polskie</td>
+</tr>
+</tbody></table>
+</body></html>`;
+    const p = parseUmgdyGdyniaHtml(html, 'ATA');
+    expect(p.rows).toHaveLength(1);
+    expect(p.rows[0]).toMatchObject({ vessel: 'M/F Stena Ebba', atUtc: null, kind: 'ATA' });
+    expect(p.emptyTime).toBe(1);
+    expect(p.warnings.filter((w) => /nieczytelny/i.test(w))).toHaveLength(0);
+  });
+
+  /* F7 #796 r1: ETA/ETD pusta komórka — pomijać bez ostrzeżenia; licznik emptyTime. */
+  it('F7 #796: pusta ETD → 0 ostrzeżeń, emptyTime 1; „12:xx” → ostrzeżenie', () => {
+    const emptyEtd = `<!DOCTYPE html><html><body>
+<h2>Port Gdynia</h2>
+<table class="table table-striped">
+<thead><tr>
+<th>Call ID</th><th>Nazwa statku</th><th>IMO</th><th>Agent</th><th>ETD (LT)</th><th>Poprzedni port</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>7377815</td><td>STENA ESTELLE</td><td>9862994</td><td>Stena</td>
+<td></td><td>Karlskrona</td>
+</tr>
+</tbody></table>
+</body></html>`;
+    const empty = parseUmgdyGdyniaHtml(emptyEtd, 'ETD');
+    expect(empty.rows).toHaveLength(0);
+    expect(empty.emptyTime).toBe(1);
+    expect(empty.warnings.filter((w) => /nieczytelny/i.test(w))).toHaveLength(0);
+
+    const badEtd = emptyEtd.replace('<td></td><td>Karlskrona</td>', '<td>12:xx</td><td>Karlskrona</td>');
+    const bad = parseUmgdyGdyniaHtml(badEtd, 'ETD');
+    expect(bad.rows).toHaveLength(0);
+    expect(bad.emptyTime).toBe(0);
+    expect(bad.warnings.some((w) => /nieczytelny czas „12:xx”/i.test(w))).toBe(true);
   });
 });
 
@@ -500,6 +559,81 @@ describe('BN3 UMG × ferry-portnet', () => {
       'statki-w-porcie': 503,
     }));
     expect(st.risks.some((r) => r.dedup.startsWith('SOURCE_DOWN:UMG_GDY'))).toBe(true);
+  });
+
+  it('F7 #796: pusta ETD → umg_empty_time w observations; bez ostrzeżenia nieczytelny', async () => {
+    const st = new MemStore();
+    const emptyEtd = `<!DOCTYPE html><html><body>
+<h2>Port Gdynia</h2>
+<table class="table table-striped">
+<thead><tr>
+<th>Call ID</th><th>Nazwa statku</th><th>IMO</th><th>Agent</th><th>ETD (LT)</th><th>Poprzedni port</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>7378101</td><td>STENA ESTELLE</td><td>9862994</td><td>Stena</td>
+<td></td><td>Karlskrona</td>
+</tr>
+</tbody></table>
+</body></html>`;
+    const r = await runFerryPortnet(deps(st, {
+      'port-calls': PORTNET,
+      'statki-spodziewane': EMPTY_TABLE,
+      'statki-wychodzace': emptyEtd,
+      'statki-w-porcie': EMPTY_TABLE,
+    }));
+    expect(r.ok).toBe(true);
+    expect(r.observations?.umg_empty_time).toBe('1');
+    expect((r.warnings ?? []).filter((w) => /nieczytelny/i.test(w))).toHaveLength(0);
+  });
+
+  it('DP-124: pusta ATA Stena w porcie → bez actual_arrival; past ETD nie daje W_REJSIE', async () => {
+    const st = new MemStore();
+    st.sailings.push(
+      {
+        id: 'kaa-ebba-empty', vessel_id: EBBA, route: 'KAA-GDY',
+        departure_at: '2026-10-31T04:00:00.000Z', arrival_at: '2026-10-31T07:50:00.000Z',
+        delayed_departure_at: null, delayed_arrival_at: null,
+        actual_departure_at: '2026-10-31T04:05:00.000Z', actual_arrival_at: null,
+        status: 'W_REJSIE', source: 'STENA',
+      },
+      {
+        id: 'gdy-ebba-etd', vessel_id: EBBA, route: 'GDY-KAA',
+        departure_at: '2026-10-31T09:00:00.000Z', arrival_at: '2026-10-31T13:00:00.000Z',
+        delayed_departure_at: null, delayed_arrival_at: null,
+        actual_departure_at: null, actual_arrival_at: null,
+        status: 'ZAPLANOWANY', source: 'STENA',
+      },
+    );
+    const emptyAtaInPort = `<!DOCTYPE html><html><body>
+<h2>Port Gdynia</h2>
+<table class="table table-striped">
+<thead><tr>
+<th>Call ID</th><th>Nazwa statku</th><th>IMO</th><th>Agent</th><th>ATA (LT)</th><th>Nabrzeże</th>
+</tr></thead>
+<tbody>
+<tr>
+<td>7377814</td><td>STENA EBBA</td><td>9863003</td><td>Stena</td>
+<td></td><td>Polskie</td>
+</tr>
+</tbody></table>
+</body></html>`;
+    /* Past ETD Ebba — gdyby pusta ATA nie liczyła obecności, fałszywie W_REJSIE. */
+    const pastEtdEbba = UMG_ETD
+      .replace('STENA ESTELLE', 'STENA EBBA')
+      .replace('9862994', '9863003');
+    await runFerryPortnet(deps(st, {
+      'port-calls': PORTNET,
+      'statki-spodziewane': EMPTY_TABLE,
+      'statki-wychodzace': pastEtdEbba,
+      'statki-w-porcie': emptyAtaInPort,
+    }));
+    expect(st.sailings.find((s) => s.id === 'kaa-ebba-empty')).toMatchObject({
+      status: 'W_REJSIE', actual_arrival_at: null,
+    });
+    expect(st.sailings.find((s) => s.id === 'gdy-ebba-etd')).toMatchObject({
+      status: 'ZAPLANOWANY', actual_departure_at: null,
+    });
   });
 
   it('F7 r3: RECZNIE + STENA_STATUS down + ETA +60 → delayed_arrival bez zmian', async () => {

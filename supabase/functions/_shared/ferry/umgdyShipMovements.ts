@@ -31,8 +31,12 @@ export interface UmgShipRow {
   callId: string;
   vessel: string;
   imo: number | null;
-  /** Czas zdarzenia w UTC. */
-  atUtc: string;
+  /**
+   * Czas zdarzenia w UTC.
+   * DP-124: na liście „w porcie” UMG bywa pusta kolumna ATA — wtedy `null`
+   * (obecność w porcie bez godziny; nie wolno zapisać jako actual_arrival).
+   */
+  atUtc: string | null;
   /**
    * Surowy tekst z ostatniej kolumny: nabrzeże (w porcie),
    * poprzedni port (spodziewane / wychodzące — na stronie „wychodzące” nagłówek to „Poprzedni port”).
@@ -43,6 +47,8 @@ export interface UmgShipRow {
 export interface UmgParseResult {
   rows: UmgShipRow[];
   warnings: string[];
+  /** DP-124 / F7 #796: puste komórki czasu (wszystkie rodzaje) — bez ostrzeżenia. */
+  emptyTime: number;
 }
 
 function stripTags(s: string): string {
@@ -55,14 +61,28 @@ export function extractPortGdyniaHtml(html: string): string | null {
   return m ? m[1]! : null;
 }
 
+/** DP-124: pusta / placeholder godzina UMG (nie ATA/ETD/ETA). */
+export function isUmgTimeEmpty(raw: string | null | undefined): boolean {
+  const t = (raw ?? '').trim();
+  return !t || /^(?:[-–—.…]|n\/?a|brak)$/i.test(t);
+}
+
+/** DP-124: brak godziny — pusta komórka albo sama data DD.MM.RRRR. */
+export function isUmgTimeAbsent(raw: string | null | undefined): boolean {
+  const t = (raw ?? '').trim();
+  return isUmgTimeEmpty(t) || /^\d{1,2}\.\d{1,2}\.\d{4}$/.test(t);
+}
+
 /** ISO z offsetem albo „DD.MM.RRRR HH:MM:SS” (Europe/Warsaw). */
 export function parseUmgLocalTime(raw: string): string | null {
   const t = raw.trim();
-  if (!t) return null;
+  if (isUmgTimeEmpty(t)) return null;
   if (/^\d{4}-\d{2}-\d{2}T/.test(t)) {
     const ms = Date.parse(t);
     return Number.isFinite(ms) ? new Date(ms).toISOString() : null;
   }
+  /* Samo DD.MM.RRRR bez godziny = pusta godzina (DP-124), nie północ. */
+  if (/^\d{1,2}\.\d{1,2}\.\d{4}$/.test(t)) return null;
   const m = t.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})\s+(\d{1,2}):(\d{2})(?::(\d{2}))?/);
   if (!m) return null;
   const dd = m[1]!.padStart(2, '0');
@@ -91,17 +111,18 @@ export function isKarlskronaNote(note: string | null | undefined): boolean {
 export function parseUmgdyGdyniaHtml(html: string, kind: UmgKind): UmgParseResult {
   const warnings: string[] = [];
   const rows: UmgShipRow[] = [];
+  let emptyTime = 0;
   const section = extractPortGdyniaHtml(html);
   if (!section) {
     warnings.push('Struktura UMG zmieniona: brak sekcji Port Gdynia.');
-    return { rows, warnings };
+    return { rows, warnings, emptyTime };
   }
   const table = section.match(
     /<table[^>]*class="[^"]*table-striped[^"]*"[^>]*>[\s\S]*?<\/table>/i,
   );
   if (!table) {
     warnings.push('Struktura UMG zmieniona: brak tabeli desktopowej Port Gdynia.');
-    return { rows, warnings };
+    return { rows, warnings, emptyTime };
   }
   /* F7 #695 r1 B3: <tr class=…> też; brak nagłówków / pusta tabela = awaria struktury. */
   const trs = [...table[0]!.matchAll(/<tr[^>]*>([\s\S]*?)<\/tr>/gi)];
@@ -118,19 +139,30 @@ export function parseUmgdyGdyniaHtml(html: string, kind: UmgKind): UmgParseResul
     dataRows += 1;
     const vessel = mapStenaVessel(cells[1]!, cells[2] ?? '');
     if (!vessel) continue;
-    const atUtc = parseUmgLocalTime(cells[4]!);
+    const timeRaw = cells[4] ?? '';
+    const atUtc = parseUmgLocalTime(timeRaw);
+    const imoN = Number((cells[2] ?? '').replace(/\D/g, ''));
+    const imo = Number.isFinite(imoN) && imoN > 0 ? imoN : null;
+    const note = cells[5]?.trim() || null;
+    /* DP-124 / F7 #796: pusty czas — bez ostrzeżenia (licznik); ATA = obecność w porcie. */
     if (!atUtc) {
-      warnings.push(`UMG ${kind}: nieczytelny czas „${cells[4]}” (${vessel}).`);
+      if (isUmgTimeAbsent(timeRaw)) {
+        emptyTime += 1;
+        if (kind === 'ATA') {
+          rows.push({ kind, callId: cells[0]!, vessel, imo, atUtc: null, note });
+        }
+        continue;
+      }
+      warnings.push(`UMG ${kind}: nieczytelny czas „${timeRaw}” (${vessel}).`);
       continue;
     }
-    const imoN = Number((cells[2] ?? '').replace(/\D/g, ''));
     rows.push({
       kind,
       callId: cells[0]!,
       vessel,
-      imo: Number.isFinite(imoN) && imoN > 0 ? imoN : null,
+      imo,
       atUtc,
-      note: cells[5]?.trim() || null,
+      note,
     });
   }
   if (!hasHeader) {
@@ -139,7 +171,7 @@ export function parseUmgdyGdyniaHtml(html: string, kind: UmgKind): UmgParseResul
   if (dataRows === 0) {
     warnings.push('UMG Port Gdynia: pusta tabela (brak wierszy).');
   }
-  return { rows, warnings };
+  return { rows, warnings, emptyTime };
 }
 
 /**
