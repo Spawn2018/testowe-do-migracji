@@ -2128,6 +2128,8 @@ export async function runFerryPortnet(deps: JobDeps): Promise<JobResult> {
       ...(v2c.reissued ? { port_call_v2_reissued: String(v2c.reissued) } : {}),
       umg_stena_rows: String(umg.rows),
       ...(umg.updated ? { umg_stena_updated: String(umg.updated) } : {}),
+      /* DP-124 / F7 #796: puste komórki czasu UMG (bez ostrzeżeń). */
+      umg_empty_time: String(umg.emptyTime),
       ...(suspect.hits ? { cancel_suspect_hits: String(suspect.hits) } : {}),
     },
   };
@@ -2191,7 +2193,7 @@ async function applyWinterNavigation(deps: JobDeps, nowIso: string): Promise<{
  * F7 #695 r2 B4: przeszłe ETD→actual tylko gdy strona „w porcie” OK i statku na niej nie ma.
  */
 async function applyUmgdyStenaBackup(deps: JobDeps, sinceIso: string): Promise<{
-  updated: number; rows: number; risks: number; warnings: string[];
+  updated: number; rows: number; emptyTime: number; risks: number; warnings: string[];
 }> {
   const nowIso = deps.now().toISOString();
   const nowMs = Date.parse(nowIso);
@@ -2205,6 +2207,7 @@ async function applyUmgdyStenaBackup(deps: JobDeps, sinceIso: string): Promise<{
   const allRows: UmgShipRow[] = [];
   let okPages = 0;
   let inPortPageOk = false;
+  let emptyTime = 0;
   const umgStructureFail = (ws: string[]) =>
     ws.some((w) => /struktura|pusta tabela/i.test(w));
   for (const p of pages) {
@@ -2215,6 +2218,7 @@ async function applyUmgdyStenaBackup(deps: JobDeps, sinceIso: string): Promise<{
     }
     const parsed = parseUmgdyGdyniaHtml(page.text, p.kind);
     warnings.push(...parsed.warnings);
+    emptyTime += parsed.emptyTime;
     if (umgStructureFail(parsed.warnings)) continue;
     okPages += 1;
     if (p.kind === 'ATA') inPortPageOk = true;
@@ -2390,7 +2394,7 @@ async function applyUmgdyStenaBackup(deps: JobDeps, sinceIso: string): Promise<{
   if (candidates.length) {
     warnings.push(`${UMG_ATTRIBUTION}: ${candidates.length} Stena`);
   }
-  return { updated, rows: candidates.length, risks, warnings };
+  return { updated, rows: candidates.length, emptyTime, risks, warnings };
 }
 
 /**

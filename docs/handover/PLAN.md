@@ -2655,6 +2655,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 03.11.2026 21:35 | #777 F7 r1 niegotowe → seed Portnet/Deltamarin, I=IC, dzień przypłynięcia, złożone IBNet | pętla / C2 F7 |
 | 03.11.2026 22:00 | #777 SCALONE `2a99a8e6` (DP-120 / **0391**; F7 gotowe @ `fecc5f7a`); start DP-202+203 (#778+#779) | pętla / C2 |
 | 03.11.2026 23:50 | #780 F7 r3: auto DeepL na luki TV/bałtyk (bez RESOURCE_MISSING:TV_CODE); **0393** memory_auto_24h | pętla / C2 F7 |
+| 04.11.2026 19:20 | #796 F7 r1: puste ETA/ETD bez ostrzeżenia + `umg_empty_time` | pętla / C2 F7 |
 | 04.11.2026 19:05 | #795 SCALONE `9ab5b2cb` (DP-209; F7 gotowe @ `b35fd767`); start DP-124 (UMG pusta ATA) | pętla / C2 |
 | 04.11.2026 17:40 | #794 SCALONE `21a92c37` (DP-208 / **0406**; F7 gotowe @ `58114b06`); start DP-209 (#789 EE droga) | pętla / C2 |
 | 04.11.2026 16:30 | #794 F7 r1: powody odrzutu PL znaki; PLAN DP-208 — otwarte gęsta linia E4 OSM (docelowe) | pętla / C2 F7 |

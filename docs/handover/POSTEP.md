@@ -1,4 +1,11 @@
 
+## 2026-11-04 19:20 — #796 F7 r1: puste ETA/ETD + umg_empty_time
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
+- Scalanie: brak (F7 #796 r1 niegotowe @ `d24a8784` — puste ETA/ETD ostrzegały; brak licznika).
+- **Krok F7 r1:** `isUmgTimeAbsent` — pusta komórka / sama data bez ostrzeżenia (wszystkie rodzaje); `observations.umg_empty_time`; „12:xx” → ostrzeżenie. Vitest bn3-umg-gdynia **22**/22. Bez migracji.
+- **Dalej:** CI unit/visual → F7. Potem kolejka C2…; DP-210 nie zaczynać.
+
 ## 2026-11-04 19:05 — #795 SCALONE; start DP-124 (UMG pusta ATA)
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
