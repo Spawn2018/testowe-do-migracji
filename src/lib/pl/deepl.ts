@@ -9,6 +9,10 @@ import { applyPhrases } from './phrases.ts';
 
 export const DEEPL_MONTHLY_LIMIT = 1_000_000;
 export const DEEPL_WARN_AT = 0.8;
+/** DP-205: limit nowych wywołań DeepL na jeden przebieg joba (reszta → translate-retry). */
+export const DEEPL_MAX_CALLS_PER_RUN = 40;
+/** DP-205: timeout pojedynczego POST /v2/translate. */
+export const DEEPL_CALL_TIMEOUT_MS = 8_000;
 
 /** Języki źródłowe DeepL Free używane w Watch Tower (komunikaty drogowe). */
 export type DeeplSourceLang = 'SV' | 'EN' | 'LT' | 'LV' | 'ET' | 'FI';
@@ -66,8 +70,10 @@ export async function deeplTranslate(
   apiKey: string,
   text: string,
   source: DeeplSourceLang,
+  opts?: { timeoutMs?: number },
 ): Promise<{ text: string; billed: number }> {
   const body = new URLSearchParams({ text, source_lang: source, target_lang: 'PL' });
+  const timeoutMs = opts?.timeoutMs ?? DEEPL_CALL_TIMEOUT_MS;
   const res = await fetchFn('https://api-free.deepl.com/v2/translate', {
     method: 'POST',
     headers: {
@@ -75,6 +81,7 @@ export async function deeplTranslate(
       'Content-Type': 'application/x-www-form-urlencoded',
     },
     body,
+    signal: AbortSignal.timeout(timeoutMs),
   });
   if (!res.ok) throw new Error(`deepl ${res.status}`);
   const json = await res.json() as { translations?: { text?: string }[] };
@@ -88,6 +95,10 @@ export async function translateFreeText(args: {
   source: DeeplSourceLang;
   used: number;
   limit?: number;
+  /** DP-205: ile wywołań DeepL już w tym przebiegu (przed tą pozycją). */
+  runCalls?: number;
+  /** DP-205: maks. nowych wywołań DeepL na przebieg (domyślnie DEEPL_MAX_CALLS_PER_RUN). */
+  maxCallsPerRun?: number;
   memoryGet: (hash: string) => Promise<string | null> | string | null;
   memoryPut: (hash: string, source: string, pl: string) => Promise<void> | void;
   enqueue: (hash: string, reason: string) => Promise<void> | void;
@@ -95,6 +106,8 @@ export async function translateFreeText(args: {
   deepl?: (text: string, source: DeeplSourceLang) => Promise<{ text: string; billed: number }>;
 }): Promise<TranslateResult> {
   const limit = args.limit ?? DEEPL_MONTHLY_LIMIT;
+  const maxRun = args.maxCallsPerRun ?? DEEPL_MAX_CALLS_PER_RUN;
+  const runCalls = args.runCalls ?? 0;
   const hash = textHash(args.text);
   const base = { used: args.used, limit, deeplCalls: 0, queued: false as boolean };
   if (!isPublicRoadText(args.text)) {
@@ -119,6 +132,8 @@ export async function translateFreeText(args: {
   };
   if (!isPublicRoadText(args.text)) return fail('odrzucone');
   if (args.used >= limit || !args.deepl) return fail(args.used >= limit ? 'limit' : 'brak');
+  /* DP-205: limit na przebieg — kolejne teksty do translate-retry. */
+  if (runCalls >= maxRun) return fail('limit_przebiegu');
   try {
     const out = await args.deepl(args.text, args.source);
     base.deeplCalls = 1;

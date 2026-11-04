@@ -150,6 +150,7 @@ import { applyPendingRoadTitle, humanizeRoadCode } from '../../../../src/lib/pl/
 import { PANEL_FALLBACK } from '../../../../src/lib/pl/codes.ts';
 import {
   deeplTranslate, textHash, translateFreeText, usageLevel, DEEPL_MONTHLY_LIMIT,
+  DEEPL_MAX_CALLS_PER_RUN,
   deeplSourceForBalticCountry,
   type DeeplSourceLang,
 } from '../../../../src/lib/pl/deepl.ts';
@@ -3513,6 +3514,7 @@ async function polishRoadFreeText(
   if (!key || !store.translationGet || !store.translationPut || !store.translationEnqueue || !store.deeplUsage || !store.deeplAddUsage) return;
   let usage = await store.deeplUsage();
   let warned = false;
+  let runCalls = 0;
   for (const e of events) {
     if (!e.freeText || e.note) continue;
     const result = await translateFreeText({
@@ -3520,12 +3522,15 @@ async function polishRoadFreeText(
       source,
       used: usage.characters,
       limit: usage.limit || DEEPL_MONTHLY_LIMIT,
+      runCalls,
+      maxCallsPerRun: DEEPL_MAX_CALLS_PER_RUN,
       memoryGet: (hash) => store.translationGet!(hash),
       memoryPut: (hash, src, pl) => store.translationPut!(hash, src, pl, source),
       enqueue: (hash, reason) => store.translationEnqueue!(hash, e.freeText || '', source, reason),
       addUsage: async (n) => { usage = { ...usage, characters: await store.deeplAddUsage!(n) }; return usage.characters; },
       deepl: (text, src) => deeplTranslate(deps.fetch, key, text, src),
     });
+    if (result.deeplCalls > 0) runCalls += result.deeplCalls;
     if (result.pl) {
       e.note = result.pl;
       e.detail = result.pl;
@@ -6398,7 +6403,7 @@ export async function runTranslateRetry(deps: JobDeps): Promise<JobResult> {
   if (!store.translationListQueue) {
     return { job: 'translate-retry', mode: 'LIVE', ok: true, reason: 'Brak magazynu kolejki tłumaczeń — pominięto' };
   }
-  const rows = await store.translationListQueue(['blad', 'brak', 'limit']);
+  const rows = await store.translationListQueue(['blad', 'brak', 'limit', 'limit_przebiegu']);
   await raiseStale(rows);
 
   if (!key || !store.translationGet || !store.translationPut
@@ -6413,6 +6418,7 @@ export async function runTranslateRetry(deps: JobDeps): Promise<JobResult> {
   usageChars = usage.characters;
   usageLimit = usage.limit || DEEPL_MONTHLY_LIMIT;
   let done = 0;
+  let runCalls = 0;
   for (const row of rows) {
     /* Nowy miesiąc = nowy wiersz deepl_usage (F7: bez !isFirstDay). */
     if (row.reason === 'limit' && usage.characters >= usage.limit) continue;
@@ -6421,12 +6427,15 @@ export async function runTranslateRetry(deps: JobDeps): Promise<JobResult> {
       source: row.lang,
       used: usage.characters,
       limit: usage.limit || DEEPL_MONTHLY_LIMIT,
+      runCalls,
+      maxCallsPerRun: DEEPL_MAX_CALLS_PER_RUN,
       memoryGet: (hash) => store.translationGet!(hash),
       memoryPut: (hash, source, pl) => store.translationPut!(hash, source, pl, row.lang),
       enqueue: (hash, reason) => store.translationEnqueue!(hash, row.source, row.lang, reason),
       addUsage: async (n) => { usage = { ...usage, characters: await store.deeplAddUsage!(n) }; return usage.characters; },
       deepl: (text, source) => deeplTranslate(deps.fetch, key, text, source),
     });
+    if (result.deeplCalls > 0) runCalls += result.deeplCalls;
     if (!result.pl) continue;
     try { await store.translationDequeue(row.hash); }
     catch { /* nie przerywaj dalszych wpisów */ }

@@ -1,4 +1,11 @@
 
+## 2026-11-04 02:20 — #782 SCALONE; start DP-204…208 (#781)
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`. #783 E49 (D-20261104-0105-01) bez etykiety `dla-cursora` — nie w skrzynce; kolejność po #781.
+- Scalanie: **#782 SCALONE** `4b9e0d9a` (DP-121 / **0394**; F7: gotowe @ `76da43be`; CI unit/db/visual ✔). `deploy-main` robi resztę. Bez push na main.
+- **Krok DP-204…208** `pakiet/c2-dp-204-lv-e67-corridor` (#781): A6 km≤24 `on` / km>24 `off`; A5 Babīte `off`; gęstszy `CORRIDOR_LV`; DeepL max 40/przebieg + timeout 8 s; LV „…, A7, km 6,2”; `rk_road_se`=`{road}: {event}`; `riskText` domyślne road/limit; bez dublowania tagu limitu. Bez migracji.
+- **Dalej:** push → CI → F7. Po scaleniu: DP-123… (C2); E49 (#783) po #781 gdy etykieta/`dla-cursora`.
+
 ## 2026-11-04 01:40 — #782 F7 r2 niegotowe → 0394 audience HHL
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.

@@ -354,6 +354,7 @@ describe('PL-DATA', () => {
       expect(body).toContain('Tillf');
       expect(body).not.toContain('klucz');
       expect(String(init?.headers && (init.headers as Record<string, string>).Authorization)).toContain('DeepL-Auth-Key');
+      expect(init?.signal).toBeTruthy();
       return new Response(JSON.stringify({ translations: [{ text: 'Tymczasowe' }] }), { status: 200 });
     });
     const out = await deeplTranslate(fetch as unknown as typeof globalThis.fetch, 'klucz-testowy', 'Tillfällig avstängning', 'SV');
@@ -362,6 +363,26 @@ describe('PL-DATA', () => {
     const url = String(fetch.mock.calls[0][0]);
     expect(url).toBe('https://api-free.deepl.com/v2/translate');
     expect(url).not.toContain('klucz');
+  });
+
+  it('DP-205: limit wywołań na przebieg + timeout w deeplTranslate', async () => {
+    const { DEEPL_MAX_CALLS_PER_RUN, DEEPL_CALL_TIMEOUT_MS } = await import('../src/lib/pl/deepl');
+    expect(DEEPL_MAX_CALLS_PER_RUN).toBe(40);
+    expect(DEEPL_CALL_TIMEOUT_MS).toBe(8_000);
+    const queue: string[] = [];
+    const hits = { n: 0 };
+    /* LT — bez słownika fraz SV/EN; runCalls≥max → kolejka, bez DeepL. */
+    const r = await translateFreeText({
+      text: 'Kelias A5 laikinai uzdarytas del avarijos prie Kauno',
+      source: 'LT', used: 0, runCalls: 40, maxCallsPerRun: 40,
+      memoryGet: () => null, memoryPut: () => {},
+      enqueue: (_h, reason) => { queue.push(reason); },
+      deepl: async () => { hits.n += 1; return { text: 'X', billed: 10 }; },
+    });
+    expect(r.pl).toBeNull();
+    expect(r.queued).toBe(true);
+    expect(queue).toContain('limit_przebiegu');
+    expect(hits.n).toBe(0);
   });
 
   it('DP-172: źródła LT/LV/ET/FI + mapowanie EE→ET; brak klucza → oryginał bez błędu', async () => {

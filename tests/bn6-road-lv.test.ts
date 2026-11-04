@@ -25,8 +25,11 @@ import {
   classifyBalticNetError,
   dedupeLvSlippery,
   balticShouldRaiseRisk,
+  CORRIDOR_LV,
+  densifyCorridor,
   extractBalticRoadRef,
   extractBalticRoadRefPreferStreet,
+  extractLvRoadKm,
   filterInLvBboxes,
   formatBalticRoadTitle,
   isDimensionLimitEvent,
@@ -617,7 +620,7 @@ describe('BN6 runRoadLv / DP-200 REST snapshot', () => {
 });
 
 describe('DP-202/203 LV korytarz + tytuły PL (#778/#779); decyzja 99 obok trasy', () => {
-  it('parser LVC: A7_L → on; A6_K masa → off LOW „obok trasy”', () => {
+  it('parser LVC: A7_L → on; A6 bez km → off; V → off', () => {
     expect(normalizeLvRoadCode('A7_L')).toBe('A7');
     expect(normalizeLvRoadCode('A6_K')).toBe('A6');
     expect(normalizeLvRoadCode('P103_I')).toBe('P103');
@@ -625,6 +628,7 @@ describe('DP-202/203 LV korytarz + tytuły PL (#778/#779); decyzja 99 obok trasy
     expect(extractBalticRoadRef('heightRestrictions · A6_K · km 22.97')).toBe('A6');
     expect(extractBalticRoadRef('massRestrictions · A7_L · km 6.2')).toBe('A7');
     expect(lvRoadOnCorridor(normalizeLvRoadCode('A7_L'))).toBe('on');
+    /* DP-204: A6 bez km/geo → off; z km ≤24 → on (osobny test). */
     expect(lvRoadOnCorridor(normalizeLvRoadCode('A6_K'))).toBe('off');
     expect(lvRoadOnCorridor(normalizeLvRoadCode('V1021_I'))).toBe('off');
 
@@ -637,19 +641,8 @@ describe('DP-202/203 LV korytarz + tytuły PL (#778/#779); decyzja 99 obok trasy
     expect(balticShouldRaiseRisk('LV', a7)).toBe('on');
     const a7Risk = weightLimitRisk('LV', a7, null, LV_SOURCE_REF, LV_ATTRIBUTION);
     expect(a7Risk.title).toMatch(/^Warunki drogowe A7 \(LV\): Ograniczenie masy/);
+    expect(a7Risk.title).toMatch(/Ograniczenie masy 40 t, A7, km 6,2/);
     expect(a7Risk.title).not.toMatch(/obok trasy/);
-
-    const a6 = applyBalticCorridorRoadFilter('LV', [{
-      id: 'a6', title: 'massRestrictions · A6_K', detail: 'A6_K · km 22',
-      severity: 'MEDIUM', lat: 56.95, lon: 24.10, kind: 'WEIGHT_DIM',
-      start: null, end: null, road: normalizeLvRoadCode('A6_K'), weightLimitT: 40,
-    }])[0]!;
-    expect(a6.corridorMatch).toBe('off');
-    expect(balticShouldRaiseRisk('LV', a6)).toBe('off');
-    const a6Risk = weightLimitRisk('LV', a6, null, LV_SOURCE_REF, LV_ATTRIBUTION);
-    expect(a6Risk.severity).toBe('LOW');
-    expect(a6Risk.title).toMatch(/Warunki drogowe A6 \(LV\) · obok trasy:/);
-    expect(a6Risk.title).toMatch(/Ograniczenie masy 40 t/);
 
     const v = applyBalticCorridorRoadFilter('LV', [{
       id: 'v', title: 'virtualMass · V1021_I', detail: 'V1021_I',
@@ -661,9 +654,10 @@ describe('DP-202/203 LV korytarz + tytuły PL (#778/#779); decyzja 99 obok trasy
   });
 
   it('unknown ≤300 m → sprawdź; daleko → off „obok trasy”; A7 on bez dopisku', () => {
+    /* DP-204: Salaspils na gęstszym CORRIDOR_LV (dawniej centrum Rygi 56.95/24.10). */
     const nearUnknown: BalticRoadEvent = {
       id: 'u', title: 'massRestrictions', detail: 'km 1',
-      severity: 'MEDIUM', lat: 56.95, lon: 24.10, kind: 'WEIGHT_DIM',
+      severity: 'MEDIUM', lat: 56.86, lon: 24.35, kind: 'WEIGHT_DIM',
       start: '2026-11-03T10:00:00Z', end: null, road: null, corridorMatch: 'unknown',
       weightLimitT: 40,
     };
@@ -675,18 +669,69 @@ describe('DP-202/203 LV korytarz + tytuły PL (#778/#779); decyzja 99 obok trasy
 
     const onEv: BalticRoadEvent = {
       id: 't', title: 'massRestrictions · A7_L', detail: 'A7 · km 6.2',
-      severity: 'MEDIUM', lat: 56.95, lon: 24.10, kind: 'WEIGHT_DIM',
+      severity: 'MEDIUM', lat: 56.83, lon: 24.23, kind: 'WEIGHT_DIM',
       start: '2026-11-03T10:00:00Z', end: '2026-11-04T18:00:00Z',
       road: 'A7', corridorMatch: 'on', weightLimitT: 40,
     };
     const title = formatBalticRoadTitle('LV', onEv, 'Ograniczenie masy 40 t');
-    expect(title.title).toMatch(/^Warunki drogowe A7 \(LV\): Ograniczenie masy 40 t/);
+    expect(title.title).toMatch(/^Warunki drogowe A7 \(LV\): Ograniczenie masy 40 t, A7, km 6,2/);
     expect(title.title).not.toMatch(/^Trasa LV:/);
     expect(title.off).toBe('');
     const w = weightLimitRisk('LV', onEv, null, LV_SOURCE_REF, LV_ATTRIBUTION);
     expect(w.title).toMatch(/Warunki drogowe A7 \(LV\):/);
-    expect(w.title).toMatch(/Ograniczenie masy 40 t/);
+    expect(w.title).toMatch(/Ograniczenie masy 40 t, A7, km 6,2/);
     expect(w.params.road).toBe('A7');
+  });
+});
+
+describe('DP-204 LV E67: A6 km / A5 Babīte + gęstszy CORRIDOR_LV (#781)', () => {
+  it('A6 km 10 → on; km 40 → off; A5 Babīte → off; Ķekava–Salaspils → on', () => {
+    expect(extractLvRoadKm('A6_K · km 22.97')).toBe(22.97);
+    expect(extractLvRoadKm('massRestrictions · A7_L · km 6,2')).toBe(6.2);
+    expect(lvRoadOnCorridor('A6', { km: 10 })).toBe('on');
+    expect(lvRoadOnCorridor('A6', { km: 24 })).toBe('on');
+    expect(lvRoadOnCorridor('A6', { km: 40 })).toBe('off');
+    expect(lvRoadOnCorridor('A5', { lat: 56.95, lon: 23.94 })).toBe('off'); /* Babīte */
+    expect(lvRoadOnCorridor('A5', { lat: 56.84, lon: 24.28 })).toBe('on'); /* Ķekava–Salaspils */
+
+    const a6on = applyBalticCorridorRoadFilter('LV', [{
+      id: 'a6on', title: 'massRestrictions · A6_K', detail: 'A6_K · km 10',
+      severity: 'MEDIUM', lat: 56.87, lon: 24.40, kind: 'WEIGHT_DIM',
+      start: null, end: null, road: 'A6', weightLimitT: 40,
+    }])[0]!;
+    expect(a6on.corridorMatch).toBe('on');
+    expect(balticShouldRaiseRisk('LV', a6on)).toBe('on');
+    const a6onRisk = weightLimitRisk('LV', a6on, null, LV_SOURCE_REF, LV_ATTRIBUTION);
+    expect(a6onRisk.title).toMatch(/Warunki drogowe A6 \(LV\): Ograniczenie masy 40 t, A6, km 10/);
+    expect(a6onRisk.title).not.toMatch(/obok trasy/);
+
+    const a6off = applyBalticCorridorRoadFilter('LV', [{
+      id: 'a6off', title: 'massRestrictions · A6_K', detail: 'A6_K · km 40',
+      severity: 'MEDIUM', lat: 56.80, lon: 24.60, kind: 'WEIGHT_DIM',
+      start: null, end: null, road: 'A6', weightLimitT: 40,
+    }])[0]!;
+    expect(a6off.corridorMatch).toBe('off');
+    expect(balticShouldRaiseRisk('LV', a6off)).toBe('off');
+
+    const a5bab = applyBalticCorridorRoadFilter('LV', [{
+      id: 'a5b', title: 'Closure · A5', detail: 'Babīte',
+      severity: 'HIGH', lat: 56.95, lon: 23.94, kind: 'CLOSURES',
+      start: null, end: null, road: 'A5', roadClosed: true,
+    }])[0]!;
+    expect(a5bab.corridorMatch).toBe('off');
+
+    /* Saulkalne ~km 23 — na E67 (wcześniej cały A6 = off). */
+    const saul = applyBalticCorridorRoadFilter('LV', [{
+      id: 'saul', title: 'heightRestrictions · A6_K', detail: 'A6_K · km 22.97',
+      severity: 'MEDIUM', lat: 56.88, lon: 24.45, kind: 'WEIGHT_DIM',
+      start: null, end: null, road: 'A6', heightLimitM: 4,
+    }])[0]!;
+    expect(saul.corridorMatch).toBe('on');
+
+    expect(CORRIDOR_LV.length).toBeGreaterThanOrEqual(9);
+    expect(densifyCorridor(CORRIDOR_LV, 2).length).toBeGreaterThan(densifyCorridor([
+      [56.25, 24.45], [56.55, 24.20], [56.95, 24.10], [57.35, 24.40], [57.75, 24.55], [57.90, 24.40],
+    ], 2).length);
   });
 });
 

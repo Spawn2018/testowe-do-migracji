@@ -526,8 +526,26 @@ export function balticEventTypePl(e: BalticRoadEvent): string {
 }
 
 /**
+ * DP-206: dopisek techniczny LV „, A7, km 6,2” (droga + km z LVC; przecinek dziesiętny PL).
+ */
+export function formatLvTechSuffix(e: BalticRoadEvent): string {
+  const road = (e.road ?? extractBalticRoadRefPreferStreet(null, e.title, e.detail) ?? '').trim();
+  const km = extractLvRoadKm(e.title, e.detail, e.freeText);
+  const bits: string[] = [];
+  if (road) bits.push(balticRoadLabel('LV', road));
+  if (km != null) {
+    const kmPl = Number.isInteger(km)
+      ? String(km)
+      : String(Math.round(km * 10) / 10).replace('.', ',');
+    bits.push(`km ${kmPl}`);
+  }
+  return bits.length ? `, ${bits.join(', ')}` : '';
+}
+
+/**
  * DP-203 / decyzja 99: tytuł jak SE — `Warunki drogowe <droga> (<KRAJ>): …`;
  * poza trasą: `… (KRAJ) · obok trasy: …` (EN off route / SV vid sidan av rutten w `{off}`).
+ * DP-206: LV — typ z drogą i km („Ograniczenie masy 40 t, A7, km 6,2”).
  */
 export function formatBalticRoadTitle(
   country: BalticRoadCountry,
@@ -544,6 +562,10 @@ export function formatBalticRoadTitle(
     else if ((e.freeText ?? '').trim()) type = 'Tłumaczenie w toku';
   }
   const roadLabel = balticRoadLabel(country, e.road);
+  if (country === 'LV') {
+    const suffix = formatLvTechSuffix(e);
+    if (suffix && !/,\s*km\s*\d/i.test(type)) type = `${type}${suffix}`;
+  }
   const from = balticWarsawDt(e.start);
   const to = balticWarsawDt(e.end);
   const when = from && to ? `od ${from} do ${to}` : from ? `od ${from}` : to ? `do ${to}` : '';
@@ -551,7 +573,12 @@ export function formatBalticRoadTitle(
   let place = '';
   const det = String(e.detail ?? '').replace(/\s+/g, ' ').trim();
   if (det && !/^(mass|width|height|virtual|restriction)/i.test(det)) {
-    place = det.length > 80 ? `${det.slice(0, 77)}…` : det;
+    /* DP-206: surowy „A7_L · km 6.2” nie jako place — jest w formatLvTechSuffix. */
+    const lvcKm = country === 'LV'
+      && /^(?:[AVP]\d+(?:_[A-Za-z]+)?\s*[·,]\s*)?km\s*\d/i.test(det);
+    if (!lvcKm) {
+      place = det.length > 80 ? `${det.slice(0, 77)}…` : det;
+    }
   }
   const bits = [type, place, when].filter(Boolean);
   const offRoute = opts?.offRoute === true || e.corridorMatch === 'off';
@@ -906,13 +933,72 @@ export function ltRoadOnCorridor(
 }
 
 /**
- * LV: A7/E67 + A1 (do EE) + obwodnica Rygi A4/A5 (F7 #730 B7).
+ * DP-204: km z kodu LVC (`· km 22.97` / `km 6,2`).
+ * Bez dopasowania → null (nie zgadujemy).
+ */
+export function extractLvRoadKm(...texts: Array<string | null | undefined>): number | null {
+  for (const raw of texts) {
+    const t = String(raw ?? '');
+    const m = t.match(/(?:^|[·|,;\s])km\s*(\d+(?:[.,]\d+)?)\b/i);
+    if (m) {
+      const n = Number(String(m[1]).replace(',', '.'));
+      if (Number.isFinite(n)) return n;
+    }
+  }
+  return null;
+}
+
+/** DP-204: A6 na E67 — Salaspils–Saulkalne (ok. km 0–24). */
+export const LV_A6_E67_KM_MAX = 24;
+
+/**
+ * DP-204: A5 na E67 tylko Ķekava–Salaspils (wschód).
+ * Zachód (Babīte / Salaspils–Babīte, lon ≲ 24,05) → off.
+ */
+export function lvA5OnE67(lat?: number | null, lon?: number | null): BalticCorridorRoadMatch {
+  if (lat == null || lon == null) return 'on';
+  if (lon < 24.05) return 'off';
+  if (lat >= 56.80 && lat <= 56.96 && lon >= 24.05 && lon <= 24.45) return 'on';
+  return 'off';
+}
+
+/**
+ * DP-204: A6 na E67 — km ≤ 24 albo geometria Salaspils–Saulkalne.
+ * Bez km i bez współrzędnych → off (dawniej cały A6 = off).
+ */
+export function lvA6OnE67(
+  km?: number | null,
+  lat?: number | null,
+  lon?: number | null,
+): BalticCorridorRoadMatch {
+  if (km != null && Number.isFinite(km)) return km <= LV_A6_E67_KM_MAX ? 'on' : 'off';
+  if (lat != null && lon != null) {
+    if (lat >= 56.84 && lat <= 56.92 && lon >= 24.30 && lon <= 24.55) return 'on';
+    return 'off';
+  }
+  return 'off';
+}
+
+export type LvRoadCorridorOpts = {
+  km?: number | null;
+  lat?: number | null;
+  lon?: number | null;
+};
+
+/**
+ * LV: E67 = A7 (LT→Ķekava) + A5 (Ķekava–Salaspils) + A6 (Salaspils–Saulkalne km 0–24)
+ * + A4 (Saulkalne–Baltezers) + A1 (Baltezers→Ainaži). DP-204; wcześniej F7 #730 B7.
  * Znany numer poza listą (P/V, A12…) → off.
  */
-export function lvRoadOnCorridor(road: string | null | undefined): BalticCorridorRoadMatch {
+export function lvRoadOnCorridor(
+  road: string | null | undefined,
+  opts?: LvRoadCorridorOpts,
+): BalticCorridorRoadMatch {
   if (road == null || road === '') return 'unknown';
   const r = road.toUpperCase().replace(/\s+/g, '');
-  if (r === 'A7' || r === 'E67' || r === 'A1' || r === 'A4' || r === 'A5') return 'on';
+  if (r === 'A7' || r === 'E67' || r === 'A1' || r === 'A4') return 'on';
+  if (r === 'A5') return lvA5OnE67(opts?.lat, opts?.lon);
+  if (r === 'A6') return lvA6OnE67(opts?.km, opts?.lat, opts?.lon);
   return 'off';
 }
 
@@ -963,10 +1049,13 @@ export function applyBalticCorridorRoadFilter(
     }
     const road = capped.road
       ?? extractBalticRoadRefPreferStreet(null, capped.title, capped.detail);
+    const lvKm = country === 'LV'
+      ? extractLvRoadKm(capped.title, capped.detail, capped.freeText)
+      : null;
     let corridorMatch: BalticCorridorRoadMatch = country === 'LT'
       ? ltRoadOnCorridor(road, capped)
       : country === 'LV'
-        ? lvRoadOnCorridor(road)
+        ? lvRoadOnCorridor(road, { km: lvKm, lat: capped.lat, lon: capped.lon })
         : eeRoadOnCorridor(road, capped);
     /* EE: bez numeru ≤ 2 km od portów → on (F7 #733 B3); odległość korytarza → unknown (DP-203). */
     if (
@@ -1436,11 +1525,19 @@ export function ltWeatherToSlowdownEvents(
 
 /* ---------- Łotwa — LVC / transportdata.gov.lv (#716 cz.3 / #589) ---------- */
 
-/** Via Baltica LT→LV→EE (granica LT → Rīga → granica EE ku Tallinn/Muuga/Paldiski). */
+/**
+ * Via Baltica LT→LV→EE po E67 (DP-204): A7 → Ķekava → A5 → Salaspils → A6 → Saulkalne → A4 → Baltezers → A1.
+ * Gęstsze punkty wokół obwodnicy Rygi — próg 300 m dla `unknown` (BALTIC_UNKNOWN_NEAR_KM).
+ */
 export const CORRIDOR_LV: LatLon[] = [
   [56.25, 24.45], // granica LT/LV
   [56.55, 24.20], // Bauska
-  [56.95, 24.10], // Rīga A7/A1
+  [56.72, 24.25], // Iecava / A7
+  [56.83, 24.23], // Ķekava A7/A5
+  [56.86, 24.35], // Salaspils A5/A6
+  [56.88, 24.45], // Saulkalne A6/A4 (~km 24)
+  [56.95, 24.30], // A4 ku Baltezers
+  [57.02, 24.30], // Baltezers A4/A1
   [57.35, 24.40], // Saulkrasti / A1
   [57.75, 24.55], // Salacgrīva
   [57.90, 24.40], // granica LV/EE

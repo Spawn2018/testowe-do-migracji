@@ -228,16 +228,18 @@ describe('BN9-c4 — Ryzyka › Drogi: sekcje krajów', () => {
     expand(el);
     const w1 = el.querySelector('[data-baltic-road="w1"]') as HTMLElement;
     expect(w1.getAttribute('data-limit')).toBe('WEIGHT');
-    expect(w1.querySelector('[data-limit-tag]')!.textContent).toBe('Limit masy 12\u00a0t'); /* DP-177: twarda spacja także w tytule */
+    /* DP-204/#781 pkt 6: bez dublowania „Limit masy” + „Ograniczenie masy”; DP-177: twarda spacja w tytule. */
+    expect(w1.querySelector('[data-limit-tag]')).toBeNull();
     expect(w1.querySelector('.rk-road-t')!.textContent).toBe(
-      'Limit masy 12\u00a0tWarunki drogowe A1 (FI): Ograniczenie masy 12\u00a0t — sprawdź zezwolenie',
+      'Warunki drogowe A1 (FI): Ograniczenie masy 12\u00a0t — sprawdź zezwolenie',
     );
     expect(w1.querySelector('[data-limit-check]')!.textContent).toBe('Sprawdź zezwolenie / trasę.');
     expect(w1.textContent).not.toMatch(/ładunek/i);
     expect(w1.querySelector('[data-road-note="baltic"]')!.textContent).toBe('opis w1');
     /* masa ładunku tylko, gdy przyszła z bazy (params.load) */
     const w2 = el.querySelector('[data-baltic-road="w2"]') as HTMLElement;
-    expect(w2.querySelector('[data-limit-tag]')!.textContent).toBe('Limit masy 40\u00a0t');
+    expect(w2.querySelector('[data-limit-tag]')).toBeNull();
+    expect(w2.querySelector('.rk-road-t')!.textContent).toMatch(/Ograniczenie masy 40\u00a0t/);
     expect(w2.querySelector('[data-limit-check]')!.textContent).toBe('Ładunek 52,5\u00a0t — sprawdź zezwolenie / trasę.');
     /* limit wysokości z detail (bez wartości masy) — etykieta „Limit wysokości 4,2 m” */
     expect(el.querySelector('[data-baltic-road="h1"] [data-limit-tag]')!.textContent).toBe('Limit wysokości 4,2\u00a0m');
