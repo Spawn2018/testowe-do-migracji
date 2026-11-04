@@ -188,6 +188,10 @@ const pl: Dict = {
   rk_rio_no_position: 'Link RIO nie zwraca pozycji — sprawdź udostępnianie w RIO / czy pojazd nadaje',
   rk_safefleet_dead: 'Link SafeFleet nie działa / wygasł',
   rk_wind_gust: 'Wiatr: porywy {gust} m/s (próg {thr} m/s)',
+  /** E49-a Z2 (DP-205): silny wiatr 20–24 m/s na trasie */
+  rk_wind_strong: 'Silny wiatr na trasie · {where} · {gust} m/s · +{min} min',
+  /** E49-a Z2: postój od 25 m/s */
+  rk_wind_hold: 'Postój przez wiatr · {where} · porywy {gust} m/s',
   rk_time_ban: 'Zakaz czasowy {where}: plan {when}',
   /* DP-204.3: droga z params.road (E4/E22…), nie na sztywno E4. */
   rk_road_se: '{road}: {event}',
