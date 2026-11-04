@@ -883,6 +883,47 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
         trackingOpenedAt: (row.tracking_opened_at as string | null) ?? null,
       }));
     },
+    /** E49-a: korytarze z transportem w oknie śledzenia. */
+    async e49WindActiveCorridors() {
+      const r = await sb.rpc('e49_wind_active_corridors');
+      if (r.error) throw new Error(`e49_wind_active_corridors: ${r.error.message}`);
+      const rows = (r.data ?? []) as Array<string | { code: string }>;
+      return rows.map((row) => (typeof row === 'string' ? row : String(row.code))).filter(Boolean);
+    },
+    async corridorPolylineGeoJson(code: string) {
+      const r = await sb.rpc('corridor_polyline_geojson', { p_code: code });
+      if (r.error) throw new Error(`corridor_polyline_geojson: ${r.error.message}`);
+      return r.data ?? null;
+    },
+    async upsertCorridorWindForecast(row: {
+      corridor: string;
+      km: number;
+      lon: number;
+      lat: number;
+      bearingDeg: number;
+      source: 'SMHI' | 'FMI';
+      samples: unknown;
+      fetchedAt: string;
+    }) {
+      must(await sb.from('corridor_wind_forecast').upsert({
+        corridor: row.corridor,
+        km: row.km,
+        lon: row.lon,
+        lat: row.lat,
+        bearing_deg: row.bearingDeg,
+        source: row.source,
+        samples: row.samples,
+        fetched_at: row.fetchedAt,
+      }, { onConflict: 'corridor,km' }), 'corridor_wind_forecast upsert');
+    },
+    async corridorWindFreshCount(maxAgeMin: number) {
+      const since = new Date(Date.now() - maxAgeMin * 60_000).toISOString();
+      const r = await sb.from('corridor_wind_forecast')
+        .select('corridor', { count: 'exact', head: true })
+        .gte('fetched_at', since);
+      if (r.error) return 0;
+      return r.count ?? 0;
+    },
     async processPosition(row: {
       loadId: string; lat: number; lon: number; ts: string;
       source: 'EMTRACK_WEB' | 'TELEMATICS_API' | 'SUBCONTRACTOR_LINK' | 'SAFEFLEET';

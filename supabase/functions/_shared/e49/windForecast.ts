@@ -22,6 +22,38 @@ export interface WindHourSample {
 
 export { fmiHarmonieUrl, smhiSnow1gUrl, SMHI_SNOW1G_BASE, FMI_HARMONIE_URL };
 
+/** FMI HARMONIE z kierunkiem wiatru (E49 Z1 — marineWeather ma tylko gust/speed). */
+export function fmiHarmonieWindUrl(lat: number, lon: number, fromIso: string, toIso: string): string {
+  const q = new URLSearchParams({
+    latlon: `${lat},${lon}`,
+    parameters: 'WindGust,WindSpeedMS,WindDirection',
+    timestep: '60',
+    starttime: fromIso.replace(/\.\d{3}Z$/, 'Z'),
+    endtime: toIso.replace(/\.\d{3}Z$/, 'Z'),
+  });
+  return `${FMI_HARMONIE_URL}&${q.toString()}`;
+}
+
+/** Najbliższa próbka do godziny (ISO); null gdy brak. */
+export function nearestWindSample(
+  samples: readonly WindHourSample[],
+  atIso: string,
+  maxSkewMs = 90 * 60_000,
+): WindHourSample | null {
+  const t = Date.parse(atIso);
+  if (!Number.isFinite(t) || !samples.length) return null;
+  let best: WindHourSample | null = null;
+  let bestAbs = Infinity;
+  for (const s of samples) {
+    const d = Math.abs(Date.parse(s.at) - t);
+    if (d < bestAbs) {
+      bestAbs = d;
+      best = s;
+    }
+  }
+  return best != null && bestAbs <= maxSkewMs ? best : null;
+}
+
 /** SMHI snow1g JSON → próbki z kierunkiem (E49 Z1). */
 export function parseSmhiSnow1gWind(json: unknown): WindHourSample[] {
   const body = json as {

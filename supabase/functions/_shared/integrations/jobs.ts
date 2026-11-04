@@ -146,6 +146,7 @@ import {
   WIND_GUST_MS_THRESHOLD, gustExceedsThreshold, windRiskTitle,
   seWeekendBanHit, plSundayBanHit, banRiskTitle,
 } from '../here/windAndBans.ts';
+import { runCorridorWindCore } from '../e49/corridorWindJob.ts';
 import { applyPendingRoadTitle, humanizeRoadCode } from '../../../../src/lib/pl/describe.ts';
 import { PANEL_FALLBACK } from '../../../../src/lib/pl/codes.ts';
 import {
@@ -379,6 +380,23 @@ export interface SyncStore {
   ferryPortDelayMin?(): Promise<number>;
   /** II-8: progi WAVE_M / GUST_KN z ops_thresholds (domyślnie 3.8 / 40) */
   opsThresholds?(): Promise<{ waveM: number; gustKn: number }>;
+  /** E49-a: korytarze z transportem w oknie śledzenia. */
+  e49WindActiveCorridors?(): Promise<string[]>;
+  /** E49-a: geometria korytarza (GeoJSON) z corridor_polylines. */
+  corridorPolylineGeoJson?(code: string): Promise<unknown | null>;
+  /** E49-a: zapis prognozy wiatru na punkcie. */
+  upsertCorridorWindForecast?(row: {
+    corridor: string;
+    km: number;
+    lon: number;
+    lat: number;
+    bearingDeg: number;
+    source: 'SMHI' | 'FMI';
+    samples: unknown;
+    fetchedAt: string;
+  }): Promise<void>;
+  /** E49-a: liczba świeżych punktów prognozy (Stan systemu / route-hazards). */
+  corridorWindFreshCount?(maxAgeMin: number): Promise<number>;
   /**
    * DP-145 / BN5: `ferry_routes.code` → `family_key` (UPPER).
    * Brak metody → marineWeather używa zapasu w kodzie.
@@ -5547,8 +5565,8 @@ async function raiseFerryIceRisks(
  */
 
 /**
- * H-10 / E49 (ryzyko wiatru, próg 20 m/s — D-84/E49-a) + H-12 (zakazy czasowe).
- * Korekta ETA przez wiatr = E49-a (`_shared/e49/windEta`) — tu na razie tylko ryzyko testowe / H-12.
+ * H-12 (zakazy czasowe) + mostek do E49 wiatru (żywa seria = corridor-wind / corridor_wind_forecast).
+ * Korekta ETA i sprawy Z2 — kolejne kroki DP-205 (basis.weather).
  */
 export async function runRouteHazards(deps: JobDeps): Promise<JobResult> {
   const nowIso = deps.now().toISOString();
@@ -5587,7 +5605,6 @@ export async function runRouteHazards(deps: JobDeps): Promise<JobResult> {
       risks++;
     }
   }
-  // H-10: opcjonalny gust z env (test) albo z observations — bez wołania HERE gdy brak danych
   const gustEnv = deps.env.H10_TEST_GUST_MS;
   if (gustEnv != null && gustEnv !== '') {
     const g = Number(gustEnv);
@@ -5603,12 +5620,41 @@ export async function runRouteHazards(deps: JobDeps): Promise<JobResult> {
       risks++;
     }
   } else {
-    // E49-a (DP-205): próg 20 m/s (D-84); żywa seria SMHI/FMI — w jobie wiatru E49 (następny krok PR).
-    warnings.push('E49: brak żywej serii wiatru drogowego w tym przebiegu — próg 20 m/s (ops_thresholds WIND_SLOW_MS)');
+    const fresh = deps.store.corridorWindFreshCount
+      ? await deps.store.corridorWindFreshCount(120)
+      : 0;
+    if (fresh > 0) {
+      warnings.push(`E49: żywa seria wiatru — ${fresh} punktów < 2 h (próg ${WIND_GUST_MS_THRESHOLD} m/s)`);
+    } else {
+      warnings.push('E49: brak żywej serii wiatru drogowego — próg 20 m/s (ops_thresholds WIND_SLOW_MS); job corridor-wind');
+    }
   }
   return {
     job: 'route-hazards', mode: 'LIVE', ok: true, risks,
     warnings, observations: { loads: String(loads.length), thrMs: String(WIND_GUST_MS_THRESHOLD) },
+  };
+}
+
+/** E49-a cz.2: prognoza SMHI/FMI na punktach korytarza (co 25 km). */
+export async function runCorridorWind(deps: JobDeps): Promise<JobResult> {
+  const core = await runCorridorWindCore({
+    store: deps.store,
+    fetch: deps.fetch,
+    now: deps.now(),
+  });
+  return {
+    job: 'corridor-wind',
+    mode: 'LIVE',
+    ok: core.ok,
+    reason: core.reason,
+    warnings: core.warnings,
+    observations: {
+      corridors: String(core.corridors),
+      points: String(core.points),
+      fetched_ok: String(core.fetchedOk),
+      smhi: String(core.sourceSmhi),
+      fmi: String(core.sourceFmi),
+    },
   };
 }
 
@@ -6467,6 +6513,7 @@ export const JOBS = {
   'rio-links': runRioLinks,
   'safefleet-poll': runSafefleetPoll,
   'route-hazards': runRouteHazards,
+  'corridor-wind': runCorridorWind,
   'translate-retry': runTranslateRetry,
 } as const;
 export type JobName = keyof typeof JOBS;
@@ -6480,6 +6527,7 @@ export const MIN_INTERVAL_MIN: Record<JobName, number> = {
   'traffic-flow': 15, 'here-roads': 1380,
   'emtrack-web': 2, 'rio-links': 2,
   'safefleet-poll': 2, 'route-hazards': 60,
+  'corridor-wind': 60,
   'translate-retry': 5,
 };
 

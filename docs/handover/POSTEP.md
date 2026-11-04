@@ -1,10 +1,10 @@
 
-## 2026-11-04 06:20 — #787 SCALONE; #785 rebase (0396)
+## 2026-11-04 06:20 — #787 SCALONE; #785 rebase (0396+0397)
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne` (poza #550). #786 zamknięte.
 - Scalanie: **#787 SCALONE** `31a1c0bb` (DP-786 / **0395**; F7: gotowe @ `03dee3ba`; unit/db ✔; visual flaky telefon → rerun ✔). `deploy-main` robi resztę. Bez push na main.
-- **Krok:** rebase `pakiet/c2-dp-205-e49a-wind` na `main`; migracja progów WIND_* → **0396** (0395 zajęte przez DP-786).
-- **Dalej:** dokończyć rebase (0397 corridor-wind) → ETA `basis.weather` + Z2 + Z4 → `WIND_E49=true`; potem DP-206.
+- **Krok:** rebase `pakiet/c2-dp-205-e49a-wind` na `main`; progi WIND_* → **0396**, corridor-wind → **0397** (0395 = DP-786).
+- **Dalej:** ETA `basis.weather` + Z2 + Z4 → `WIND_E49=true`; potem DP-206.
 
 ## 2026-11-04 05:25 — #787 CI db: asercja count ze spacją jsonb
 
@@ -26,6 +26,13 @@
 - Scalanie: brak F7 „gotowe” na #785; CI #785 w toku @ `504d6381` — bez push na tę gałąź (G-15). **#785 wstrzymane do wdrożenia hotfixu.**
 - **Krok:** gałąź `hotfix/dp-786-road-ee-dedup` z `main`: `parseEeWeatherData` id=`ee-wx:${ref}` (merge gorszej wagi); `nameFromEeSiteId` / `isOpaqueEeSiteRef` bez UUID; tytuł bez podwójnego `(EE)`; migracja **0395** IN_APP ROAD_EE ee-wx → `read_at` + `AUDYT17_MARK_READ`; testy #786 + strażnik dedup. `resolveStaleRisks('ROAD_EE:', keep)` zamyka stare klucze z czasem przy następnym przebiegu.
 - **Dalej:** push → CI → F7/scalenie → po wdrożeniu powrót do #785 (rebase migracji 0395/0396 → wolne numery) ETA/Z2/`WIND_E49=true`.
+
+## 2026-11-04 04:20 — #785 E49-a cz.2: job corridor-wind (**0397**)
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`. Bez „F7: gotowe”.
+- Scalanie: brak. **#785** CI na `e8d76047` unit/db/visual ✔ (po fix dec6).
+- **Krok cz.2:** migracja **0397** `corridor_wind_forecast` + `e49_wind_active_corridors` + cron `tower-corridor-wind`; Edge `corridor-wind` (SMHI→FMI, punkty co 25 km); testy `e49-corridor-wind`; Stan systemu `KNOWN_JOBS`. `WIND_E49` nadal false.
+- **Dalej:** ETA `basis.weather` + Z2 sprawy + Z4 lokalnie → `WIND_E49=true`; potem DP-206.
 
 ## 2026-11-04 03:45 — #785 db FAIL → dec6 29 progów WIND_*
 
