@@ -1,4 +1,11 @@
 
+## 2026-11-04 14:48 — #792: DP-207–209 → DP-210–212 (kolizja rej. koord.)
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
+- Scalanie: brak (brak „F7: gotowe do scalenia” po `5d279f1d`; CI unit/visual ✔).
+- **Krok:** komentarz #792 Spawn2018 — numery 207–209 zajęte w rejestrze koordynatora → przenumerowanie F7 #791 nieblok.: **DP-210** (piloci LT/LV/EE/FI — **do decyzji właściciela, nie zaczynać**), **DP-211** (BAN/WORKS źródła), **DP-212** (WIND okno + N+1). PLAN §4 + §8.
+- **Dalej:** push → CI → F7 DP-123. Bez push na main.
+
 ## 2026-11-04 15:25 — #791 SCALONE; start DP-123
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.

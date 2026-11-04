@@ -1300,9 +1300,9 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-786 | Cursor | **PILNE** zalew ROAD_EE: dedup `ee-wx:${stacja}` (bez czasu), resolveStale, oznacz IN_APP przeczytane, nazwy bez UUID/hex | #786; komentarze #785 | BN6 / ROAD_EE | SCALONE (#787 `31a1c0bb` / **0395**) |
 | DP-205 | Cursor | **E49-a** (D-20261104-0105-01 / #783): wiatr w ETA 20/25 m/s + źródła SMHI/FMI dla PL/SE/LT/LV/EE/FI | #783; właściciel 04.11 | E49 / ETA | SCALONE (#785 `7ef4bc3c` / **0396**+**0397**+**0398**; `WIND_E49=true`) |
 | DP-206 | Cursor | **E49-b** (D-20261104-0105-01 / #783): zamknięty most/droga → sprawa SCX „Objazd czy postój?” (cała trasa; HERE objazd) | #783; właściciel 04.11 | E49 / SCX | SCALONE (#791 `4e5ffc99` / **0399**–**0405**; `DETOUR_E49=true`) |
-| DP-207 | Cursor | E49-b: `load_escorts.scope` tylko PL/SE/PL_SE → PILOT LT/LV/EE/FI zawsze „!”; rozszerzenie awizacji pilotów na całą trasę (decyzja właściciela) | F7 #791 nieblok. | E49 / awizacja | w kolejce |
-| DP-208 | Cursor | E49-b: BAN / WORKS bez źródła danych → „sprawdź …” (podpiąć źródła gdy dostępne) | F7 #791 nieblok. | E49 / ryzyka | w kolejce |
-| DP-209 | Cursor | E49-b: WIND zawęzić do okna przejazdu wariantu; zapytania w pętli → jedno na przebieg | F7 #791 nieblok. | E49 / HERE | w kolejce |
+| DP-210 | Cursor | E49-b: `load_escorts.scope` tylko PL/SE/PL_SE → PILOT LT/LV/EE/FI zawsze „!”; rozszerzenie awizacji pilotów na całą trasę | F7 #791 nieblok.; #792 (kolizja 207–209 w rej. koord.) | E49 / awizacja | **do decyzji właściciela — nie zaczynać** |
+| DP-211 | Cursor | E49-b: BAN / WORKS bez źródła danych → „sprawdź …” (podpiąć źródła gdy dostępne) | F7 #791 nieblok.; #792 | E49 / ryzyka | w kolejce |
+| DP-212 | Cursor | E49-b: WIND zawęzić do okna przejazdu wariantu; zapytania w pętli → jedno na przebieg | F7 #791 nieblok.; #792 | E49 / HERE | w kolejce |
 | DP-121 | Cursor | Digitraffic `port-call/v2/visits?status=cancelled` (bez `locode`); filtr MMSI/IMO floty FIHEL/FIVUO ±3 h → ryzyko HIGH HHL (bez ODWOLANY); re-zgłoszenie aktywnej wizyty ±3 h → bez ryzyka; dedup `…:<visitId>` bez daty; F7 r2: `detail.audience=HHL` + `risk_audience_for` (**0394**) | F7 #694 r1; F7 #782 r1–r2 | BN3 / Portnet | SCALONE (#782 `4b9e0d9a` / **0394**) |
 | DP-99 | Cursor | `operatorFromSailingSource` fallback MUU-VUO → VIKING (prod tylko ECKERO), domyślnie TALLINK → z `data-company` ts.ee albo `ferry_route_operators` (DP-1) | F7 #683 | BN3 | w kolejce |
 | DP-100 | Cursor | dedup AUTO tylko aplikacyjny → partial unique index `(sailing_id, kind) where source='AUTO'` albo `.neq('status','ODWOLANY')` w update | F7 #683 | BN3 | w kolejce |
@@ -2652,6 +2652,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 03.11.2026 21:35 | #777 F7 r1 niegotowe → seed Portnet/Deltamarin, I=IC, dzień przypłynięcia, złożone IBNet | pętla / C2 F7 |
 | 03.11.2026 22:00 | #777 SCALONE `2a99a8e6` (DP-120 / **0391**; F7 gotowe @ `fecc5f7a`); start DP-202+203 (#778+#779) | pętla / C2 |
 | 03.11.2026 23:50 | #780 F7 r3: auto DeepL na luki TV/bałtyk (bez RESOURCE_MISSING:TV_CODE); **0393** memory_auto_24h | pętla / C2 F7 |
+| 04.11.2026 14:48 | #792: kolizja numerów — F7 #791 nieblok. **DP-207–209 → DP-210–212** (210 = decyzja właściciela, nie zaczynać); CI unit/visual ✔ @ `5d279f1d` | pętla / C2 |
 | 04.11.2026 15:25 | #791 SCALONE `4e5ffc99` (DP-206 / **0399**–**0405**; F7 gotowe @ `3735049a`); DP-207–209 z F7 nieblok.; start DP-123 (test cancel-suspect) | pętla / C2 |
 | 04.11.2026 14:55 | #791 F7 r5 **0405**: B8a FERRY→port; B8b H4_SEGMENTS; B8c piloci; B6b kotwica/notices/>2h; B13 canDecide; visual telefon; e-mail `who` | pętla / C2 F7 |
 | 04.11.2026 14:30 | #791 F7 r4 **0404**: B8 ryzyka z danymi; B4 IN_TRANSIT+pozycja; B6 baseMissing+pamięć HERE; B12 security **521**; CI db FAIL @769375b8 | pętla / C2 F7 |
