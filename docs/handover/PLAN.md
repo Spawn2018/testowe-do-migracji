@@ -962,6 +962,13 @@ Aplikacja kierowcy porzucona, zostaje w kodzie; link pokazuje „Link nieaktywny
 - `notifications` `IN_APP`, nieprzeczytane, starsze niż 7 dni → przeczytane (`b8_mark_stale_in_app_read`).
 - Kopia identyfikatorów w `audit_log` (`action = 'AUDYT17_MARK_READ'`, `entity_id = b8-0301`); liczby przed i po w `POSTEP.md` po wdrożeniu.
 
+### #797 · PILNE: Tallinn — status w porcie (strefy EE `country`/`route`) — W TOKU
+Źródło: #797 (Spawn2018, `pilne`; 04.11 ~18:48Z). Prod: SG 0040/41 w Tallinn D, rejs TLL–HEL 20:30Z, status `IN_TRANSIT_PL` — strefy EE miały `country='SE'` / `route='POLFERRIES'` → `ferry_geofence_matches_route` false.
+1. Migracja **0407**: poprawa `geofences` (EE/FI/SE bałtyckie po nazwie); `bn1_seed_baltic_geofences` upsert country/route; backfill INSIDE PORT_OUT → `AT_PORT_GDANSK`.
+2. `promote_ferry_departures` już obejmuje `IN_TRANSIT_PL` + outbound TLL-HEL (assume_dep 20) — bez zmiany kodu.
+3. Testy `status.sh` (+9 → **663**): match TLL-HEL → AT_PORT; obca trasa bez zmiany; promote; seed naprawia.
+Gałąź: `pakiet/c2-797-tallinn-ee-geofences`. Po scaleniu → **DP-215** (#798).
+
 ### #550 · PILNE: lokalizacja kierowcy SG-18 (D-20261025-1022-01) — WSTRZYMANE (właściciel 25.10 11:34: kierowca nie instaluje aplikacji; nic nie budować do nowego wpisu)
 Źródło: skrzynka `dla-cursora` #550 (Spawn2018, etykiety `dla-cursora`+`pilne`). Link Google w SG-18 zostaje jako „inny link” (ręczne kliknięcie). **Nie buduj** konektora Google (STOP pkt 1) ani wariantu z kontem/ciasteczkami; wariant Traccar/OwnTracks/JSON — wstrzymany. Kolejka: B9 → A6 → C4–C13.
 1. **Rozpoznanie formatu (25.10):** `maps/rpc/locationsharing/read` bez sesji Google → HTTP 200, prefix `)]}'`, indeks 0 = null, indeks 6 = `GgA=` (brak pozycji). Token w `pb` nie odblokowuje; biblioteki wymagają ciasteczek sesji. Koordynator potwierdził STOP Google; potem decyzja JSON — **wstrzymana**.
@@ -1222,7 +1229,8 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-115 | Cursor | `stenaIrmBackoffUntilMs` — stan w pamięci modułu (jak dawny streak Tallink); ocenić persist / Edge cold start | F7 #689 r1 | BN3 / AIS | w kolejce |
 | DP-116 | Cursor | `max_rows=1000` obcina odczyty rejsów (2119 na prod) — przegląd innych jobów ferry + stronicowanie / agregaty; F7 #696 r4: też `openCancelSuspectSailings` (risk_signals range+order, sailings.in ≤150) | F7 #690 r2 / #691 / #696 r4 | BN3 / ferry | SCALONE #693 sailings; cancel-suspect w #696 |
 | DP-123 | Cursor | mutacja „zniknięcie bez wymogu stoi” przeżywa w wąskim przypadku (SOG 0,5–3 kn w geofence + Portnet zniknął) — brakuje testu; kod OK | F7 #696 r4 | BN3 / cancel-suspect | SCALONE (#792 `ba31c223`) |
-| DP-124 | Cursor | UMG: pusta godzina ATA — nie traktować jako ATA (wpis koordynatora 01.11) | F7 #695 / koord. 01.11 | BN3 / UMG | W TOKU (`pakiet/c2-dp-124-umg-empty-ata`) |
+| DP-124 | Cursor | UMG: pusta godzina ATA — nie traktować jako ATA (wpis koordynatora 01.11) | F7 #695 / koord. 01.11 | BN3 / UMG | SCALONE (#796 `9a5d7e35`) |
+| DP-215 | Cursor | Neutralne nazwy etapów: Droga do portu / Port wyjścia / Port docelowy / Droga do placu (i18n pl/en/sv) | #798 / właściciel 04.11 19:54 | C2 / UI | w kolejce (po #797) |
 | DP-125 | Cursor | SMS „prom przywrócony” dla kierowców po auto-ODWOLANY — **ANULOWANE** (właściciel 01.11 11:24: „79: bez SMS”; #697) | F7 #698 r2 / #697 | BN3 / #686 | **ANULOWANE** 01.11.2026 |
 | DP-126 | Cursor | F7 #699 r3 nieblokujące: zaprzeczenie „will not be”; wzmocnienie T1; szersze testy filtrów ERR | F7 #699 r3 | BN3 / ERR RSS | w kolejce |
 | DP-127 | Cursor | Odbiór #699: `ferry-status` observations puste — dodać `err_rss_enabled` / `err_rss_items` / `err_rss_hits` (bez migracji) | #699 odbiór / F7 #701 | BN3 / ERR RSS | SCALONE #702 `483a7ce8` |
@@ -1456,7 +1464,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 ### #762 · Kolejka drobnych poprawek Cursora — pakiety C1–C5 (do wydania 1.0)
 Źródło: #762 (Spawn2018; 03.11). Po #760 → #756 (DP-187/188) → C1…. Koordynator: pakiety DP-A/B/C (front) — nie brać.
 1. **C1 — Korytarz bałtycki:** ~~DP-179~~ DONE; ~~143/144~~ DONE; ~~DP-146~~ SCALONE (#769 `1a523a5f`); ~~152~~ SCALONE (#768 `0abe9a8f`); ~~155/156~~ SCALONE (#766 `272e0afc` / **0388**); ~~157/158~~ DONE (LT/LV/EE/FI etykiety, szum FI; przed BN10).
-2. **C2 — telematyka / ETA:** ~~**DP-193+194**~~ SCALONE (#770 / **0389**); ~~**DP-197**~~ SCALONE (#771 `18c05217` / **0390**); ~~**DP-198**~~ SCALONE (#772 `ee54ad20`); ~~**DP-119**~~ SCALONE (#774 `5f0c4bce`; rej. koord. DP-116 cz. 2); ~~**DP-200**~~ SCALONE (#776 `e023c2ba`); ~~**DP-196**~~ SCALONE (#775 `b4a8dab9`); ~~**DP-120**~~ SCALONE (#777 `2a99a8e6` / **0391**); ~~**DP-202+203**~~ SCALONE (#780 `642a9b21` / **0392**+**0393**); ~~**DP-121**~~ SCALONE (#782 `4b9e0d9a` / **0394**); ~~**DP-204**~~ SCALONE (#784 `34263f4d`); ~~**DP-786**~~/**DP-207** SCALONE (#787 `31a1c0bb` / **0395**); ~~**DP-205**~~ SCALONE (#785 `7ef4bc3c` / **0396**+**0397**+**0398**); ~~**DP-206**~~ SCALONE (#791 `4e5ffc99` / **0399**–**0405**, `DETOUR_E49=true`); ~~**DP-123**~~ SCALONE (#792 `ba31c223`); ~~**DP-208**~~ SCALONE (#794 `21a92c37` / **0406**; otwarte: gęsta E4 OSM); ~~**DP-209**~~ SCALONE (#795 `9ab5b2cb`). **Bieżące:** **DP-124** (UMG pusta ATA); potem kolejka C2…; DP-210 = decyzja właściciela (nie zaczynać).
+2. **C2 — telematyka / ETA:** ~~**DP-193+194**~~ SCALONE (#770 / **0389**); ~~**DP-197**~~ SCALONE (#771 `18c05217` / **0390**); ~~**DP-198**~~ SCALONE (#772 `ee54ad20`); ~~**DP-119**~~ SCALONE (#774 `5f0c4bce`; rej. koord. DP-116 cz. 2); ~~**DP-200**~~ SCALONE (#776 `e023c2ba`); ~~**DP-196**~~ SCALONE (#775 `b4a8dab9`); ~~**DP-120**~~ SCALONE (#777 `2a99a8e6` / **0391**); ~~**DP-202+203**~~ SCALONE (#780 `642a9b21` / **0392**+**0393**); ~~**DP-121**~~ SCALONE (#782 `4b9e0d9a` / **0394**); ~~**DP-204**~~ SCALONE (#784 `34263f4d`); ~~**DP-786**~~/**DP-207** SCALONE (#787 `31a1c0bb` / **0395**); ~~**DP-205**~~ SCALONE (#785 `7ef4bc3c` / **0396**+**0397**+**0398**); ~~**DP-206**~~ SCALONE (#791 `4e5ffc99` / **0399**–**0405**, `DETOUR_E49=true`); ~~**DP-123**~~ SCALONE (#792 `ba31c223`); ~~**DP-208**~~ SCALONE (#794 `21a92c37` / **0406**; otwarte: gęsta E4 OSM); ~~**DP-209**~~ SCALONE (#795 `9ab5b2cb`); ~~**DP-124**~~ SCALONE (#796 `9a5d7e35`). **Bieżące:** **#797 PILNE** (strefy EE Tallinn `country`/`route` + backfill AT_PORT / **0407**); potem **DP-215** (#798 nazwy etapów); potem kolejka C2…; DP-210 = decyzja właściciela (nie zaczynać).
 3. **C3 — stare pozycje backendu:** DP-2, 10, 12, 22, 24, 29–32, 38–40, 43, 46, 47, 53–58 (+ **DP-195** tor KAA po #764).
 4. **C4 — reszta:** DP-69, 70, 81–83, 90–93, 97, 99–103, 105–109, 111, 112.
 5. **C5 — warunkowe:** DP-186 (decyzja 04.11 ~07:00 po 24 h odbioru #753).
@@ -2655,6 +2663,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 03.11.2026 21:35 | #777 F7 r1 niegotowe → seed Portnet/Deltamarin, I=IC, dzień przypłynięcia, złożone IBNet | pętla / C2 F7 |
 | 03.11.2026 22:00 | #777 SCALONE `2a99a8e6` (DP-120 / **0391**; F7 gotowe @ `fecc5f7a`); start DP-202+203 (#778+#779) | pętla / C2 |
 | 03.11.2026 23:50 | #780 F7 r3: auto DeepL na luki TV/bałtyk (bez RESOURCE_MISSING:TV_CODE); **0393** memory_auto_24h | pętla / C2 F7 |
+| 04.11.2026 20:05 | #796 SCALONE `9a5d7e35` (DP-124); start #797 PILNE Tallinn EE geofences / **0407**; DP-215 (#798) w kolejce | pętla / C2 |
 | 04.11.2026 19:20 | #796 F7 r1: puste ETA/ETD bez ostrzeżenia + `umg_empty_time` | pętla / C2 F7 |
 | 04.11.2026 19:05 | #795 SCALONE `9ab5b2cb` (DP-209; F7 gotowe @ `b35fd767`); start DP-124 (UMG pusta ATA) | pętla / C2 |
 | 04.11.2026 17:40 | #794 SCALONE `21a92c37` (DP-208 / **0406**; F7 gotowe @ `58114b06`); start DP-209 (#789 EE droga) | pętla / C2 |

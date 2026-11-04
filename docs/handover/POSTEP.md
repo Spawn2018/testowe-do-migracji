@@ -1,4 +1,11 @@
 
+## 2026-11-04 20:05 — #796 SCALONE; start #797 PILNE (Tallinn EE)
+
+- Skrzynka: #550 WSTRZYMANE; #797 `pilne` (Tallinn status); #798 DP-215 (po #797); BN5–8 w planie. Bez innego nowego `pilne`.
+- Scalanie: **#796 SCALONE** `9a5d7e35` (DP-124; F7: gotowe @ `d26b15ff`; CI unit/visual/db ✔). `deploy-main` robi resztę. Bez push na main.
+- **Krok #797** `pakiet/c2-797-tallinn-ee-geofences` / **0407**: poprawa `geofences` country/route (Tallinn/Muuga/Paldiski + PORT_IN); seed upsert; backfill INSIDE PORT_OUT → AT_PORT_GDANSK. `promote_ferry_departures` już pokrywa IN_TRANSIT_PL+TLL-HEL. status.sh +9 → **663**.
+- **Dalej:** push → CI (+`db`) → F7. Po scaleniu DP-215 (#798). DP-210 nie zaczynać.
+
 ## 2026-11-04 19:20 — #796 F7 r1: puste ETA/ETD + umg_empty_time
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
