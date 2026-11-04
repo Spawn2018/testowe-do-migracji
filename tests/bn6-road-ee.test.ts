@@ -514,14 +514,22 @@ describe('BN6 road-ee parsers', () => {
     expect(formatEeRoadLabel('E67')).toBe('droga 4 (E67)');
     expect(formatEeRoadLabel('T1')).toBe('droga 1 (E20)');
     expect(formatEeRoadLabel('E20')).toBe('droga 1 (E20)');
+    expect(formatEeRoadLabel('E263')).toBe('droga 2 (E263)');
+    expect(formatEeRoadLabel('T2')).toBe('droga 2 (E263)');
+    expect(formatEeRoadLabel('2')).toBe('droga 2 (E263)');
+    expect(formatEeRoadLabel('E264')).toBe('droga 3 (E264)');
+    expect(formatEeRoadLabel('T3')).toBe('droga 3 (E264)');
+    expect(formatEeRoadLabel('3')).toBe('droga 3 (E264)');
     expect(formatEeRoadLabel('T11')).toBe('droga 11');
     expect(formatEeRoadLabel('T8')).toBe('droga 8');
     expect(formatEeRoadLabel('980')).toBe('droga 980');
     expect(formatEeRoadLabel('E980')).toBe('droga 980');
     expect(formatEeRoadLabel('A55')).toBe('droga 55');
+    expect(balticRoadLabel('EE', 'E263')).toBe('droga 2 (E263)');
+    expect(balticRoadLabel('EE', 'E264')).toBe('droga 3 (E264)');
     expect(balticRoadLabel('EE', 'E980')).toBe('droga 980');
     expect(balticRoadLabel('EE', 'A55')).toBe('droga 55');
-    expect(balticRoadLabel('EE', 'A55')).not.toMatch(/A55|E980/);
+    expect(balticRoadLabel('EE', 'A55')).not.toMatch(/A55|E980|droga 263|droga 264/);
 
     /* Via Baltica (Pärnu–Tallinn, punkt na odcinku CORRIDOR_EE_ROAD_SEGS) → droga 4 (E67). */
     const onT4 = nearestCorridorRoad('EE', 58.6445, 24.4615);

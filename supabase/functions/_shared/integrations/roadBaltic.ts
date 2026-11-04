@@ -501,13 +501,20 @@ export function balticShortPlace(
 }
 
 /**
- * DP-209 / #789: konwencja estońska w tytule — „droga N” (+ E w nawiasie).
- * Bez prefiksów A/P/V/T; E980 → „droga 980”; A55 → „droga 55”.
+ * DP-209 / #789 / F7 #795 B1: konwencja estońska — „droga N” (+ E w nawiasie).
+ * Znane E (E20/E67/E263/E264) → tabela; nieznane E (np. E980) → „droga {n}”.
+ * Bez prefiksów A/P/V/T; A55 → „droga 55”.
  */
 export const EE_ROAD_DISPLAY: Record<string, string> = {
   '1': 'droga 1 (E20)',
   T1: 'droga 1 (E20)',
   E20: 'droga 1 (E20)',
+  '2': 'droga 2 (E263)',
+  T2: 'droga 2 (E263)',
+  E263: 'droga 2 (E263)',
+  '3': 'droga 3 (E264)',
+  T3: 'droga 3 (E264)',
+  E264: 'droga 3 (E264)',
   '4': 'droga 4 (E67)',
   T4: 'droga 4 (E67)',
   E67: 'droga 4 (E67)',
