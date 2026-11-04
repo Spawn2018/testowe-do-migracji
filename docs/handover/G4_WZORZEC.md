@@ -395,4 +395,5 @@ Wzorca `shots-baseline` nie zmieniano.
 ## DP-215 (04.11.2026) — E28 / StageBar: neutralne nazwy etapów
 Odświeżone `tests/__screenshots__/kokpit-hhl-pl-1920-{light,dark-default}.png` z artefaktów `visual-artifacts` po failach zrzutów (light: 41906263605; dark: 41915265123 @ `3ef8c0d0`, gałąź `pakiet/c2-dp-215-neutral-stage-names`). Telefon i bramy zielone bez zmian migawek.
 Przyczyna: DP-215 (#798) — kafelki paska E28: Droga do portu / Port wyjścia / Port docelowy / Droga do placu (zamiast Droga PL / Port PL / Port SE / Droga SE). Light 399 px, dark 366 px (ratio 0,01) w pasku statusów u góry Kokpitu. Statusy Polferries/Stena (Port wypłynięcia/przypłynięcia) — poza tymi 15 migawkami (brak osobnego failu zrzutów statusów).
+Dodatkowo `mapa-hhl-pl-1920-light.png` z actual po failu 41919939041 @ `e02f7e42` (2047 px — ten sam StageBar E28 na widoku Mapa; dark mapa bez failu).
 Wzorca `shots-baseline` nie zmieniano.
