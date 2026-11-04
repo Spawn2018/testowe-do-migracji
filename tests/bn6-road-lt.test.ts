@@ -405,14 +405,23 @@ describe('BN6 road-lt — eismoinfo', () => {
     expect(cA5.severity).toBe('HIGH');
     expect(balticSlowdownMult([c134]).mult).toBe(1);
     expect(balticSlowdownMult([cA5]).reason).toMatch(/zamknięcia:\s*1/);
+    /* DP-204.5 / #781 pkt 10b: bez numeru ≤ 300 m od korytarza → droga z geometrii + on. */
     const unknown: BalticRoadEvent = {
       id: 'U', title: 'zamkniecie', detail: 'bez numeru', severity: 'HIGH',
       lat: 54.9, lon: 23.9, kind: 'closed', start: null, end: null,
     };
     const [u] = applyBalticCorridorRoadFilter('LT', [unknown]);
-    expect(u.corridorMatch).toBe('unknown');
-    expect(u.severity).toBe('MEDIUM');
-    expect(balticSlowdownMult([u]).mult).toBe(1);
+    expect(u.road).toBe('A5');
+    expect(u.corridorMatch).toBe('on');
+    expect(u.severity).toBe('HIGH');
+    /* Daleko od korytarza bez numeru → nadal unknown / off (nie b.d. w HIGH). */
+    const far: BalticRoadEvent = {
+      id: 'F', title: 'zamkniecie', detail: 'Wilno centrum', severity: 'HIGH',
+      lat: 54.69, lon: 25.28, kind: 'closed', start: null, end: null,
+    };
+    const [f] = applyBalticCorridorRoadFilter('LT', [far]);
+    expect(f.road == null || f.corridorMatch !== 'on').toBe(true);
+    expect(balticSlowdownMult([f]).mult).toBe(1);
   });
 });
 

@@ -189,7 +189,7 @@ const pl: Dict = {
   rk_safefleet_dead: 'Link SafeFleet nie działa / wygasł',
   rk_wind_gust: 'Wiatr: porywy {gust} m/s (próg {thr} m/s)',
   rk_time_ban: 'Zakaz czasowy {where}: plan {when}',
-  /* DP-207: droga z params.road (E4/E22…), nie na sztywno E4. */
+  /* DP-204.3: droga z params.road (E4/E22…), nie na sztywno E4. */
   rk_road_se: '{road}: {event}',
   rk_tv_unknown_code: 'Nieznany kod źródła drogowego — w panelu: zdarzenie drogowe',
   /** DP-203: luka słownika SE — tylko HHL (RESOURCE_MISSING), nie panel Ryzyka WSZYSCY */

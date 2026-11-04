@@ -124,7 +124,7 @@ import {
   lvWeatherToSlowdownEvents, parseEeFeedBody, parseFiTrafficMessages, parseLtRestrictions,
   parseLtWeather, parseLvFeedBody, probeBalticHost, probeEeDatexApi, readBalticFeedBody,
   setEeHeavyFeedCache, setEeSitesCache, weightLimitRisk,
-  type BalticKeyMeta, type BalticRoadEvent, type LvNapCode,
+  type BalticKeyMeta, type BalticRoadEvent, type EeSiteInfo, type LvNapCode,
 } from './roadBaltic.ts';
 import { buildTrafficIncidentsUrl, parseHereTrafficIncidents } from '../here/trafficIncidents.ts';
 import { HERE_BILLING_DEFAULTS } from '../here/billing.ts';
@@ -4557,7 +4557,7 @@ type EeFeedPart = {
   per: string;
   format: string;
   events: BalticRoadEvent[];
-  sites?: Map<string, [number, number]>;
+  sites?: Map<string, [number, number]> | Map<string, EeSiteInfo>;
   /** DP-171 — czas pobrania [ms]. */
   ms: number;
   /** DP-178 — kształt nieczytelnej odpowiedzi (bez treści/URL). */
@@ -4751,7 +4751,9 @@ export async function runRoadEe(deps: JobDeps): Promise<JobResult> {
     );
     parts.push(sitePart);
     if (sitePart.sites && sitePart.sites.size > 0) {
-      for (const [id, ll] of sitePart.sites) sites.set(id, ll);
+      for (const [id, v] of sitePart.sites) {
+        sites.set(id, Array.isArray(v) ? v : [v.lat, v.lon]);
+      }
       setEeSitesCache(sitePart.sites, started);
       sitesSource = 'fetch';
     } else {
@@ -6403,7 +6405,8 @@ export async function runTranslateRetry(deps: JobDeps): Promise<JobResult> {
   if (!store.translationListQueue) {
     return { job: 'translate-retry', mode: 'LIVE', ok: true, reason: 'Brak magazynu kolejki tłumaczeń — pominięto' };
   }
-  const rows = await store.translationListQueue(['blad', 'brak', 'limit', 'limit_przebiegu']);
+  /* DP-204.5: rate_limit (DeepL 429) też w kolejce — bez oznaczania jako blad. */
+  const rows = await store.translationListQueue(['blad', 'brak', 'limit', 'limit_przebiegu', 'rate_limit']);
   await raiseStale(rows);
 
   if (!key || !store.translationGet || !store.translationPut

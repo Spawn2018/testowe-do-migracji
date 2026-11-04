@@ -27,6 +27,8 @@ import {
   balticFeedObsOk,
   balticFeedShapeObs,
   balticKeyMeta,
+  balticRoadLabel,
+  balticShortPlace,
   balticSlowdownMult,
   classifyBalticFeedClass,
   classifyBalticNetError,
@@ -41,6 +43,9 @@ import {
   eeDatexFeedUrl,
   eeIsDatexPublicationEnvelope,
   eeRoadOnCorridor,
+  formatBalticRoadTitle,
+  formatEeWeatherDetailPl,
+  nearestCorridorRoad,
   probeEeDatexApi,
   eeSeverityForRecord,
   extractBalticRoadRef,
@@ -293,16 +298,19 @@ describe('BN6 road-ee parsers', () => {
     expect(lvNapKeyAllowedForUrl('https://cdn.example.com/feed.xml')).toBe(false);
   });
 
-  it('F7 B5 / r2 B1: nested weather — jäide / zimno+RH / mgła → HIGH+slow; märg → nie', () => {
+  it('F7 B5 / r2 B1 / DP-204.5: nested weather — jäide / zimno+RH / mgła → HIGH+slow; märg → nie', () => {
     const sites = parseEeMeasurementSites(sitesXml);
     expect(sites.has('ee-site-t4-marjamaa')).toBe(true);
+    expect(sites.get('ee-site-t4-marjamaa')?.road).toBe('T4');
     const stats = { parsed: 0, skipped: 0, swapped: 0, weatherBlocks: 0, weatherNoSite: 0 };
     const wx = parseEeWeatherData(weatherXml, sites, stats);
     expect(wx.some((e) => /jäide|libedus/i.test(e.detail ?? ''))).toBe(true);
     const icy = wx.find((e) => /jäide|libedus/i.test(e.detail ?? ''))!;
     expect(icy.severity).toBe('HIGH');
-    expect(wx.some((e) => /temp nawierzchni -1/i.test(e.detail ?? '') && e.severity === 'HIGH')).toBe(true);
-    expect(wx.some((e) => /widocznosc 120/i.test(e.detail ?? '') && e.severity === 'HIGH')).toBe(true);
+    expect(icy.road).toBe('T4');
+    expect(icy.title).toMatch(/ryzyko gołoledzi|słaba widoczność/);
+    expect(wx.some((e) => /temperatura nawierzchni −1 °C/i.test(e.detail ?? '') && e.severity === 'HIGH')).toBe(true);
+    expect(wx.some((e) => /widoczność 120 m/i.test(e.detail ?? '') && e.severity === 'HIGH')).toBe(true);
     /* id z czasem pomiaru (dwa pomiary tej samej stacji) */
     expect(wx.filter((e) => e.id.startsWith('ee-wx:ee-site-t4-marjamaa')).length).toBeGreaterThanOrEqual(2);
     const near = applyBalticCorridorRoadFilter('EE', wx);
@@ -312,12 +320,59 @@ describe('BN6 road-ee parsers', () => {
     expect(slow.mult).toBeGreaterThan(1);
     expect(slow.reason ?? '').toMatch(/pogoda/);
     /* sama mokra nawierzchnia bez lodu — brak zdarzenia z samym „märg” */
-    expect(wx.filter((e) => /märg/i.test(e.detail ?? '') && !/temp|widocznosc|jäide|libedus/i.test(e.detail ?? ''))).toHaveLength(0);
+    expect(wx.filter((e) => /märg/i.test(e.detail ?? '') && !/temp|widoczność|jäide|libedus/i.test(e.detail ?? ''))).toHaveLength(0);
     expect(stats.weatherNoSite).toBeGreaterThanOrEqual(1);
   });
 
   it('F7 B7: atrybucja Transpordiamet / Tark Tee (tarktee.ee)', () => {
     expect(EE_ATTRIBUTION).toBe('Transpordiamet / Tark Tee (tarktee.ee)');
+  });
+
+  it('DP-204.5 / #781 pkt 8–12: EE droga ze stacji; LV A7 z geometrii; miejsce; pogoda PL', () => {
+    const sites = parseEeMeasurementSites(sitesXml);
+    expect(sites.get('ee-site-t4-marjamaa')?.road).toBe('T4');
+    expect(sites.get('ee-site-kose')?.name).toMatch(/Kose/i);
+    const wx = parseEeWeatherData(weatherXml, sites);
+    const icy = wx.find((e) => /jäide|libedus/i.test(e.detail ?? ''))!;
+    expect(icy.road).toBe('T4');
+    expect(formatBalticRoadTitle('EE', icy).roadLabel).toMatch(/^T4$/);
+    expect(formatBalticRoadTitle('EE', icy).title).not.toMatch(/droga b\.d\./i);
+
+    /* LV wypadek bez kodu przy A7 → A7 z geometrii korytarza. */
+    const nearA7 = nearestCorridorRoad('LV', 56.83, 24.23);
+    expect(nearA7).toBe('A7');
+    const lvAcc = applyBalticCorridorRoadFilter('LV', [{
+      id: 'lv-acc', title: 'Accident', detail: 'Wypadek',
+      severity: 'HIGH', lat: 56.83, lon: 24.23, kind: 'ACCIDENTS',
+      start: null, end: null, road: null,
+    }])[0]!;
+    expect(lvAcc.road).toBe('A7');
+    expect(lvAcc.corridorMatch).toBe('on');
+    expect(balticRoadLabel('LV', lvAcc.road)).toBe('A7');
+
+    /* Punkt daleko bez numeru → nazwa miejsca, nie „b.d.” w HIGH. */
+    const far = applyBalticCorridorRoadFilter('EE', [{
+      id: 'ee-far', title: 'SAFETY', detail: 'Kose vald',
+      severity: 'HIGH', lat: 59.18, lon: 25.17, kind: 'SAFETY',
+      start: null, end: null, road: null, placeName: 'stacja Kose',
+    }])[0]!;
+    const farTitle = formatBalticRoadTitle('EE', far);
+    expect(farTitle.roadLabel).toMatch(/Kose/i);
+    expect(farTitle.roadLabel).not.toMatch(/droga b\.d\./i);
+    expect(farTitle.title).not.toMatch(/droga b\.d\./i);
+
+    /* Tytuł bez wykonawcy/telefonu; ≤ 40 znaków miejsca. */
+    const short = balticShortPlace(
+      'Remont drogi. Wykonawca: AB „Kauno tiltai”, tel. +370 600 00000, odcinek Kaunas–Rumšiškės',
+      { road: 'A1', typePl: 'roboty drogowe', maxLen: 40 },
+    );
+    expect(short.length).toBeLessThanOrEqual(40);
+    expect(short).not.toMatch(/Wykonawca|tel\.|\+370/i);
+
+    const pl = formatEeWeatherDetailPl({
+      surfaceTempC: -0.8, humidityPct: 92, visibilityM: 20_000,
+    });
+    expect(pl).toBe('temperatura nawierzchni −0,8 °C · wilgotność 92% · widoczność 20 km');
   });
 
   it('parseEeSrtiJson: wypadek przy porcie; blokada HIGH', () => {

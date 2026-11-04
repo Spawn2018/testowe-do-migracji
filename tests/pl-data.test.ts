@@ -365,7 +365,7 @@ describe('PL-DATA', () => {
     expect(url).not.toContain('klucz');
   });
 
-  it('DP-205: limit wywołań na przebieg + timeout w deeplTranslate', async () => {
+  it('DP-204.1: limit wywołań na przebieg + timeout w deeplTranslate', async () => {
     const { DEEPL_MAX_CALLS_PER_RUN, DEEPL_CALL_TIMEOUT_MS } = await import('../src/lib/pl/deepl');
     expect(DEEPL_MAX_CALLS_PER_RUN).toBe(40);
     expect(DEEPL_CALL_TIMEOUT_MS).toBe(8_000);
@@ -383,6 +383,31 @@ describe('PL-DATA', () => {
     expect(r.queued).toBe(true);
     expect(queue).toContain('limit_przebiegu');
     expect(hits.n).toBe(0);
+  });
+
+  it('DP-204.5 / #781 pkt 9: DeepL 429 → rate_limit (nie blad); retry raz', async () => {
+    const { deeplTranslate, translateFreeText, DeeplRateLimitError } = await import('../src/lib/pl/deepl');
+    const queue: string[] = [];
+    const r = await translateFreeText({
+      text: 'Tee remont E67 juures Parnu',
+      source: 'ET', used: 0,
+      memoryGet: () => null, memoryPut: () => {},
+      enqueue: (_h, reason) => { queue.push(reason); },
+      deepl: async () => { throw new DeeplRateLimitError(); },
+    });
+    expect(r.pl).toBeNull();
+    expect(queue).toEqual(['rate_limit']);
+    expect(queue).not.toContain('blad');
+
+    let calls = 0;
+    const fetch429 = vi.fn(async () => {
+      calls += 1;
+      return new Response('Quota', { status: 429 });
+    });
+    await expect(
+      deeplTranslate(fetch429 as unknown as typeof globalThis.fetch, 'k', 'x', 'ET', { retry429Ms: 1 }),
+    ).rejects.toBeInstanceOf(DeeplRateLimitError);
+    expect(calls).toBe(2);
   });
 
   it('DP-172: źródła LT/LV/ET/FI + mapowanie EE→ET; brak klucza → oryginał bez błędu', async () => {

@@ -265,7 +265,7 @@ export function roadConditionRisk(c: RoadConditionReading): RiskInput {
   return {
     kind: 'ROAD_SE', severity: 'MEDIUM',
     title: `Warunki drogowe ${road}: ${c.text}`,
-    /* DP-207: params.road (E4/E22), nie stałe „E4:” w słowniku. */
+    /* DP-204.3: params.road (E4/E22), nie stałe „E4:” w słowniku. */
     titleKey: 'rk_road_se', params: { road, event: c.text },
     detail: { opis: c.location || c.text, rodzaj: 'RoadCondition', kod: c.code, droga: road, lat: c.lat, lon: c.lon, od: c.start, zrodlo: 'Trafikverket RoadCondition (CC0)' },
     dedup: `ROAD_SE:RC:${c.id}`, sourceUrl: 'https://www.trafikverket.se/trafikinformation/', validUntil: null,
@@ -343,9 +343,15 @@ export function markSeOffRoute(risk: RiskInput): RiskInput {
   };
 }
 
+/** DP-204.5 / #781 pkt 8: „E 4” → „E4” w etykiecie SE. */
+function compactSeRoadLabel(road: string | null | undefined): string {
+  const r = String(road ?? '').replace(/\bE\s+(\d{1,3})\b/gi, 'E$1').trim();
+  return r || 'E4';
+}
+
 export function roadRisk(country: 'SE' | 'PL', e: RoadEvent, sourceUrl: string): RiskInput {
   const offSe = country === 'SE' && seIsOffMainCorridor(e);
-  const roadLabel = e.road || 'E4';
+  const roadLabel = country === 'SE' ? compactSeRoadLabel(e.road) : (e.road || 'E4');
   const seTitle = offSe
     ? `Warunki drogowe ${roadLabel} · obok trasy: ${e.title}`
     : `Warunki drogowe ${roadLabel}: ${e.title}`;
