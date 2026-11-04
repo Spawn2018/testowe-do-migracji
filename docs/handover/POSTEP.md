@@ -1,4 +1,11 @@
 
+## 2026-11-04 16:30 — #794 F7 r1: PL znaki + PLAN otwarte E4
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
+- Scalanie: brak (F7 #794 r1 niegotowe @ `6d8e5287` — powody odrzutu bez ogonków).
+- **Krok F7 r1:** `seNynSparseDeviation` — „za mało punktów” / „długość … poza …” / „odchyłka … km”; PLAN §4 DP-208: **otwarte** gęsta linia E4 z OSM (docelowe, pkt 1 #788).
+- **Dalej:** push → CI (+`db`) → F7. Potem DP-209 / 124…; DP-210 nie zaczynać.
+
 ## 2026-11-04 16:20 — #792 SCALONE; start DP-208 (#788)
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.

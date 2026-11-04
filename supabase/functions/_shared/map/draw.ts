@@ -379,12 +379,12 @@ export function seNynSparseDeviation(
     }
   }
   if (line.length < 2 || corridor.length < 2) {
-    return { ok: false, reason: 'za malo punktow', lenKm, devMaxKm, devAt };
+    return { ok: false, reason: 'za mało punktów', lenKm, devMaxKm, devAt };
   }
   if (lenKm < SE_NYN_LEN_MIN_KM || lenKm > SE_NYN_LEN_MAX_KM) {
     return {
       ok: false,
-      reason: `dlugosc ${Math.round(lenKm)} poza ${Math.round(SE_NYN_LEN_MIN_KM)}-${Math.round(SE_NYN_LEN_MAX_KM)}`,
+      reason: `długość ${Math.round(lenKm)} poza ${Math.round(SE_NYN_LEN_MIN_KM)}-${Math.round(SE_NYN_LEN_MAX_KM)}`,
       lenKm,
       devMaxKm,
       devAt,
@@ -408,7 +408,7 @@ export function seNynSparseDeviation(
   if (devMaxKm > SE_NYN_CORR_MAX_KM) {
     return {
       ok: false,
-      reason: `odchylka ${devMaxKm.toFixed(1)} km > ${SE_NYN_CORR_MAX_KM}`,
+      reason: `odchyłka ${devMaxKm.toFixed(1)} km > ${SE_NYN_CORR_MAX_KM}`,
       lenKm,
       devMaxKm,
       devAt,

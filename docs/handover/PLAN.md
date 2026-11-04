@@ -1301,7 +1301,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-205 | Cursor | **E49-a** (D-20261104-0105-01 / #783): wiatr w ETA 20/25 m/s + źródła SMHI/FMI dla PL/SE/LT/LV/EE/FI | #783; właściciel 04.11 | E49 / ETA | SCALONE (#785 `7ef4bc3c` / **0396**+**0397**+**0398**; `WIND_E49=true`) |
 | DP-206 | Cursor | **E49-b** (D-20261104-0105-01 / #783): zamknięty most/droga → sprawa SCX „Objazd czy postój?” (cała trasa; HERE objazd) | #783; właściciel 04.11 | E49 / SCX | SCALONE (#791 `4e5ffc99` / **0399**–**0405**; `DETOUR_E49=true`) |
 | DP-207 | Cursor | rej. koord.: zalew ROAD_EE — u nas **DP-786** (dedup `ee-wx:${stacja}`, resolveStale, IN_APP) | #786/#787; komentarz #792 | BN6 / ROAD_EE | SCALONE (#787 `31a1c0bb` / **0395**; alias DP-786) |
-| DP-208 | Cursor | `SE_E4` ma 13 punktów → kontrola odchyłki HERE SE-NYN zawsze odrzuca; gęsta linia E4 albo kontrola względem via + obserwacje `se_nyn_*` | #788; odbiór DP-197 04.11; #718 | BN7 / HERE SE-NYN | W TOKU (`pakiet/c2-dp-208-se-e4-via-dev` / **0406**) |
+| DP-208 | Cursor | `SE_E4` ma 13 punktów → kontrola odchyłki HERE SE-NYN zawsze odrzuca; **w PR #794:** via ≤1 km + len ±10% + max 35 km + `se_nyn_*` (**0406**). **Otwarte (docelowe, pkt 1 #788):** gęsta linia E4 z OSM | #788; odbiór DP-197 04.11; #718; F7 #794 r1 | BN7 / HERE SE-NYN | W TOKU (`pakiet/c2-dp-208-se-e4-via-dev` / **0406**) |
 | DP-209 | Cursor | EE: numer drogi na trasie (HIGH „okolice trasy”); konwencja „droga 4 (E67)”; bez „E980”/„A55”; tabela odcinków jak LV/LT | #789; odbiór #787 | BN6 / ROAD_EE | w kolejce (po DP-123; było „przed E49-b”) |
 | DP-210 | Cursor | E49-b: `load_escorts.scope` tylko PL/SE/PL_SE → PILOT LT/LV/EE/FI zawsze „!”; rozszerzenie awizacji pilotów na całą trasę | F7 #791 nieblok.; #792 (kolizja 207–209 w rej. koord.) | E49 / awizacja | **do decyzji właściciela — nie zaczynać** |
 | DP-211 | Cursor | E49-b: BAN / WORKS bez źródła danych → „sprawdź …” (podpiąć źródła gdy dostępne) | F7 #791 nieblok.; #792 | E49 / ryzyka | w kolejce |
@@ -2655,6 +2655,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 03.11.2026 21:35 | #777 F7 r1 niegotowe → seed Portnet/Deltamarin, I=IC, dzień przypłynięcia, złożone IBNet | pętla / C2 F7 |
 | 03.11.2026 22:00 | #777 SCALONE `2a99a8e6` (DP-120 / **0391**; F7 gotowe @ `fecc5f7a`); start DP-202+203 (#778+#779) | pętla / C2 |
 | 03.11.2026 23:50 | #780 F7 r3: auto DeepL na luki TV/bałtyk (bez RESOURCE_MISSING:TV_CODE); **0393** memory_auto_24h | pętla / C2 F7 |
+| 04.11.2026 16:30 | #794 F7 r1: powody odrzutu PL znaki; PLAN DP-208 — otwarte gęsta linia E4 OSM (docelowe) | pętla / C2 F7 |
 | 04.11.2026 16:20 | #792 SCALONE `ba31c223` (DP-123; F7 @ `fd0cf994`); start DP-208 (#788) — via ≤1 km + len ±10% + max 35 km / **0406** | pętla / C2 |
 | 04.11.2026 16:15 | #792: rejestr — **DP-207** (=DP-786 SCALONE), **DP-208** (#788 SE_E4), **DP-209** (#789 EE droga); CI ✔ @ `ad448bb4`; czekam F7 DP-123 | pętla / C2 |
 | 04.11.2026 14:48 | #792: kolizja numerów — F7 #791 nieblok. **DP-207–209 → DP-210–212** (210 = decyzja właściciela, nie zaczynać); CI unit/visual ✔ @ `5d279f1d` | pętla / C2 |
