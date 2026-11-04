@@ -12,7 +12,8 @@ export default defineConfig({
     // P2: domyślny pool Vitest 5 na Windows nie ustawia runnera (describe → runner.config).
     // vmForks działa; po teście zostają timery toasta bez localStorage w hoście — nie liczą się jako błąd testu.
     ...(process.platform === 'win32' ? {
-      maxWorkers: 2,
+      /* maxWorkers 1: równoległe vite w i0+o2 → OOM (Zone Allocation) na Windows wykonawcy */
+      maxWorkers: 1,
       pool: 'vmForks' as const,
       dangerouslyIgnoreUnhandledErrors: true,
       testTimeout: 20_000,
