@@ -1,4 +1,11 @@
 
+## 2026-11-04 10:05 — #785 SCALONE; start DP-206 E49-b cz.1
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
+- Scalanie: **#785 SCALONE** `7ef4bc3c` (DP-205 / **0396**+**0397**+**0398**; F7: gotowe @ `d1775048`; CI unit/visual/db ✔). `deploy-main` robi resztę. Bez push na main.
+- **Krok DP-206 cz.1** `pakiet/c2-dp-206-e49b-detour`: migracja **0399** `e49_detour_cases` + RLS + `e49_detour_cases_open`; `_shared/e49/detourPlan.ts` + `detourHere.ts` (avoid[areas]); źródła ClosureSource bałtyckie + i18n; vitest `e49-detour-plan`; nullguard **909**. `DETOUR_E49` nadal false.
+- **Dalej:** job z `roadClosed` → sprawy + HERE truck objazd + decyzja SCX / macierz `scx_detour` → `DETOUR_E49=true`.
+
 ## 2026-11-04 09:35 — #785 CI zielone @ 9e0a8c3c → prośba o F7 r3
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`. Bez „F7: gotowe”.
