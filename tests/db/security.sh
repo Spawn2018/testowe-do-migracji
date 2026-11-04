@@ -1515,22 +1515,25 @@ chk6 "B8: AUDYT17_MARK_READ z id starego" "$(sys "select (new_value->'notificati
 echo; echo "[DP-786] ROAD_EE ee-wx — oznacz IN_APP przez risk_signals (0395 / F7 #787)"
 # F7: dedup_key powiadomienia = risk:RISK_OPEN:<risk_id>:… — bez ee-wx; łączenie po risk_id.
 # Fixture: 2× ROAD_EE ee-wx + 1× inny ROAD_EE → oznaczone 2, trzecie nie.
+# risk_signals z replica — bez trg_risk_matrix_notify (HIGH ROAD_EE = zalew IN_APP × użytkownicy).
 val "DP-786: authenticated bez EXECUTE dp786_mark_road_ee_wx_in_app_read" $HHL \
   "select has_function_privilege('authenticated', 'public.dp786_mark_road_ee_wx_in_app_read()', 'EXECUTE')::text" false
 DP786_P=$(sys "select project_id from loads where id='$L1'" | tr -d '\r')
-sys "insert into risk_signals (id, project_id, kind, severity, title, title_key, detail, dedup_key)
+sys "set session_replication_role=replica;
+     insert into risk_signals (id, project_id, kind, severity, title, title_key, detail, dedup_key)
      values
        ('55555555-0000-0000-0000-000000000786','$DP786_P','ROAD_EE','HIGH','DP786 wx A','rk_road_baltic',
         '{\"t\":\"dp786a\"}'::jsonb,'ROAD_EE:v2:ee-wx:dp786-site-a'),
        ('55555555-0000-0000-0000-000000000787','$DP786_P','ROAD_EE','HIGH','DP786 wx B','rk_road_baltic',
         '{\"t\":\"dp786b\"}'::jsonb,'ROAD_EE:v2:ee-wx:dp786-site-b'),
        ('55555555-0000-0000-0000-000000000788','$DP786_P','ROAD_EE','HIGH','DP786 other','rk_road_baltic',
-        '{\"t\":\"dp786c\"}'::jsonb,'ROAD_EE:v2:other-road-ee')" >/dev/null
+        '{\"t\":\"dp786c\"}'::jsonb,'ROAD_EE:v2:other-road-ee');
+     set session_replication_role=origin" >/dev/null
 DP786_N1=$(sys "set session_replication_role=replica;
   insert into notifications (channel, recipient, user_id, template, payload, dedup_key, created_at)
   values ('IN_APP', 'dp786-a@test', '$HHLID_B5', 'RISK_OPEN',
           jsonb_build_object('kind','ROAD_EE','risk_id','55555555-0000-0000-0000-000000000786','title','A'),
-          'risk:RISK_OPEN:55555555-0000-0000-0000-000000000786:HIGH:IN:' || '$HHLID_B5',
+          'dp786:test:a:' || gen_random_uuid()::text,
           '2026-11-04 00:00:00+00')
   returning id;
   set session_replication_role=origin" | grep -E '^[0-9]+$' | head -1)
@@ -1538,7 +1541,7 @@ DP786_N2=$(sys "set session_replication_role=replica;
   insert into notifications (channel, recipient, user_id, template, payload, dedup_key, created_at)
   values ('IN_APP', 'dp786-b@test', '$HHLID_B5', 'RISK_OPEN',
           jsonb_build_object('kind','ROAD_EE','risk_id','55555555-0000-0000-0000-000000000787','title','B'),
-          'risk:RISK_OPEN:55555555-0000-0000-0000-000000000787:HIGH:IN:' || '$HHLID_B5',
+          'dp786:test:b:' || gen_random_uuid()::text,
           '2026-11-04 00:10:00+00')
   returning id;
   set session_replication_role=origin" | grep -E '^[0-9]+$' | head -1)
@@ -1546,7 +1549,7 @@ DP786_N3=$(sys "set session_replication_role=replica;
   insert into notifications (channel, recipient, user_id, template, payload, dedup_key, created_at)
   values ('IN_APP', 'dp786-c@test', '$HHLID_B5', 'RISK_OPEN',
           jsonb_build_object('kind','ROAD_EE','risk_id','55555555-0000-0000-0000-000000000788','title','C'),
-          'risk:RISK_OPEN:55555555-0000-0000-0000-000000000788:HIGH:IN:' || '$HHLID_B5',
+          'dp786:test:c:' || gen_random_uuid()::text,
           '2026-11-04 00:20:00+00')
   returning id;
   set session_replication_role=origin" | grep -E '^[0-9]+$' | head -1)
@@ -1559,7 +1562,11 @@ chk6 "DP-786: inny ROAD_EE bez zmian" "$(sys "select (read_at is null)::text fro
 chk6 "DP-786: AUDYT17_MARK_READ z id A" "$(sys "select (new_value->'notification_ids' @> to_jsonb($DP786_N1::bigint))::text
   from audit_log where action='AUDYT17_MARK_READ' and entity_id='dp786-0395'
   order by id desc limit 1" | tail -1)" "true"
-sys "delete from notifications where id in ($DP786_N1,$DP786_N2,$DP786_N3);
+sys "delete from notifications where id in ($DP786_N1,$DP786_N2,$DP786_N3)
+        or payload->>'risk_id' in (
+          '55555555-0000-0000-0000-000000000786',
+          '55555555-0000-0000-0000-000000000787',
+          '55555555-0000-0000-0000-000000000788');
      delete from risk_signals where id in (
        '55555555-0000-0000-0000-000000000786',
        '55555555-0000-0000-0000-000000000787',
