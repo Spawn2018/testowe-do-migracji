@@ -5547,8 +5547,8 @@ async function raiseFerryIceRisks(
  */
 
 /**
- * H-10 (ryzyko wiatru, próg 15 m/s) + H-12 (zakazy czasowe).
- * Korekta ETA przez wiatr = etap po TELM (H-4) — tu tylko ryzyko.
+ * H-10 / E49 (ryzyko wiatru, próg 20 m/s — D-84/E49-a) + H-12 (zakazy czasowe).
+ * Korekta ETA przez wiatr = E49-a (`_shared/e49/windEta`) — tu na razie tylko ryzyko testowe / H-12.
  */
 export async function runRouteHazards(deps: JobDeps): Promise<JobResult> {
   const nowIso = deps.now().toISOString();
@@ -5603,7 +5603,8 @@ export async function runRouteHazards(deps: JobDeps): Promise<JobResult> {
       risks++;
     }
   } else {
-    warnings.push('H-10: brak żywej serii wiatru drogowego w tym przebiegu — próg 15 m/s gotowy; ETA+wiatr po TELM');
+    // E49-a (DP-205): próg 20 m/s (D-84); żywa seria SMHI/FMI — w jobie wiatru E49 (następny krok PR).
+    warnings.push('E49: brak żywej serii wiatru drogowego w tym przebiegu — próg 20 m/s (ops_thresholds WIND_SLOW_MS)');
   }
   return {
     job: 'route-hazards', mode: 'LIVE', ok: true, risks,

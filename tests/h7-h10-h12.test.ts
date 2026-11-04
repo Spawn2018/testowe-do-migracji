@@ -23,11 +23,12 @@ describe('H-7 mapImage', () => {
   });
 });
 
-describe('H-10 wiatr', () => {
-  it('próg 15 m/s', () => {
-    expect(WIND_GUST_MS_THRESHOLD).toBe(15);
-    expect(gustExceedsThreshold(14.9)).toBe(false);
-    expect(gustExceedsThreshold(15)).toBe(true);
+describe('H-10 / E49 wiatr', () => {
+  // E49 Z1/Z2 (D-20261016-0230-01, DP-205): D-84 = 20 m/s (było 15).
+  it('próg 20 m/s', () => {
+    expect(WIND_GUST_MS_THRESHOLD).toBe(20);
+    expect(gustExceedsThreshold(19.9)).toBe(false);
+    expect(gustExceedsThreshold(20)).toBe(true);
     expect(gustExceedsThreshold(null)).toBe(false);
   });
 });

@@ -1,4 +1,11 @@
 
+## 2026-11-04 06:20 — #787 SCALONE; #785 rebase (0396)
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne` (poza #550). #786 zamknięte.
+- Scalanie: **#787 SCALONE** `31a1c0bb` (DP-786 / **0395**; F7: gotowe @ `03dee3ba`; unit/db ✔; visual flaky telefon → rerun ✔). `deploy-main` robi resztę. Bez push na main.
+- **Krok:** rebase `pakiet/c2-dp-205-e49a-wind` na `main`; migracja progów WIND_* → **0396** (0395 zajęte przez DP-786).
+- **Dalej:** dokończyć rebase (0397 corridor-wind) → ETA `basis.weather` + Z2 + Z4 → `WIND_E49=true`; potem DP-206.
+
 ## 2026-11-04 05:25 — #787 CI db: asercja count ze spacją jsonb
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne` (poza #550). #786 otwarte.
@@ -19,6 +26,13 @@
 - Scalanie: brak F7 „gotowe” na #785; CI #785 w toku @ `504d6381` — bez push na tę gałąź (G-15). **#785 wstrzymane do wdrożenia hotfixu.**
 - **Krok:** gałąź `hotfix/dp-786-road-ee-dedup` z `main`: `parseEeWeatherData` id=`ee-wx:${ref}` (merge gorszej wagi); `nameFromEeSiteId` / `isOpaqueEeSiteRef` bez UUID; tytuł bez podwójnego `(EE)`; migracja **0395** IN_APP ROAD_EE ee-wx → `read_at` + `AUDYT17_MARK_READ`; testy #786 + strażnik dedup. `resolveStaleRisks('ROAD_EE:', keep)` zamyka stare klucze z czasem przy następnym przebiegu.
 - **Dalej:** push → CI → F7/scalenie → po wdrożeniu powrót do #785 (rebase migracji 0395/0396 → wolne numery) ETA/Z2/`WIND_E49=true`.
+
+## 2026-11-04 03:20 — #784 SCALONE; start E49-a DP-205 (#783)
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`. #783 — prognoza czasu w komentarzu (E49-a 10–14 h + F7; E49-b 12–16 h; wydanie ~23–25.11).
+- Scalanie: **#784 SCALONE** `34263f4d` (DP-204; F7: gotowe @ `ec2c39d6`; CI unit/db/visual ✔). `deploy-main` robi resztę. Bez push na main.
+- **Krok DP-205 cz.1** `pakiet/c2-dp-205-e49a-wind`: migracja progów `WIND_*` (po rebase **0396**); `_shared/e49/windEta.ts` + `windForecast.ts` (SMHI/FMI, Z1/Z4); usunięcie `H10_ETA_PROPOSAL`; próg Ryzyk 20 m/s; `PROPOZYCJA_H10` → archiwum; testy `e49-wind-eta`. `WIND_E49` nadal `false` do podłączenia ETA. Dopisek `D-20261104-0105-01`.
+- **Dalej:** job/prognoza punktów korytarza + ETA `basis.weather` + Z2 sprawy → `WIND_E49=true`; potem E49-b DP-206.
 
 ## 2026-11-04 02:55 — #784 F7 r2: widoczność MEDIUM / <200 m HIGH
 

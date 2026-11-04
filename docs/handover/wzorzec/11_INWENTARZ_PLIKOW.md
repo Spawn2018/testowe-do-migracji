@@ -36,7 +36,8 @@
 | `docs/handover/LIMITY_PLANU_DARMOWEGO.md` | usage-check | od 08.10 plan Supabase Pro |
 | `docs/handover/RAPORT_HERE_REGULAMIN.md` | cytaty regulaminu HERE | wniosek „Base Plan nie pozwala” zastąpiony przez D-77, D-78 |
 | `docs/handover/RAPORT_KALIBRACJI_ETA.md` | szablon raportu kalibracji | kalibracja według E15 |
-| `docs/handover/RAPORT_POGODA_MORSKA.md`, `RAPORT_TELM_EMTRACK_WEB_05_10.md`, `EMTRACK_HISTORIA_SPRZED_05_10.md`, `PROPOZYCJA_H10_WIATR_ETA.md` | źródła danych, protokoły | wiedza |
+| `docs/handover/RAPORT_POGODA_MORSKA.md`, `RAPORT_TELM_EMTRACK_WEB_05_10.md`, `EMTRACK_HISTORIA_SPRZED_05_10.md` | źródła danych, protokoły | wiedza |
+| `docs/archiwum/2026-11-04/PROPOZYCJA_H10_WIATR_ETA.md` | stara propozycja H-10 ETA+wiatr | archiwum (zastąpione E49 / DP-205) |
 | `docs/handover/SEC_OWASP_ASVS_L2.md`, `docs/evidence/zap/*` | stan bezpieczeństwa 05.10 | punkt wyjścia E48 |
 | `docs/handover/wzorzec/04_KONEKTORY.md` | katalog usług | wpisy „Supabase Free”, „jeden projekt” i „HERE odrzucone” nie obowiązują (Pro, TEST, D-77/D-78) |
 | `docs/watch-tower/ADDRESSES.md`, `docs/watch-tower/permits-research/*` | adresy, źródła prawne | dane referencyjne |

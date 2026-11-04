@@ -266,6 +266,7 @@ Polecenie kazało przepisać D-66–D-76 dosłownie z `ZLECENIE_POPRAWKI_02_10.m
 |---|---|---|---|
 | 16.10.2026 01:13 | wymiary, polisa, zezwolenie, H-1/H-3 | Wymiary/pilot/zezwolenie z tabeli 07.10 (P5 D1); polisa HHL i zezwolenie 13/GD/2026 wpisuje wykonawca (P5 D2, W4 zamknięte); bez kontroli trasy i przeszkód (P9); D-21 → E31/L6 | ✅ D-20261016-0200-01 |
 | E49 | wiatr a ETA, objazd | E49 zaakceptowane: SMHI, progi 20/25 m/s, sprawa SCX „Objazd czy postój?”, śliskość lokalnie; D-84 = 20 m/s; W19 zamknięte | ✅ 16.10.2026, 02:08 (D-20261016-0230-01) |
+| E49-ext | E49 cała trasa | E49 rozszerzone na LT/LV/EE/FI i przyspieszone do C2 (po DP-204); E49-a/b = DP-205/206 | ✅ 04.11.2026, 01:01 (D-20261104-0105-01 / #783; właściciel) |
 | E17 (07.10, 20:57) | Czat | wykonanie: D-20261016-0250-01 + 0310-01 + 0315-01 (P6 Cz1–Cz33; C3 Cz13/Cz25) | ⏳ P6 / C3 |
 | D-21 | wymóg zezwoleń | zastąpione przez E31 i L6 (D-20261016-0200-01 Z1 pkt 7) | 🔁 16.10.2026 |
 

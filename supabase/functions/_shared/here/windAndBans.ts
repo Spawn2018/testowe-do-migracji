@@ -1,9 +1,12 @@
 /**
- * H-10 — próg porywów 15 m/s (D-84) → ryzyko.
- * Korekta ETA przez wiatr: WYŁĄCZONA do akceptacji (H10_ETA_WIND_ENABLED=0) — patrz PROPOZYCJA_H10_WIATR_ETA.md.
+ * H-10 / E49 — próg porywów w Ryzykach (D-84 = 20 m/s od 16.10; E49-a DP-205).
+ * Korekta ETA przez wiatr: moduł `_shared/e49/windEta.ts` (Z1); stara H10_ETA_PROPOSAL usunięta.
  * H-12 — weekendy + święta PL/SE (truck_ban_holidays).
  */
-export const WIND_GUST_MS_THRESHOLD = 15;
+import { E49_WIND_DEFAULTS } from '../e49/windEta.ts';
+
+/** D-84 / E49 Z2: próg sprawy „Silny wiatr” = WIND_SLOW_MS (domyślnie 20). */
+export const WIND_GUST_MS_THRESHOLD = E49_WIND_DEFAULTS.WIND_SLOW_MS;
 
 export function windRiskTitle(gustMs: number, where: string): string {
   return `Wiatr: porywy ${gustMs.toFixed(0)} m/s na trasie (${where}) — próg ${WIND_GUST_MS_THRESHOLD} m/s`;
@@ -37,16 +40,3 @@ export function holidayBanHit(fromDb: boolean | null | undefined): boolean {
 export function banRiskTitle(where: 'PL' | 'SE', whenLocal: string): string {
   return `Zakaz czasowy ${where}: planowany przejazd ${whenLocal} koliduje z ograniczeniem dla ciężarówek`;
 }
-
-/**
- * Propozycja H-10 (NIE stosować w ETA, dopóki H10_ETA_WIND_ENABLED=0):
- * - porywy ≥ 15 → mnożnik prędkości 0,70 na odcinkach przed pojazdem
- * - porywy ≥ 25 → postój do spadku poniżej 15
- * Źródła do akceptacji: Trafikverket / mosty E4 — PROPOZYCJA_H10_WIATR_ETA.md
- */
-export const H10_ETA_PROPOSAL = {
-  enabledDefault: false,
-  speedFactorAbove15: 0.7,
-  stopGustMs: 25,
-  resumeBelowMs: 15,
-} as const;
