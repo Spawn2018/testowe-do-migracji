@@ -1,4 +1,11 @@
 
+## 2026-11-04 22:50 — DP-215 (#800): odświeżenie dark Kokpit (StageBar)
+
+- Skrzynka: #550 WSTRZYMANE; #798 DP-215; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: brak (brak „F7: gotowe”; visual zrzuty ✖ 41915265123 @ `3ef8c0d0` — telefon/bramy ✔, unit ✔).
+- **Krok:** `kokpit-hhl-pl-1920-dark-default.png` z actual (366 px — StageBar E28); G4_WZORZEC. Bez migracji. Innych faili zrzutów brak (statusy poza 15 migawkami).
+- **Dalej:** push → CI → F7. DP-210 nie zaczynać.
+
 ## 2026-11-04 22:20 — DP-215 (#800): statusy jak EE (decyzja właściciela 21:10)
 
 - Skrzynka: #550 WSTRZYMANE; #798 DP-215; BN5–8 w planie. Bez nowego `pilne`.
