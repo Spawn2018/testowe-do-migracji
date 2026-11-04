@@ -38,6 +38,7 @@ import type { DbSailing, RiskInput, SailingInsert, SailingPatch, VesselRow } fro
 import { ROAD_LEGS } from '../here/refreshRoadLegs.ts';
 import { legDefFromRow } from '../here/legDefFromRow.ts';
 import { windThresholdsFromOps } from '../e49/etaWeather.ts';
+import { hoursLeftFromH4Segments } from '../e49/detourCaseJob.ts';
 
 export {
   filterLoadsReassignedFromSailing,
@@ -1041,17 +1042,38 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
       )];
       const sailById = new Map<string, { operator: string | null; dep: string | null }>();
       if (sailingIds.length) {
+        // F7 #791 r5 B8a: armator = vessels.operator (nie name).
         const sR = await sb.from('sailings')
-          .select('id,departure_at,delayed_departure_at,vessel_id,vessels(name)')
+          .select('id,departure_at,delayed_departure_at,vessel_id,vessels(operator,name)')
           .in('id', sailingIds);
+        if (sR.error) throw new Error(`sailings detour: ${sR.error.message}`);
         for (const s of sR.data ?? []) {
-          const v = (s as { vessels?: { name?: string } | null }).vessels;
+          const v = (s as { vessels?: { operator?: string; name?: string } | null }).vessels;
           sailById.set(String(s.id), {
-            operator: v?.name != null ? String(v.name) : null,
+            operator: v?.operator != null && String(v.operator).trim()
+              ? String(v.operator)
+              : (v?.name != null ? String(v.name) : null),
             dep: s.delayed_departure_at
               ? String(s.delayed_departure_at)
               : (s.departure_at ? String(s.departure_at) : null),
           });
+        }
+      }
+      // F7 r5 B8c: kraje pilotów z awizacji (load_escorts PL/SE).
+      const pilotsByLoad = new Map<string, string[]>();
+      if (ids.length) {
+        const pR = await sb.from('load_escorts')
+          .select('load_id,scope')
+          .in('load_id', ids)
+          .in('scope', ['PL', 'SE']);
+        if (pR.error) throw new Error(`load_escorts detour: ${pR.error.message}`);
+        for (const row of pR.data ?? []) {
+          const lid = String((row as { load_id: string }).load_id);
+          const scope = String((row as { scope: string }).scope).toUpperCase();
+          if (scope !== 'PL' && scope !== 'SE') continue;
+          const list = pilotsByLoad.get(lid) ?? [];
+          if (!list.includes(scope)) list.push(scope);
+          pilotsByLoad.set(lid, list);
         }
       }
       const windPeak = new Map<string, number>();
@@ -1099,20 +1121,50 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
         const basis = (row.eta_basis && typeof row.eta_basis === 'object')
           ? row.eta_basis as Record<string, unknown>
           : {};
-        const h4 = (basis.h4 && typeof basis.h4 === 'object')
-          ? basis.h4 as Record<string, unknown>
-          : basis;
-        const hoursLeft = Number(
-          h4.remaining_drive_min ?? h4.remainingDriveMin ?? h4.drive_left_min ?? NaN,
-        );
+        const segs = Array.isArray(basis.segments) ? basis.segments as Array<Record<string, unknown>> : [];
+        const h4Seg = segs.find((s) => String(s.code ?? '') === 'H4_SEGMENTS');
+        const h4Items = h4Seg && Array.isArray(h4Seg.items) ? h4Seg.items : null;
+        // F7 r5 B8b: jazda do najbliższego EU_DAILY_REST z H4_SEGMENTS (nie fikcyjny remaining_drive_min).
+        let hoursLeft = hoursLeftFromH4Segments(h4Items);
+        if (hoursLeft == null) {
+          const causes = (basis.causes && typeof basis.causes === 'object')
+            ? basis.causes as Record<string, unknown>
+            : {};
+          const driveH = Number(basis.drive_h ?? causes.drive_h ?? NaN);
+          if (Number.isFinite(driveH) && driveH >= 0) hoursLeft = Math.round(driveH * 60);
+        }
+        const crossing = segs.find((s) => String(s.code ?? '') === 'CROSSING');
+        const crossingDep = crossing && crossing.departure != null
+          ? String(crossing.departure)
+          : null;
         const sail = row.sailing_id ? sailById.get(String(row.sailing_id)) : undefined;
+        const status = String(row.status ?? '');
+        const ferryPast = /IN_TRANSIT_SE|AT_SITE|UNLOADED|DELIVERED/.test(status);
+        // ETA do portu: baza ≈ odejście rejsu − zapas; wariant przesuwa w jobie o addMin.
+        // Gdy auto jest przed promem: portEtaBase = now + (ferryDep − now) − 0 = ferryDep
+        // gdy znamy godzinę dojazdu z PL_ROAD — użyj now+hours; inaczej ferryDep jako planowany deadline.
+        const plRoad = segs.find((s) => /PL_ROAD|TO_PORT|PRE_PORT/.test(String(s.code ?? '')));
+        const plHours = plRoad != null ? Number(plRoad.hours) : NaN;
+        const ferryDepIso = sail?.dep ?? crossingDep;
+        let ferryPortEtaBaseIso: string | null = null;
+        if (!ferryPast && ferryDepIso && Number.isFinite(Date.parse(ferryDepIso))) {
+          if (Number.isFinite(plHours) && plHours >= 0) {
+            ferryPortEtaBaseIso = new Date(Date.now() + plHours * 3600_000).toISOString();
+          } else {
+            // Plan: zdążyć na przypisany rejs (deadline = dep); wariant +addMin porównujemy z dep.
+            ferryPortEtaBaseIso = new Date(Date.parse(ferryDepIso) - 30 * 60_000).toISOString();
+          }
+        }
+        const pilots = pilotsByLoad.get(leg.loadId) ?? [];
         const riskCtx: import('../e49/detourCaseJob.ts').DetourRiskCtx = {
           windGustMs: windPeak.has(leg.code) ? windPeak.get(leg.code)! : null,
-          hoursLeftMin: Number.isFinite(hoursLeft) ? hoursLeft : null,
+          hoursLeftMin: hoursLeft,
           ferryOperator: sail?.operator ?? null,
-          ferryDepIso: sail?.dep ?? null,
+          ferryDepIso,
+          ferryPortEtaBaseIso,
+          ferryPast,
           windowEndIso: row.plan_delivery_to ? String(row.plan_delivery_to) : null,
-          pilotCountries: null,
+          pilotCountries: pilots.length ? pilots : null,
         };
         out.push({
           loadId: leg.loadId,

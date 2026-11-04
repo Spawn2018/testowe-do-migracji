@@ -1,4 +1,12 @@
 
+## 2026-11-04 14:55 — #791 F7 r5 B8a/b/c + B6b + B13 (0405)
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
+- Scalanie: brak (F7 r5 niegotowe @ `b75e4a6d`; visual telefon FAIL = B13).
+- CI @ `b75e4a6d`: unit ✔ · db ✔ · **visual** FAIL — HHL demo z przyciskami `[data-detour-pick]`.
+- **Krok F7 r5:** **0405** upsert bez `stale_at=now`; job: FERRY vs ETA portu (+ pastFerry / następny); HOURS z `H4_SEGMENTS`; PILOT z `load_escorts`; pamięć HERE kotwica tylko przy liczeniu + notices + >2 h; `needDriveMin` = wariant; e-mail `who`. Front: `canDecide` tylko SCX|`HHL_ADMIN` (B13). Vitest e49-detour* 33/33.
+- **Dalej:** push → CI (+`db`) → F7. Bez push na main.
+
 ## 2026-11-04 14:30 — #791 F7 r4 B8/B4/B6/B12 (0404)
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.

@@ -297,10 +297,8 @@ export function TodoPanel({ role, kind, locale, phone, nowIso, loads, risks, geo
       const save = detourDecideOf();
       const c = i.detour;
       return {
-        // B11 / F7 r4: SCX albo HHL_ADMIN; w demo konto HHL bez roli = Administrator.
-        canDecide: role === 'SCX'
-          || accountRole(role) === 'HHL_ADMIN'
-          || (role === 'HHL' && accountRole(role) == null && import.meta.env.VITE_AUTH_MODE !== 'supabase'),
+        // B11 / F7 r5 B13: tylko SCX albo jawna rola HHL_ADMIN (demo HHL bez roli = bez przycisków).
+        canDecide: role === 'SCX' || accountRole(role) === 'HHL_ADMIN',
         busy: detourBusy === i.id,
         onDecide: save && c ? (pick, note) => {
           setDetourBusy(i.id);

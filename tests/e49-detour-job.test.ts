@@ -13,9 +13,11 @@ import {
   isOnRouteClosure,
   placeFromRoadTitle,
   projectKmOnCorridor,
+  hoursLeftFromH4Segments,
   riskFerryVsEta,
   riskHoursFromLeft,
   riskPilotForCountry,
+  etaPortForVariant,
   riskWindFromGust,
   riskWindowVsEta,
   runDetourCases,
@@ -103,29 +105,53 @@ describe('detourCaseJob helpers', () => {
     }
   });
 
-  it('B8 r4: WIND/HOURS/FERRY/WINDOW/PILOT — ok i warn z wartościami', () => {
+  it('B8 r4/r5: WIND/HOURS/FERRY/WINDOW/PILOT — ok i warn z wartościami', () => {
     expect(riskWindFromGust(14).text).toMatch(/14 m\/s — bez wpływu/);
     expect(riskWindFromGust(14).level).toBe('ok');
     expect(riskWindFromGust(22).level).toBe('warn');
     expect(riskWindFromGust(null).text).toMatch(/sprawdź/i);
+
+    expect(hoursLeftFromH4Segments([
+      { code: 'EU_DRIVE', hours: 2 },
+      { code: 'EU_BREAK_45', hours: 0.75 },
+      { code: 'EU_DRIVE', hours: 1 },
+      { code: 'EU_DAILY_REST', hours: 11 },
+    ])).toBe(180);
+    expect(hoursLeftFromH4Segments([])).toBeNull();
 
     expect(riskHoursFromLeft(180, 60).level).toBe('ok');
     expect(riskHoursFromLeft(180, 60).text).toMatch(/3 h/);
     expect(riskHoursFromLeft(30, 90).level).toBe('warn');
     expect(riskHoursFromLeft(null, null).text).toMatch(/sprawdź/i);
 
+    // F7 r5 B8a: auto 3 h przed rejsem, objazd +35 → zdąży; postój +4 h → nie zdąży.
+    const portBase = '2026-11-04T18:30:00Z'; // 3 h przed 21:30
+    const detourPort = etaPortForVariant(portBase, 35)!;
+    const holdPort = etaPortForVariant(portBase, 4 * 60)!;
     const ferryOk = riskFerryVsEta({
       operator: 'Tallink',
       depIso: '2026-11-04T21:30:00Z',
-      etaIso: '2026-11-04T20:20:00Z',
+      etaIso: detourPort,
     });
     expect(ferryOk.level).toBe('ok');
     expect(ferryOk.text).toMatch(/Tallink 21:30/);
-    expect(ferryOk.text).toMatch(/zapas 1 h 10 min/);
+    expect(ferryOk.text).toMatch(/zapas/);
     expect(riskFerryVsEta({
       operator: 'Tallink',
       depIso: '2026-11-04T21:30:00Z',
-      etaIso: '2026-11-04T22:00:00Z',
+      etaIso: holdPort,
+      nextDepIso: '2026-11-05T06:00:00Z',
+    }).text).toMatch(/nie zdąży; następny 06:00/);
+    expect(riskFerryVsEta({
+      operator: 'Tallink',
+      depIso: '2026-11-04T21:30:00Z',
+      pastFerry: true,
+    }).text).toMatch(/za transportem/);
+    expect(riskFerryVsEta({
+      operator: 'Tallink',
+      depIso: '2026-11-04T21:30:00Z',
+      etaIso: detourPort,
+      syntheticEta: true,
     }).level).toBe('warn');
     expect(riskFerryVsEta({ operator: null, depIso: null, etaIso: null }).text).toMatch(/sprawdź/i);
 
@@ -450,7 +476,10 @@ describe('runDetourCases', () => {
       baseDurationSec: 1500,
     });
     cachedPayload.positionAtCalc = [62.5, 17.5];
+    cachedPayload.hereCalculatedAt = '2026-11-04T10:00:00Z';
+    cachedPayload.hereNotices = ['TruckAttributes'];
 
+    const upserted: Array<{ positionAtCalc?: readonly [number, number] | null; notices?: string[] | null }> = [];
     const res = await runDetourCases({
       now: new Date('2026-11-04T10:30:00Z'),
       hereApiKey: 'secret-key-xyz',
@@ -481,6 +510,7 @@ describe('runDetourCases', () => {
           dims: {
             lengthM: 25, widthM: 3.2, heightM: 4.0, weightT: 60, axleCount: 8, axleLoadT: 10,
           },
+          // ~2 km od kotwicy — pamięć; kotwica nie może się przesunąć na tę pozycję.
           position: [62.52, 17.51],
           permitMode: 'TRASA',
         }],
@@ -490,7 +520,13 @@ describe('runDetourCases', () => {
           closureLat: 62.8,
           closureLon: 17.9,
         }),
-        upsertE49DetourCase: async () => true,
+        upsertE49DetourCase: async (row) => {
+          upserted.push({
+            positionAtCalc: row.payload.positionAtCalc,
+            notices: row.payload.hereNotices,
+          });
+          return true;
+        },
         closeStaleE49DetourCases: async () => 0,
         noteHereUsage: async () => {},
         hereMonthSpend: async () => 0,
@@ -498,6 +534,9 @@ describe('runDetourCases', () => {
     });
     expect(res.hereCalls).toBe(0);
     expect(fetchMock).not.toHaveBeenCalled();
+    expect(upserted[0]?.positionAtCalc?.[0]).toBe(62.5);
+    expect(upserted[0]?.positionAtCalc?.[1]).toBe(17.5);
+    expect(upserted[0]?.notices).toEqual(['TruckAttributes']);
   });
 
   it('B3: ROAD_LV × PL_EE_E67 → upsert', async () => {
@@ -546,14 +585,13 @@ describe('runDetourCases', () => {
   });
 });
 
-describe('TodoPanel B10/B11', () => {
-  it('supabase: decyzja bez lokalnego appendEvent; canDecide SCX|HHL_ADMIN', () => {
+describe('TodoPanel B10/B11/B13', () => {
+  it('supabase: decyzja bez lokalnego appendEvent; canDecide SCX|HHL_ADMIN (bez demo HHL bez roli)', () => {
     const src = readFileSync(resolve('src/components/risks/TodoPanel.tsx'), 'utf8');
     expect(src).toMatch(/VITE_AUTH_MODE !== 'supabase'/);
     expect(src).toMatch(/F7 #791 B10/);
-    expect(src).toMatch(/canDecide: role === 'SCX'/);
-    expect(src).toMatch(/HHL_ADMIN/);
-    expect(src).toMatch(/VITE_AUTH_MODE !== 'supabase'/);
+    expect(src).toMatch(/canDecide: role === 'SCX' \|\| accountRole\(role\) === 'HHL_ADMIN'/);
+    expect(src).not.toMatch(/role === 'HHL' && accountRole\(role\) == null/);
     const block = src.slice(src.indexOf('detourHandlers'), src.indexOf('detourHandlers') + 1800);
     expect(block).toMatch(/VITE_AUTH_MODE !== 'supabase'/);
     expect(block).toMatch(/appendEvent/);

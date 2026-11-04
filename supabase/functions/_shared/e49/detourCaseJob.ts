@@ -58,19 +58,27 @@ export type RoadClosureCandidate = {
   korytarzDroga?: string | null;
 };
 
-/** Kontekst ryzyk karty (F7 #791 r4 B8) — wartości z bazy; brak = warn „sprawdź …”. */
+/** Kontekst ryzyk karty (F7 #791 r4/r5 B8) — wartości z bazy; brak = warn „sprawdź …”. */
 export type DetourRiskCtx = {
   /** Poryw m/s z corridor_wind_forecast na korytarzu. */
   windGustMs?: number | null;
-  /** Pozostały czas jazdy H-4 (min) z eta_basis. */
+  /** Pozostały czas jazdy H-4 (min) do najbliższego EU_DAILY_REST. */
   hoursLeftMin?: number | null;
-  /** Rejs: operator + plan wypłynięcia. */
+  /** Rejs: operator (vessels.operator) + plan wypłynięcia. */
   ferryOperator?: string | null;
   ferryDepIso?: string | null;
+  /** Następny rejs (gdy nie zdąży na przypisany) — HH:MM w tekście. */
+  ferryNextDepIso?: string | null;
+  /** ETA do portu przeprawy (bazowe, bez wariantu) — nie eta_site/Boden. */
+  ferryPortEtaBaseIso?: string | null;
+  /** Po przeprawie (IN_TRANSIT_SE…) — FERRY bez „nie zdąży”. */
+  ferryPast?: boolean;
   /** Koniec okna dostawy KSH. */
   windowEndIso?: string | null;
   /** Kraje z awizacji pilotów (np. ['SE']). */
   pilotCountries?: readonly string[] | null;
+  /** true gdy baseEta jest syntetyczne (decideBy+6h) — WINDOW/FERRY bez ok. */
+  syntheticEta?: boolean;
 };
 
 export type DetourLoadLeg = {
@@ -116,8 +124,12 @@ export type DetourCasePayload = {
   hereUrlMasked?: string;
   /** B6: brak trasy bazowej HERE — upsert ma zachować poprzedni objazd. */
   baseMissing?: boolean;
-  /** F7 r4 B6: pozycja auta przy liczeniu HERE [lat, lon]. */
+  /** F7 r4/r5 B6: pozycja auta przy prawdziwym liczeniu HERE [lat, lon]. */
   positionAtCalc?: readonly [number, number] | null;
+  /** ISO czasu ostatniego prawdziwego liczenia HERE. */
+  hereCalculatedAt?: string | null;
+  /** Notices z ostatniego HERE (LIMITS przy pamięci). */
+  hereNotices?: string[] | null;
 };
 
 export type DetourCaseUpsert = {
@@ -371,7 +383,30 @@ export function riskWindFromGust(gustMs: number | null | undefined): DetourRiskR
   return { kind: 'WIND', level: 'ok', text: `wiatr na objeździe do ${g} m/s — bez wpływu` };
 }
 
-/** F7 #791 r4 B8: HOURS z pozostałego czasu jazdy H-4. */
+/**
+ * F7 #791 r5 B8b: suma EU_DRIVE do pierwszego EU_DAILY_REST z H4_SEGMENTS.items (minuty).
+ */
+export function hoursLeftFromH4Segments(items: unknown): number | null {
+  if (!Array.isArray(items) || items.length === 0) return null;
+  let driveH = 0;
+  let sawDrive = false;
+  for (const raw of items) {
+    if (!raw || typeof raw !== 'object') continue;
+    const it = raw as { code?: string; hours?: number | string };
+    const code = String(it.code ?? '');
+    const h = Number(it.hours);
+    if (code === 'EU_DAILY_REST') {
+      return sawDrive || driveH > 0 ? Math.round(driveH * 60) : 0;
+    }
+    if (code === 'EU_DRIVE' && Number.isFinite(h) && h > 0) {
+      driveH += h;
+      sawDrive = true;
+    }
+  }
+  return sawDrive ? Math.round(driveH * 60) : null;
+}
+
+/** F7 #791 r4/r5 B8: HOURS z pozostałego czasu jazdy H-4 (need = wariant, nie okno decyzji). */
 export function riskHoursFromLeft(leftMin: number | null | undefined, needMin: number | null | undefined): DetourRiskRow {
   if (leftMin == null || !Number.isFinite(leftMin)) {
     return { kind: 'HOURS', level: 'warn', text: 'sprawdź czas pracy kierowcy (H-4)' };
@@ -394,31 +429,45 @@ export function riskHoursFromLeft(leftMin: number | null | undefined, needMin: n
   };
 }
 
-/** F7 #791 r4 B8: FERRY — rejs vs ETA wariantu. */
+/** F7 #791 r5 B8a: FERRY — rejs vs ETA **do portu** wariantu (nie Boden). */
 export function riskFerryVsEta(args: {
   operator: string | null | undefined;
   depIso: string | null | undefined;
+  /** ETA dojazdu do portu przeprawy dla wariantu. */
   etaIso: string | null | undefined;
+  pastFerry?: boolean;
+  nextDepIso?: string | null;
+  /** Brak wiarygodnego ETA (syntetyczne) → warn, nigdy ok. */
+  syntheticEta?: boolean;
 }): DetourRiskRow {
+  if (args.pastFerry) {
+    const op = args.operator ? ` ${args.operator}` : '';
+    return { kind: 'FERRY', level: 'ok', text: `rejs${op} — już za transportem` };
+  }
   if (!args.operator || !args.depIso || !Number.isFinite(Date.parse(args.depIso))) {
     return { kind: 'FERRY', level: 'warn', text: 'sprawdź rejs promu względem ETA' };
   }
   const dep = Date.parse(args.depIso);
-  const eta = args.etaIso && Number.isFinite(Date.parse(args.etaIso)) ? Date.parse(args.etaIso) : null;
   const hhmm = new Date(dep).toISOString().slice(11, 16);
-  if (eta == null) {
+  if (args.syntheticEta || !args.etaIso || !Number.isFinite(Date.parse(args.etaIso))) {
     return {
       kind: 'FERRY',
       level: 'warn',
-      text: `rejs ${args.operator} ${hhmm} — sprawdź zapas do ETA`,
+      text: `rejs ${args.operator} ${hhmm} — sprawdź zapas do ETA portu`,
     };
   }
+  const eta = Date.parse(args.etaIso);
   const slackMin = Math.round((dep - eta) / 60_000);
   if (slackMin < 0) {
+    const next = args.nextDepIso && Number.isFinite(Date.parse(args.nextDepIso))
+      ? new Date(Date.parse(args.nextDepIso)).toISOString().slice(11, 16)
+      : null;
     return {
       kind: 'FERRY',
       level: 'warn',
-      text: `rejs ${args.operator} ${hhmm} — nie zdąży (spóźnienie ${fmtHm(-slackMin)})`,
+      text: next
+        ? `rejs ${args.operator} ${hhmm} — nie zdąży; następny ${next}`
+        : `rejs ${args.operator} ${hhmm} — nie zdąży (spóźnienie ${fmtHm(-slackMin)})`,
     };
   }
   return {
@@ -428,20 +477,21 @@ export function riskFerryVsEta(args: {
   };
 }
 
-/** F7 #791 r4 B8: WINDOW — okno KSH vs ETA. */
+/** F7 #791 r4/r5 B8: WINDOW — okno KSH vs ETA (bez ok na syntetycznym ETA). */
 export function riskWindowVsEta(args: {
   windowEndIso: string | null | undefined;
   etaIso: string | null | undefined;
+  syntheticEta?: boolean;
 }): DetourRiskRow {
   if (!args.windowEndIso || !Number.isFinite(Date.parse(args.windowEndIso))) {
     return { kind: 'WINDOW', level: 'warn', text: 'sprawdź okno dostawy KSH' };
   }
   const end = Date.parse(args.windowEndIso);
-  const eta = args.etaIso && Number.isFinite(Date.parse(args.etaIso)) ? Date.parse(args.etaIso) : null;
   const endLabel = new Date(end).toISOString().slice(0, 16).replace('T', ' ');
-  if (eta == null) {
+  if (args.syntheticEta || !args.etaIso || !Number.isFinite(Date.parse(args.etaIso))) {
     return { kind: 'WINDOW', level: 'warn', text: `okno KSH do ${endLabel} — sprawdź ETA` };
   }
+  const eta = Date.parse(args.etaIso);
   if (eta > end) {
     const late = Math.round((eta - end) / 60_000);
     return {
@@ -456,6 +506,15 @@ export function riskWindowVsEta(args: {
     level: 'ok',
     text: `okno KSH do ${endLabel} — ETA w oknie (zapas ${fmtHm(slack)})`,
   };
+}
+
+/** ETA do portu dla wariantu: baza + addMin wariantu. */
+export function etaPortForVariant(
+  basePortIso: string | null | undefined,
+  addMin: number,
+): string | null {
+  if (!basePortIso || !Number.isFinite(Date.parse(basePortIso))) return null;
+  return new Date(Date.parse(basePortIso) + Math.max(0, addMin) * 60_000).toISOString();
 }
 
 /** F7 #791 r4 B8: PILOT — awizacja na kraj objazdu. */
@@ -498,7 +557,11 @@ export function buildNineRisks(args: {
   permitMode: DetourLoadLeg['permitMode'];
   hereNotices?: readonly string[];
   noDetour?: boolean;
+  /** ETA placu (WINDOW). */
   etaIso?: string | null;
+  /** ETA do portu przeprawy (FERRY); domyślnie etaIso. */
+  ferryEtaIso?: string | null;
+  /** Potrzeba jazdy wariantu (objazd: +addMin; postój: 0). */
   needDriveMin?: number | null;
   riskCtx?: DetourRiskCtx | null;
   /** Gdy podane — nadpisują riskCtx (testy). */
@@ -520,14 +583,19 @@ export function buildNineRisks(args: {
   const ctx = args.riskCtx ?? null;
   const wind = args.wind ?? riskWindFromGust(ctx?.windGustMs);
   const hours = args.hours ?? riskHoursFromLeft(ctx?.hoursLeftMin, args.needDriveMin);
+  const ferryEta = args.ferryEtaIso ?? args.etaIso;
   const ferry = args.ferry ?? riskFerryVsEta({
     operator: ctx?.ferryOperator,
     depIso: ctx?.ferryDepIso,
-    etaIso: args.etaIso,
+    etaIso: ferryEta,
+    pastFerry: ctx?.ferryPast === true,
+    nextDepIso: ctx?.ferryNextDepIso,
+    syntheticEta: ctx?.syntheticEta === true,
   });
   const window = args.window ?? riskWindowVsEta({
     windowEndIso: ctx?.windowEndIso,
     etaIso: args.etaIso,
+    syntheticEta: ctx?.syntheticEta === true,
   });
   const pilot = args.pilot ?? riskPilotForCountry({
     country: args.country,
@@ -584,13 +652,17 @@ export function buildDetourPayload(args: {
     untilIso: args.untilIso,
     baseEtaIso: args.baseEtaIso,
   });
+  // F7 r5 B8a: FERRY porównuje ETA do portu, nie placu (Boden).
+  const holdFerryEta = etaPortForVariant(args.riskCtx?.ferryPortEtaBaseIso, hold.addMin);
+  // F7 r5 B8b: need z wariantu (postój = 0 jazdy; odpoczynek osobno w tekście gdy left znane).
   const holdRisks = buildNineRisks({
     side: 'hold',
     country: args.country,
     permitMode: args.permitMode,
     riskCtx: args.riskCtx,
     etaIso: hold.etaIso,
-    needDriveMin: hold.addMin,
+    ferryEtaIso: holdFerryEta,
+    needDriveMin: 0,
   });
   const avoid = avoidBboxAround(args.lat, args.lon).param;
 
@@ -621,6 +693,7 @@ export function buildDetourPayload(args: {
     notices: args.here.notices,
   });
   const detourEta = new Date(Date.parse(args.baseEtaIso) + addMin * 60_000).toISOString();
+  const detourFerryEta = etaPortForVariant(args.riskCtx?.ferryPortEtaBaseIso, addMin);
 
   return {
     hold: { ...hold, risks: holdRisks },
@@ -636,7 +709,9 @@ export function buildDetourPayload(args: {
         hereNotices: args.here.notices,
         riskCtx: args.riskCtx,
         etaIso: detourEta,
-        needDriveMin: addMin + Math.round((Date.parse(args.decideByIso) - Date.parse(args.nowIso)) / 60_000),
+        ferryEtaIso: detourFerryEta,
+        // F7 r5 B8b: need = sama nadwyżka jazdy objazdu, nie okno decyzji.
+        needDriveMin: addMin,
       }),
       line: args.here.line,
     },
@@ -807,9 +882,14 @@ export async function runDetourCases(args: {
         fromKm,
         atKm,
       });
-      const baseEta = leg.baseEtaIso && Number.isFinite(Date.parse(leg.baseEtaIso))
-        ? leg.baseEtaIso
+      const syntheticEta = !(leg.baseEtaIso && Number.isFinite(Date.parse(leg.baseEtaIso)));
+      const baseEta = !syntheticEta
+        ? leg.baseEtaIso!
         : new Date(Date.parse(decideBy) + 6 * 3600_000).toISOString();
+      const riskCtx: DetourRiskCtx = {
+        ...(leg.riskCtx ?? {}),
+        syntheticEta: syntheticEta || leg.riskCtx?.syntheticEta === true,
+      };
 
       let hereSummary: {
         lengthM: number;
@@ -823,6 +903,7 @@ export async function runDetourCases(args: {
       let baseDurationSec = 0;
       let noWhy: string | null = null;
       let urlMasked: string | undefined;
+      let hereCalculatedAt: string | null = null;
 
       const dims = completeDims(leg.dims);
       const dimsLabel = dims
@@ -849,47 +930,50 @@ export async function runDetourCases(args: {
       }
 
       let baseMissing = false;
-      // F7 r4 B6: pamięć HERE — bez ponownego pytania gdy pozycja <10 km i to samo zamknięcie.
+      // F7 r4/r5 B6: pamięć HERE — kotwica tylko z prawdziwego liczenia; >2 h → przelicz.
       let reusedCache = false;
       const prev = args.store.getOpenDetourCache
         ? await args.store.getOpenDetourCache(dedup)
         : null;
+      const prevCalcAt = prev?.payload?.hereCalculatedAt
+        ?? null;
+      const cacheFresh = prevCalcAt != null
+        && Number.isFinite(Date.parse(prevCalcAt))
+        && (Date.parse(nowIso) - Date.parse(prevCalcAt)) <= 2 * 3600_000;
+      const cacheAnchor = prev?.position
+        ?? (prev?.payload?.positionAtCalc && prev.payload.positionAtCalc.length >= 2
+          ? [prev.payload.positionAtCalc[0]!, prev.payload.positionAtCalc[1]!] as [number, number]
+          : null);
       if (
         prev
         && prev.payload
         && !('none' in prev.payload.detour && prev.payload.detour.none)
+        && cacheFresh
         && Math.abs(prev.closureLat - c.lat) < 1e-4
         && Math.abs(prev.closureLon - c.lon) < 1e-4
-        && prev.position
+        && cacheAnchor
         && leg.position
         && haversineKm(
-          [prev.position[1], prev.position[0]],
+          [cacheAnchor[1], cacheAnchor[0]],
           [leg.position[1], leg.position[0]],
         ) <= 10
       ) {
         reusedCache = true;
         const cached = prev.payload.detour;
+        const cachedNotices = prev.payload.hereNotices ?? [];
         if (!('none' in cached)) {
-          hereSummary = {
-            lengthM: 0,
-            durationSec: 0,
-            notices: [],
-            names: [],
-            roadNumbers: [],
-            line: cached.line,
-          };
-          // Odtwórz nadwyżkę z cache przez sztuczne base/here (addKm/addMin już w payload —
-          // poniżej zbudujemy świeże ryzyka, ale zachowamy liczby z cache).
+          // Odtwórz nadwyżkę z cache + notices z ostatniego liczenia (B6b.3 LIMITS).
           baseLengthM = 1000;
           baseDurationSec = 60;
           hereSummary = {
             lengthM: 1000 + cached.addKm * 1000,
             durationSec: 60 + cached.addMin * 60,
-            notices: [],
+            notices: [...cachedNotices],
             names: cached.via ? [cached.via] : [],
             roadNumbers: [],
             line: cached.line,
           };
+          hereCalculatedAt = prevCalcAt;
         }
       }
 
@@ -974,6 +1058,21 @@ export async function runDetourCases(args: {
         baseMissing = true;
       }
 
+      // F7 r5 B6b.2: po >2 h bez świeżego HERE — objazd nieaktualny (bez przycisku).
+      if (
+        !reusedCache
+        && baseMissing
+        && prev
+        && prev.payload
+        && !('none' in prev.payload.detour && prev.payload.detour.none)
+        && prevCalcAt
+        && Number.isFinite(Date.parse(prevCalcAt))
+        && (Date.parse(nowIso) - Date.parse(prevCalcAt)) > 2 * 3600_000
+      ) {
+        noWhy = 'Objazd nieaktualny (>2 h) — sprawdź objazd; tylko postój do przeliczenia';
+        hereSummary = null;
+      }
+
       const payload = buildDetourPayload({
         nowIso,
         decideByIso: decideBy,
@@ -989,15 +1088,28 @@ export async function runDetourCases(args: {
         noDetourWhy: noWhy,
         baseLengthM,
         baseDurationSec,
-        riskCtx: leg.riskCtx,
+        riskCtx,
       });
       if (urlMasked) payload.hereUrlMasked = urlMasked;
       if (baseMissing) payload.baseMissing = true;
-      payload.positionAtCalc = leg.position;
-      // Zachowaj via z cache gdy odtworzono liczby.
-      if (reusedCache && prev && !('none' in prev.payload.detour) && !('none' in payload.detour)) {
-        payload.detour.via = prev.payload.detour.via;
-        payload.detour.line = prev.payload.detour.line;
+      // F7 r5 B6b.1: kotwica tylko przy prawdziwym liczeniu HERE (nie przy pamięci / baseMissing).
+      if (!reusedCache && !baseMissing && hereSummary && leg.position) {
+        payload.positionAtCalc = leg.position;
+        payload.hereCalculatedAt = nowIso;
+        payload.hereNotices = hereSummary.notices;
+      } else if (reusedCache && prev) {
+        payload.positionAtCalc = prev.payload.positionAtCalc ?? cacheAnchor;
+        payload.hereCalculatedAt = prevCalcAt;
+        payload.hereNotices = prev.payload.hereNotices ?? [];
+        if (!('none' in prev.payload.detour) && !('none' in payload.detour)) {
+          payload.detour.via = prev.payload.detour.via;
+          payload.detour.line = prev.payload.detour.line;
+        }
+      } else if (baseMissing && prev?.payload?.positionAtCalc) {
+        // Zachowaj starą kotwicę — nie przesuwaj przy błędzie HERE.
+        payload.positionAtCalc = prev.payload.positionAtCalc;
+        payload.hereCalculatedAt = prev.payload.hereCalculatedAt ?? null;
+        payload.hereNotices = prev.payload.hereNotices ?? null;
       }
 
       const row: DetourCaseUpsert = {
