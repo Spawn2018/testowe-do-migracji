@@ -1,4 +1,11 @@
 
+## 2026-11-04 01:15 — #782 F7 r1 niegotowe → decyzja 100 (tylko HIGH HHL)
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
+- Scalanie: brak „F7: gotowe” po `32608820`. **#782 F7 r1 niegotowe** — auto-ODWOLANY poza DP-121; decyzja **100**.
+- **Krok F7 r1:** usunięte `updateSailing(ODWOLANY)` + `insertOperatorNotice`; ryzyko HIGH HHL z `{dep}`; drugi GET aktywnych wizyt → re-zgłoszenie bez ryzyka (`port_call_v2_reissued`); obs. `port_call_v2_matched`. vitest bn3-winter-nav-mmsi **15**. Bez migracji. Bez push na main.
+- **Dalej:** push → CI → F7. Po scaleniu: #781 DP-204, potem C2: 123….
+
 ## 2026-11-04 00:45 — #780 SCALONE; start DP-121 (Digitraffic v2 cancelled)
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.

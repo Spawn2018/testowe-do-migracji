@@ -33,8 +33,9 @@ export { DIGITRAFFIC_USER };
 import {
   FERRY_ICE_ATTRIBUTION, WINTER_NAV_LOCATIONS_URL,
   ferryIceRisk, ibnetRestrictionStrictness, isWinterNavWindowActiveOnSailingDay,
-  matchPortCallV2CancelledFleet, parseIbnetRestriction, parsePortCallV2Visits,
-  parseWinterNavigationLocations, portCallV2CancelledFleetRisk, portCallV2CancelledUrl,
+  isPortCallV2Reissued, matchPortCallV2CancelledFleet, parseIbnetRestriction, parsePortCallV2Visits,
+  parseWinterNavigationLocations, portCallV2ActiveVisitsUrl, portCallV2CancelledFleetRisk,
+  portCallV2CancelledUrl,
   utcDayEndMs, vesselMeetsIbnetIceClass, winterLocodeEndsForRoute, winterNavIceRisk,
 } from '../ferry/winterNavigation.ts';
 import {
@@ -2054,11 +2055,10 @@ export async function runFerryPortnet(deps: JobDeps): Promise<JobResult> {
   warnings.push(...winter.warnings);
   risks += winter.risks;
 
-  /* DP-121: port-call v2 cancelled — filtr floty ± okno rejsu; ryzyko + ODWOLANY. */
+  /* DP-121 / decyzja 100: v2 cancelled → ryzyko HIGH HHL; bez ODWOLANY / notice. */
   const v2c = await applyPortCallV2Cancelled(deps, since, now);
   warnings.push(...v2c.warnings);
   risks += v2c.risks;
-  updated += v2c.cancelled;
 
   /* BN3 pkt 7: Urząd Morski Gdynia — zapas ETA/ATA/ETD Stena GDY↔KAA. */
   const umg = await applyUmgdyStenaBackup(deps, since);
@@ -2076,7 +2076,8 @@ export async function runFerryPortnet(deps: JobDeps): Promise<JobResult> {
       ...(v2c.fihel ? { port_call_v2_fihel_cancelled: '1' } : {}),
       port_call_v2_fleet_n: String(v2c.fleet),
       port_call_v2_cancelled_n: String(v2c.count),
-      ...(v2c.cancelled ? { port_call_v2_cancelled_odwolany: String(v2c.cancelled) } : {}),
+      ...(v2c.matched ? { port_call_v2_matched: String(v2c.matched) } : {}),
+      ...(v2c.reissued ? { port_call_v2_reissued: String(v2c.reissued) } : {}),
       umg_stena_rows: String(umg.rows),
       ...(umg.updated ? { umg_stena_updated: String(umg.updated) } : {}),
       ...(suspect.hits ? { cancel_suspect_hits: String(suspect.hits) } : {}),
@@ -2342,35 +2343,57 @@ async function applyUmgdyStenaBackup(deps: JobDeps, sinceIso: string): Promise<{
 }
 
 /**
- * DP-121: Digitraffic port-call v2 `status=cancelled` (bez nieistniejącego `locode`).
- * Filtr MMSI/IMO floty + porty FIHEL/FIVUO + dopasowanie rejsu ±3 h.
- * Ryzyko dedup `FERRY_PORTCALL_V2_CANCELLED:<visitId>` (bez daty); matched → ODWOLANY.
+ * DP-121 / decyzja 100 (F7 #782 r1): Digitraffic port-call v2 `status=cancelled`.
+ * Filtr floty FIHEL/FIVUO ±3 h → ryzyko HIGH HHL; **bez** `updateSailing(ODWOLANY)`
+ * i **bez** `insertOperatorNotice`. Re-zgłoszenie (aktywna wizyta ±3 h) → bez ryzyka.
+ * Drugi GET bez `status` (OpenAPI „active visits”); HTTP≠OK → bez filtra, wpis w warnings.
  */
 async function applyPortCallV2Cancelled(deps: JobDeps, sinceIso: string, nowIso: string): Promise<{
-  count: number; fleet: number; fihel: boolean; cancelled: number; risks: number; warnings: string[];
+  count: number; fleet: number; matched: number; reissued: number;
+  fihel: boolean; risks: number; warnings: string[];
 }> {
   const empty = {
-    count: 0, fleet: 0, fihel: false, cancelled: 0, risks: 0, warnings: [] as string[],
+    count: 0, fleet: 0, matched: 0, reissued: 0, fihel: false, risks: 0, warnings: [] as string[],
   };
   const nowMs = Date.parse(nowIso);
   const fromIso = new Date(nowMs - 14 * 864e5).toISOString();
   const toIso = new Date(nowMs + 21 * 864e5).toISOString();
   const url = portCallV2CancelledUrl(fromIso, toIso);
-  const page = await readText(deps, url, {
-    headers: {
-      'User-Agent': USER_AGENT,
-      Accept: 'application/json',
-      'Accept-Encoding': 'gzip',
-      'Digitraffic-User': DIGITRAFFIC_USER,
-    },
-  });
+  const headers = {
+    'User-Agent': USER_AGENT,
+    Accept: 'application/json',
+    'Accept-Encoding': 'gzip',
+    'Digitraffic-User': DIGITRAFFIC_USER,
+  };
+  const page = await readText(deps, url, { headers });
   /* HTTP ≠ OK: bez ostrzeżenia co przebieg (F7 #694); stary URL 400 nie spamuje. */
   if (!page.ok) return empty;
   let json: unknown;
   try { json = JSON.parse(page.text); } catch {
     return { ...empty, warnings: ['port-call v2 cancelled: nieczytelny JSON'] };
   }
-  const parsed = parsePortCallV2Visits(json);
+  const parsed = parsePortCallV2Visits(json, 'cancelled');
+  const warnings = [...parsed.warnings];
+
+  /* Re-zgłoszenie: aktywne wizyty w tym samym oknie (bez status=cancelled). */
+  let activeVisits: ReturnType<typeof parsePortCallV2Visits>['visits'] = [];
+  const activeUrl = portCallV2ActiveVisitsUrl(fromIso, toIso);
+  const activePage = await readText(deps, activeUrl, { headers });
+  if (!activePage.ok) {
+    warnings.push(
+      'port-call v2 active: niedostępne — bez filtra re-zgłoszenia (decyzja 100)',
+    );
+  } else {
+    try {
+      const activeJson = JSON.parse(activePage.text) as unknown;
+      const activeParsed = parsePortCallV2Visits(activeJson, 'active');
+      activeVisits = activeParsed.visits;
+      warnings.push(...activeParsed.warnings);
+    } catch {
+      warnings.push('port-call v2 active: nieczytelny JSON — bez filtra re-zgłoszenia');
+    }
+  }
+
   const [vessels, sailings] = await Promise.all([
     deps.store.vessels(), deps.store.sailingsSince(sinceIso),
   ]);
@@ -2378,36 +2401,28 @@ async function applyPortCallV2Cancelled(deps: JobDeps, sinceIso: string, nowIso:
   const fihel = hits.some((h) => h.visit.portOfCall === 'FIHEL' || h.visit.portOfCall === 'FIVUO')
     || parsed.visits.some((v) => v.portOfCall === 'FIHEL' || v.portOfCall === 'FIVUO');
   let risks = 0;
-  let cancelled = 0;
+  let matched = 0;
+  let reissued = 0;
   const keepDedup: string[] = [];
   for (const hit of hits) {
+    if (isPortCallV2Reissued(hit.visit, activeVisits)) {
+      reissued += 1;
+      continue;
+    }
+    matched += 1;
     const risk = portCallV2CancelledFleetRisk(hit, nowIso, url);
     keepDedup.push(risk.dedup);
     if (await deps.store.raiseRisk(risk)) risks += 1;
-    if (hit.sailing && hit.sailing.status !== 'ODWOLANY') {
-      if (await deps.store.updateSailing(hit.sailing.id, { status: 'ODWOLANY' })) {
-        cancelled += 1;
-        hit.sailing.status = 'ODWOLANY';
-        if (deps.store.insertOperatorNotice) {
-          await deps.store.insertOperatorNotice({
-            sailingId: hit.sailing.id,
-            operator: operatorFromSailingSource(hit.sailing.source, hit.sailing.route),
-            kind: 'ODWOLANY',
-            note: `Digitraffic port-call v2: wizyta ${hit.visit.visitId} odwołana (${hit.visit.portOfCall})`,
-            sourceUrl: url,
-          });
-        }
-      }
-    }
   }
   await deps.store.resolveStaleRisks('FERRY_PORTCALL_V2_CANCELLED:', keepDedup);
   return {
     count: parsed.visits.length,
     fleet: hits.length,
+    matched,
+    reissued,
     fihel,
-    cancelled,
     risks,
-    warnings: parsed.warnings,
+    warnings,
   };
 }
 

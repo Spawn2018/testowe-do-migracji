@@ -8,11 +8,11 @@ import {
   applyFerryDictSnapshot, operatorsForRoute, resetFerryDictRpc,
 } from '../src/lib/ferryCatalog';
 import {
-  ferryIceRisk, ferryIceRiskDedup, isWinterNavWindowActive,
+  ferryIceRisk, ferryIceRiskDedup, isPortCallV2Reissued, isWinterNavWindowActive,
   isWinterNavWindowActiveOnSailingDay, matchPortCallV2CancelledFleet,
   parseIbnetRestriction, parsePortCallV2Visits, parseWinterNavigationLocations,
-  portCallV2CancelledFleetRisk, portCallV2CancelledHasFihel, portCallV2CancelledRiskDedup,
-  portCallV2CancelledUrl, vesselMeetsIbnetIceClass,
+  portCallV2ActiveVisitsUrl, portCallV2CancelledFleetRisk, portCallV2CancelledHasFihel,
+  portCallV2CancelledRiskDedup, portCallV2CancelledUrl, vesselMeetsIbnetIceClass,
   winterLocodesForRoute, winterNavIceRisk, winterNavRiskDedup, WINTER_NAV_LOCATIONS_URL,
 } from '../supabase/functions/_shared/ferry/winterNavigation';
 import {
@@ -346,11 +346,13 @@ describe('BN3 winter-nav / MMSI / DP-11', () => {
     expect(withVisits.count).toBe(2);
   });
 
-  it('DP-121: URL status=cancelled bez locode; parse + filtr floty ± okno; dedup bez daty', () => {
+  it('DP-121: URL status=cancelled bez locode; parse + filtr floty ± okno; HIGH bez daty', () => {
     const url = portCallV2CancelledUrl('2026-02-01T00:00:00.000Z', '2026-02-20T00:00:00.000Z');
     expect(url).toContain('status=cancelled');
     expect(url).not.toContain('locode=');
     expect(url).toContain('fromDateTime=');
+    const activeUrl = portCallV2ActiveVisitsUrl('2026-02-01T00:00:00.000Z', '2026-02-20T00:00:00.000Z');
+    expect(activeUrl).not.toContain('status=');
     const parsed = parsePortCallV2Visits([
       {
         visitId: 'FI-1', vesselName: 'MEGASTAR', portOfCall: 'FIHEL',
@@ -384,7 +386,16 @@ describe('BN3 winter-nav / MMSI / DP-11', () => {
     const risk = portCallV2CancelledFleetRisk(hits[0]!, '2026-02-10T12:00:00.000Z', url);
     expect(risk.dedup).toBe(portCallV2CancelledRiskDedup('FI-1'));
     expect(risk.dedup).not.toMatch(/\d{4}-\d{2}-\d{2}$/);
-    expect(risk.severity).toBe('MEDIUM');
+    expect(risk.severity).toBe('HIGH');
+    expect(risk.title).toMatch(/sprawdź rejs/);
+    expect(String(risk.params.dep)).toBeTruthy();
+    const reissue = parsePortCallV2Visits([{
+      visitId: 'FI-1b', vesselName: 'MEGASTAR', portOfCall: 'FIHEL',
+      mmsi: '276829000', vesselId: '9395159',
+      eta: '2026-02-10T10:30:00.000Z', etd: '2026-02-10T12:15:00.000Z',
+      status: 'Expected to Arrive',
+    }], 'active');
+    expect(isPortCallV2Reissued(hits[0]!.visit, reissue.visits)).toBe(true);
   });
 });
 
@@ -457,7 +468,7 @@ describe('F7 #694 R1-B3 ferry-portnet × winter-nav', () => {
     expect(st.risks.filter((x) => x.dedup.startsWith('FERRY_PORTCALL_V2_CANCELLED:'))).toHaveLength(0);
   });
 
-  it('DP-121: v2 cancelled naszej floty + rejs ±3 h → ryzyko + ODWOLANY; dedup bez daty', async () => {
+  it('DP-121 / decyzja 100: flota ±3 h → HIGH HHL; status rejsu bez zmian; dedup bez daty', async () => {
     const st = new MemStore();
     st.sailings.push({
       id: 's-mega', vessel_id: MEGA, route: 'HEL-TLL',
@@ -468,7 +479,7 @@ describe('F7 #694 R1-B3 ferry-portnet × winter-nav', () => {
     const r = await runFerryPortnet(deps(st, {
       'port-calls': PORTNET,
       'winter-navigation': JSON.stringify({ type: 'FeatureCollection', features: [] }),
-      'port-call/v2': JSON.stringify([{
+      'status=cancelled': JSON.stringify([{
         visitId: 'FI20260210-001',
         vesselName: 'MEGASTAR',
         portOfCall: 'FIHEL',
@@ -477,14 +488,56 @@ describe('F7 #694 R1-B3 ferry-portnet × winter-nav', () => {
         etd: '2026-02-10T12:00:00.000Z',
         status: 'Cancelled',
       }]),
+      'visits?fromDateTime': JSON.stringify([]),
     }));
     expect(r.ok).toBe(true);
     expect(r.observations?.port_call_v2_fihel_cancelled).toBe('1');
     expect(r.observations?.port_call_v2_fleet_n).toBe('1');
+    expect(r.observations?.port_call_v2_matched).toBe('1');
+    expect(r.observations?.port_call_v2_cancelled_odwolany).toBeUndefined();
     const risks = st.risks.filter((x) => x.dedup.startsWith('FERRY_PORTCALL_V2_CANCELLED:'));
     expect(risks).toHaveLength(1);
     expect(risks[0]!.dedup).toBe('FERRY_PORTCALL_V2_CANCELLED:FI20260210-001');
     expect(risks[0]!.dedup).not.toMatch(/:\d{4}-\d{2}-\d{2}$/);
-    expect(st.sailings[0]!.status).toBe('ODWOLANY');
+    expect(risks[0]!.severity).toBe('HIGH');
+    expect(risks[0]!.title).toMatch(/sprawdź rejs/);
+    expect(st.sailings[0]!.status).toBe('ZAPLANOWANY');
+  });
+
+  it('DP-121 / decyzja 100: re-zgłoszenie aktywnej wizyty → bez ryzyka', async () => {
+    const st = new MemStore();
+    st.sailings.push({
+      id: 's-mega', vessel_id: MEGA, route: 'HEL-TLL',
+      departure_at: '2026-02-10T12:00:00.000Z', arrival_at: '2026-02-10T14:30:00.000Z',
+      delayed_departure_at: null, delayed_arrival_at: null,
+      status: 'ZAPLANOWANY', source: 'TALLINK',
+    });
+    const r = await runFerryPortnet(deps(st, {
+      'port-calls': PORTNET,
+      'winter-navigation': JSON.stringify({ type: 'FeatureCollection', features: [] }),
+      'status=cancelled': JSON.stringify([{
+        visitId: 'FI20260210-001',
+        vesselName: 'MEGASTAR',
+        portOfCall: 'FIHEL',
+        mmsi: '276829000',
+        eta: '2026-02-10T10:00:00.000Z',
+        etd: '2026-02-10T12:00:00.000Z',
+        status: 'Cancelled',
+      }]),
+      'visits?fromDateTime': JSON.stringify([{
+        visitId: 'FI20260210-002',
+        vesselName: 'MEGASTAR',
+        portOfCall: 'FIHEL',
+        mmsi: '276829000',
+        eta: '2026-02-10T10:20:00.000Z',
+        etd: '2026-02-10T12:10:00.000Z',
+        status: 'Expected to Arrive',
+      }]),
+    }));
+    expect(r.ok).toBe(true);
+    expect(r.observations?.port_call_v2_reissued).toBe('1');
+    expect(r.observations?.port_call_v2_matched).toBeUndefined();
+    expect(st.risks.filter((x) => x.dedup.startsWith('FERRY_PORTCALL_V2_CANCELLED:'))).toHaveLength(0);
+    expect(st.sailings[0]!.status).toBe('ZAPLANOWANY');
   });
 });
