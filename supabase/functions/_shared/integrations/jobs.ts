@@ -5129,6 +5129,7 @@ export async function runHereRoads(deps: JobDeps): Promise<JobResult> {
         attempted: String(result.attempted),
         missing: result.missingLegs.join(','),
         budget: result.skippedBudget ? 'stop' : 'ok',
+        ...(result.observations ?? {}),
       },
     };
   }
@@ -5143,6 +5144,7 @@ export async function runHereRoads(deps: JobDeps): Promise<JobResult> {
       stored: String(result.stored),
       attempted: String(result.attempted),
       budget: result.skippedBudget ? 'stop' : 'ok',
+      ...(result.observations ?? {}),
     },
   };
 }

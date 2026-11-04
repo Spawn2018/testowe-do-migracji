@@ -1,4 +1,11 @@
 
+## 2026-11-04 16:20 — #792 SCALONE; start DP-208 (#788)
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
+- Scalanie: **#792 SCALONE** `ba31c223` (DP-123; F7: gotowe @ `fd0cf994`; CI unit/visual ✔). `deploy-main` robi resztę. Bez push na main.
+- **Krok DP-208** `pakiet/c2-dp-208-se-e4-via-dev` / **0406**: zamiast sparse 15 km — `seNynSparseDeviation` (via ≤1 km, len ±10% od 960–1000, linia→SE_E4 ≤35 km); obserwacje `se_nyn_*`; clear `retry_after` SE-NYN. OFF_CORRIDOR OSM: próg `OFFROUTE_KM`=2 (bez osobnego bufora SE_E4). Vitest i667+bmapa 33/33.
+- **Dalej:** push → CI (+`db`) → F7. Potem DP-209 / 124…; DP-210 nie zaczynać.
+
 ## 2026-11-04 16:15 — #792: rejestr DP-207–209 (#788/#789) + czekam F7
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.

@@ -14,6 +14,7 @@ import {
   roadGeometryOk,
   dictGeomRejectReason,
   kaaDeviationOk,
+  seNynSparseDeviation,
   type LatLng,
 } from '../map/draw.ts';
 
@@ -141,6 +142,8 @@ export type RefreshRoadResult = {
   warnings: string[];
   /** Legi bez ≥2 punktów po próbie odświeżenia. */
   missingLegs: string[];
+  /** DP-208: se_nyn_dev_max_km / se_nyn_dev_at / se_nyn_len_km przy próbie SE-NYN. */
+  observations?: Record<string, string>;
 };
 
 function hasPoints(points: unknown): boolean {
@@ -221,6 +224,7 @@ export async function refreshRoadLegs(
 
   let stored = 0;
   let attempted = 0;
+  const observations: Record<string, string> = {};
   for (const leg of legs) {
     const prev = have.get(leg.leg);
     const isKaa = leg.spec === 'kaa';
@@ -323,15 +327,14 @@ export async function refreshRoadLegs(
         : geomSpec === 'loose'
           ? looseRoadOk(line)
           : roadGeometryOk(line, geomSpec);
-    // #667 F7 r3 B4: SE_E22 / SE_KAA_INLAND = rzadki korytarz (controlPts + 15 km);
-    // DP-197: SE_E4 sparse — ciężarówka na E4 (Essingeleden) vs cięciwa OSM przez centrum.
+    // #667 F7 r3 B4: SE_E22 / SE_KAA_INLAND = rzadki korytarz (controlPts + 15 km).
+    // DP-208: SE_E4 / SE-NYN — via ≤1 km + długość ±10% + linia→korytarz ≤35 km (nie sparse 15 km).
     // SE_KAA_TRACK (gdyby wrócił) = stara reguła śladu GPS.
-    const sparse =
-      corridorLabel === 'SE_E22' ||
-      corridorLabel === 'SE_KAA_INLAND' ||
-      corridorLabel === 'SE_E4';
+    const sparseKaa =
+      corridorLabel === 'SE_E22' || corridorLabel === 'SE_KAA_INLAND';
+    const isSeE4 = corridorLabel === 'SE_E4';
     const controlPts: LatLng[] = (() => {
-      if (!useCorridorDev) return [];
+      if (!useCorridorDev || isSeE4) return [];
       const [oLat, oLng] = leg.origin.split(',').map(Number);
       const [dLat, dLng] = leg.destination.split(',').map(Number);
       const out: LatLng[] = [];
@@ -340,19 +343,33 @@ export async function refreshRoadLegs(
       if (Number.isFinite(dLat) && Number.isFinite(dLng)) out.push([dLat!, dLng!]);
       return out;
     })();
-    const okDev =
-      !useCorridorDev ||
-      corridorPts.length < 2 ||
-      kaaDeviationOk(
-        line,
-        corridorPts,
-        sparse ? { sparseCorridor: true, controlPts } : undefined,
-      );
+    let okDev = true;
+    let seDevDetail: string | null = null;
+    if (useCorridorDev && corridorPts.length >= 2) {
+      if (isSeE4) {
+        const seDev = seNynSparseDeviation(line, corridorPts, viaPts);
+        observations.se_nyn_len_km = seDev.lenKm.toFixed(1);
+        observations.se_nyn_dev_max_km = seDev.devMaxKm.toFixed(1);
+        observations.se_nyn_dev_at = seDev.devAt
+          ? `${seDev.devAt[0].toFixed(5)},${seDev.devAt[1].toFixed(5)}`
+          : '';
+        okDev = seDev.ok;
+        if (!seDev.ok) {
+          seDevDetail = `odchyłka od ${corridorLabel} (${seDev.reason ?? '?'}; max ${seDev.devMaxKm.toFixed(1)} km, len ${Math.round(seDev.lenKm)})`;
+        }
+      } else {
+        okDev = kaaDeviationOk(
+          line,
+          corridorPts,
+          sparseKaa ? { sparseCorridor: true, controlPts } : undefined,
+        );
+      }
+    }
     if (!okGeom || !okDev) {
       const retryIso = new Date(nowMs + RETRY_REJECT_MS).toISOString();
       // DP-183: powód z liczbami (km/zakres/via/punkty) — bez geometrii w ostrzeżeniu.
       const detail = okGeom
-        ? `odchyłka od ${corridorLabel}`
+        ? (seDevDetail ?? `odchyłka od ${corridorLabel}`)
         : (dictReason ?? 'geometria odrzucona');
       await store.storeRoad(
         leg.leg,
@@ -382,5 +399,12 @@ export async function refreshRoadLegs(
   }
 
   const missingLegs = requiredLegs.filter((l) => !hasPoints(have.get(l.leg)?.points)).map((l) => l.leg);
-  return { stored, attempted, skippedBudget: false, warnings, missingLegs };
+  return {
+    stored,
+    attempted,
+    skippedBudget: false,
+    warnings,
+    missingLegs,
+    ...(Object.keys(observations).length > 0 ? { observations } : {}),
+  };
 }
