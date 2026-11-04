@@ -2663,6 +2663,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 03.11.2026 21:35 | #777 F7 r1 niegotowe → seed Portnet/Deltamarin, I=IC, dzień przypłynięcia, złożone IBNet | pętla / C2 F7 |
 | 03.11.2026 22:00 | #777 SCALONE `2a99a8e6` (DP-120 / **0391**; F7 gotowe @ `fecc5f7a`); start DP-202+203 (#778+#779) | pętla / C2 |
 | 03.11.2026 23:50 | #780 F7 r3: auto DeepL na luki TV/bałtyk (bez RESOURCE_MISSING:TV_CODE); **0393** memory_auto_24h | pętla / C2 F7 |
+| 04.11.2026 23:40 | #800 DP-215: odświeżenie `mapa-hhl-pl-1920-dark-default` (StageBar E28, 2060 px @ 41924308018); komplet 4 smoke; CI → F7 | pętla / C2 |
 | 04.11.2026 23:15 | #800 DP-215: odświeżenie `mapa-hhl-pl-1920-light` (StageBar E28, 2047 px @ 41919939041); CI → F7 | pętla / C2 |
 | 04.11.2026 22:50 | #800 DP-215: odświeżenie `kokpit-hhl-pl-1920-dark-default` (StageBar E28, 366 px @ 41915265123); CI → F7 | pętla / C2 |
 | 04.11.2026 22:20 | #800 DP-215: statusy Polferries/Stena/bez rejsu jak EE (Port wypłynięcia/przypłynięcia); strefy/Pomoc; CI → F7 | pętla / C2 |

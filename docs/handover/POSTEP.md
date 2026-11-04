@@ -1,4 +1,11 @@
 
+## 2026-11-04 23:40 — DP-215 (#800): odświeżenie Mapa dark (StageBar)
+
+- Skrzynka: #550 WSTRZYMANE; #798 DP-215; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: brak (brak „F7: gotowe”; visual zrzuty ✖ 41924308018 @ `b13d126e` — telefon/bramy ✔, unit ✔).
+- **Krok:** `mapa-hhl-pl-1920-dark-default.png` z actual (2060 px — StageBar E28). Komplet 4 smoke z paskiem (kokpit+mapa × light/dark 1920) gotowy; matrycy 280 nie ruszano. Bez migracji.
+- **Dalej:** push → CI → F7. DP-210 nie zaczynać.
+
 ## 2026-11-04 23:15 — DP-215 (#800): odświeżenie Mapa light (StageBar)
 
 - Skrzynka: #550 WSTRZYMANE; #798 DP-215; BN5–8 w planie. Bez nowego `pilne`.
