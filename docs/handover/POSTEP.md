@@ -1,4 +1,11 @@
 
+## 2026-11-04 20:25 — #799 F7: test bn1_seed (perform → select)
+
+- Skrzynka: #550 WSTRZYMANE; #797 `pilne` / PR #799; #798 DP-215 po scaleniu. Bez innego nowego `pilne`.
+- Scalanie: brak (F7 niegotowe @ `50a87458` — `db` 662/663: `perform` poza PL/pgSQL).
+- **Krok F7:** `status.sh` `#797 bn1_seed` — `select public.bn1_seed_baltic_geofences(...)` zamiast `perform`. Bez migracji.
+- **Dalej:** CI (+`db`) → F7 („zgoda od razu” po zielonym). Po scaleniu DP-215 (#798). DP-210 nie zaczynać.
+
 ## 2026-11-04 20:05 — #796 SCALONE; start #797 PILNE (Tallinn EE)
 
 - Skrzynka: #550 WSTRZYMANE; #797 `pilne` (Tallinn status); #798 DP-215 (po #797); BN5–8 w planie. Bez innego nowego `pilne`.

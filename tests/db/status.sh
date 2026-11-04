@@ -4026,7 +4026,7 @@ chk "#797: bn1_seed poprawia country/route" \
   "begin;
    update geofences set country='SE', route='POLFERRIES'
     where project_id='$P' and name='Terminal Tallinn D HEL';
-   perform public.bn1_seed_baltic_geofences('$P');
+   select public.bn1_seed_baltic_geofences('$P');
    select country||'/'||route from geofences
     where project_id='$P' and name='Terminal Tallinn D HEL';
    rollback" "EE/TLL-HEL"
