@@ -1,4 +1,11 @@
 
+## 2026-11-04 16:15 — #792: rejestr DP-207–209 (#788/#789) + czekam F7
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
+- Scalanie: brak (brak „F7: gotowe do scalenia” po `ad448bb4`; CI unit/visual ✔).
+- **Krok:** po kolizji numerów — dopisanie pozycji rej. koord. do PLAN §4: **DP-207** = alias **DP-786** SCALONE; **DP-208** (#788 SE_E4 13 pkt / SE-NYN); **DP-209** (#789 EE numer drogi). Kolejka C2: po F7 DP-123 → 208/209/124…; DP-210 nie zaczynać.
+- **Dalej:** push docs → CI → F7 DP-123. Bez push na main.
+
 ## 2026-11-04 14:48 — #792: DP-207–209 → DP-210–212 (kolizja rej. koord.)
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
