@@ -44,6 +44,7 @@ import {
   eeIsDatexPublicationEnvelope,
   eeRoadOnCorridor,
   formatBalticRoadTitle,
+  formatEeRoadLabel,
   formatEeWeatherDetailPl,
   nearestCorridorRoad,
   probeEeDatexApi,
@@ -450,7 +451,9 @@ describe('BN6 road-ee parsers', () => {
     const wx = parseEeWeatherData(weatherXml, sites);
     const icy = wx.find((e) => /jäide|libedus/i.test(e.detail ?? ''))!;
     expect(icy.road).toBe('T4');
-    expect(formatBalticRoadTitle('EE', icy).roadLabel).toMatch(/^T4$/);
+    /* DP-209: T4 → „droga 4 (E67)”, nie surowy T4. */
+    expect(formatBalticRoadTitle('EE', icy).roadLabel).toBe('droga 4 (E67)');
+    expect(formatBalticRoadTitle('EE', icy).title).toMatch(/droga 4 \(E67\) \(EE\)/);
     expect(formatBalticRoadTitle('EE', icy).title).not.toMatch(/droga b\.d\./i);
 
     /* LV wypadek bez kodu przy A7 → A7 z geometrii korytarza. */
@@ -503,6 +506,62 @@ describe('BN6 road-ee parsers', () => {
     const blk = parseEeSrtiJson(srtiJson, 'SRTI_BLOCKAGE')
       .find((e) => e.id === 'bn6-ee-acc-blocked');
     expect(blk?.severity).toBe('HIGH');
+  });
+
+  it('DP-209: EE konwencja „droga N (E…)”; bez A55/E980; tabela odcinków', () => {
+    expect(formatEeRoadLabel('T4')).toBe('droga 4 (E67)');
+    expect(formatEeRoadLabel('4')).toBe('droga 4 (E67)');
+    expect(formatEeRoadLabel('E67')).toBe('droga 4 (E67)');
+    expect(formatEeRoadLabel('T1')).toBe('droga 1 (E20)');
+    expect(formatEeRoadLabel('E20')).toBe('droga 1 (E20)');
+    expect(formatEeRoadLabel('E263')).toBe('droga 2 (E263)');
+    expect(formatEeRoadLabel('T2')).toBe('droga 2 (E263)');
+    expect(formatEeRoadLabel('2')).toBe('droga 2 (E263)');
+    expect(formatEeRoadLabel('E264')).toBe('droga 3 (E264)');
+    expect(formatEeRoadLabel('T3')).toBe('droga 3 (E264)');
+    expect(formatEeRoadLabel('3')).toBe('droga 3 (E264)');
+    expect(formatEeRoadLabel('T11')).toBe('droga 11');
+    expect(formatEeRoadLabel('T8')).toBe('droga 8');
+    expect(formatEeRoadLabel('980')).toBe('droga 980');
+    expect(formatEeRoadLabel('E980')).toBe('droga 980');
+    expect(formatEeRoadLabel('A55')).toBe('droga 55');
+    expect(balticRoadLabel('EE', 'E263')).toBe('droga 2 (E263)');
+    expect(balticRoadLabel('EE', 'E264')).toBe('droga 3 (E264)');
+    expect(balticRoadLabel('EE', 'E980')).toBe('droga 980');
+    expect(balticRoadLabel('EE', 'A55')).toBe('droga 55');
+    expect(balticRoadLabel('EE', 'A55')).not.toMatch(/A55|E980|droga 263|droga 264/);
+
+    /* Via Baltica (Pärnu–Tallinn, punkt na odcinku CORRIDOR_EE_ROAD_SEGS) → droga 4 (E67). */
+    const onT4 = nearestCorridorRoad('EE', 58.6445, 24.4615);
+    expect(onT4).toBe('T4');
+    expect(formatBalticRoadTitle('EE', {
+      id: 'ee-t4', title: 'Jäide', detail: 'gołoledź',
+      severity: 'HIGH', lat: 58.6445, lon: 24.4615, kind: 'EE_WEATHER',
+      start: null, end: null, road: onT4,
+    }).roadLabel).toBe('droga 4 (E67)');
+    expect(formatBalticRoadTitle('EE', {
+      id: 'ee-t4', title: 'Jäide', detail: 'gołoledź',
+      severity: 'HIGH', lat: 58.6445, lon: 24.4615, kind: 'EE_WEATHER',
+      start: null, end: null, road: onT4,
+    }).title).toMatch(/droga 4 \(E67\) \(EE\)/);
+
+    /* Muuga → droga 1 (E20). */
+    const nearMuuga = nearestCorridorRoad('EE', 59.50, 24.96);
+    expect(nearMuuga).toBe('T1');
+    expect(formatEeRoadLabel(nearMuuga)).toBe('droga 1 (E20)');
+
+    /* HIGH on bez numeru → uzupełnij z tabeli, nie „okolice trasy”. */
+    const onNoRoad = applyBalticCorridorRoadFilter('EE', [{
+      id: 'ee-on-bare', title: 'Warunki', detail: 'ryzyko gołoledzi',
+      severity: 'HIGH', lat: 58.904, lon: 24.425, kind: 'EE_WEATHER',
+      start: null, end: null, road: null,
+    }])[0]!;
+    expect(onNoRoad.corridorMatch).toBe('on');
+    expect(onNoRoad.road).toBe('T4');
+    const onTitle = formatBalticRoadTitle('EE', onNoRoad);
+    expect(onTitle.roadLabel).toBe('droga 4 (E67)');
+    expect(onTitle.title).not.toMatch(/okolice trasy/i);
+    expect(onTitle.title).not.toMatch(/\bA\d+\b|\bE9\d{2}\b/);
   });
 
   it('extractBalticRoadRef rozpoznaje T4 / E67', () => {
