@@ -28,7 +28,81 @@ create policy corridor_wind_forecast_read on public.corridor_wind_forecast
   for select to authenticated
   using (current_app_user_id() is not null);
 
--- Korytarze z geometrią, na których jest transport w oknie śledzenia (E27 / #783 pkt 6).
+-- Korytarze transportów w oknie śledzenia — osobno dla każdego transportu (E27 / #783 pkt 6, F7 #785 r1 pkt 6).
+-- Odcinek PL = ferry_routes.road_corridor_pre, odcinek SE/FI = road_corridor_post trasy TEGO transportu
+-- (jak rdzeń ETA 0389: load_route_family + here_road_legs; brak trasy → PL_ROAD / SE_E4).
+-- AT_SITE, FERRY i statusy po rozładunku nie uruchamiają pobierania prognozy.
+-- from_km = postęp auta na korytarzu (tylko odcinek bieżący, świeża pozycja ≤ 2 h), inaczej 0.
+-- current_leg = transport jedzie tym odcinkiem teraz (tylko dla niego Z2 otwiera sprawy);
+-- pozostałe odcinki trasy służą ETA (Z1) i pobraniu prognozy.
+create or replace function public.e49_wind_load_corridors(p_now timestamptz default now())
+returns table(load_id uuid, code text, leg text, from_km numeric, current_leg boolean)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  with base as (
+    select l.id,
+           l.status::text as st,
+           coalesce(hpre.corridor_code, 'PL_ROAD') as pre_code,
+           coalesce(hpost.corridor_code, 'SE_E4') as post_code,
+           (select coalesce(p.geom_snapped, p.geom_raw)
+              from positions p
+             where p.load_id = l.id
+               and p.ts >= p_now - interval '2 hours'
+             order by p.ts desc
+             limit 1) as g
+      from loads l
+      left join ferry_routes fr
+        on fr.active and fr.code = upper(btrim(public.load_route_family(l.id)))
+      left join here_road_legs hpre on hpre.leg = fr.road_corridor_pre
+      left join here_road_legs hpost on hpost.leg = fr.road_corridor_post
+     where l.status::text in (
+             'READY', 'AT_LOADING', 'IN_TRANSIT_PL', 'AT_PORT_GDANSK',
+             'AT_PORT_NYNASHAMN', 'IN_TRANSIT_SE'
+           )
+       and public.load_in_tracking_window(l.id, p_now) is true
+  ), legs as (
+    select b.id, b.st, 'PL'::text as leg, b.pre_code as code, b.g,
+           true as cur
+      from base b
+     where b.st in ('READY', 'AT_LOADING', 'IN_TRANSIT_PL')
+    union all
+    select b.id, b.st, 'SE'::text, b.post_code, b.g,
+           (b.st in ('AT_PORT_NYNASHAMN', 'IN_TRANSIT_SE'))
+      from base b
+    union all
+    -- Stena KAA: rdzeń wybiera E22 / inland / track po pozycji — prognoza dla wariantów tej samej trasy.
+    select b.id, b.st, 'SE'::text, k.code, b.g, false
+      from base b
+      cross join (values ('SE_KAA_INLAND'), ('SE_KAA_TRACK')) as k(code)
+     where b.post_code = 'SE_E22'
+  )
+  select x.id, x.code, x.leg,
+         coalesce(
+           case
+             when x.cur and x.g is not null and x.st in ('IN_TRANSIT_PL', 'IN_TRANSIT_SE') then (
+               select greatest(0, cp.total_km - cp.remaining_km)
+                 from public.corridor_progress(x.code, x.g) cp
+                 limit 1
+             )
+           end,
+           0
+         )::numeric as from_km,
+         x.cur
+    from legs x
+   where x.code is not null
+     and exists (select 1 from corridor_polylines cpl where cpl.code = x.code);
+$$;
+
+revoke all on function public.e49_wind_load_corridors(timestamptz) from public, anon, authenticated;
+grant execute on function public.e49_wind_load_corridors(timestamptz) to service_role;
+
+comment on function public.e49_wind_load_corridors(timestamptz) is
+  'E49-a: korytarze (PL / SE-FI) z geometrią per transport w oknie śledzenia; bez AT_SITE/FERRY.';
+
+-- Lista kodów do pobrania prognozy (SMHI/FMI): tylko korytarze, którymi jedzie jakiś transport.
 create or replace function public.e49_wind_active_corridors(p_now timestamptz default now())
 returns table(code text)
 language sql
@@ -36,49 +110,14 @@ stable
 security definer
 set search_path = public
 as $$
-  select distinct x.code
-  from (
-    select h.corridor_code as code
-      from loads l
-      join sailings s on s.id = l.sailing_id
-      join ferry_routes fr on fr.active and fr.code = upper(btrim(s.route))
-      join here_road_legs h on h.leg in (fr.road_corridor_pre, fr.road_corridor_post)
-     where public.load_in_tracking_window(l.id, p_now) is true
-       and (h.corridor_code is not null)
-    union
-    select cp.code
-      from corridor_polylines cp
-     where cp.code in (
-             'PL_ROAD', 'SE_E4', 'SE_E22', 'SE_KAA_INLAND', 'SE_KAA_TRACK',
-             'PL_EE_E67', 'FI_E75', 'SE_E4_STO', 'SE_E18_KPS'
-           )
-       and exists (
-         select 1
-           from loads l
-          where public.load_in_tracking_window(l.id, p_now) is true
-            and (
-              (cp.code like 'SE%' and l.status in (
-                 'AT_PORT_NYNASHAMN', 'IN_TRANSIT_SE', 'AT_SITE'
-               ))
-              or (cp.code like 'PL%' and l.status in (
-                 'READY', 'AT_LOADING', 'IN_TRANSIT_PL', 'AT_PORT_GDANSK'
-               ))
-              or (cp.code like 'FI%' and l.status in (
-                 'AT_PORT_NYNASHAMN', 'IN_TRANSIT_SE', 'AT_SITE',
-                 'IN_TRANSIT_PL', 'AT_PORT_GDANSK'
-               ))
-            )
-       )
-  ) x
-  where x.code is not null
-    and exists (select 1 from corridor_polylines cp where cp.code = x.code);
+  select distinct c.code from public.e49_wind_load_corridors(p_now) c;
 $$;
 
 revoke all on function public.e49_wind_active_corridors(timestamptz) from public, anon, authenticated;
 grant execute on function public.e49_wind_active_corridors(timestamptz) to service_role;
 
 comment on function public.e49_wind_active_corridors(timestamptz) is
-  'E49-a: kody corridor_polylines z transportem w oknie śledzenia — bez zapytań SMHI/FMI poza listą.';
+  'E49-a: kody corridor_polylines z trasy konkretnych transportów w oknie śledzenia — bez zapytań SMHI/FMI poza listą.';
 
 create or replace function public.corridor_polyline_geojson(p_code text)
 returns jsonb

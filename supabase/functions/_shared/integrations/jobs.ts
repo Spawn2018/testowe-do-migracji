@@ -147,7 +147,7 @@ import {
   seWeekendBanHit, plSundayBanHit, banRiskTitle,
 } from '../here/windAndBans.ts';
 import { runCorridorWindCore } from '../e49/corridorWindJob.ts';
-import { weatherFromCorridorWind, windCaseRisk, type CorridorWindRow } from '../e49/etaWeather.ts';
+import { planWindCase, windCaseDedup, type CorridorWindRow } from '../e49/etaWeather.ts';
 import { E49_WIND_DEFAULTS } from '../e49/windEta.ts';
 import { applyPendingRoadTitle, humanizeRoadCode } from '../../../../src/lib/pl/describe.ts';
 import { PANEL_FALLBACK } from '../../../../src/lib/pl/codes.ts';
@@ -384,6 +384,18 @@ export interface SyncStore {
   opsThresholds?(): Promise<{ waveM: number; gustKn: number }>;
   /** E49-a: korytarze z transportem w oknie śledzenia. */
   e49WindActiveCorridors?(): Promise<string[]>;
+  /** E49-a Z2: korytarze per transport (odcinek PL / SE-FI; bez AT_SITE) + postęp auta `fromKm`. */
+  e49WindLoadCorridors?(): Promise<Array<{
+    loadId: string;
+    code: string;
+    leg: 'PL' | 'SE';
+    fromKm: number;
+    currentLeg: boolean;
+  }>>;
+  /** E49-a Z2: progi WIND_* / SLIP_* z ops_thresholds (Z1 pkt 5). */
+  e49WindThresholds?(): Promise<import('../e49/windEta.ts').E49Thr>;
+  /** E49-a Z2: klucze dedup otwartych spraw z prefiksem (jedno zapytanie zamiast hasOpenRisk per sprawa). */
+  openRiskDedups?(dedupPrefix: string): Promise<string[]>;
   /** E49-a: geometria korytarza (GeoJSON) z corridor_polylines. */
   corridorPolylineGeoJson?(code: string): Promise<unknown | null>;
   /** E49-a: zapis prognozy wiatru na punkcie. */
@@ -5632,64 +5644,60 @@ export async function runRouteHazards(deps: JobDeps): Promise<JobResult> {
       : 0;
     if (fresh > 0) {
       warnings.push(`E49: żywa seria wiatru — ${fresh} punktów < 2 h (próg ${WIND_GUST_MS_THRESHOLD} m/s)`);
-      /* Z2: sprawy Silny wiatr / Postój przez wiatr dla transportów w oknie (E49-a). */
-      if (deps.store.listCorridorWindForecast && deps.store.e49WindActiveCorridors) {
-        const corridors = await deps.store.e49WindActiveCorridors();
+      /*
+       * Z2 (F7 #785 r1 pkt 5): JEDNA otwarta sprawa na transport i korytarz (E49_WIND:{load}:{korytarz}),
+       * tylko korytarze tego transportu, tylko odcinek bieżący, tylko punkty przed autem; poryw ≥ WIND_SLOW_MS
+       * w 24 h niezależnie od kierunku; ≥ WIND_HOLD_MS = wyższa waga na tym samym kluczu (aktualizacja w miejscu);
+       * zamknięcie z histerezą (poniżej progu − 2 m/s). Progi z ops_thresholds. Odbiorcy: HHL + SCX.
+       */
+      if (deps.store.listCorridorWindForecast && deps.store.e49WindLoadCorridors) {
+        const legs = await deps.store.e49WindLoadCorridors();
+        const thr = deps.store.e49WindThresholds
+          ? await deps.store.e49WindThresholds()
+          : { ...E49_WIND_DEFAULTS };
+        const openKeys = new Set(
+          deps.store.openRiskDedups ? await deps.store.openRiskDedups('E49_WIND:') : [],
+        );
+        const statusById = new Map(loads.map((l) => [l.id, l.status ?? ''] as const));
         const byCorr = new Map<string, CorridorWindRow[]>();
-        for (const code of corridors) {
-          byCorr.set(code, await deps.store.listCorridorWindForecast(code, 180));
-        }
-        for (const load of loads) {
-          const inWin = deps.store.loadInTrackingWindow
-            ? await deps.store.loadInTrackingWindow(load.id, nowIso)
-            : true;
-          if (!inWin) continue;
-          const st = load.status ?? '';
-          const codesForLoad = [...byCorr.keys()].filter((code) => {
-            if (st === 'IN_TRANSIT_SE' || st === 'AT_PORT_NYNASHAMN' || st === 'AT_SITE') {
-              return code.startsWith('SE') || code.startsWith('FI');
-            }
-            if (st === 'READY' || st === 'AT_LOADING' || st === 'IN_TRANSIT_PL' || st === 'AT_PORT_GDANSK') {
-              return code.startsWith('PL');
-            }
-            return false;
+        const seen = new Set<string>();
+        for (const leg of legs) {
+          if (!leg.currentLeg) continue; // odcinek SE/FI dla auta jeszcze w PL liczy tylko ETA (Z1)
+          const st = statusById.get(leg.loadId) ?? '';
+          if (st === 'AT_SITE' || st === 'FERRY') continue; // nie na placu budowy / promie
+          const dedup = windCaseDedup(leg.loadId, leg.code);
+          if (seen.has(dedup)) continue;
+          seen.add(dedup);
+          if (!byCorr.has(leg.code)) {
+            byCorr.set(leg.code, await deps.store.listCorridorWindForecast(leg.code, 180));
+          }
+          const plan = planWindCase({
+            loadId: leg.loadId,
+            corridor: leg.code,
+            rows: byCorr.get(leg.code) ?? [],
+            fromKm: leg.fromKm,
+            now: deps.now(),
+            thr,
+            isOpen: openKeys.has(dedup),
           });
-          for (const code of codesForLoad) {
-            const rows = byCorr.get(code) ?? [];
-            if (!rows.length) continue;
-            const { weather } = weatherFromCorridorWind({
-              rows,
-              fromKm: 0,
-              startAt: deps.now(),
-              driveH: 24,
-              thr: E49_WIND_DEFAULTS,
-              horizonH: 24,
-            });
-            for (const w of weather) {
-              if (w.kind !== 'WIND' && w.kind !== 'WIND_HOLD') continue;
-              const km = Number((w.where.match(/km\s+(\d+)/i) ?? [])[1] ?? 0);
-              const risk = windCaseRisk({
-                loadId: load.id,
-                corridor: code,
-                km,
-                gustMs: w.gustMs ?? E49_WIND_DEFAULTS.WIND_SLOW_MS,
-                addMin: w.addMin,
-                hold: w.kind === 'WIND_HOLD',
-                atIso: w.atIso ?? w.fromIso ?? nowIso,
-                side: w.side ?? null,
-                untilIso: w.untilIso ?? null,
-              });
-              windKeep.push(risk.dedup);
-              if (await deps.store.raiseRisk(risk)) risks++;
-            }
+          if (plan.action === 'raise') {
+            windKeep.push(dedup);
+            if (await deps.store.raiseRisk(plan.risk)) risks++;
+          } else if (plan.action === 'keep') {
+            windKeep.push(dedup);
           }
         }
         if (deps.store.resolveStaleRisks) {
           await deps.store.resolveStaleRisks('E49_WIND:', windKeep);
-          await deps.store.resolveStaleRisks('E49_WIND_HOLD:', windKeep);
+          await deps.store.resolveStaleRisks('E49_WIND_HOLD:', []); // stary klucz postoju (przed F7 r1)
         }
       }
     } else {
+      /* Bez świeżej prognozy sprawy wiatrowe nie wiszą bez końca (F7 #785 r1 pkt 5h). */
+      if (deps.store.resolveStaleRisks) {
+        await deps.store.resolveStaleRisks('E49_WIND:', []);
+        await deps.store.resolveStaleRisks('E49_WIND_HOLD:', []);
+      }
       warnings.push('E49: brak żywej serii wiatru drogowego — próg 20 m/s (ops_thresholds WIND_SLOW_MS); job corridor-wind');
     }
   }

@@ -2924,9 +2924,9 @@ chk "BN8b DP-184: IN_TRANSIT_SE SE_E18_KPS na linii → 0" \
    select count(*) from risk_signals where load_id='$L824d' and dedup_key like 'OFF_CORRIDOR%';
    rollback" 0
 
-# DP-155 / C1: ROAD_FI×1.5 wydłuża ETA FI_E75 (IN_TRANSIT_SE TLL-HEL); GDN-NYN bez zmian.
+# DP-155 / C1 → DP-205 E49-a Z4 (0398): ROAD_FI×1.5 NIE wydłuża ETA (śliskość lokalnie, nie × całej trasy); poprzednio wydłużało FI_E75 (IN_TRANSIT_SE TLL-HEL); GDN-NYN bez zmian.
 # (compute_load_eta już w 0385; yard_drive_quote = tylko SREM/BODEN → SE_E4/PL, bez ROAD_FI.)
-chk "DP-155: ROAD_FI×1.5 — FI_E75 dłuższy, GDN bez zmian" \
+chk "DP-155→E49 Z4: ROAD_FI×1.5 — ETA FI_E75 i GDN bez zmian (bez × całej trasy)" \
   "begin;
    update corridor_conditions set slowdown_mult=1.00, reason='ok'
     where corridor in ('ROAD_FI','SE_E4','SE_E22');
@@ -2951,15 +2951,15 @@ chk "DP-155: ROAD_FI×1.5 — FI_E75 dłuższy, GDN bez zmian" \
      from public.compute_load_eta('$L825b') c where e.route='GDN';
    select bool_and(
             case route
-              when 'FI' then eta_slow > eta_base and eta_base is not null and slow = 1.00
+              when 'FI' then eta_slow = eta_base and eta_base is not null and slow = 1.00
               when 'GDN' then eta_base = eta_slow and eta_base is not null
             end
           )
      from dp155_eta;
    rollback" t
 
-# F7 r2 N1: ROAD_LT=1.5 nie zmienia ETA GDN-NYN; wydłuża TLL-HEL (przed promem).
-chk "BN8b F7 N1: ROAD_LT×1.5 — GDN bez zmian, TLL dłuższy" \
+# F7 r2 N1 → E49 Z4 (0398): ROAD_LT=1.5 nie zmienia ETA ani GDN-NYN, ani TLL-HEL (bez mnożnika całej trasy).
+chk "BN8b F7 N1→E49 Z4: ROAD_LT×1.5 — ETA GDN i TLL bez zmian (bez × całej trasy)" \
   "begin;
    update corridor_conditions set slowdown_mult=1.00, reason='ok'
     where corridor in ('ROAD_LT','ROAD_LV','ROAD_EE');
@@ -2988,7 +2988,7 @@ chk "BN8b F7 N1: ROAD_LT×1.5 — GDN bez zmian, TLL dłuższy" \
    select bool_and(
             case route
               when 'GDN' then eta_base = eta_slow and eta_base is not null
-              when 'TLL' then eta_slow > eta_base and eta_base is not null
+              when 'TLL' then eta_slow = eta_base and eta_base is not null
             end
           )
      from bn8b_n1_eta;

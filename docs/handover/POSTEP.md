@@ -1,4 +1,12 @@
 
+## 2026-11-04 08:15 — #785 F7 r1 niegotowe → poprawki blokujące (0397/0398 w miejscu)
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
+- Scalanie: brak F7 „gotowe” (F7 #785 r1 @ `487265dc` niegotowe; db padało w `e49_slip_weather_local` — `positions` nie ma `lon`/`lat`). Migracje 0396–0398 nie są na produkcji → 0397/0398 poprawione w miejscu, bez 0399.
+- **Krok (pkt F7 r1):** (1) wiatr w ETA od postępu auta (`causes.remaining_km`), korytarz PL/SE z trasy transportu, SE/FI po promie od `CROSSING.arrival`, bez `drive_h*0.4`; (2) postój wiatrowy minus okna H-4 (max, nie suma); (3) Z4 w rdzeniu: `h_pl_eff`/`h_road_eff` bez mnożnika (poprawka definicji `compute_load_eta_core` z 0389), wrapper tylko normalizuje `causes` (`observed_slowdown_*`); (4) śliskość: pozycja `coalesce(geom_snapped, geom_raw)` świeża ≤ 2 h, tylko `IN_TRANSIT_PL/SE`, promień 25 km od punktu na odcinku PRZED autem, skupiska bez sumowania, źródło wg kraju, reguła nawierzchnia ≤ 0 °C + stan; (5) Z2: klucz `E49_WIND:{transport}:{korytarz}`, aktualizacja w miejscu (`raise_integration_risk`, waga tylko w górę), histereza zamknięcia < 18 m/s, `detail.audience=HHL_PRZEWOZNIK` (`risk_audience_for`: HHL + SCX, bez KSH), progi z `ops_thresholds`, AT_SITE pominięty, bez prognozy zamknięcie; (6) `e49_wind_load_corridors` per transport (bez AT_SITE) → `e49_wind_active_corridors`.
+- **Testy:** vitest `e49-eta-weather` 16/16 (nowe: `planWindCase`, `runRouteHazards`, strażnik migracji), e49-* + h7-h10-h12 + eta-howto-sg03 razem 41+ ✔; DB (CI): przepisane do decyzji Z4 `i2.sh` II-7, `status.sh` DP-155 i BN8b N1 (ETA bez × całej trasy); `dec6` +2 strażnik (34 lokalnie / 30 TEST).
+- **Odroczone (nieblokujące F7):** pełny zestaw DB `e49` (Z6.10) i testy DB wrappera/śliskości/korytarzy; flaga „brak prognozy wiatru”; kierunek polilinii; MultiLineString; `AbortSignal`/`must()` w jobie; zasięg SMHI per punkt; tytuły z drogą/krajem/godzinami; Z5 alarm 2 h; wpis w Historii transportu przy sprawie wiatru; FI Digitraffic: tylko to, co jest w `ROAD_FI` (bez nowego API).
+- **Dalej:** push → CI (+`db`) → F7. Po scaleniu: E49-b DP-206.
 ## 2026-11-04 07:15 — #785 db FAIL: rename compute_load_eta_core
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.

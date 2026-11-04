@@ -15,6 +15,9 @@ export const E49_WIND_DEFAULTS = {
   SLIP_MULT: 1.15,
 } as const;
 
+/** Progi E49 jako liczby (domyślne albo z ops_thresholds). */
+export type E49Thr = { -readonly [K in keyof typeof E49_WIND_DEFAULTS]: number };
+
 export type WindBearing = 'cross' | 'head' | 'tail';
 
 /** Kąt 0–180° między kierunkiem jazdy (deg) a skąd wieje wiatr (deg, meteorologiczny). */
@@ -41,7 +44,7 @@ export function windEtaEffect(args: {
   gustMs: number;
   travelDeg: number;
   windFromDeg: number;
-  thr?: Partial<typeof E49_WIND_DEFAULTS>;
+  thr?: Partial<E49Thr>;
 }): WindEtaEffect {
   const t = { ...E49_WIND_DEFAULTS, ...args.thr };
   const g = args.gustMs;

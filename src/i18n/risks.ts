@@ -189,7 +189,7 @@ const pl: Dict = {
   rk_safefleet_dead: 'Link SafeFleet nie działa / wygasł',
   rk_wind_gust: 'Wiatr: porywy {gust} m/s (próg {thr} m/s)',
   /** E49-a Z2 (DP-205): silny wiatr 20–24 m/s na trasie */
-  rk_wind_strong: 'Silny wiatr na trasie · {where} · {gust} m/s · +{min} min',
+  rk_wind_strong: 'Silny wiatr na trasie · {where} · {gust} m/s',
   /** E49-a Z2: postój od 25 m/s */
   rk_wind_hold: 'Postój przez wiatr · {where} · porywy {gust} m/s',
   rk_time_ban: 'Zakaz czasowy {where}: plan {when}',

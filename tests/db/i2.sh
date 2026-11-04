@@ -1211,8 +1211,9 @@ else
     || $PSQL -c "insert into positions (load_id, ts, geom_raw, source) values ('$L7', now(), st_setsrid(st_makepoint(17.95, 58.90),4326), (enum_range(null::position_source))[1])" >/dev/null
 fi
 $PSQL -c "select refresh_load_eta('$L7')" >/dev/null
-chk "II-6→II-7: SE_ROAD hours ×1.15 przy śniegu" "$(Q "select (s->>'hours') from loads, jsonb_array_elements(eta_basis->'segments') s where id='$L7' and s->>'code'='SE_ROAD' limit 1")" "19.6"
-chk "II-7 causes.weather_slowdown_pct=15" "$(Q "select eta_basis->'causes'->>'weather_slowdown_pct' from loads where id='$L7'")" "15"
+# DP-205 E49-a Z4 (F7 #785 r1 pkt 3): spowolnienie korytarza NIE mnoży godzin jazdy w ETA (rdzeń 0398) — 17 h, nie 19,6 h
+chk "II-7→E49 Z4: SE_ROAD hours bez ×1.15 przy śniegu (17)" "$(Q "select ((s->>'hours')::numeric = 17)::text from loads, jsonb_array_elements(eta_basis->'segments') s where id='$L7' and s->>'code'='SE_ROAD' limit 1")" "true"
+chk "II-7→E49 Z4: causes.weather_slowdown_pct=0, observed_slowdown_se=1.15 (Stan systemu)" "$(Q "select (eta_basis->'causes'->>'weather_slowdown_pct')||'/'||(eta_basis->'causes'->>'observed_slowdown_se') from loads where id='$L7'")" "0/1.15"
 $PSQL -c "update corridor_conditions set slowdown_mult=1.00, reason='start — normalne warunki' where corridor='SE_E4'" >/dev/null
 # zjazd z korytarza: pozycja daleko od PL, status IN_TRANSIT_PL
 # pozycja z testu śniegu nie może zostać jedną z dwóch ostatnich próbek

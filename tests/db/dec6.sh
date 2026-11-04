@@ -30,6 +30,9 @@ val "WIND_HOLD_MS 25" "select value_num::text from ops_thresholds where key='WIN
 val "WIND_RESUME_MIN 30" "select value_num::text from ops_thresholds where key='WIND_RESUME_MIN'" "30"
 val "SLIP_RADIUS_KM 25 (E49 Z4)" "select value_num::text from ops_thresholds where key='SLIP_RADIUS_KM'" "25"
 val "SLIP_PCT 15" "select value_num::text from ops_thresholds where key='SLIP_PCT'" "15"
+# F7 #785 r1: strażnik — migracja odtwarzająca pełne compute_load_eta nadpisałaby wrapper i Z4 w rdzeniu
+val "E49 Z4: rdzeń compute_load_eta_core bez mnożnika slowdown (marker w definicji)" "select position('E49 Z4' in pg_get_functiondef('public.compute_load_eta_core(uuid, timestamptz)'::regprocedure)) > 0" t
+val "E49: compute_load_eta = wrapper wołający compute_load_eta_core" "select position('compute_load_eta_core' in pg_get_functiondef('public.compute_load_eta(uuid, timestamptz)'::regprocedure)) > 0" t
 
 sys "begin; select set_config('request.jwt.claim.sub','$HHL',true); set local role authenticated;
      select admin_ops_threshold_set('DELAY_MIN', 45); commit;" >/dev/null

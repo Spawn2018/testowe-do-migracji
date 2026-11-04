@@ -2,9 +2,12 @@
  * E49-a cz.3 (DP-205): budowa `eta_basis.causes.weather` z prognozy punktów korytarza (Z1)
  * oraz spraw Z2 („Silny wiatr” / „Postój przez wiatr”).
  */
+import { gustMeetsThresholdInWindow } from './corridorWindJob.ts';
 import {
   E49_WIND_DEFAULTS,
+  windBearingOf,
   windEtaEffect,
+  type E49Thr,
   type WindBearing,
 } from './windEta.ts';
 import { nearestWindSample, type WindHourSample } from './windForecast.ts';
@@ -18,7 +21,7 @@ export type EtaWxCause = {
   atIso?: string | null;
   fromIso?: string | null;
   untilIso?: string | null;
-  source: 'SMHI' | 'FMI' | 'TRAFIKVERKET';
+  source: 'SMHI' | 'FMI' | 'TRAFIKVERKET' | 'DIGITRAFFIC' | string;
 };
 
 export type CorridorWindRow = {
@@ -53,7 +56,7 @@ export function weatherFromCorridorWind(args: {
   fromKm: number;
   startAt: Date;
   driveH: number;
-  thr?: Partial<typeof E49_WIND_DEFAULTS>;
+  thr?: Partial<E49Thr>;
   horizonH?: number;
 }): { weather: EtaWxCause[]; addMin: number; holdMin: number } {
   const thr = { ...E49_WIND_DEFAULTS, ...args.thr };
@@ -76,7 +79,8 @@ export function weatherFromCorridorWind(args: {
     const sample = nearestWindSample(row.samples ?? [], at.toISOString());
     if (sample?.gustMs == null) continue;
     const gust = sample.gustMs;
-    const windFrom = sample.windFromDeg ?? 0;
+    /* brak kierunku: bok (nie zgadujemy przodu/tyłu — F7 #785 r1) */
+    const windFrom = sample.windFromDeg ?? (row.bearingDeg + 90) % 360;
     const effect = windEtaEffect({
       gustMs: gust,
       travelDeg: row.bearingDeg,
@@ -133,13 +137,45 @@ export function weatherFromCorridorWind(args: {
   return { weather, addMin, holdMin };
 }
 
-/** Z2: jedna sprawa na transport+odcinek (dedup). */
+/** Z2: klucz deduplikacji — JEDNA otwarta sprawa na transport i korytarz (nie na punkt km, nie osobno postój). */
+export function windCaseDedup(loadId: string, corridor: string): string {
+  return `E49_WIND:${loadId}:${corridor}`;
+}
+
+/** Z2: histereza zamknięcia — sprawa zamyka się dopiero gdy poryw spadnie poniżej progu − tyle m/s. */
+export const E49_WIND_CLOSE_HYST_MS = 2;
+
+export type WindThresholds = E49Thr;
+
+/** Progi z `ops_thresholds` (WIND_*, SLIP_*) na wartości domyślne E49 (Z1 pkt 5). */
+export function windThresholdsFromOps(
+  rows: ReadonlyArray<{ key: string; value_num: number | string | null }>,
+): WindThresholds {
+  const thr: WindThresholds = { ...E49_WIND_DEFAULTS };
+  for (const row of rows) {
+    const v = Number(row.value_num);
+    if (!Number.isFinite(v)) continue;
+    switch (row.key) {
+      case 'WIND_SLOW_MS': thr.WIND_SLOW_MS = v; break;
+      case 'WIND_CROSS_PCT': thr.WIND_CROSS_PCT = v; break;
+      case 'WIND_HEAD_PCT': thr.WIND_HEAD_PCT = v; break;
+      case 'WIND_HOLD_MS': thr.WIND_HOLD_MS = v; break;
+      case 'WIND_RESUME_MS': thr.WIND_RESUME_MS = v; break;
+      case 'WIND_RESUME_MIN': thr.WIND_RESUME_MIN = v; break;
+      case 'SLIP_RADIUS_KM': thr.SLIP_RADIUS_KM = v; break;
+      case 'SLIP_PCT': thr.SLIP_MULT = 1 + v / 100; break;
+      default: break;
+    }
+  }
+  return thr;
+}
+
+/** Z2: sprawa „Silny wiatr” / „Postój przez wiatr” — jedna na transport+korytarz; odbiorcy HHL + SCX (bez KSH). */
 export function windCaseRisk(args: {
   loadId: string;
   corridor: string;
   km: number;
   gustMs: number;
-  addMin: number;
   hold: boolean;
   atIso: string;
   side?: 'CROSS' | 'HEAD' | null;
@@ -158,6 +194,15 @@ export function windCaseRisk(args: {
 } {
   const where = whereLabel(args.corridor, args.km);
   const sidePl = args.side === 'CROSS' ? 'z boku' : args.side === 'HEAD' ? 'z przodu' : '';
+  const base = {
+    zrodlo: 'E49-a SMHI/FMI',
+    /* Z2: odbiorcy HHL + SCX — risk_audience_for (0398) czyta detail.audience, nie WSZYSCY (KSH). */
+    audience: 'HHL_PRZEWOZNIK',
+    gustMs: args.gustMs,
+    corridor: args.corridor,
+    km: args.km,
+    loadId: args.loadId,
+  };
   if (args.hold) {
     return {
       kind: 'WEATHER',
@@ -166,42 +211,115 @@ export function windCaseRisk(args: {
       titleKey: 'rk_wind_hold',
       params: { where, gust: String(Math.round(args.gustMs)) },
       detail: {
-        zrodlo: 'E49-a SMHI/FMI',
-        gustMs: args.gustMs,
-        corridor: args.corridor,
-        km: args.km,
+        ...base,
+        hold: true,
         fromIso: args.atIso,
         untilIso: args.untilIso ?? null,
-        addMin: args.addMin,
-        loadId: args.loadId,
       },
-      dedup: `E49_WIND_HOLD:${args.loadId}:${args.corridor}:${Math.round(args.km)}`,
+      dedup: windCaseDedup(args.loadId, args.corridor),
       loadId: args.loadId,
       sourceUrl: null,
-      validUntil: args.untilIso ?? null,
+      validUntil: null, /* waga i tytuł aktualizowane w miejscu; sprawa nie wygasa sama */
     };
   }
   return {
     kind: 'WEATHER',
     severity: 'MEDIUM',
-    title: `Silny wiatr na trasie · ${where} · ${Math.round(args.gustMs)} m/s${sidePl ? ` ${sidePl}` : ''} · +${args.addMin} min`,
+    title: `Silny wiatr na trasie · ${where} · ${Math.round(args.gustMs)} m/s${sidePl ? ` ${sidePl}` : ''}`,
     titleKey: 'rk_wind_strong',
-    params: { where, gust: String(Math.round(args.gustMs)), min: String(args.addMin) },
+    params: { where, gust: String(Math.round(args.gustMs)) },
     detail: {
-      zrodlo: 'E49-a SMHI/FMI',
-      gustMs: args.gustMs,
-      corridor: args.corridor,
-      km: args.km,
+      ...base,
+      hold: false,
       atIso: args.atIso,
       side: args.side ?? null,
-      addMin: args.addMin,
-      loadId: args.loadId,
     },
-    dedup: `E49_WIND:${args.loadId}:${args.corridor}:${Math.round(args.km)}`,
+    dedup: windCaseDedup(args.loadId, args.corridor),
     loadId: args.loadId,
     sourceUrl: null,
     validUntil: null,
   };
+}
+
+export type WindPeak = {
+  gustMs: number;
+  corridor: string;
+  km: number;
+  atIso: string;
+  side: 'CROSS' | 'HEAD' | null;
+};
+
+/** Z2: najsilniejszy poryw w 24 h na punktach korytarza PRZED autem (km ≥ fromKm), bez względu na kierunek. */
+export function windCasePeak(args: {
+  rows: readonly CorridorWindRow[];
+  fromKm: number;
+  now: Date;
+  windowH?: number;
+}): WindPeak | null {
+  const nowIso = args.now.toISOString();
+  let best: WindPeak | null = null;
+  for (const row of args.rows) {
+    if (!Number.isFinite(row.km) || row.km < args.fromKm - 0.01) continue;
+    const s = gustMeetsThresholdInWindow(row.samples ?? [], nowIso, 0, args.windowH ?? 24);
+    const g = s?.gustMs ?? s?.windMs ?? null;
+    if (s == null || g == null) continue;
+    if (best == null || g > best.gustMs) {
+      best = {
+        gustMs: g,
+        corridor: row.corridor,
+        km: row.km,
+        atIso: s.at,
+        side: s.windFromDeg == null ? 'CROSS' : sideOf(windBearingOf(row.bearingDeg, s.windFromDeg)),
+      };
+    }
+  }
+  return best;
+}
+
+export type WindCasePlan =
+  | { action: 'raise'; risk: ReturnType<typeof windCaseRisk> }
+  | { action: 'keep'; dedup: string }
+  | { action: 'close'; dedup: string };
+
+/**
+ * Z2 + F7 #785 r1 pkt 5: decyzja dla jednego transportu i jednego korytarza.
+ * - poryw w 24 h ≥ WIND_SLOW_MS → raise (otwarcie albo aktualizacja tej samej sprawy; ≥ WIND_HOLD_MS = wyższa waga na TYM SAMYM kluczu);
+ * - między (WIND_SLOW_MS − histereza) a WIND_SLOW_MS i sprawa otwarta → keep (bez zmian, bez nowego powiadomienia);
+ * - niżej → close (brak w liście „keep” → resolveStaleRisks).
+ */
+export function planWindCase(args: {
+  loadId: string;
+  corridor: string;
+  rows: readonly CorridorWindRow[];
+  fromKm: number;
+  now: Date;
+  thr: Pick<WindThresholds, 'WIND_SLOW_MS' | 'WIND_HOLD_MS' | 'WIND_RESUME_MIN'>;
+  isOpen: boolean;
+}): WindCasePlan {
+  const dedup = windCaseDedup(args.loadId, args.corridor);
+  const peak = windCasePeak({ rows: args.rows, fromKm: args.fromKm, now: args.now });
+  if (peak == null) return { action: 'close', dedup };
+  if (peak.gustMs >= args.thr.WIND_SLOW_MS) {
+    const hold = peak.gustMs >= args.thr.WIND_HOLD_MS;
+    return {
+      action: 'raise',
+      risk: windCaseRisk({
+        loadId: args.loadId,
+        corridor: args.corridor,
+        km: peak.km,
+        gustMs: peak.gustMs,
+        hold,
+        atIso: peak.atIso,
+        side: peak.side,
+        untilIso: hold
+          ? new Date(Date.parse(peak.atIso) + args.thr.WIND_RESUME_MIN * 60_000).toISOString()
+          : null,
+      }),
+    };
+  }
+  const closeBelow = Math.max(0, args.thr.WIND_SLOW_MS - E49_WIND_CLOSE_HYST_MS);
+  if (args.isOpen && peak.gustMs >= closeBelow) return { action: 'keep', dedup };
+  return { action: 'close', dedup };
 }
 
 /** Z4: ×1,15 tylko gdy punkt śliskości w promieniu radiusKm od odcinka. */

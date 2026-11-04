@@ -37,6 +37,7 @@ import {
 import type { DbSailing, RiskInput, SailingInsert, SailingPatch, VesselRow } from './sync.ts';
 import { ROAD_LEGS } from '../here/refreshRoadLegs.ts';
 import { legDefFromRow } from '../here/legDefFromRow.ts';
+import { windThresholdsFromOps } from '../e49/etaWeather.ts';
 
 export {
   filterLoadsReassignedFromSailing,
@@ -889,6 +890,41 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
       if (r.error) throw new Error(`e49_wind_active_corridors: ${r.error.message}`);
       const rows = (r.data ?? []) as Array<string | { code: string }>;
       return rows.map((row) => (typeof row === 'string' ? row : String(row.code))).filter(Boolean);
+    },
+    /** E49-a Z2: korytarze per transport (0397 e49_wind_load_corridors). */
+    async e49WindLoadCorridors() {
+      const r = await sb.rpc('e49_wind_load_corridors');
+      if (r.error) throw new Error(`e49_wind_load_corridors: ${r.error.message}`);
+      const rows = (r.data ?? []) as Array<{
+        load_id: string; code: string; leg: string; from_km: number | string | null; current_leg: boolean;
+      }>;
+      return rows.map((row) => ({
+        loadId: String(row.load_id),
+        code: String(row.code),
+        leg: (row.leg === 'SE' ? 'SE' : 'PL') as 'PL' | 'SE',
+        fromKm: Number(row.from_km ?? 0) || 0,
+        currentLeg: row.current_leg === true,
+      }));
+    },
+    /** E49-a Z2: progi WIND_* / SLIP_* z ops_thresholds (Z1 pkt 5). */
+    async e49WindThresholds() {
+      const r = await sb.from('ops_thresholds').select('key,value_num')
+        .in('key', [
+          'WIND_SLOW_MS', 'WIND_CROSS_PCT', 'WIND_HEAD_PCT',
+          'WIND_HOLD_MS', 'WIND_RESUME_MS', 'WIND_RESUME_MIN',
+          'SLIP_RADIUS_KM', 'SLIP_PCT',
+        ]);
+      if (r.error) throw new Error(`ops_thresholds E49: ${r.error.message}`);
+      return windThresholdsFromOps((r.data ?? []) as Array<{ key: string; value_num: number | null }>);
+    },
+    /** E49-a Z2: otwarte sprawy z prefiksem — klucze dedup. */
+    async openRiskDedups(dedupPrefix: string) {
+      const like = `${dedupPrefix.replace(/[%_]/g, (c) => `\\${c}`)}%`;
+      const rows = must(
+        await sb.from('risk_signals').select('dedup_key').like('dedup_key', like).is('resolved_at', null),
+        'risk_signals openRiskDedups',
+      ) as Array<{ dedup_key: string | null }>;
+      return rows.map((row) => row.dedup_key).filter((k): k is string => !!k);
     },
     async corridorPolylineGeoJson(code: string) {
       const r = await sb.rpc('corridor_polyline_geojson', { p_code: code });
