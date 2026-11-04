@@ -305,6 +305,7 @@ export type KaaDeviationOpts = {
  * #572 F7 r3 NOWE-3 / #667 F7 r3 B4: odchyłka linii HERE od korytarza.
  * Domyślnie (ślad GPS): korytarz→trasa ≤ 2 km; trasa→korytarz ≤ max(2 km; 0,15 × L odcinka).
  * sparseCorridor (SE_E22 / SE_KAA_INLAND): tylko controlPts ≤ 2 km; linia→korytarz ≤ 15 km.
+ * SE_E4 / SE-NYN — nie tu: `seNynSparseDeviation` (DP-208).
  */
 export function kaaDeviationOk(
   line: readonly LatLng[],
@@ -331,6 +332,89 @@ export function kaaDeviationOk(
     if (d > allowed) return false;
   }
   return true;
+}
+
+/**
+ * DP-208: wzorzec Nynäshamn–Boden ~960–1000 km; ±10 % od krańców → [864, 1100].
+ * (Cięciwy między via są krótsze niż realna E4 — dolny próg nie może być 882.)
+ */
+export const SE_NYN_LEN_MIN_KM = 960 * 0.9;
+export const SE_NYN_LEN_MAX_KM = 1000 * 1.1;
+/** Via na E4 muszą leżeć na linii HERE. */
+export const SE_NYN_VIA_MAX_KM = 1;
+/**
+ * Linia→13-pkt SE_E4: 15 km (sparse KAA) odrzucało poprawną E4 (~3 km od cięciwy).
+ * 35 km = stara swobodna SE-NYN (~30 km) nadal odpada.
+ */
+export const SE_NYN_CORR_MAX_KM = 35;
+
+export type SeNynDevResult = {
+  ok: boolean;
+  reason?: string;
+  lenKm: number;
+  devMaxKm: number;
+  /** Punkt linii o największej odchyłce od SE_E4. */
+  devAt: LatLng | null;
+};
+
+/**
+ * DP-208 (#788): kontrola SE-NYN względem rzadkiego SE_E4 —
+ * każdy via ≤ 1 km od linii, długość ±10 % wzorca ~960–1000 km, żaden punkt linii > 35 km od SE_E4.
+ */
+export function seNynSparseDeviation(
+  line: readonly LatLng[],
+  corridor: readonly LatLng[],
+  via: readonly LatLng[],
+): SeNynDevResult {
+  const lenKm = line.length >= 2 ? lineLengthKm(line) : 0;
+  let devMaxKm = 0;
+  let devAt: LatLng | null = null;
+  if (line.length >= 2 && corridor.length >= 2) {
+    for (const p of line) {
+      const d = nearestKm(corridor, p[0], p[1]);
+      if (d > devMaxKm) {
+        devMaxKm = d;
+        devAt = p;
+      }
+    }
+  }
+  if (line.length < 2 || corridor.length < 2) {
+    return { ok: false, reason: 'za mało punktów', lenKm, devMaxKm, devAt };
+  }
+  if (lenKm < SE_NYN_LEN_MIN_KM || lenKm > SE_NYN_LEN_MAX_KM) {
+    return {
+      ok: false,
+      reason: `długość ${Math.round(lenKm)} poza ${Math.round(SE_NYN_LEN_MIN_KM)}-${Math.round(SE_NYN_LEN_MAX_KM)}`,
+      lenKm,
+      devMaxKm,
+      devAt,
+    };
+  }
+  if (via.length < 1) {
+    return { ok: false, reason: 'brak via E4', lenKm, devMaxKm, devAt };
+  }
+  for (const v of via) {
+    const d = nearestKm(line, v[0], v[1]);
+    if (d > SE_NYN_VIA_MAX_KM) {
+      return {
+        ok: false,
+        reason: `via ${d.toFixed(1)} km > ${SE_NYN_VIA_MAX_KM}`,
+        lenKm,
+        devMaxKm,
+        devAt,
+      };
+    }
+  }
+  if (devMaxKm > SE_NYN_CORR_MAX_KM) {
+    return {
+      ok: false,
+      reason: `odchyłka ${devMaxKm.toFixed(1)} km > ${SE_NYN_CORR_MAX_KM}`,
+      lenKm,
+      devMaxKm,
+      devAt,
+    };
+  }
+  return { ok: true, lenKm, devMaxKm, devAt };
 }
 
 export function looseRoadOk(line: readonly LatLng[]): boolean {

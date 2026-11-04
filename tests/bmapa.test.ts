@@ -196,8 +196,10 @@ describe('B-MAPA geometria', () => {
     expect(refresh).toMatch(/SE_E22/);
     expect(refresh).toMatch(/corridorCode: 'SE_KAA_INLAND'/);
     // DP-197 / F7 #771: SE-NYN = SE_E4 + via E4 (Essingeleden); behawior w i667-refresh-roads.
+    // DP-208: seNynSparseDeviation zamiast sparse 15 km dla SE_E4.
     expect(refresh).toMatch(/corridorCode: 'SE_E4'/);
     expect(refresh).toMatch(/useCorridorDev/);
+    expect(refresh).toMatch(/seNynSparseDeviation/);
     expect(refresh).toMatch(/59\.322/);
     expect(refresh).not.toMatch(/corridorInland:\s*true/);
     expect(refresh).not.toMatch(/CORRIDOR_KAA = 'SE_KAA_TRACK'/);

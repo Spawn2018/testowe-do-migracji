@@ -310,5 +310,138 @@ describe('DP-197 / F7 #771 SE-NYN corridorDev', () => {
     expect(stored).toHaveLength(1);
     expect(stored[0]!.points).toBeNull();
     expect(stored[0]!.nowIso).toBe(new Date(nowMs + 24 * 3600e3).toISOString());
+    expect(r.observations?.se_nyn_dev_max_km).toBeTruthy();
+    expect(Number(r.observations!.se_nyn_dev_max_km)).toBeGreaterThan(35);
+    expect(r.observations?.se_nyn_len_km).toBeTruthy();
+  });
+
+  // DP-208: trasa po E4 przez via — przyjęta mimo ~3 km od 13-pkt SE_E4 (stary sparse 15 km / 2 km odrzucał).
+  it('DP-208: E4 przez via → store mimo 3 km od rzadkiego SE_E4', async () => {
+    const { encodeFlexiblePolyline } = await import(
+      '../supabase/functions/_shared/here/flexPolyline.ts'
+    );
+    const { nearestKm, seNynSparseDeviation } = await import(
+      '../supabase/functions/_shared/map/draw.ts'
+    );
+    // Pad start (ROAD_SE minKm 900; cięciwy via ~857 km).
+    const e4Line = denseVia(
+      [
+        [58.90453, 17.95621], [59.195, 17.628], [58.90453, 17.95621],
+        [59.322, 18.005],
+        [59.8767, 17.6953],
+        [60.6638, 17.109],
+        [61.7279, 17.065],
+        [62.391, 17.340],
+        [63.8127, 20.3263],
+        [65.606, 22.053],
+        [65.80539, 21.75914],
+      ],
+      0.35,
+    );
+    // 13-pkt cięciwa lekko na wschód (~3 km od Essingeleden / E4).
+    const sparseE4: [number, number][] = [
+      [58.90, 18.01], [59.10, 18.08], [59.32, 18.06], [59.55, 17.95],
+      [59.88, 17.75], [60.30, 17.40], [60.67, 17.20], [61.40, 17.10],
+      [62.00, 17.25], [62.40, 17.40], [63.80, 20.40], [65.60, 22.10],
+      [65.81, 21.76],
+    ];
+    const essDev = nearestKm(sparseE4, 59.322, 18.005);
+    expect(essDev).toBeGreaterThan(2);
+    expect(essDev).toBeLessThan(15);
+    const check = seNynSparseDeviation(e4Line, sparseE4, e4Via);
+    expect(check.ok).toBe(true);
+    expect(check.devMaxKm).toBeGreaterThan(2);
+    expect(check.devMaxKm).toBeLessThan(35);
+
+    const poly = encodeFlexiblePolyline(e4Line);
+    const fetchFn = vi.fn(async () =>
+      new Response(JSON.stringify({
+        routes: [{ sections: [{ polyline: poly, summary: { length: 980_000, duration: 50_000 } }] }],
+      }), { status: 200, headers: { 'Content-Type': 'application/json' } }),
+    );
+    const stored: Array<{ leg: string; points: unknown; nowIso?: string }> = [];
+    const nowMs = Date.parse('2026-11-04T16:00:00Z');
+    const r = await refreshRoadLegs(
+      {
+        listLegs: async () => [seNyn],
+        listGeometry: async () => [geom('SE-NYN', 40 * 864e5, null)],
+        storeRoad: async (leg, points, _summary, nowIso) => {
+          stored.push({ leg, points, nowIso });
+          return true;
+        },
+        loadCorridor: async (code) => ({ code, pts: sparseE4, via: e4Via, updatedAt: 0 }),
+        monthSpend: async () => 0,
+        noteRouting: async () => {},
+      },
+      {
+        fetch: fetchFn as unknown as typeof fetch,
+        hereApiKey: 'k',
+        maxAgeMs: ROAD_CRON_REFRESH_MS,
+        nowMs,
+      },
+    );
+    expect(r.attempted).toBe(1);
+    expect(r.stored).toBe(1);
+    expect(stored[0]!.points).not.toBeNull();
+    expect(stored[0]!.nowIso).toBeUndefined();
+    expect(Number(r.observations!.se_nyn_dev_max_km)).toBeGreaterThan(2);
+    expect(Number(r.observations!.se_nyn_len_km)).toBeGreaterThan(800);
+  });
+
+  // DP-208: centrum Sztokholmu (≥2 km od via Essingeleden) → odrzut + retry 24 h.
+  it('DP-208: Sztokholm centrum (≥2 km od Essingeleden) → odrzut + retry 24 h', async () => {
+    const { encodeFlexiblePolyline } = await import(
+      '../supabase/functions/_shared/here/flexPolyline.ts'
+    );
+    const cityLine = denseVia(
+      [
+        [58.90453, 17.95621], [59.195, 17.628], [58.90453, 17.95621],
+        [59.33, 18.07], // centrum — ≥2 km od Essingeleden E4
+        [59.8767, 17.6953],
+        [60.6638, 17.109],
+        [61.7279, 17.065],
+        [62.391, 17.340],
+        [63.8127, 20.3263],
+        [65.606, 22.053],
+        [65.80539, 21.75914],
+      ],
+      0.35,
+    );
+    const sparseE4 = denseVia(
+      [[58.9, 17.95], [59.322, 18.005], [60.67, 17.14], [62.39, 17.31], [65.81, 21.76]],
+      40,
+    );
+    const poly = encodeFlexiblePolyline(cityLine);
+    const fetchFn = vi.fn(async () =>
+      new Response(JSON.stringify({
+        routes: [{ sections: [{ polyline: poly }] }],
+      }), { status: 200, headers: { 'Content-Type': 'application/json' } }),
+    );
+    const nowMs = Date.parse('2026-11-04T16:00:00Z');
+    const stored: Array<{ leg: string; points: unknown; nowIso?: string }> = [];
+    const r = await refreshRoadLegs(
+      {
+        listLegs: async () => [seNyn],
+        listGeometry: async () => [geom('SE-NYN', 40 * 864e5, null)],
+        storeRoad: async (leg, points, _summary, nowIso) => {
+          stored.push({ leg, points, nowIso });
+          return true;
+        },
+        loadCorridor: async (code) => ({ code, pts: sparseE4, via: e4Via, updatedAt: 0 }),
+        monthSpend: async () => 0,
+        noteRouting: async () => {},
+      },
+      {
+        fetch: fetchFn as unknown as typeof fetch,
+        hereApiKey: 'k',
+        maxAgeMs: ROAD_CRON_REFRESH_MS,
+        nowMs,
+      },
+    );
+    expect(r.attempted).toBe(1);
+    expect(r.stored).toBe(0);
+    expect(r.warnings.some((w) => /SE-NYN: odchyłka od SE_E4/.test(w))).toBe(true);
+    expect(stored[0]!.points).toBeNull();
+    expect(stored[0]!.nowIso).toBe(new Date(nowMs + 24 * 3600e3).toISOString());
   });
 });
