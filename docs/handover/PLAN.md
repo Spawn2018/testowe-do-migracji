@@ -2649,6 +2649,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 03.11.2026 21:35 | #777 F7 r1 niegotowe → seed Portnet/Deltamarin, I=IC, dzień przypłynięcia, złożone IBNet | pętla / C2 F7 |
 | 03.11.2026 22:00 | #777 SCALONE `2a99a8e6` (DP-120 / **0391**; F7 gotowe @ `fecc5f7a`); start DP-202+203 (#778+#779) | pętla / C2 |
 | 03.11.2026 23:50 | #780 F7 r3: auto DeepL na luki TV/bałtyk (bez RESOURCE_MISSING:TV_CODE); **0393** memory_auto_24h | pętla / C2 F7 |
+| 04.11.2026 13:45 | #791 F7 r3+B11 **0403**: decide SCX/`HHL_ADMIN`; dzwonek +KSH; B3/B4/B6/B8; CI B1/B2 = brak `commit` w teście; security **520** | pętla / C2 F7 |
 | 04.11.2026 12:30 | #791 CI db FAIL @ `5a96a7ed` → **0401** assert_not_preview + Brak aktywnego konta; `sections[].notices` HERE; security **509** / nullguard **914** | pętla / C2 CI |
 | 04.11.2026 11:25 | #791 E49-b cz.2: **0400** upsert/decide/Historia/macierz; job `roadClosed`→HERE w route-hazards; `DETOUR_E49=true` + e49Source | pętla / C2 |
 | 04.11.2026 10:40 | #791 F7 r1: B1 RLS bez CLIENT + testy; U1 maskApiKey; U2 noDetourWhy po kodzie; restore cyfry (`e49_*`); security **507**; pl-t `lt` | pętla / C2 F7 |
