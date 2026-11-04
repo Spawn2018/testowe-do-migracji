@@ -150,7 +150,7 @@ begin
       $c$select public.tower_cron_corridor_wind_invoke();$c$
     );
   else
-    raise notice '0396: pg_cron niedostępne — tower-corridor-wind do zaplanowania ręcznie';
+    raise notice '0397: pg_cron niedostępne — tower-corridor-wind do zaplanowania ręcznie';
   end if;
 end
 $body$;
