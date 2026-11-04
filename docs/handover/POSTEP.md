@@ -1,4 +1,11 @@
 
+## 2026-11-04 04:45 — #787 F7 r1 niegotowe: mark przez risk_signals
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne` (poza #550). #786 nadal otwarte.
+- Scalanie: **#787 F7 r1 niegotowe** @ `a860fd28` — filtr `ee-wx` w `notifications` łapie 0; łączenie przez `risk_signals.dedup_key like 'ROAD_EE:v2:ee-wx:%'`. Edge OK.
+- **Krok:** `dp786_mark_road_ee_wx_in_app_read()` + exists po `payload.risk_id`; test security 2 ee-wx / 1 inny ROAD_EE; EXPECTED security 502/498.
+- **Dalej:** push → CI (+ `db`) → F7. Po wdrożeniu: #785 rebase migracji + ETA/Z2.
+
 ## 2026-11-04 04:35 — PILNE #786: ROAD_EE dedup (przerwa #785)
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. **#786 PILNE** (Spawn2018; bez etykiety `dla-cursora`, ale polecenie w #785 + treść #786) — zalew dzwonków ROAD_EE.
