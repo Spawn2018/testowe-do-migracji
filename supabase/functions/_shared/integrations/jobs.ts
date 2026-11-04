@@ -146,6 +146,9 @@ import {
   WIND_GUST_MS_THRESHOLD, gustExceedsThreshold, windRiskTitle,
   seWeekendBanHit, plSundayBanHit, banRiskTitle,
 } from '../here/windAndBans.ts';
+import { runCorridorWindCore } from '../e49/corridorWindJob.ts';
+import { planWindCase, windCaseDedup, type CorridorWindRow } from '../e49/etaWeather.ts';
+import { E49_WIND_DEFAULTS } from '../e49/windEta.ts';
 import { applyPendingRoadTitle, humanizeRoadCode } from '../../../../src/lib/pl/describe.ts';
 import { PANEL_FALLBACK } from '../../../../src/lib/pl/codes.ts';
 import {
@@ -379,6 +382,39 @@ export interface SyncStore {
   ferryPortDelayMin?(): Promise<number>;
   /** II-8: progi WAVE_M / GUST_KN z ops_thresholds (domyślnie 3.8 / 40) */
   opsThresholds?(): Promise<{ waveM: number; gustKn: number }>;
+  /** E49-a: korytarze z transportem w oknie śledzenia. */
+  e49WindActiveCorridors?(): Promise<string[]>;
+  /** E49-a Z2: korytarze per transport (odcinek PL / SE-FI; bez AT_SITE) + postęp auta `fromKm`. */
+  e49WindLoadCorridors?(): Promise<Array<{
+    loadId: string;
+    code: string;
+    leg: 'PL' | 'SE';
+    fromKm: number;
+    currentLeg: boolean;
+  }>>;
+  /** E49-a Z2: progi WIND_* / SLIP_* z ops_thresholds (Z1 pkt 5). */
+  e49WindThresholds?(): Promise<import('../e49/windEta.ts').E49Thr>;
+  /** E49-a Z2: klucze dedup otwartych spraw z prefiksem (jedno zapytanie zamiast hasOpenRisk per sprawa). */
+  openRiskDedups?(dedupPrefix: string): Promise<string[]>;
+  /** E49-a: geometria korytarza (GeoJSON) z corridor_polylines. */
+  corridorPolylineGeoJson?(code: string): Promise<unknown | null>;
+  /** E49-a: zapis prognozy wiatru na punkcie. */
+  upsertCorridorWindForecast?(row: {
+    corridor: string;
+    km: number;
+    lon: number;
+    lat: number;
+    bearingDeg: number;
+    source: 'SMHI' | 'FMI';
+    samples: unknown;
+    fetchedAt: string;
+  }): Promise<void>;
+  /** E49-a: liczba świeżych punktów prognozy (Stan systemu / route-hazards). */
+  corridorWindFreshCount?(maxAgeMin: number): Promise<number>;
+  /** E49-a Z2: punkty prognozy korytarza (fresh). */
+  listCorridorWindForecast?(corridor: string, maxAgeMin?: number): Promise<CorridorWindRow[]>;
+  /** E49-a: transport w oknie śledzenia? */
+  loadInTrackingWindow?(loadId: string, at?: string): Promise<boolean>;
   /**
    * DP-145 / BN5: `ferry_routes.code` → `family_key` (UPPER).
    * Brak metody → marineWeather używa zapasu w kodzie.
@@ -5547,8 +5583,8 @@ async function raiseFerryIceRisks(
  */
 
 /**
- * H-10 (ryzyko wiatru, próg 15 m/s) + H-12 (zakazy czasowe).
- * Korekta ETA przez wiatr = etap po TELM (H-4) — tu tylko ryzyko.
+ * H-12 (zakazy czasowe) + mostek do E49 wiatru (żywa seria = corridor-wind / corridor_wind_forecast).
+ * Korekta ETA i sprawy Z2 — kolejne kroki DP-205 (basis.weather).
  */
 export async function runRouteHazards(deps: JobDeps): Promise<JobResult> {
   const nowIso = deps.now().toISOString();
@@ -5587,8 +5623,8 @@ export async function runRouteHazards(deps: JobDeps): Promise<JobResult> {
       risks++;
     }
   }
-  // H-10: opcjonalny gust z env (test) albo z observations — bez wołania HERE gdy brak danych
   const gustEnv = deps.env.H10_TEST_GUST_MS;
+  const windKeep: string[] = [];
   if (gustEnv != null && gustEnv !== '') {
     const g = Number(gustEnv);
     if (gustExceedsThreshold(g)) {
@@ -5603,11 +5639,98 @@ export async function runRouteHazards(deps: JobDeps): Promise<JobResult> {
       risks++;
     }
   } else {
-    warnings.push('H-10: brak żywej serii wiatru drogowego w tym przebiegu — próg 15 m/s gotowy; ETA+wiatr po TELM');
+    const fresh = deps.store.corridorWindFreshCount
+      ? await deps.store.corridorWindFreshCount(120)
+      : 0;
+    if (fresh > 0) {
+      warnings.push(`E49: żywa seria wiatru — ${fresh} punktów < 2 h (próg ${WIND_GUST_MS_THRESHOLD} m/s)`);
+      /*
+       * Z2 (F7 #785 r1 pkt 5): JEDNA otwarta sprawa na transport i korytarz (E49_WIND:{load}:{korytarz}),
+       * tylko korytarze tego transportu, tylko odcinek bieżący, tylko punkty przed autem; poryw ≥ WIND_SLOW_MS
+       * w 24 h niezależnie od kierunku; ≥ WIND_HOLD_MS = wyższa waga na tym samym kluczu (aktualizacja w miejscu);
+       * zamknięcie z histerezą (poniżej progu − 2 m/s). Progi z ops_thresholds. Odbiorcy: HHL + SCX.
+       */
+      if (deps.store.listCorridorWindForecast && deps.store.e49WindLoadCorridors) {
+        const legs = await deps.store.e49WindLoadCorridors();
+        const thr = deps.store.e49WindThresholds
+          ? await deps.store.e49WindThresholds()
+          : { ...E49_WIND_DEFAULTS };
+        const openKeys = new Set(
+          deps.store.openRiskDedups ? await deps.store.openRiskDedups('E49_WIND:') : [],
+        );
+        const statusById = new Map(loads.map((l) => [l.id, l.status ?? ''] as const));
+        const byCorr = new Map<string, CorridorWindRow[]>();
+        const seen = new Set<string>();
+        for (const leg of legs) {
+          if (!leg.currentLeg) continue; // odcinek SE/FI dla auta jeszcze w PL liczy tylko ETA (Z1)
+          const st = statusById.get(leg.loadId) ?? '';
+          if (st === 'AT_SITE' || st === 'FERRY') continue; // nie na placu budowy / promie
+          const dedup = windCaseDedup(leg.loadId, leg.code);
+          if (seen.has(dedup)) continue;
+          seen.add(dedup);
+          if (!byCorr.has(leg.code)) {
+            byCorr.set(leg.code, await deps.store.listCorridorWindForecast(leg.code, 180));
+          }
+          const plan = planWindCase({
+            loadId: leg.loadId,
+            corridor: leg.code,
+            rows: byCorr.get(leg.code) ?? [],
+            fromKm: leg.fromKm,
+            now: deps.now(),
+            thr,
+            isOpen: openKeys.has(dedup),
+          });
+          if (plan.action === 'raise') {
+            windKeep.push(dedup);
+            if (await deps.store.raiseRisk(plan.risk)) risks++;
+          } else if (plan.action === 'keep') {
+            windKeep.push(dedup);
+          }
+        }
+        if (deps.store.resolveStaleRisks) {
+          await deps.store.resolveStaleRisks('E49_WIND:', windKeep);
+          await deps.store.resolveStaleRisks('E49_WIND_HOLD:', []); // stary klucz postoju (przed F7 r1)
+        }
+      }
+    } else {
+      /* Bez świeżej prognozy sprawy wiatrowe nie wiszą bez końca (F7 #785 r1 pkt 5h). */
+      if (deps.store.resolveStaleRisks) {
+        await deps.store.resolveStaleRisks('E49_WIND:', []);
+        await deps.store.resolveStaleRisks('E49_WIND_HOLD:', []);
+      }
+      warnings.push('E49: brak żywej serii wiatru drogowego — próg 20 m/s (ops_thresholds WIND_SLOW_MS); job corridor-wind');
+    }
   }
   return {
     job: 'route-hazards', mode: 'LIVE', ok: true, risks,
-    warnings, observations: { loads: String(loads.length), thrMs: String(WIND_GUST_MS_THRESHOLD) },
+    warnings, observations: {
+      loads: String(loads.length),
+      thrMs: String(WIND_GUST_MS_THRESHOLD),
+      windCases: String(windKeep.length),
+    },
+  };
+}
+
+/** E49-a cz.2: prognoza SMHI/FMI na punktach korytarza (co 25 km). */
+export async function runCorridorWind(deps: JobDeps): Promise<JobResult> {
+  const core = await runCorridorWindCore({
+    store: deps.store,
+    fetch: deps.fetch,
+    now: deps.now(),
+  });
+  return {
+    job: 'corridor-wind',
+    mode: 'LIVE',
+    ok: core.ok,
+    reason: core.reason,
+    warnings: core.warnings,
+    observations: {
+      corridors: String(core.corridors),
+      points: String(core.points),
+      fetched_ok: String(core.fetchedOk),
+      smhi: String(core.sourceSmhi),
+      fmi: String(core.sourceFmi),
+    },
   };
 }
 
@@ -6466,6 +6589,7 @@ export const JOBS = {
   'rio-links': runRioLinks,
   'safefleet-poll': runSafefleetPoll,
   'route-hazards': runRouteHazards,
+  'corridor-wind': runCorridorWind,
   'translate-retry': runTranslateRetry,
 } as const;
 export type JobName = keyof typeof JOBS;
@@ -6479,6 +6603,7 @@ export const MIN_INTERVAL_MIN: Record<JobName, number> = {
   'traffic-flow': 15, 'here-roads': 1380,
   'emtrack-web': 2, 'rio-links': 2,
   'safefleet-poll': 2, 'route-hazards': 60,
+  'corridor-wind': 60,
   'translate-retry': 5,
 };
 

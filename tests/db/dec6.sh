@@ -18,12 +18,21 @@ echo; echo "[dec6] progi ops_thresholds"
 # B7 / E15 (D-0300): +4 progi ETA/ciszy; SILENT_MIN 15 → 30
 # #356: +1 import_quiet_hours (D-20261020-1157-01)
 # #398: +SILENT_MIN_EMTRACK (720)
-val "23 progów domyślnych (10 + 7 postój + 4 E15 + import_quiet_hours + SILENT_MIN_EMTRACK)" "select count(*) from ops_thresholds" 23
+# DP-205 E49-a (#783 / 0396+0398): +6 WIND_* +2 SLIP_* (Z1/Z4 — 8 progów)
+val "31 progów domyślnych (23 + 8 E49 WIND/SLIP)" "select count(*) from ops_thresholds" 31
 val "fala 3.8" "select value_num::text from ops_thresholds where key='WAVE_M'" "3.8"
 val "porywy 40" "select value_num::text from ops_thresholds where key='GUST_KN'" "40"
 val "silent 30 (E15 / B7)" "select value_num::text from ops_thresholds where key='SILENT_MIN'" "30"
 val "ETA_CONF_HIGH_MIN 30" "select value_num::text from ops_thresholds where key='ETA_CONF_HIGH_MIN'" "30"
 val "ETA_CONF_MED_MIN 120" "select value_num::text from ops_thresholds where key='ETA_CONF_MED_MIN'" "120"
+val "WIND_SLOW_MS 20 (E49 D-84)" "select value_num::text from ops_thresholds where key='WIND_SLOW_MS'" "20"
+val "WIND_HOLD_MS 25" "select value_num::text from ops_thresholds where key='WIND_HOLD_MS'" "25"
+val "WIND_RESUME_MIN 30" "select value_num::text from ops_thresholds where key='WIND_RESUME_MIN'" "30"
+val "SLIP_RADIUS_KM 25 (E49 Z4)" "select value_num::text from ops_thresholds where key='SLIP_RADIUS_KM'" "25"
+val "SLIP_PCT 15" "select value_num::text from ops_thresholds where key='SLIP_PCT'" "15"
+# F7 #785 r1: strażnik — migracja odtwarzająca pełne compute_load_eta nadpisałaby wrapper i Z4 w rdzeniu
+val "E49 Z4: rdzeń compute_load_eta_core bez mnożnika slowdown (marker w definicji)" "select position('E49 Z4' in pg_get_functiondef('public.compute_load_eta_core(uuid, timestamptz)'::regprocedure)) > 0" t
+val "E49: compute_load_eta = wrapper wołający compute_load_eta_core" "select position('compute_load_eta_core' in pg_get_functiondef('public.compute_load_eta(uuid, timestamptz)'::regprocedure)) > 0" t
 
 sys "begin; select set_config('request.jwt.claim.sub','$HHL',true); set local role authenticated;
      select admin_ops_threshold_set('DELAY_MIN', 45); commit;" >/dev/null

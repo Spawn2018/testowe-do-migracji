@@ -35,10 +35,15 @@ describe('U-31: obsada jednoosobowa — ETA nie czyta pól C-SEP jako załogi', 
   it('najnowsza definicja compute_load_eta nie traktuje A|B jako dwóch kierowców w obsadzie', () => {
     const dir = join(__dirname, '..', 'supabase', 'migrations');
     const files = readdirSync(dir).filter((f) => f.endsWith('.sql')).sort();
-    const withFn = files.filter((f) => /create or replace function public\.compute_load_eta/i.test(readFileSync(join(dir, f), 'utf8')));
+    /* DP-205 E49-a: 0398 to wrapper — H-4 jest w ostatniej pełnej definicji (0389 → rename _core). */
+    const withFn = files.filter((f) => {
+      const t = readFileSync(join(dir, f), 'utf8');
+      return /create or replace function public\.compute_load_eta\b/i.test(t)
+        && /SE_DAILY_REST|driver_hours|H-4|gps_rest|daily_rest/i.test(t);
+    });
     expect(withFn.length).toBeGreaterThan(0);
-    const last = readFileSync(join(dir, withFn[withFn.length - 1]), 'utf8');
-    const body = last.slice(last.search(/create or replace function public\.compute_load_eta/i));
+    const last = readFileSync(join(dir, withFn[withFn.length - 1]!), 'utf8');
+    const body = last.slice(last.search(/create or replace function public\.compute_load_eta\b/i));
     const fn = body.slice(0, body.indexOf('$function$', body.indexOf('$function$') + 1));
     // U-31: nie ma gałęzi „dwóch kierowców” / crew_size — A|B to przepięcie (C-SEP), nie obsada
     expect(fn).not.toMatch(/crew_size|dual.?driver|two.?driver|obsada.?2/i);

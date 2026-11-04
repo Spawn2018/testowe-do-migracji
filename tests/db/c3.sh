@@ -194,6 +194,29 @@ sys "select public.matrix_notify('RISK_FERRY_WEATHER','RISK_OPEN','$L','$P',
 sval "#402 F7: firma mail off → 0 EMAIL (bez prefs)" "select count(*) from notifications where channel='EMAIL' and user_id='$HHLU' and dedup_key like 'c402-org:%' and status <> 'SUPPRESSED'" 0
 sys "update notification_matrix_org_kind set email=true where org_kind='FORWARDER' and event_group='RISK_FERRY_WEATHER'" >/dev/null
 
+# DP-205 F7 #785 r2: audience HHL/HHL_PRZEWOZNIK → macierz bez KSH (CLIENT_USER).
+sys "update notification_matrix set in_app=true where event_key='risk_route' and role in ('HHL_ADMIN','HHL_OPS','CARRIER_DISPATCH','CARRIER_USER','CLIENT_USER')" >/dev/null
+sys "delete from user_notify_pref where user_id in ('$HHLU','$KSHU','$SCXU') and event_key='risk_route' and channel='bell'" >/dev/null
+RID_E49=$(sys "insert into risk_signals (project_id, load_id, kind, severity, title, title_key, detail, dedup_key)
+  values ('$P','$L','WEATHER','MEDIUM','Silny wiatr','rk_wind_strong',
+    jsonb_build_object('audience','HHL_PRZEWOZNIK','params',jsonb_build_object('corridor','SE_E4')),
+    'E49_WIND:$L:SE_E4:c3-dp205')
+  returning id" | grep -E '^[0-9a-f-]{36}$' | tail -1 | tr -d '\r')
+sval "DP-205 F7: E49_WIND audience → HHL IN_APP" "select (count(*) > 0)::text from notifications where channel='IN_APP' and user_id='$HHLU' and payload->>'risk_id'='$RID_E49'" true
+sval "DP-205 F7: E49_WIND audience → SCX IN_APP" "select (count(*) > 0)::text from notifications where channel='IN_APP' and user_id='$SCXU' and payload->>'risk_id'='$RID_E49'" true
+sval "DP-205 F7: E49_WIND audience → 0 KSH" "select count(*) from notifications where channel='IN_APP' and user_id='$KSHU' and payload->>'risk_id'='$RID_E49'" 0
+sval "DP-205: risk_signals.audience HHL_PRZEWOZNIK" "select audience::text from risk_signals where id='$RID_E49'" HHL_PRZEWOZNIK
+RID_FH=$(sys "insert into risk_signals (project_id, load_id, kind, severity, title, title_key, detail, dedup_key)
+  values ('$P','$L','FERRY','HIGH','Prom odwołany','rk_ferry_portcall_v2_fihel',
+    jsonb_build_object('audience','HHL'),
+    'FERRY_PORTCALL_V2_CANCELLED:c3-dp205-hhl')
+  returning id" | grep -E '^[0-9a-f-]{36}$' | tail -1 | tr -d '\r')
+sval "DP-205 F7: FERRY audience=HHL + load → HHL" "select (count(*) > 0)::text from notifications where channel='IN_APP' and user_id='$HHLU' and payload->>'risk_id'='$RID_FH'" true
+sval "DP-205 F7: FERRY audience=HHL + load → 0 SCX" "select count(*) from notifications where channel='IN_APP' and user_id='$SCXU' and payload->>'risk_id'='$RID_FH'" 0
+sval "DP-205 F7: FERRY audience=HHL + load → 0 KSH" "select count(*) from notifications where channel='IN_APP' and user_id='$KSHU' and payload->>'risk_id'='$RID_FH'" 0
+sys "delete from notifications where payload->>'risk_id' in ('$RID_E49','$RID_FH')" >/dev/null
+sys "delete from risk_signals where id in ('$RID_E49','$RID_FH')" >/dev/null
+
 # #467 D3: maile bez konta przez rodzaj (nie ext_mail); ext_mail.email = false.
 sval "#467: ext_mail.email wyłączone (bez domyślnie on)" "select bool_and(email is false)::text from notification_matrix where event_key='ext_mail'" true
 run "$HHL" "select admin_notification_matrix_set('sms_gw','CARRIER_DISPATCH',false,false,false)" commit >/dev/null

@@ -46,7 +46,8 @@ describe('teksty o automatach (serverRuleOn)', () => {
       const { serverRuleOn } = await import('../src/lib/serverRules');
       expect(serverRuleOn('TRACKING_WINDOW')).toBe(true);
       expect(serverRuleOn('SITE_EXIT_DELIVERED')).toBe(true);
-      for (const k of ['WIND_E49', 'DETOUR_E49', 'ROAD_PL_HERE', 'ROAD_SITUATIONS_MAP'] as const) expect(serverRuleOn(k)).toBe(false);
+      expect(serverRuleOn('WIND_E49')).toBe(true); /* DP-205 E49-a */
+      for (const k of ['DETOUR_E49', 'ROAD_PL_HERE', 'ROAD_SITUATIONS_MAP'] as const) expect(serverRuleOn(k)).toBe(false);
       const { helpVersion, HELP_WINDOW } = await import('../src/lib/helpContent');
       for (const kind of ['HHL_ADMIN', 'HHL_OPS', 'CLIENT_USER', 'CARRIER_DISPATCH'] as const) {
         const map = helpVersion(kind).steps.find((s) => s.target === 'map');
@@ -57,8 +58,9 @@ describe('teksty o automatach (serverRuleOn)', () => {
       expect(wt('pl', 'p4c_wf_r_zones_d')).not.toContain('włączamy wkrótce');
       expect(wt('pl', 'p4c_wf_zt_site_out')).not.toMatch(/— włączamy wkrótce$/);
       const gps = wt('pl', 'p4c_wf_r_gps_d').replace(/\u00a0/g, ' ');
-      expect(gps.startsWith('brak pozycji 30 min w ruchu / 3 h na postoju, opóźnienie po wyjeździe, rejs odwołany · ')).toBe(true); /* P11 (E21): bez kodów etapów */
-      expect(gps).toMatch(/„Objazd czy postój\?” przy zamkniętym moście lub drodze — włączamy wkrótce$/);
+      expect(gps).toContain('brak pozycji 30 min w ruchu / 3 h na postoju, opóźnienie po wyjeździe, rejs odwołany');
+      expect(gps).toContain('wiatr w ETA (od 20 m/s wolniej, od 25 m/s postój)');
+      expect(gps.endsWith('„Objazd czy postój?” przy zamkniętym moście lub drodze — włączamy wkrótce')).toBe(true);
       const { p9m } = await import('../src/i18n/p9c');
       expect(p9m('pl', 'p9c_note')).toBe('Podkład i trasy: HERE · statki: AIS Fintraffic / digitraffic.fi, CC BY 4.0');
     });

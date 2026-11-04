@@ -1,4 +1,54 @@
 
+## 2026-11-04 09:35 — #785 CI zielone @ 9e0a8c3c → prośba o F7 r3
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`. Bez „F7: gotowe”.
+- Scalanie: brak. CI @ `9e0a8c3c`: unit ✔; visual ✔; **db** ✔ (`41798242478`).
+- **Odpowiedź F7 r3 (pkt 1–4):** (1–2) błąd testu `::text` → oczekiwane `true`; (3) HOLD: `from_km=200` (przy 0 punkt km200 ~171 min później → 26 m/s poza ±90 min) — kod OK, test poprawiony; (4) `false` = asercja: `like` bez escape `_`, `count(distinct dedup_key)` przy wielu `:IN:<user>`, + eskalacja `case when p_sev > severity` / `~ '^E49_WIND:'`. Anti-flood: 1 OPEN, 0 OPEN przy tym samym, 1 SEVERITY przy wzroście wagi, 0 KSH.
+- **Dalej:** czekam F7. Po scaleniu: E49-b DP-206.
+
+## 2026-11-04 08:55 — #785 CI db FAIL @ 0020273a → poprawki asercji DP-205
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`. Bez „F7: gotowe”.
+- Scalanie: brak. CI @ `0020273a`: unit ✔; visual ✔; **db** FAIL status 650/4 (oczekiwano 654) — testy DP-205.
+- **Krok:** (1) `::text` boolean → oczekiwane `true` (nie `t`); (2) HOLD: `from_km=200` żeby próbka 26 m/s trafiła w ±90 min od `v_at`; (3) Z2: `count(distinct dedup_key)=1` padało przy wielu odbiorcach (`…:IN:<user>`) → `split_part(…,':IN:',1)`; macierz `risk_route` włączona w teście; (4) 0398: eskalacja `case when p_sev > severity` + `~ '^E49_WIND:'`. Migracja w miejscu (nie na prod).
+- **Dalej:** push → CI (+`db`) → F7. Po scaleniu: E49-b DP-206.
+
+## 2026-11-04 08:30 — #785 F7 r2 niegotowe → audience macierzy + testy DB
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
+- Scalanie: brak F7 „gotowe” (F7 #785 r2 @ `d142b46e` — 2 blokujące). CI na starym SHA anulowane przy pushu (G-15: F7 już niegotowe).
+- **Krok (F7 r2):** (1) `trg_risk_matrix_notify` — `audience` HHL / HHL_PRZEWOZNIK / HHL_KLIENT → `matrix_notify` z `p_only_org_kind` (KSH nie dostaje RISK_OPEN/SEVERITY sprawy, której nie widzi); (2) testy DB: `e49_wind_weather_for_corridor` 22/26 m/s + H-4, wrapper ETA, `raise_integration_risk` E49_WIND (1 OPEN / 1 SEVERITY, 0 KSH), `e49_wind_load_corridors` bez obcych SE/FI; c3 +7 audience E49/FERRY; (3) CI db @ `d142b46e`: `e49_wind_rel_angle` bez `search_path` → security 501/1 — ustawione. status **654**, c3 **61**. Migracja **0398** w miejscu (nie na prod).
+- **Dalej:** push → CI (+`db`) → F7. Po scaleniu: E49-b DP-206.
+
+## 2026-11-04 08:15 — #785 F7 r1 niegotowe → poprawki blokujące (0397/0398 w miejscu)
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
+- Scalanie: brak F7 „gotowe” (F7 #785 r1 @ `487265dc` niegotowe; db padało w `e49_slip_weather_local` — `positions` nie ma `lon`/`lat`). Migracje 0396–0398 nie są na produkcji → 0397/0398 poprawione w miejscu, bez 0399.
+- **Krok (pkt F7 r1):** (1) wiatr w ETA od postępu auta (`causes.remaining_km`), korytarz PL/SE z trasy transportu, SE/FI po promie od `CROSSING.arrival`, bez `drive_h*0.4`; (2) postój wiatrowy minus okna H-4 (max, nie suma); (3) Z4 w rdzeniu: `h_pl_eff`/`h_road_eff` bez mnożnika (poprawka definicji `compute_load_eta_core` z 0389), wrapper tylko normalizuje `causes` (`observed_slowdown_*`); (4) śliskość: pozycja `coalesce(geom_snapped, geom_raw)` świeża ≤ 2 h, tylko `IN_TRANSIT_PL/SE`, promień 25 km od punktu na odcinku PRZED autem, skupiska bez sumowania, źródło wg kraju, reguła nawierzchnia ≤ 0 °C + stan; (5) Z2: klucz `E49_WIND:{transport}:{korytarz}`, aktualizacja w miejscu (`raise_integration_risk`, waga tylko w górę), histereza zamknięcia < 18 m/s, `detail.audience=HHL_PRZEWOZNIK` (`risk_audience_for`: HHL + SCX, bez KSH), progi z `ops_thresholds`, AT_SITE pominięty, bez prognozy zamknięcie; (6) `e49_wind_load_corridors` per transport (bez AT_SITE) → `e49_wind_active_corridors`.
+- **Testy:** vitest `e49-eta-weather` 16/16 (nowe: `planWindCase`, `runRouteHazards`, strażnik migracji), e49-* + h7-h10-h12 + eta-howto-sg03 razem 41+ ✔; DB (CI): przepisane do decyzji Z4 `i2.sh` II-7, `status.sh` DP-155 i BN8b N1 (ETA bez × całej trasy); `dec6` +2 strażnik (34 lokalnie / 30 TEST).
+- **Odroczone (nieblokujące F7):** pełny zestaw DB `e49` (Z6.10) i testy DB wrappera/śliskości/korytarzy; flaga „brak prognozy wiatru”; kierunek polilinii; MultiLineString; `AbortSignal`/`must()` w jobie; zasięg SMHI per punkt; tytuły z drogą/krajem/godzinami; Z5 alarm 2 h; wpis w Historii transportu przy sprawie wiatru; FI Digitraffic: tylko to, co jest w `ROAD_FI` (bez nowego API).
+- **Dalej:** push → CI (+`db`) → F7. Po scaleniu: E49-b DP-206.
+## 2026-11-04 07:15 — #785 db FAIL: rename compute_load_eta_core
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
+- Scalanie: brak F7 „gotowe”. CI @ `5a458e4b`: unit ✔; **db** FAIL tower_boot 0398 — `compute_load_eta_core` nie istnieje (warunek rename na `pg_get_function_identity_arguments` nie trafił RETURNS TABLE). Visual anulowany (G-15, zepsuty SHA).
+- **Krok:** 0398 — rename przez `to_regprocedure` + wyjątek gdy brak po rename. Bez nowego numeru migracji (nie nałożona).
+- **Dalej:** push → CI (+`db`) → F7. Po scaleniu: E49-b DP-206.
+
+## 2026-11-04 07:05 — #785 E49-a cz.3: ETA/Z2/Z4 + WIND_E49
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`. #787 już SCALONE.
+- Scalanie: brak F7 „gotowe” (cz.3 po zielonym CI @ `24f67712`). Bez push na main.
+- **Krok cz.3:** migracja **0398** — `compute_load_eta` wrapper (`_core`): Z4 bez globalnego slowdown, Z1 `causes.weather` z `corridor_wind_forecast` + lokalna śliskość; SLIP_* w `ops_thresholds`; `route-hazards` sprawy Z2; `WIND_E49=true`; vitest `e49-eta-weather`; dec6 31/32.
+- **Dalej:** push → CI (+`db`) → F7. Po scaleniu: E49-b DP-206.
+
+## 2026-11-04 06:20 — #787 SCALONE; #785 rebase (0396+0397)
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne` (poza #550). #786 zamknięte.
+- Scalanie: **#787 SCALONE** `31a1c0bb` (DP-786 / **0395**; F7: gotowe @ `03dee3ba`; unit/db ✔; visual flaky telefon → rerun ✔). `deploy-main` robi resztę. Bez push na main.
+- **Krok:** rebase `pakiet/c2-dp-205-e49a-wind` na `main`; progi WIND_* → **0396**, corridor-wind → **0397** (0395 = DP-786).
+- **Dalej:** ETA `basis.weather` + Z2 + Z4 → `WIND_E49=true`; potem DP-206.
+
 ## 2026-11-04 05:25 — #787 CI db: asercja count ze spacją jsonb
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne` (poza #550). #786 otwarte.
@@ -19,6 +69,27 @@
 - Scalanie: brak F7 „gotowe” na #785; CI #785 w toku @ `504d6381` — bez push na tę gałąź (G-15). **#785 wstrzymane do wdrożenia hotfixu.**
 - **Krok:** gałąź `hotfix/dp-786-road-ee-dedup` z `main`: `parseEeWeatherData` id=`ee-wx:${ref}` (merge gorszej wagi); `nameFromEeSiteId` / `isOpaqueEeSiteRef` bez UUID; tytuł bez podwójnego `(EE)`; migracja **0395** IN_APP ROAD_EE ee-wx → `read_at` + `AUDYT17_MARK_READ`; testy #786 + strażnik dedup. `resolveStaleRisks('ROAD_EE:', keep)` zamyka stare klucze z czasem przy następnym przebiegu.
 - **Dalej:** push → CI → F7/scalenie → po wdrożeniu powrót do #785 (rebase migracji 0395/0396 → wolne numery) ETA/Z2/`WIND_E49=true`.
+
+## 2026-11-04 04:20 — #785 E49-a cz.2: job corridor-wind (**0397**)
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`. Bez „F7: gotowe”.
+- Scalanie: brak. **#785** CI na `e8d76047` unit/db/visual ✔ (po fix dec6).
+- **Krok cz.2:** migracja **0397** `corridor_wind_forecast` + `e49_wind_active_corridors` + cron `tower-corridor-wind`; Edge `corridor-wind` (SMHI→FMI, punkty co 25 km); testy `e49-corridor-wind`; Stan systemu `KNOWN_JOBS`. `WIND_E49` nadal false.
+- **Dalej:** ETA `basis.weather` + Z2 sprawy + Z4 lokalnie → `WIND_E49=true`; potem DP-206.
+
+## 2026-11-04 03:45 — #785 db FAIL → dec6 29 progów WIND_*
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`. Bez PR z „F7: gotowe”.
+- Scalanie: brak. **#785** unit/visual ✔; db FAIL `dec6` (otrzymano 29 progów, oczekiwano 23).
+- **Krok:** `tests/db/dec6.sh` + `gate-suites.mjs` — 29 = 23+6 WIND_* (E49-a / **0396**); asercje WIND_SLOW/HOLD/RESUME. Bez nowej migracji.
+- **Dalej:** push → CI db. Po zielonym: cz.2 job punktów + ETA + Z2 → `WIND_E49=true`.
+
+## 2026-11-04 03:20 — #784 SCALONE; start E49-a DP-205 (#783)
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`. #783 — prognoza czasu w komentarzu (E49-a 10–14 h + F7; E49-b 12–16 h; wydanie ~23–25.11).
+- Scalanie: **#784 SCALONE** `34263f4d` (DP-204; F7: gotowe @ `ec2c39d6`; CI unit/db/visual ✔). `deploy-main` robi resztę. Bez push na main.
+- **Krok DP-205 cz.1** `pakiet/c2-dp-205-e49a-wind`: migracja progów `WIND_*` (po rebase **0396**); `_shared/e49/windEta.ts` + `windForecast.ts` (SMHI/FMI, Z1/Z4); usunięcie `H10_ETA_PROPOSAL`; próg Ryzyk 20 m/s; `PROPOZYCJA_H10` → archiwum; testy `e49-wind-eta`. `WIND_E49` nadal `false` do podłączenia ETA. Dopisek `D-20261104-0105-01`.
+- **Dalej:** job/prognoza punktów korytarza + ETA `basis.weather` + Z2 sprawy → `WIND_E49=true`; potem E49-b DP-206.
 
 ## 2026-11-04 02:55 — #784 F7 r2: widoczność MEDIUM / <200 m HIGH
 

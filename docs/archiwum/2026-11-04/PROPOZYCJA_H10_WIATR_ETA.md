@@ -1,5 +1,7 @@
 # Propozycja H-10 — wydłużanie ETA przez wiatr (WYŁĄCZONE)
 
+> **Archiwum (DP-205 / E49-a, 04.11.2026):** zastąpione przez E49 (D-20261016-0230-01, D-20261104-0105-01). Próg D-84 = 20 m/s; `H10_ETA_PROPOSAL` usunięte z kodu.
+
 Data: **2026-10-05** · Europe/Warsaw  
 Status: **propozycja — nie włączona**. Ostrzeżenie porywów ≥ **15 m/s** (D-84) działa w `route-hazards`.
 
