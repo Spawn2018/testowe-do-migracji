@@ -3971,5 +3971,65 @@ chk "DP-205: e49_wind_load_corridors PL GDN-NYN bez obcych SE/FI" \
    )::text;
    rollback" true
 
+# #797: Tallinn PORT_OUT — country/route EE + match TLL-HEL → AT_PORT; obca trasa bez zmiany.
+echo; echo "[#797] Tallinn EE geofence route → AT_PORT_GDANSK"
+chk "#797: Terminal Tallinn D HEL country/route" \
+  "select country||'/'||route from geofences where project_id='$P' and name='Terminal Tallinn D HEL'" "EE/TLL-HEL"
+chk "#797: Terminal Tallinn D country/route" \
+  "select country||'/'||route from geofences where project_id='$P' and name='Terminal Tallinn D'" "EE/TLL-STO"
+chk "#797: Terminal Muuga HHLA country/route" \
+  "select country||'/'||route from geofences where project_id='$P' and name='Terminal Muuga HHLA'" "EE/MUU-VUO"
+chk "#797: Terminal Helsinki T2 country/route" \
+  "select country||'/'||route from geofences where project_id='$P' and name='Terminal Helsinki West Harbour T2'" "FI/TLL-HEL"
+V797=66666666-0000-0000-0000-00000000797a
+S797=77777777-0000-0000-0000-00000000797a
+L797a=55555555-0000-0000-0000-00000000797a
+L797b=55555555-0000-0000-0000-00000000797b
+G797w=aaaaaaaa-0000-0000-0000-00000000797a
+q "
+insert into vessels (id,name,operator) values
+ ('$V797','Megastar #797','Tallink')
+ on conflict (id) do nothing;
+insert into sailings (id,project_id,vessel_id,route,departure_at,arrival_at,status,source) values
+ ('$S797','$P','$V797','TLL-HEL',
+  '2026-11-04 20:30+00','2026-11-04 22:30+00','ZAPLANOWANY','TALLINK')
+ on conflict (id) do nothing;
+" >/dev/null
+mk $L797a T797a "'HHL/T797a'" "'SCX/T797a'" IN_TRANSIT_PL "'$S797'"
+q "update loads set plan_load_date='2026-11-03',
+       tracking_opened_at=public.tracking_window_start('2026-11-03'::date)
+     where id='$L797a';
+   insert into load_events (load_id,event_type,occurred_at) values
+    ('$L797a','MILESTONE_LOADED','2026-11-03 08:00+00')" >/dev/null
+# Obca strefa PORT_OUT (TLL-STO, inna lokalizacja) — bez zmiany statusu
+q "insert into geofences (id, project_id, name, kind, geom, hysteresis_m, dwell_seconds, debounce_fixes, country, route)
+    values ('$G797w','$P','#797 obca TLL-STO','PORT_OUT',
+            make_circle_fence(59.36000, 24.10000, 400), 100, 900, 2, 'EE', 'TLL-STO')
+    on conflict (id) do nothing" >/dev/null
+pos $L797a 59.36000 24.10000 "2026-11-04 17:40+00"; pos $L797a 59.36010 24.10010 "2026-11-04 17:45+00"
+chk "#797: PORT_OUT obcej trasy → bez zmiany statusu" "$(st $L797a)" IN_TRANSIT_PL
+# Tallinn D HEL (TLL-HEL) → AT_PORT_GDANSK
+pos $L797a 59.44000 24.77500 "2026-11-04 17:47+00"; pos $L797a 59.44010 24.77510 "2026-11-04 17:52+00"
+chk "#797: wjazd Tallinn D HEL (TLL-HEL) → AT_PORT_GDANSK" "$(st $L797a)" AT_PORT_GDANSK
+# promote z IN_TRANSIT_PL (rejs outbound TLL-HEL, assume_dep 20) — osobny ładunek
+mk $L797b T797b "'HHL/T797b'" "'SCX/T797b'" IN_TRANSIT_PL "'$S797'"
+q "update loads set plan_load_date='2026-11-03',
+       tracking_opened_at=public.tracking_window_start('2026-11-03'::date)
+     where id='$L797b';
+   insert into load_events (load_id,event_type,occurred_at) values
+    ('$L797b','MILESTONE_LOADED','2026-11-03 08:00+00')" >/dev/null
+chk "#797: promote IN_TRANSIT_PL TLL-HEL plan+20 → FERRY" \
+  "select (promote_ferry_departures('2026-11-04 20:51+00') >= 1)::text" true
+chk "#797: status L797b = FERRY po promote" "$(st $L797b)" FERRY
+# Seed upsert poprawia zepsute country/route
+chk "#797: bn1_seed poprawia country/route" \
+  "begin;
+   update geofences set country='SE', route='POLFERRIES'
+    where project_id='$P' and name='Terminal Tallinn D HEL';
+   select public.bn1_seed_baltic_geofences('$P');
+   select country||'/'||route from geofences
+    where project_id='$P' and name='Terminal Tallinn D HEL';
+   rollback" "EE/TLL-HEL"
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]
