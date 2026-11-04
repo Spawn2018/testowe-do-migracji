@@ -1,4 +1,11 @@
 
+## 2026-11-04 21:45 — DP-215 (#800): odświeżenie migawki Kokpit (StageBar)
+
+- Skrzynka: #550 WSTRZYMANE; #798 DP-215; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: brak (brak „F7: gotowe do scalenia” po `07bfd8d3`; visual zrzuty ✖ @ 41906263605).
+- **Krok:** `kokpit-hhl-pl-1920-light.png` z actual (399 px — nazwy etapów E28); G4_WZORZEC DP-215. Bez migracji.
+- **Dalej:** CI → F7. Po scaleniu kolejka C2…; DP-210 nie zaczynać.
+
 ## 2026-11-04 21:05 — #799 SCALONE; start DP-215 (#798)
 
 - Skrzynka: #550 WSTRZYMANE; #797 zamknięte po merge; #798 DP-215; BN5–8 w planie. Bez nowego `pilne`.

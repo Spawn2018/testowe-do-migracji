@@ -391,3 +391,8 @@ Z workflowu `visual` (`update=true`, gałąź `wyglad/dp-196-awizacja-armator`, 
 Przyczyna: uwaga z Pakietu DP-C — siatka `.am-2` rozciągała pola na wysokość wiersza, więc „Armator” dostawał wysokość kolumny „Rejs promem” (pole + dwie linie podpowiedzi). Teraz `align-items: start` na `.am-2` (`src/components/drawer/p7.css`); `.am-lock` zostaje `align-self: end`.
 - `awizacja-rejs-przed-zaladunkiem-hhl-pl-1440-light.png` (560×960, bez zmiany rozmiaru): pole „Armator” (Polferries) ma zwykłą wysokość i stoi w jednej linii z polem „Rejs promem”; pod nim pusto, podpowiedzi rejsu („Wybrany rejs odpływa przed planowanym załadunkiem.”, „Rejs można dodać później…”) bez zmian w prawej kolumnie. Reszta okna bez zmian.
 Wzorca `shots-baseline` nie zmieniano.
+
+## DP-215 (04.11.2026) — E28 / StageBar: neutralne nazwy etapów
+Odświeżona tylko `tests/__screenshots__/kokpit-hhl-pl-1920-light.png` z artefaktu `visual-artifacts` po failu zrzutów (przebieg 41906263605, gałąź `pakiet/c2-dp-215-neutral-stage-names`, actual po DP-215). Telefon i bramy zielone bez zmian migawek; `kokpit-hhl-pl-1920-dark-default` bez failu.
+Przyczyna: DP-215 (#798) — kafelki paska E28: Droga do portu / Port wyjścia / Port docelowy / Droga do placu (zamiast Droga PL / Port PL / Port SE / Droga SE). 399 px (ratio 0,01) w pasku statusów u góry Kokpitu.
+Wzorca `shots-baseline` nie zmieniano.
