@@ -13,7 +13,9 @@ import {
 } from '../supabase/functions/_shared/e49/detourPlan.ts';
 import {
   buildDetourRoutingUrl,
+  maskHereApiKey,
   noDetourWhy,
+  noDetourWhyFromBody,
   simplifyLine,
   summarizeHereRoute,
 } from '../supabase/functions/_shared/e49/detourHere.ts';
@@ -110,6 +112,36 @@ describe('detourHere', () => {
     expect(sum?.notices[0]).toContain('height');
     expect(simplifyLine([[1, 2], [3, 4], [5, 6]], 2).length).toBeGreaterThanOrEqual(2);
     expect(noDetourWhy(['routingFailed noRoute'], '3,52 m')).toMatch(/Brak objazdu/);
+    expect(noDetourWhy(['violatedVehicleRestriction height'], '3,52 m')).toMatch(/Brak objazdu/);
     expect(noDetourWhy(['ok'], '3,52 m')).toBeNull();
+    // F7 #791 U2: notice informacyjne (length/width + vehicle) przy poprawnej trasie → objazd jest
+    expect(
+      noDetourWhy(
+        ['informativeNotice vehicle length within limits on this segment'],
+        '3,52 m',
+      ),
+    ).toBeNull();
+    expect(noDetourWhyFromBody({ routes: [] }, '3,52 m')).toMatch(/Brak objazdu/);
+    expect(
+      noDetourWhyFromBody({
+        routes: [{ sections: [{ summary: { length: 1000, duration: 60 }, spans: [] }] }],
+      }, '3,52 m'),
+    ).toBeNull();
+  });
+
+  it('maskHereApiKey — apiKey nie trafia do logów / payload (F7 #791 U1)', () => {
+    const url = buildDetourRoutingUrl({
+      apiKey: 'sekret-klucz-here',
+      origin: [54.5, 18.6],
+      destination: [55.0, 19.0],
+      dims,
+    });
+    expect(url).toContain('apiKey=sekret-klucz-here');
+    const masked = maskHereApiKey(url);
+    expect(masked).toContain('apiKey=***');
+    expect(masked).not.toContain('sekret-klucz-here');
+    expect(
+      maskHereApiKey('err fetch https://router.hereapi.com/v8/routes?x=1&apiKey=abc123&y=2'),
+    ).toBe('err fetch https://router.hereapi.com/v8/routes?x=1&apiKey=***&y=2');
   });
 });

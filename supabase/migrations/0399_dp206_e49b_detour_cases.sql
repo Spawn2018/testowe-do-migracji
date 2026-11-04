@@ -50,6 +50,8 @@ revoke all on public.e49_detour_cases from public, anon, authenticated;
 grant select on public.e49_detour_cases to authenticated;
 grant select, insert, update, delete on public.e49_detour_cases to service_role;
 
+-- F7 #791 B1: tylko HHL + SCX przewoźnika transportu (jak audience=HHL_PRZEWOZNIK).
+-- Bez gałęzi CLIENT — KSH ma grant SELECT, więc RLS musi zamykać tabelę.
 drop policy if exists e49_detour_cases_read on public.e49_detour_cases;
 create policy e49_detour_cases_read on public.e49_detour_cases
   for select to authenticated
@@ -61,18 +63,12 @@ create policy e49_detour_cases_read on public.e49_detour_cases
         select 1
           from public.loads l
          where l.id = e49_detour_cases.load_id
-           and (
-             (current_org_kind() = 'CARRIER' and l.carrier_org_id = current_org_id())
-             or (current_org_kind() = 'CLIENT' and exists (
-                   select 1 from public.projects p
-                    where p.id = l.project_id and p.client_org_id = current_org_id()
-                 ))
-           )
+           and (current_org_kind() = 'CARRIER' and l.carrier_org_id = current_org_id())
       )
     )
   );
 
--- Otwarte sprawy bez decyzji (HHL + SCX przewoźnika; KSH filtruje front E7 — sprawy SCX).
+-- Otwarte sprawy bez decyzji — HHL + SCX przewoźnika (bez KSH).
 create or replace function public.e49_detour_cases_open(p_now timestamptz default now())
 returns setof public.e49_detour_cases
 language sql

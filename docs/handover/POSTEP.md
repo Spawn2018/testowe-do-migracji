@@ -1,4 +1,11 @@
 
+## 2026-11-04 10:40 — #791 F7 r1: B1 RLS + U1–U3 + restore cyfry + pl-t
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`. Bez „F7: gotowe”.
+- Scalanie: brak (F7 #791 r1 niegotowe @ `97531eab`). CI @ `97531eab`: unit FAIL (`lt` ← eismoinfo.lt); visual ✔; **db** FAIL backup 40/4 — `restore.sh` odrzucał `e49_detour_cases` (`^[a-z_]+$` bez cyfr).
+- **Krok F7 r1:** (B1) RLS bez CLIENT + 5 testów security; (U1) `maskHereApiKey` + vitest; (U2) `noDetourWhy` po kodzie HERE + notice informacyjne; (U3) `begin`/`commit` zostaje jak 0397/0398; restore/dr-test — `^[a-z_][a-z0-9_]*$`; pl-t wyjątek `lt`; security **507** / TEST **503**.
+- **Dalej:** push → CI (+`db`) → F7. Potem cz.2: job `roadClosed` → sprawy + HERE + `DETOUR_E49=true`.
+
 ## 2026-11-04 10:05 — #785 SCALONE; start DP-206 E49-b cz.1
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.

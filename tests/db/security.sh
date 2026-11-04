@@ -1703,5 +1703,29 @@ chk6 "#588 C9: authenticated ma EXECUTE auth_email_allowed" "$(psql "$PGURL" -At
 val "#588 C9: SCX — v_load_price_client 0 wierszy" $SCX "select count(*) from v_load_price_client" 0
 chk6 "#588 C9: anon bez SELECT v_load_price_client" "$(psql "$PGURL" -Atq -c "select has_table_privilege('anon','public.v_load_price_client','select')::text")" "false"
 
+# --- DP-206 / F7 #791 B1: e49_detour_cases — HHL+SCX przewoźnika; KSH i obcy SCX = 0; anon bez SELECT ---
+echo; echo "[DP-206] e49_detour_cases RLS (F7 #791 B1)"
+SCX2_AUTH=11111111-0000-0000-0000-00000000000b
+sys "insert into organizations (id, code, name, kind)
+     values ('00000000-0000-0000-0000-00000000a00b','CX3','Inny przewoźnik 3','CARRIER')
+     on conflict do nothing;
+     insert into app_users (auth_id, org_id, email, role)
+     values ('$SCX2_AUTH','00000000-0000-0000-0000-00000000a00b','cx3@test','CARRIER_DISPATCH')
+     on conflict (auth_id) do nothing" >/dev/null
+sys "delete from e49_detour_cases where dedup_key='E49_DETOUR_TEST_DP206';
+     insert into e49_detour_cases (
+       load_id, dedup_key, country, place, reason, source,
+       notice_at, decide_by, payload
+     ) values (
+       '$L2', 'E49_DETOUR_TEST_DP206', 'SE', 'Most testowy', 'WIND', 'TRAFIKVERKET',
+       now(), now() + interval '2 hours', '{}'::jsonb
+     )" >/dev/null
+val "DP-206: HHL widzi sprawę objazdu" $HHL "select count(*) from e49_detour_cases where dedup_key='E49_DETOUR_TEST_DP206'" 1
+val "DP-206: SCX przewoźnika widzi sprawę" $SCX "select count(*) from e49_detour_cases where dedup_key='E49_DETOUR_TEST_DP206'" 1
+val "DP-206: KSH nie widzi spraw objazdu (RLS)" $KSH "select count(*) from e49_detour_cases where dedup_key='E49_DETOUR_TEST_DP206'" 0
+val "DP-206: SCX innego przewoźnika nie widzi" $SCX2_AUTH "select count(*) from e49_detour_cases where dedup_key='E49_DETOUR_TEST_DP206'" 0
+err "DP-206: anon bez SELECT e49_detour_cases" "" "set local role anon; select count(*) from e49_detour_cases" "permission denied"
+sys "delete from e49_detour_cases where dedup_key='E49_DETOUR_TEST_DP206'" >/dev/null
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

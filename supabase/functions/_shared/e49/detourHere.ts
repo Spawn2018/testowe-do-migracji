@@ -54,6 +54,11 @@ export function buildDetourRoutingUrl(args: DetourRouteArgs): string {
   return `https://router.hereapi.com/v8/routes?${q.toString()}`;
 }
 
+/** Maskuje apiKey w URL / logach / payload (F7 #791 U1) — przed zapisem do integration_runs / sprawy. */
+export function maskHereApiKey(text: string): string {
+  return text.replace(/([?&]apiKey=)[^&\s"']*/gi, '$1***');
+}
+
 export type HereRouteSummary = {
   lengthM: number;
   durationSec: number;
@@ -103,20 +108,29 @@ export function simplifyLine(
 }
 
 /**
- * Czy notices wskazują brak trasy dla zestawu (wymiary / masa) —
- * wtedy sprawa ma `{ none: true, why }`.
+ * Brak objazdu: kod HERE `violatedVehicleRestriction` / `routingFailed` / `noRoute`
+ * albo brak tras w odpowiedzi (F7 #791 U2 — nie słowa z title/notice informacyjnych).
  */
 export function noDetourWhy(notices: readonly string[], dimsLabel: string): string | null {
-  const blob = notices.join(' ').toLowerCase();
-  if (!blob) return null;
-  if (
-    /violat|exceed|too\s+(tall|wide|long|heavy)|height|width|length|weight|axle|ogranicz|przekrocz/.test(blob)
-    && /truck|vehicle|vehicleRestriction|routingFailed|noRoute|could not/i.test(blob + notices.join(' '))
-  ) {
-    return `Brak objazdu dla tego zestawu (${dimsLabel}) — tylko postój`;
-  }
-  if (/noRoute|routingFailed|could not find|brak trasy/i.test(blob)) {
-    return `Brak objazdu dla tego zestawu (${dimsLabel}) — tylko postój`;
+  for (const n of notices) {
+    const code = (n.trim().split(/\s+/)[0] ?? '').trim();
+    if (
+      /^violatedVehicleRestriction$/i.test(code)
+      || /^routingFailed$/i.test(code)
+      || /^noRoute$/i.test(code)
+    ) {
+      return `Brak objazdu dla tego zestawu (${dimsLabel}) — tylko postój`;
+    }
   }
   return null;
+}
+
+/** Brak `routes` w body HERE → tylko postój; inaczej kody notices. */
+export function noDetourWhyFromBody(body: unknown, dimsLabel: string): string | null {
+  const routes = (body as { routes?: unknown[] } | null)?.routes;
+  if (!Array.isArray(routes) || routes.length === 0) {
+    return `Brak objazdu dla tego zestawu (${dimsLabel}) — tylko postój`;
+  }
+  const sum = summarizeHereRoute(body);
+  return noDetourWhy(sum?.notices ?? [], dimsLabel);
 }
