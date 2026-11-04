@@ -297,6 +297,9 @@ describe('E49-a migracje ETA — strażnik wrappera', () => {
     expect(m398).toMatch(/h_pl_eff := h_pl;\s+-- E49 Z4/);
     expect(m398).toMatch(/compute_load_eta_core\(p_load, p_now\)/);
     expect(m398).toMatch(/E49\\_WIND:%/);
+    /* F7 #785 r2: audience → matrix_notify bez KSH */
+    expect(m398).toMatch(/new\.audience = 'HHL_PRZEWOZNIK'/);
+    expect(m398).toMatch(/p_only_org_kind|FORWARDER'|matrix_notify\([^)]*'FORWARDER'/);
     const m397 = full(files.find((f) => f.startsWith('0397_'))!);
     expect(m397).toMatch(/e49_wind_load_corridors/);
     /* AT_SITE nie uruchamia pobierania prognozy (#783 pkt 6, test 14) */

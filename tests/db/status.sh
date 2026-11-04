@@ -3800,5 +3800,169 @@ else
   chk "BN6: brak cron.job (stub) — OK" "select 1" 1
 fi
 
+# DP-205 / F7 #785 r2: testy DB wiatru, Z2 i korytarzy (UUID …0205*; #713 unikalne fixture).
+L205a=aaaaaaaa-0000-0000-0000-00000000205a
+L205b=aaaaaaaa-0000-0000-0000-00000000205b
+L205c=aaaaaaaa-0000-0000-0000-00000000205c
+HHL205=11111111-0000-0000-0000-000000000001
+echo; echo "[DP-205 E49-a] wiatr ETA / Z2 / korytarze"
+chk "DP-205: risk_audience_for WEATHER audience=HHL_PRZEWOZNIK" \
+  "select public.risk_audience_for('WEATHER', '{\"audience\":\"HHL_PRZEWOZNIK\"}'::jsonb)::text" HHL_PRZEWOZNIK
+# (a) 22 m/s z boku → +15 % tylko na odcinku; punkty za autem (km < from_km) pomijane.
+chk "DP-205: 22 m/s CROSS → add_min>0; km za autem pominięte" \
+  "begin;
+   delete from corridor_wind_forecast where corridor='SE_E4' and km in (0, 25, 100);
+   insert into corridor_wind_forecast (corridor, km, lon, lat, bearing_deg, source, samples, fetched_at)
+   values
+    ('SE_E4', 0, 17.0, 58.5, 0, 'SMHI',
+      jsonb_build_array(jsonb_build_object('at', now(), 'gustMs', 22, 'windFromDeg', 90)), now()),
+    ('SE_E4', 100, 17.5, 59.5, 0, 'SMHI',
+      jsonb_build_array(jsonb_build_object('at', now(), 'gustMs', 22, 'windFromDeg', 90)), now());
+   select (
+     (w->>'add_min')::int > 0
+     and (w->>'rows')::int = 1
+     and exists (select 1 from jsonb_array_elements(w->'weather') x where x->>'kind'='WIND' and x->>'side'='CROSS')
+   )::text
+     from public.e49_wind_weather_for_corridor('SE_E4', 50, now(), 4, now(), '[]'::jsonb) w;
+   rollback" t
+# (a) 26 m/s → postój minus okno H-4 (ETA o różnicę, nie suma).
+chk "DP-205: 26 m/s HOLD minus odpoczynek H-4 (max, nie suma)" \
+  "begin;
+   delete from corridor_wind_forecast where corridor='SE_E4' and km=200;
+   insert into corridor_wind_forecast (corridor, km, lon, lat, bearing_deg, source, samples, fetched_at)
+   values ('SE_E4', 200, 18.0, 60.0, 0, 'SMHI',
+     jsonb_build_array(
+       jsonb_build_object('at', now(), 'gustMs', 26, 'windFromDeg', 90),
+       jsonb_build_object('at', now() + interval '210 minutes', 'gustMs', 15, 'windFromDeg', 90)
+     ), now());
+   select (
+     (x->>'grossMin')::int = 240
+     and (x->>'restOverlapMin')::int = 150
+     and (x->>'addMin')::int = 90
+     and (w->>'add_min')::int = 90
+   )::text
+     from public.e49_wind_weather_for_corridor(
+       'SE_E4', 0, now(), 8, now(),
+       jsonb_build_array(jsonb_build_object(
+         'from', now(),
+         'to', now() + interval '150 minutes'
+       ))
+     ) w,
+     lateral jsonb_array_elements(w->'weather') x
+    where x->>'kind'='WIND_HOLD'
+    limit 1;
+   rollback" t
+# (a) wrapper: prognoza 22 m/s na SE → ETA dłuższe niż bez wiatru; transport w PL → wiatr SE od CROSSING.arrival.
+chk "DP-205: wrapper compute_load_eta — WIND na odcinku + PL bez wiatru SE „teraz”" \
+  "begin;
+   insert into loads (id, project_id, carrier_org_id, hhl_order_no, carrier_order_no, status,
+                      plan_load_date, plan_delivery_date, ferry_route, telematics_vehicle_id,
+                      tracking_opened_at)
+    values ('$L205a','$P','$SCXO','HHL/DP205-A','SCX/DP205-A','IN_TRANSIT_SE',
+            current_date, current_date + 3, 'GDN-NYN', 'TEL-DP205A',
+            public.tracking_window_start(current_date)),
+           ('$L205b','$P','$SCXO','HHL/DP205-B','SCX/DP205-B','IN_TRANSIT_PL',
+            current_date, current_date + 3, 'GDN-NYN', 'TEL-DP205B',
+            public.tracking_window_start(current_date));
+   insert into positions (load_id, ts, geom_raw, source) values
+    ('$L205a', now() - interval '10 minutes', st_setsrid(st_makepoint(17.50, 59.00), 4326), 'TELEMATICS_API'),
+    ('$L205b', now() - interval '10 minutes', st_setsrid(st_makepoint(17.02, 52.50), 4326), 'TELEMATICS_API');
+   create temporary table dp205_eta (
+     tag text primary key, eta_base timestamptz, eta_wind timestamptz, add_min int, has_wind boolean
+   ) on commit drop;
+   insert into dp205_eta (tag, eta_base, add_min, has_wind)
+    select 'SE', eta, coalesce((basis->'causes'->>'e49_wind_add_min')::int, 0),
+           coalesce(jsonb_array_length(basis->'causes'->'weather'), 0) > 0
+      from public.compute_load_eta('$L205a', now());
+   insert into corridor_wind_forecast (corridor, km, lon, lat, bearing_deg, source, samples, fetched_at)
+   select 'SE_E4', gs, 17.0 + gs/200.0, 58.5 + gs/200.0, 0, 'SMHI',
+          jsonb_build_array(jsonb_build_object('at', now(), 'gustMs', 22, 'windFromDeg', 90)), now()
+     from generate_series(0, 400, 25) gs
+   on conflict (corridor, km) do update
+     set samples = excluded.samples, fetched_at = excluded.fetched_at, source = excluded.source;
+   update dp205_eta e set eta_wind = c.eta, add_min = coalesce((c.basis->'causes'->>'e49_wind_add_min')::int, 0),
+          has_wind = coalesce(jsonb_array_length(c.basis->'causes'->'weather'), 0) > 0
+     from public.compute_load_eta('$L205a', now()) c where e.tag='SE';
+   insert into corridor_wind_forecast (corridor, km, lon, lat, bearing_deg, source, samples, fetched_at)
+   values ('SE_E4', 12.5, 17.1, 58.6, 0, 'SMHI',
+     jsonb_build_array(jsonb_build_object('at', now(), 'gustMs', 22, 'windFromDeg', 90)), now())
+   on conflict (corridor, km) do update set samples = excluded.samples, fetched_at = now();
+   insert into dp205_eta (tag, eta_base, add_min, has_wind)
+    select 'PL', eta, coalesce((basis->'causes'->>'e49_wind_add_min')::int, 0),
+           exists (
+             select 1 from jsonb_array_elements(coalesce(basis->'causes'->'weather','[]'::jsonb)) x
+              where x->>'kind' in ('WIND','WIND_HOLD')
+                and coalesce(x->>'source','') = 'SMHI'
+                and (x->>'atIso')::timestamptz < now() + interval '30 minutes'
+           )
+      from public.compute_load_eta('$L205b', now());
+   select bool_and(
+            case tag
+              when 'SE' then eta_wind > eta_base and add_min > 0 and has_wind
+              -- PL: wiatr SE liczony od CROSSING.arrival (nie „teraz”) — brak WIND z próbką near-now
+              when 'PL' then has_wind is false
+            end
+          )
+     from dp205_eta;
+   rollback" t
+# (b) raise_integration_risk E49_WIND: drugie wywołanie bez RISK_OPEN; wzrost wagi → 1 RISK_SEVERITY.
+chk "DP-205: raise_integration_risk E49_WIND — 1 OPEN, eskalacja 1 SEVERITY" \
+  "begin;
+   insert into loads (id, project_id, carrier_org_id, hhl_order_no, carrier_order_no, status,
+                      plan_load_date, plan_delivery_date, ferry_route, telematics_vehicle_id)
+    values ('$L205c','$P','$SCXO','HHL/DP205-C','SCX/DP205-C','IN_TRANSIT_SE',
+            current_date, current_date + 3, 'GDN-NYN', 'TEL-DP205C');
+   delete from notifications where payload->>'risk_id' in (
+     select id::text from risk_signals where dedup_key like 'E49_WIND:$L205c:%');
+   delete from risk_signals where dedup_key like 'E49_WIND:$L205c:%';
+   select public.raise_integration_risk(
+     '$P', '$L205c', 'WEATHER', 'MEDIUM', 'Silny wiatr',
+     jsonb_build_object('audience','HHL_PRZEWOZNIK','title_key','rk_wind_strong','params',jsonb_build_object('corridor','SE_E4')),
+     'E49_WIND:$L205c:SE_E4', null, now() + interval '6 hours');
+   select public.raise_integration_risk(
+     '$P', '$L205c', 'WEATHER', 'MEDIUM', 'Silny wiatr (22)',
+     jsonb_build_object('audience','HHL_PRZEWOZNIK','title_key','rk_wind_strong','params',jsonb_build_object('corridor','SE_E4','gust',22)),
+     'E49_WIND:$L205c:SE_E4', null, now() + interval '6 hours');
+   select public.raise_integration_risk(
+     '$P', '$L205c', 'WEATHER', 'HIGH', 'Postój przez wiatr',
+     jsonb_build_object('audience','HHL_PRZEWOZNIK','title_key','rk_wind_hold','params',jsonb_build_object('corridor','SE_E4','gust',26)),
+     'E49_WIND:$L205c:SE_E4', null, now() + interval '6 hours');
+   select (
+     (select count(*) from risk_signals where dedup_key='E49_WIND:$L205c:SE_E4' and resolved_at is null) = 1
+     and (select severity::text from risk_signals where dedup_key='E49_WIND:$L205c:SE_E4' and resolved_at is null) = 'HIGH'
+     and (select count(*) from notifications where channel='IN_APP' and template='RISK_OPEN'
+            and payload->>'risk_id' = (select id::text from risk_signals where dedup_key='E49_WIND:$L205c:SE_E4' limit 1)) >= 1
+     -- jedno zdarzenie eskalacji (dedup risk:RISK_SEVERITY:id:HIGH) — ≥1 odbiorca HHL/SCX, 0 KSH
+     and (select count(distinct dedup_key) from notifications where channel='IN_APP' and template='RISK_SEVERITY'
+            and payload->>'risk_id' = (select id::text from risk_signals where dedup_key='E49_WIND:$L205c:SE_E4' limit 1)) = 1
+     and (select count(*) from notifications n
+            join app_users u on u.id = n.user_id
+           where n.channel='IN_APP' and n.template in ('RISK_OPEN','RISK_SEVERITY')
+             and n.payload->>'risk_id' = (select id::text from risk_signals where dedup_key='E49_WIND:$L205c:SE_E4' limit 1)
+             and u.role = 'CLIENT_USER') = 0
+   )::text;
+   rollback" t
+# (c) transport tylko PL GDN-NYN → bez FI_E75 / SE_E22 / SE_KAA_* obcych tras.
+chk "DP-205: e49_wind_load_corridors PL GDN-NYN bez obcych SE/FI" \
+  "begin;
+   insert into loads (id, project_id, carrier_org_id, hhl_order_no, carrier_order_no, status,
+                      plan_load_date, plan_delivery_date, ferry_route, telematics_vehicle_id,
+                      tracking_opened_at)
+    values ('$L205a','$P','$SCXO','HHL/DP205-COR','SCX/DP205-COR','IN_TRANSIT_PL',
+            current_date, current_date + 3, 'GDN-NYN', 'TEL-DP205COR',
+            public.tracking_window_start(current_date));
+   insert into positions (load_id, ts, geom_raw, source) values
+    ('$L205a', now() - interval '5 minutes', st_setsrid(st_makepoint(17.02, 52.50), 4326), 'TELEMATICS_API');
+   select (
+     exists (select 1 from public.e49_wind_load_corridors(now()) c where c.load_id='$L205a' and c.leg='PL')
+     and exists (select 1 from public.e49_wind_load_corridors(now()) c where c.load_id='$L205a' and c.code='SE_E4')
+     and not exists (
+       select 1 from public.e49_wind_load_corridors(now()) c
+        where c.load_id='$L205a'
+          and c.code in ('FI_E75','SE_E22','SE_KAA_INLAND','SE_KAA_TRACK','SE_E4_STO','SE_E18_KPS')
+     )
+   )::text;
+   rollback" t
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

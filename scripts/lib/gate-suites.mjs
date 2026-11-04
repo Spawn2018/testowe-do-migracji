@@ -13,7 +13,7 @@ const ROOT = resolve(import.meta.dirname, '../..');
 /** Oczekiwane OK na lokalnym Postgresie (gate.sh). */
 export const EXPECTED_LOCAL = {
   security: 502, // F7 #787: +6 DP-786 mark ee-wx przez risk_signals; #780 r3 → 496
-  status: 648, // F7 #782 r2: +5 FERRY audience HHL (+ RLS KSH/SCX); #780 → 643
+  status: 654, // F7 #785 r2: +6 DP-205 wiatr/Z2/korytarze; #782 → 648
   storage: 37,
   money: 200, // DP-167 F7 #734 r2: +2 title_key zmiana; było 198 (r1 +4 od 194 / DP-167 +3 od 191)
   release: 146,
@@ -55,7 +55,7 @@ export const EXPECTED_LOCAL = {
   e41: 36, // P2 + P2-poprawki; A4 +6 kolumny; A2 +4 (msgs_read + loads_read / drugi SCX, D-0330)
   e25: 93, // A10 F7: +PLANNED bez daty (3) + SCX claims (1) + wahanie trasy STATUS_AUTO (3)
   'c16-push': 18, // C16 N8 + C16-H H5 (D-20261015-1955-01, D-20261016-0100-01)
-  c3: 54, // F7 #780 r2: +3 obok_trasy notif×2 + audience TV_CODE; DP-156 → 51
+  c3: 61, // F7 #785 r2: +7 audience E49_WIND/FERRY HHL (KSH/SCX); #780 → 54
 };
 
 /**

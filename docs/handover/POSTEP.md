@@ -1,4 +1,11 @@
 
+## 2026-11-04 08:30 — #785 F7 r2 niegotowe → audience macierzy + testy DB
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
+- Scalanie: brak F7 „gotowe” (F7 #785 r2 @ `d142b46e` — 2 blokujące). CI na starym SHA anulowane przy pushu (G-15: F7 już niegotowe).
+- **Krok (F7 r2):** (1) `trg_risk_matrix_notify` — `audience` HHL / HHL_PRZEWOZNIK / HHL_KLIENT → `matrix_notify` z `p_only_org_kind` (KSH nie dostaje RISK_OPEN/SEVERITY sprawy, której nie widzi); (2) testy DB: `e49_wind_weather_for_corridor` 22/26 m/s + H-4, wrapper ETA, `raise_integration_risk` E49_WIND (1 OPEN / 1 SEVERITY, 0 KSH), `e49_wind_load_corridors` bez obcych SE/FI; c3 +7 audience E49/FERRY; (3) CI db @ `d142b46e`: `e49_wind_rel_angle` bez `search_path` → security 501/1 — ustawione. status **654**, c3 **61**. Migracja **0398** w miejscu (nie na prod).
+- **Dalej:** push → CI (+`db`) → F7. Po scaleniu: E49-b DP-206.
+
 ## 2026-11-04 08:15 — #785 F7 r1 niegotowe → poprawki blokujące (0397/0398 w miejscu)
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.

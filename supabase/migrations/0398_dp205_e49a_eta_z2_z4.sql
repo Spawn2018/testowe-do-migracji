@@ -138,6 +138,7 @@ create or replace function public.e49_wind_rel_angle(p_travel numeric, p_from nu
 returns numeric
 language sql
 immutable
+set search_path = public
 as $$
   select least(
     abs(mod(p_from - p_travel + 360, 360)),
@@ -911,6 +912,113 @@ revoke all on function public.risk_audience_for(text, jsonb) from public, anon;
 grant execute on function public.risk_audience_for(text, jsonb) to authenticated;
 comment on function public.risk_audience_for(text, jsonb) is
   'BN6 + DP-203 TV_CODE + DP-121 FERRY audience=HHL + DP-205 E49 WEATHER audience=HHL_PRZEWOZNIK.';
+
+-- F7 #785 r2: macierz powiadomień respektuje risk_signals.audience (RLS Ryzyk ≠ dzwonki).
+-- HHL → tylko FORWARDER; HHL_PRZEWOZNIK → FORWARDER+CARRIER (bez CLIENT/KSH);
+-- HHL_KLIENT → FORWARDER+CLIENT; WSZYSCY → bez filtra org.
+create or replace function public.trg_risk_matrix_notify() returns trigger
+language plpgsql security definer set search_path = public as $$
+declare
+  v_group text;
+  v_tpl text;
+  v_proj uuid;
+  v_n int;
+  v_url text;
+  v_code text;
+  v_payload jsonb;
+  v_dedup text;
+begin
+  if new.load_id is null
+     and new.kind::text in ('FERRY', 'WEATHER', 'ROAD_SE', 'ROAD_PL') then
+    return null;
+  end if;
+  if new.load_id is null
+     and new.kind::text in ('ROAD_LT', 'ROAD_LV', 'ROAD_EE', 'ROAD_FI')
+     and new.severity::text not in ('HIGH', 'CRITICAL') then
+    if tg_op = 'UPDATE'
+       and old.severity::text in ('HIGH', 'CRITICAL') then
+      perform public.notify_mark_case_closed('sprawa zamknięta', null, new.id);
+    end if;
+    return null;
+  end if;
+  if new.kind::text in ('ROAD_LT', 'ROAD_LV', 'ROAD_EE', 'ROAD_FI', 'ROAD_SE')
+     and coalesce(new.detail->>'obok_trasy', '') = 'true' then
+    if tg_op = 'UPDATE'
+       and old.severity::text in ('HIGH', 'CRITICAL') then
+      perform public.notify_mark_case_closed('sprawa zamknięta', null, new.id);
+    end if;
+    return null;
+  end if;
+  if current_setting('tower.escalate_overdue', true) = '1'
+     and coalesce(new.dedup_key, '') like 'decision-overdue:%' then
+    return null;
+  end if;
+
+  v_group := case
+    when new.kind::text in ('FERRY', 'WEATHER', 'ETA_BREACH') then 'RISK_FERRY_WEATHER'
+    when new.kind::text in ('INVOICE_MISMATCH') then 'MONEY'
+    when new.kind::text in ('USAGE_LIMIT', 'JOB_FAILURE') then 'SYSTEM'
+    else 'SYSTEM'
+  end;
+
+  if tg_op = 'INSERT' then
+    v_tpl := 'RISK_OPEN';
+  elsif new.severity is distinct from old.severity then
+    v_tpl := 'RISK_SEVERITY';
+  elsif new.resolved_at is not null and old.resolved_at is null then
+    v_n := public.notify_mark_case_closed('sprawa zamknięta', null, new.id);
+    insert into public.audit_log (user_id, action, entity, entity_id, old_value, new_value)
+    values (
+      null, 'C1_RISK_RESOLVE_MARK_READ', 'risk_signals', new.id::text,
+      jsonb_build_object('template', 'RISK_RESOLVED_skipped'),
+      jsonb_build_object('marked', v_n, 'hotfix', '0256')
+    );
+    return null;
+  else
+    return null;
+  end if;
+
+  if v_tpl = 'RISK_SEVERITY'
+     and new.severity::text = 'CRITICAL'
+     and coalesce(new.detail->>'l3_level', '') = 'critical' then
+    return null;
+  end if;
+
+  v_proj := new.project_id;
+  if v_proj is null and new.load_id is not null then
+    select project_id into v_proj from loads where id = new.load_id;
+  end if;
+  if new.load_id is not null then
+    select coalesce(nullif(l.order_no, ''), nullif(l.hhl_order_no, ''))
+      into v_code from loads l where l.id = new.load_id;
+  end if;
+  v_payload := jsonb_build_object(
+    'risk_id', new.id, 'kind', new.kind, 'severity', new.severity,
+    'title', new.title, 'title_key', new.title_key,
+    'code', v_code, 'load_id', new.load_id,
+    'risk_audience', new.audience::text
+  );
+  v_url := public.notify_click_url(v_tpl, v_payload, new.load_id);
+  v_payload := v_payload || jsonb_build_object('url', v_url);
+  v_dedup := 'risk:' || v_tpl || ':' || new.id::text || ':' || new.severity::text;
+
+  if new.audience = 'HHL' then
+    perform public.matrix_notify(v_group, v_tpl, new.load_id, v_proj, v_payload, v_dedup, 'FORWARDER');
+  elsif new.audience = 'HHL_PRZEWOZNIK' then
+    perform public.matrix_notify(v_group, v_tpl, new.load_id, v_proj, v_payload, v_dedup, 'FORWARDER');
+    perform public.matrix_notify(v_group, v_tpl, new.load_id, v_proj, v_payload, v_dedup, 'CARRIER');
+  elsif new.audience = 'HHL_KLIENT' then
+    perform public.matrix_notify(v_group, v_tpl, new.load_id, v_proj, v_payload, v_dedup, 'FORWARDER');
+    perform public.matrix_notify(v_group, v_tpl, new.load_id, v_proj, v_payload, v_dedup, 'CLIENT');
+  else
+    perform public.matrix_notify(v_group, v_tpl, new.load_id, v_proj, v_payload, v_dedup);
+  end if;
+  return null;
+end $$;
+
+revoke all on function public.trg_risk_matrix_notify() from public, anon, authenticated;
+comment on function public.trg_risk_matrix_notify() is
+  'DP-156/203 + F7 #785 r2: audience HHL/HHL_PRZEWOZNIK/HHL_KLIENT → matrix_notify bez KSH (i bez SCX przy HHL).';
 
 -- Lista kopii: corridor_wind_forecast wchodzi z katalogu automatycznie (I-2B).
 
