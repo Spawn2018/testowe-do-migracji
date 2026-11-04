@@ -1637,7 +1637,7 @@ test.describe('wyglad/P4 pasek etapów (E28, img/e28-after) i Mapa (E27)', () =>
     await openView(page, 'dash');
     await bar.locator('[data-tile="ROAD_SE"]').click();
     await expect(page.locator('[data-page="map"]')).toBeVisible();
-    await expect(page.locator('[data-stage-chip="ROAD_SE"]')).toHaveText('Etap: Droga SE ✕');
+    await expect(page.locator('[data-stage-chip="ROAD_SE"]')).toHaveText('Etap: Droga do placu ✕');
     await expect(bar.locator('[data-tile="ROAD_SE"]')).toHaveAttribute('aria-pressed', 'true');
     // drugi klik zdejmuje
     await bar.locator('[data-tile="ROAD_SE"]').click();

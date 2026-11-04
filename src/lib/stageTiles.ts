@@ -1,7 +1,7 @@
 /**
  * wyglad/P4 — pasek etapów według E28 (decyzja 07.10 20:57) i przypisanie statusów według E25 (decyzja 17:46).
  *
- * 10 kafelków: Przygotowanie · Załadunek · Droga PL · Port PL · Prom · Port SE · Droga SE · Plac Boden · Dostarczone · Rozliczenie.
+ * 10 kafelków: Przygotowanie · Załadunek · Droga do portu · Port wyjścia · Prom · Port docelowy · Droga do placu · Plac Boden · Dostarczone · Rozliczenie. (DP-215)
  * Każdy status trafia do dokładnie jednego kafelka (według statusu, nie etapu paska z `status.ts`, który przypisywał źle — E28 „Fakty”).
  * Anulowane są poza paskiem. Moduł czysty: bez zapisu i bez zapytań.
  *

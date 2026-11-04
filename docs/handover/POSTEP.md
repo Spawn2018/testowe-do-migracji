@@ -1,4 +1,11 @@
 
+## 2026-11-04 21:05 — #799 SCALONE; start DP-215 (#798)
+
+- Skrzynka: #550 WSTRZYMANE; #797 zamknięte po merge; #798 DP-215; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: **#799 SCALONE** `181b70b2` (#797 / **0407**; F7 zgoda od razu po CI ✔ @ `9f10859b`). `deploy-main` robi resztę. Bez push na main.
+- **Krok DP-215** `pakiet/c2-dp-215-neutral-stage-names`: kafelki/`stage_*` → Droga do portu / Port wyjścia / Port docelowy / Droga do placu; `STAGE_KEYS` na `stage_*` (4 etapy); statusy `s_road_pl`/`s_port_*` bez zmiany (lista w PR). Vitest dp-215 + bn9b + status-label. Bez migracji. EN/SV brak (E43).
+- **Dalej:** push → CI → F7; zrzuty StageBar przy failu visual. Potem kolejka C2…; DP-210 nie zaczynać.
+
 ## 2026-11-04 20:25 — #799 F7: test bn1_seed (perform → select)
 
 - Skrzynka: #550 WSTRZYMANE; #797 `pilne` / PR #799; #798 DP-215 po scaleniu. Bez innego nowego `pilne`.

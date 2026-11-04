@@ -491,7 +491,7 @@ const pl: Dict = {
     + '|Dostawa od–do — to samo dla planowanej daty dostawy.'
     + '|Wszystkie / W drodze / Opóźnione / Bez dokumentów / Dostarczone — szybkie filtry statusu i kompletności.'
     + '|Bez kierowcy / Bez ciągnika — braki zasobów do uzupełnienia.'
-    + '|Kafelki etapów (Załadunek, Droga PL, Prom…) — ten sam filtr co na mapie i kokpicie; × na kafelku zdejmuje filtr.',
+    + '|Kafelki etapów (Załadunek, Droga do portu, Prom…) — ten sam filtr co na mapie i kokpicie; × na kafelku zdejmuje filtr.',
   a6_sch_deliv_dates: 'Rozładunek od–do',
   a6_sch_change_tractor: 'Zmień ciągnik',
   a6_sch_none: '— brak —',

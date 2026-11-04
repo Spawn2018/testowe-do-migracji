@@ -32,12 +32,12 @@ const STATUS_KEYS: Partial<Record<LoadStatus, string>> = {
 const STAGE_KEYS: Record<CorridorStage, string> = {
   PLAN: 's_planned',
   LOADING: 's_loading',
-  TO_PORT: 's_road_pl',
-  GDANSK: 's_port_gdn',
+  /* DP-215 (#798): etapy neutralne (stage_*); statusy nadal s_road_pl / s_port_* */
+  TO_PORT: 'stage_TO_PORT',
+  GDANSK: 'stage_GDANSK',
   FERRY: 's_on_ferry',
-  /* E25 / E28 (wyglad/P4-b): etap portu SE nazywa się „Port SE” (Nynäshamn albo Karlskrona) */
-  APPROACH: 's_port_se',
-  SE_ROAD: 's_road_se',
+  APPROACH: 'stage_APPROACH',
+  SE_ROAD: 'stage_SE_ROAD',
   SITE: 's_on_site',
   DELIVERED: 's_delivered',
 };
@@ -64,7 +64,7 @@ function balticNamedEnds(route: string | null | undefined) {
 /**
  * BN9-b, decyzja 25A — przeprawy z Estonii (Tallinn, Muuga, Paldiski): te same statusy, w nazwie port z rejsu:
  * „Port wypłynięcia — Muuga”, „Port przypłynięcia — Vuosaari”, „Droga do portu”, „Droga do placu”.
- * Polferries i Stena (i transport bez rejsu) — nazwy bez zmian („Port PL”, „Port SE”, „Droga PL”, „Droga SE”).
+ * Polferries/Stena: statusy nadal „Port PL” / „Droga SE” (DP-215: bez decyzji właściciela); etapy/kafelki — neutralne.
  * DP-137: enum `IN_TRANSIT_SE` / flaga `synthetic_port_se` zostają (jak SE); UI i ETA pokazują etykiety FI.
  */
 export function routeStatusLabel(status: LoadStatus, stage: CorridorStage | undefined, locale: Locale, route: string | null | undefined): string {

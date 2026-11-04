@@ -50,10 +50,14 @@ describe('BN9-b — ekrany Korytarza bałtyckiego', () => {
     expect(routeStatusLabel('IN_TRANSIT_SE', undefined, 'pl', 'TLLA-HEL')).toBe('Droga do placu');
     expect(routeStatusLabel('IN_TRANSIT_PL', 'TO_PORT', 'pl', 'TLL-HEL')).toBe('Droga do portu');
     expect(routeStatusLabel('AT_PORT_SE', 'APPROACH', 'pl', 'MUU-VUO')).toBe('Port przypłynięcia — Vuosaari');
+    /* status GDN-NYN bez zmiany (DP-215: tylko etapy/kafelki; s_road_se zostaje) */
     expect(routeStatusLabel('IN_TRANSIT_SE', 'SE_ROAD', 'pl', 'GDN-NYN')).toBe('Droga SE');
     expect(routeStageLabel('SE_ROAD', 'pl', 'TLL-HEL')).toBe('Droga do placu');
     expect(routeStageLabel('APPROACH', 'pl', 'TLL-HEL')).toBe('Port przypłynięcia — Helsinki');
-    expect(routeStageLabel('SE_ROAD', 'pl', 'GDN-NYN')).toBe('Droga SE');
+    /* DP-215 (#798): etap GDN-NYN też neutralny */
+    expect(routeStageLabel('SE_ROAD', 'pl', 'GDN-NYN')).toBe('Droga do placu');
+    expect(routeStageLabel('GDANSK', 'pl', 'GDN-NYN')).toBe('Port wyjścia');
+    expect(routeStageLabel('APPROACH', 'pl', 'GDN-NYN')).toBe('Port docelowy');
   });
 
   it('mapa: tory nowych przepraw w warstwie promu (BN9-c5: tylko dla tras z zakresu), Terminal A na torze Tallinn–Helsinki', () => {
