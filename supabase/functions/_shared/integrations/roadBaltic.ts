@@ -501,7 +501,41 @@ export function balticShortPlace(
 }
 
 /**
+ * DP-209 / #789: konwencja estońska w tytule — „droga N” (+ E w nawiasie).
+ * Bez prefiksów A/P/V/T; E980 → „droga 980”; A55 → „droga 55”.
+ */
+export const EE_ROAD_DISPLAY: Record<string, string> = {
+  '1': 'droga 1 (E20)',
+  T1: 'droga 1 (E20)',
+  E20: 'droga 1 (E20)',
+  '4': 'droga 4 (E67)',
+  T4: 'droga 4 (E67)',
+  E67: 'droga 4 (E67)',
+  '8': 'droga 8',
+  T8: 'droga 8',
+  '11': 'droga 11',
+  T11: 'droga 11',
+};
+
+/** DP-209: surowy roadNumber / T4 / E980 → etykieta PL albo null. */
+export function formatEeRoadLabel(road: string | null | undefined): string | null {
+  if (road == null || road === '') return null;
+  const r = compactEuroRoad(String(road).trim()).toUpperCase().replace(/\s+/g, '');
+  if (!r) return null;
+  if (EE_ROAD_DISPLAY[r]) return EE_ROAD_DISPLAY[r];
+  const t = r.match(/^T(\d{1,2})$/);
+  if (t) return `droga ${Number(t[1])}`;
+  const e = r.match(/^E(\d{2,3})$/);
+  if (e) return `droga ${Number(e[1])}`;
+  const apv = r.match(/^[APV](\d{1,5})$/);
+  if (apv) return `droga ${Number(apv[1])}`;
+  if (/^\d{1,5}$/.test(r)) return `droga ${Number(r)}`;
+  return null;
+}
+
+/**
  * DP-203 / DP-204.5: etykieta drogi w tytule (A5 / droga 138 / stacja Kose).
+ * DP-209: EE → „droga 4 (E67)” itd. (bez A##/E9xx).
  * „droga b.d.” tylko ostatecznie; nigdy w tytule HIGH (#781 pkt 10c).
  */
 export function balticRoadLabel(
@@ -510,6 +544,10 @@ export function balticRoadLabel(
   opts?: { placeName?: string | null; severity?: RiskSeverity },
 ): string {
   const r = compactEuroRoad((road ?? '').trim());
+  if (country === 'EE' && r) {
+    const ee = formatEeRoadLabel(r);
+    if (ee) return ee;
+  }
   if (r) {
     if (/^[AET]\d+/i.test(r) || /^E\d+/i.test(r)) {
       return r.toUpperCase().replace(/^([AET])0+(\d)/i, '$1$2');
@@ -1179,11 +1217,17 @@ export function applyBalticCorridorRoadFilter(
     if (weatherLike) {
       const nearWx = capped.lat != null && capped.lon != null
         && minDistToCorridorKm(capped.lat, capped.lon, corridor, densified) <= nearKm;
-      /* DP-204.5: pogoda bez numeru → droga z korytarza ≤ 300 m. */
+      /* DP-204.5: pogoda bez numeru → droga z korytarza ≤ 300 m.
+       * DP-209: przy `on` (bufor korytarza) zawsze numer z tabeli odcinków — nie „okolice trasy”. */
       let wxRoad = capped.road ?? null;
       let wxPlace = capped.placeName ?? null;
       if (!wxRoad && capped.lat != null && capped.lon != null) {
-        wxRoad = nearestCorridorRoad(country, capped.lat, capped.lon);
+        wxRoad = nearestCorridorRoad(
+          country,
+          capped.lat,
+          capped.lon,
+          nearWx && country === 'EE' ? nearKm : 0.3,
+        );
         if (wxRoad) {
           /* numer z geometrii → on gdy blisko korytarza pogodowego */
         } else if (!wxPlace) {
@@ -1229,6 +1273,16 @@ export function applyBalticCorridorRoadFilter(
       && nearEePortTerminal(capped.lat, capped.lon)
     ) {
       corridorMatch = 'on';
+    }
+    /* DP-209: `on` bez numeru → najbliższa droga z tabeli odcinków (bufor ≤ 3 km). */
+    if (
+      country === 'EE'
+      && corridorMatch === 'on'
+      && !road
+      && capped.lat != null
+      && capped.lon != null
+    ) {
+      road = nearestCorridorRoad(country, capped.lat, capped.lon, nearKm);
     }
     /* DP-204.5 pkt 10c: bez drogi — nazwa miejsca zamiast „droga b.d.”. */
     if (!road && !placeName) {
@@ -3195,7 +3249,7 @@ export function normalizeEeRoadRef(road: string | null | undefined): string | nu
   return r;
 }
 
-/** EE: E67/T4 (Via Baltica) + T11 (obwodnica) + T1 przy Muuga; T8 przy Paldiski. */
+/** EE: E67/T4 (Via Baltica) + T11 (obwodnica) + T1/E20 przy Muuga; T8 przy Paldiski. */
 export function eeRoadOnCorridor(
   road: string | null | undefined,
   e: Pick<BalticRoadEvent, 'lat' | 'lon'>,
@@ -3203,8 +3257,8 @@ export function eeRoadOnCorridor(
   if (road == null || road === '') return 'unknown';
   const r = normalizeEeRoadRef(road) ?? '';
   if (r === 'E67' || r === 'T4' || r === 'T11') return 'on';
-  if (r === 'T1') {
-    /* Muuga / Tallinn wschód */
+  if (r === 'T1' || r === 'E20') {
+    /* Muuga / Tallinn wschód — DP-209: E20 = droga 1 */
     if (
       e.lat != null && e.lon != null
       && e.lat >= 59.35 && e.lat <= 59.55

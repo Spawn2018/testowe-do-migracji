@@ -1,4 +1,11 @@
 
+## 2026-11-04 17:40 — #794 SCALONE; start DP-209 (#789)
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
+- Scalanie: **#794 SCALONE** `21a92c37` (DP-208 / **0406**; F7: gotowe @ `58114b06`; CI unit/visual/db ✔). `deploy-main` robi resztę. Bez push na main. DP-208 otwarte docelowe: gęsta linia E4 OSM.
+- **Krok DP-209** `pakiet/c2-dp-209-ee-road`: `formatEeRoadLabel` (droga 4 (E67) / 1 (E20) / 11 / 8); E980→droga 980, A55→droga 55; przy `on` numer z `CORRIDOR_EE_ROAD_SEGS` (bufor 3 km). Bez migracji.
+- **Dalej:** push → CI → F7. Potem DP-124…; DP-210 nie zaczynać.
+
 ## 2026-11-04 16:30 — #794 F7 r1: PL znaki + PLAN otwarte E4
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
