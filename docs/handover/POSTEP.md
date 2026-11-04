@@ -1,4 +1,11 @@
 
+## 2026-11-04 09:35 — #785 CI zielone @ 9e0a8c3c → prośba o F7 r3
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`. Bez „F7: gotowe”.
+- Scalanie: brak. CI @ `9e0a8c3c`: unit ✔; visual ✔; **db** ✔ (`41798242478`).
+- **Odpowiedź F7 r3 (pkt 1–4):** (1–2) błąd testu `::text` → oczekiwane `true`; (3) HOLD: `from_km=200` (przy 0 punkt km200 ~171 min później → 26 m/s poza ±90 min) — kod OK, test poprawiony; (4) `false` = asercja: `like` bez escape `_`, `count(distinct dedup_key)` przy wielu `:IN:<user>`, + eskalacja `case when p_sev > severity` / `~ '^E49_WIND:'`. Anti-flood: 1 OPEN, 0 OPEN przy tym samym, 1 SEVERITY przy wzroście wagi, 0 KSH.
+- **Dalej:** czekam F7. Po scaleniu: E49-b DP-206.
+
 ## 2026-11-04 08:55 — #785 CI db FAIL @ 0020273a → poprawki asercji DP-205
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`. Bez „F7: gotowe”.
