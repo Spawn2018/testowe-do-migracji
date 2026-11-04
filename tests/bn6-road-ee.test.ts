@@ -59,6 +59,10 @@ import {
   parseEeMeasurementSites,
   parseEeSrtiJson,
   parseEeWeatherData,
+  nameFromEeSiteId,
+  isOpaqueEeSiteRef,
+  balticRoadRisk,
+  BALTIC_RISK_DEDUP_VER,
   readBalticFeedBody,
   stripBalticDetourText,
   weightLimitRisk,
@@ -309,13 +313,13 @@ describe('BN6 road-ee parsers', () => {
     expect(icy.severity).toBe('HIGH');
     expect(icy.road).toBe('T4');
     expect(icy.title).toMatch(/ryzyko gołoledzi|słaba widoczność/);
-    /* F7 #784 r2: −1 °C + 95 % → HIGH; 800 m → MEDIUM; 150/120 m → HIGH. */
-    expect(wx.some((e) => /temperatura nawierzchni −1 °C/i.test(e.detail ?? '') && e.severity === 'HIGH')).toBe(true);
-    expect(wx.some((e) => /widoczność 800 m/i.test(e.detail ?? '') && e.severity === 'MEDIUM' && e.title === 'słaba widoczność')).toBe(true);
-    expect(wx.some((e) => /widoczność 150 m/i.test(e.detail ?? '') && e.severity === 'HIGH')).toBe(true);
-    expect(wx.some((e) => /widoczność 120 m/i.test(e.detail ?? '') && e.severity === 'HIGH')).toBe(true);
-    /* id z czasem pomiaru (dwa pomiary tej samej stacji) */
-    expect(wx.filter((e) => e.id.startsWith('ee-wx:ee-site-t4-marjamaa')).length).toBeGreaterThanOrEqual(2);
+    expect(icy.road).toBe('T4');
+    /* F7 #784 r2 progi widoczności / zimno — osobno w teście #786 (tu merge per stacja). */
+    /* #786: wiele pomiarów jednej stacji → jedno id bez czasu (gorsza waga = lód). */
+    expect(wx.filter((e) => e.id === 'ee-wx:ee-site-t4-marjamaa')).toHaveLength(1);
+    expect(wx.find((e) => e.id === 'ee-wx:ee-site-t4-marjamaa')!.severity).toBe('HIGH');
+    expect(wx.find((e) => e.id === 'ee-wx:ee-site-t4-marjamaa')!.detail).toMatch(/jäide|libedus/i);
+    expect(wx.every((e) => !/ee-wx:[^:]+:\d{4}-/.test(e.id))).toBe(true);
     const near = applyBalticCorridorRoadFilter('EE', wx);
     const onIcy = near.find((e) => e.id === icy.id)!;
     expect(onIcy.corridorMatch).toBe('on');
@@ -329,6 +333,114 @@ describe('BN6 road-ee parsers', () => {
 
   it('F7 B7: atrybucja Transpordiamet / Tark Tee (tarktee.ee)', () => {
     expect(EE_ATTRIBUTION).toBe('Transpordiamet / Tark Tee (tarktee.ee)');
+  });
+
+  it('#786: dedup ee-wx per stacja; UUID bez hex w tytule; widoczność osobno', () => {
+    expect(isOpaqueEeSiteRef('0519f783-0c20-428f-b6d0-3e4920e438d7')).toBe(true);
+    expect(nameFromEeSiteId('0519f783-0c20-428f-b6d0-3e4920e438d7')).toBeNull();
+    expect(nameFromEeSiteId('ee-site-t4-marjamaa')).toMatch(/Marjamaa/i);
+
+    const uuid = '0519f783-0c20-428f-b6d0-3e4920e438d7';
+    const sites = new Map([
+      [uuid, { lat: 58.904, lon: 24.425, road: null as string | null, name: null as string | null }],
+      ['ee-vis-800', { lat: 58.904, lon: 24.425, road: 'T4', name: 'stacja Vis800' }],
+      ['ee-vis-150', { lat: 58.904, lon: 24.425, road: 'T4', name: 'stacja Vis150' }],
+    ]);
+    const wxUuid = parseEeWeatherData(`<?xml version="1.0"?>
+      <d2LogicalModel><payloadPublication>
+        <siteMeasurements>
+          <measurementSiteReference id="${uuid}"/>
+          <measurementTimeDefault>2026-11-04T03:50:00Z</measurementTimeDefault>
+          <measuredValue><basicData>
+            <weatherRelatedRoadConditionType>ice</weatherRelatedRoadConditionType>
+            <value lang="et">Jäide</value>
+          </basicData></measuredValue>
+        </siteMeasurements>
+        <siteMeasurements>
+          <measurementSiteReference id="${uuid}"/>
+          <measurementTimeDefault>2026-11-04T04:10:00Z</measurementTimeDefault>
+          <measuredValue><basicData>
+            <weatherRelatedRoadConditionType>ice</weatherRelatedRoadConditionType>
+            <value lang="et">Jäide</value>
+          </basicData></measuredValue>
+        </siteMeasurements>
+      </payloadPublication></d2LogicalModel>`, sites);
+    expect(wxUuid).toHaveLength(1);
+    expect(wxUuid[0]!.id).toBe(`ee-wx:${uuid}`);
+    expect(wxUuid[0]!.start).toBe('2026-11-04T04:10:00Z');
+    const titled = formatBalticRoadTitle('EE', applyBalticCorridorRoadFilter('EE', wxUuid)[0]!);
+    expect(titled.title).not.toMatch(/[0-9a-f]{8}/i);
+    expect(titled.title.match(/\(EE\)/g)?.length ?? 0).toBeLessThanOrEqual(1);
+
+    const vis800 = parseEeWeatherData(`<?xml version="1.0"?>
+      <d2LogicalModel><payloadPublication>
+        <siteMeasurements>
+          <measurementSiteReference id="ee-vis-800"/>
+          <measurementTimeDefault>2026-11-02T10:35:00Z</measurementTimeDefault>
+          <measuredValue><basicData>
+            <minimumVisibilityDistance><integerMetreDistance>800</integerMetreDistance></minimumVisibilityDistance>
+          </basicData></measuredValue>
+        </siteMeasurements>
+      </payloadPublication></d2LogicalModel>`, sites);
+    expect(vis800).toHaveLength(1);
+    expect(vis800[0]!.severity).toBe('MEDIUM');
+    expect(vis800[0]!.title).toBe('słaba widoczność');
+
+    const vis150 = parseEeWeatherData(`<?xml version="1.0"?>
+      <d2LogicalModel><payloadPublication>
+        <siteMeasurements>
+          <measurementSiteReference id="ee-vis-150"/>
+          <measurementTimeDefault>2026-11-02T10:40:00Z</measurementTimeDefault>
+          <measuredValue><basicData>
+            <minimumVisibilityDistance><integerMetreDistance>150</integerMetreDistance></minimumVisibilityDistance>
+          </basicData></measuredValue>
+        </siteMeasurements>
+      </payloadPublication></d2LogicalModel>`, sites);
+    expect(vis150[0]!.severity).toBe('HIGH');
+
+    /* Strażnik: dwa przebiegi z innym czasem → ten sam dedup_key. */
+    const mk = (t: string) => parseEeWeatherData(`<?xml version="1.0"?>
+      <d2LogicalModel><payloadPublication>
+        <siteMeasurements>
+          <measurementSiteReference id="ee-site-t4-marjamaa"/>
+          <measurementTimeDefault>${t}</measurementTimeDefault>
+          <measuredValue><basicData>
+            <weatherRelatedRoadConditionType>ice</weatherRelatedRoadConditionType>
+            <value lang="et">Jäide</value>
+          </basicData></measuredValue>
+        </siteMeasurements>
+      </payloadPublication></d2LogicalModel>`, parseEeMeasurementSites(sitesXml));
+    const a = mk('2026-11-04T01:00:00Z')[0]!;
+    const b = mk('2026-11-04T01:10:00Z')[0]!;
+    expect(a.id).toBe(b.id);
+    expect(a.id).toBe('ee-wx:ee-site-t4-marjamaa');
+    expect(balticRoadRisk('EE', a, EE_SOURCE_REF, EE_ATTRIBUTION).dedup)
+      .toBe(balticRoadRisk('EE', b, EE_SOURCE_REF, EE_ATTRIBUTION).dedup);
+    expect(balticRoadRisk('EE', a, EE_SOURCE_REF, EE_ATTRIBUTION).dedup)
+      .toBe(`ROAD_EE:${BALTIC_RISK_DEDUP_VER}:ee-wx:ee-site-t4-marjamaa`);
+  });
+
+  it('#786 strażnik: ten sam obiekt źródła → jeden dedup bez czasu pomiaru (LT/LV/EE/FI/SE)', () => {
+    const noClock = (id: string) => !/:\d{4}-\d{2}-\d{2}T/.test(id);
+    /* EE pogoda — id stacji. */
+    expect(noClock('ee-wx:ee-site-t4-marjamaa')).toBe(true);
+    /* FI pogoda — wx:<stationId>. */
+    expect(noClock('wx:station-42')).toBe(true);
+    /* LT/LV/SE — id zdarzenia/stacji ze źródła, bez ISO czasu w kluczu. */
+    for (const id of [
+      'bn6-lt-wx-panevezys-slippery',
+      'lv-sit:12345',
+      'ROAD_SE:WX:station-1',
+      `ROAD_EE:${BALTIC_RISK_DEDUP_VER}:ee-wx:abc`,
+      `ROAD_FI:${BALTIC_RISK_DEDUP_VER}:wx:fi-1`,
+      `ROAD_LT:${BALTIC_RISK_DEDUP_VER}:bn6-lt-wx-panevezys-slippery`,
+      `ROAD_LV:${BALTIC_RISK_DEDUP_VER}:lv-sit:99`,
+      'ROAD_SE:WX:tv-station-7',
+    ]) {
+      expect(noClock(id), id).toBe(true);
+    }
+    /* Negatyw: stary format z czasem nie wolno wracać. */
+    expect(noClock('ee-wx:ee-site-t4-marjamaa:2026-11-04T03:50:00Z')).toBe(false);
   });
 
   it('DP-204.5 / #781 pkt 8–12: EE droga ze stacji; LV A7 z geometrii; miejsce; pogoda PL', () => {
@@ -363,6 +475,8 @@ describe('BN6 road-ee parsers', () => {
     expect(farTitle.roadLabel).toMatch(/Kose/i);
     expect(farTitle.roadLabel).not.toMatch(/droga b\.d\./i);
     expect(farTitle.title).not.toMatch(/droga b\.d\./i);
+    /* #786: jedno „(EE)” w tytule, nie „(EE) (EE)”. */
+    expect(farTitle.title.match(/\(EE\)/g)?.length ?? 0).toBe(1);
 
     /* Tytuł bez wykonawcy/telefonu; ≤ 40 znaków miejsca. */
     const short = balticShortPlace(

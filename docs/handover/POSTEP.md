@@ -1,4 +1,11 @@
 
+## 2026-11-04 04:35 — PILNE #786: ROAD_EE dedup (przerwa #785)
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. **#786 PILNE** (Spawn2018; bez etykiety `dla-cursora`, ale polecenie w #785 + treść #786) — zalew dzwonków ROAD_EE.
+- Scalanie: brak F7 „gotowe” na #785; CI #785 w toku @ `504d6381` — bez push na tę gałąź (G-15). **#785 wstrzymane do wdrożenia hotfixu.**
+- **Krok:** gałąź `hotfix/dp-786-road-ee-dedup` z `main`: `parseEeWeatherData` id=`ee-wx:${ref}` (merge gorszej wagi); `nameFromEeSiteId` / `isOpaqueEeSiteRef` bez UUID; tytuł bez podwójnego `(EE)`; migracja **0395** IN_APP ROAD_EE ee-wx → `read_at` + `AUDYT17_MARK_READ`; testy #786 + strażnik dedup. `resolveStaleRisks('ROAD_EE:', keep)` zamyka stare klucze z czasem przy następnym przebiegu.
+- **Dalej:** push → CI → F7/scalenie → po wdrożeniu powrót do #785 (rebase migracji 0395/0396 → wolne numery) ETA/Z2/`WIND_E49=true`.
+
 ## 2026-11-04 02:55 — #784 F7 r2: widoczność MEDIUM / <200 m HIGH
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.

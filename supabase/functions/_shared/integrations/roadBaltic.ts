@@ -649,8 +649,10 @@ export function formatBalticRoadTitle(
   const offRoute = opts?.offRoute === true || e.corridorMatch === 'off';
   const off = offRoute ? ' · obok trasy' : '';
   const eventBody = bits.join(', ');
+  /* #786: roadLabel z miejsca już ma „(EE)” — nie dubluj kraju. */
+  const countryBit = /\(([A-Z]{2})\)$/.test(roadLabel.trim()) ? '' : ` (${country})`;
   return {
-    title: `Warunki drogowe ${roadLabel} (${country})${off}: ${eventBody}`,
+    title: `Warunki drogowe ${roadLabel}${countryBit}${off}: ${eventBody}`,
     typePl: type,
     roadLabel,
     off,
@@ -3047,14 +3049,33 @@ export function roadFromEeSiteId(id: string): string | null {
   return extractBalticRoadRef(id.replace(/[-_]/g, ' '));
 }
 
-/** DP-204.5: „Marjamaa” / „Kose” z id stacji. */
+/**
+ * #786: UUID / same hexy nie są nazwą stacji (było: „stacja Aacce90d 0c20 …”).
+ */
+export function isOpaqueEeSiteRef(id: string): boolean {
+  const s = String(id ?? '').trim();
+  if (!s) return true;
+  if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(s)) {
+    return true;
+  }
+  const parts = s.split(/[-_]/).filter(Boolean);
+  if (parts.length >= 4 && parts.every((p) => /^[0-9a-f]+$/i.test(p) && p.length >= 4)) {
+    return true;
+  }
+  return false;
+}
+
+/** DP-204.5: „Marjamaa” / „Kose” z id stacji. #786: bez UUID/hex. */
 export function nameFromEeSiteId(id: string): string | null {
+  if (isOpaqueEeSiteRef(id)) return null;
   const parts = id.split(/[-_]/).filter(Boolean);
   const skip = new Set(['ee', 'site', 'wx', 'station', 'tee']);
   const nameParts: string[] = [];
   for (const p of parts) {
     if (skip.has(p.toLowerCase())) continue;
     if (/^t?\d{1,3}$/i.test(p) || /^e\d{2,3}$/i.test(p)) continue;
+    /* Część wyglądająca na hex (np. z UUID) — odrzuć całą nazwę. */
+    if (/^[0-9a-f]{8,}$/i.test(p)) return null;
     nameParts.push(p.charAt(0).toUpperCase() + p.slice(1).toLowerCase());
   }
   return nameParts.length ? nameParts.join(' ') : null;
@@ -3499,12 +3520,14 @@ export function parseEeMeasurementSites(xml: string): Map<string, EeSiteInfo> {
     const nameRaw = (
       lvTag(rec, 'measurementSiteName')
       || lvTag(rec, 'measurementSiteIdentification')
-      || nameFromEeSiteId(id)
       || ''
     ).trim();
-    const name = nameRaw && nameRaw !== id
-      ? nameRaw.replace(/^ee-site[-_]?/i, '').replace(/[-_]/g, ' ').trim()
-      : nameFromEeSiteId(id);
+    let name: string | null = null;
+    if (nameRaw && nameRaw !== id && !isOpaqueEeSiteRef(nameRaw)) {
+      const cleaned = nameRaw.replace(/^ee-site[-_]?/i, '').replace(/[-_]/g, ' ').trim();
+      if (cleaned && !isOpaqueEeSiteRef(cleaned)) name = cleaned;
+    }
+    if (!name) name = nameFromEeSiteId(id);
     map.set(id, {
       lat: coords.lat,
       lon: coords.lon,
@@ -3701,11 +3724,16 @@ export function parseEeWeatherData(
       || block.match(/<(?:\w+:)?(?:measurementTimeDefault|timeDefault)\b[^>]*>([^<]+)</i)?.[1]
       || ''
     ).trim();
-    /* F7 r2 drobne: dwa pomiary tej samej stacji — id z czasem; dedup po gorszej wadze. */
-    const id = measuredAt ? `ee-wx:${ref}:${measuredAt}` : `ee-wx:${ref}`;
-    const placeName = site.name
-      ? (site.name.startsWith('stacja ') ? site.name : `stacja ${site.name}`)
-      : (nameFromEeSiteId(ref) ? `stacja ${nameFromEeSiteId(ref)}` : null);
+    /* #786: dedup per stacja (bez czasu) — nowy pomiar = UPDATE, nie RISK_OPEN. */
+    const id = `ee-wx:${ref}`;
+    const fromId = nameFromEeSiteId(ref);
+    const rawName = (site.name && !isOpaqueEeSiteRef(site.name.replace(/^stacja\s+/i, ''))
+      ? site.name
+      : null)
+      || (fromId ? `stacja ${fromId}` : null);
+    const placeName = rawName
+      ? (rawName.startsWith('stacja ') ? rawName : `stacja ${rawName}`)
+      : null;
     const next: BalticRoadEvent = {
       id,
       title: eeWeatherRiskTitle({ icyText, coldWet, lowVis }),
@@ -3726,7 +3754,19 @@ export function parseEeWeatherData(
       byId.set(id, next);
     } else {
       const rank = (s: RiskSeverity) => (s === 'HIGH' ? 3 : s === 'MEDIUM' ? 2 : 1);
-      if (rank(next.severity) > rank(prev.severity)) byId.set(id, next);
+      /* Gorsza waga; przy remisie — treść lodu > zimno+wilgoć > widoczność; potem nowszy. */
+      const hazard = (e: BalticRoadEvent) => (
+        /jäide|libedus|\bice\b|gołoled|szron|frost|snow/i.test(e.detail ?? '')
+          ? 3
+          : /temperatura nawierzchni/i.test(e.detail ?? '')
+            ? 2
+            : 1
+      );
+      const better = rank(next.severity) > rank(prev.severity)
+        || (rank(next.severity) === rank(prev.severity) && hazard(next) > hazard(prev))
+        || (rank(next.severity) === rank(prev.severity) && hazard(next) === hazard(prev)
+          && (next.start ?? '') > (prev.start ?? ''));
+      if (better) byId.set(id, next);
     }
   }
   const out = [...byId.values()];
