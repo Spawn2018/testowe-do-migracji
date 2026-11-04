@@ -1024,16 +1024,53 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
       }
       return out;
     },
-    /** E49-b: korytarze + wymiary + pozycja (HERE truck). */
+    /** E49-b: korytarze + wymiary + pozycja (HERE truck) + riskCtx (F7 r4 B8). */
     async e49DetourLoadLegs() {
       const legs = await this.e49WindLoadCorridors!();
       const ids = [...new Set(legs.map((l) => l.loadId))];
       if (!ids.length) return [];
       const loadsR = await sb.from('loads')
-        .select('id,status,eta_site,combo_length_m,combo_width_m,combo_height_m,combo_weight_t,combo_axle_count,combo_axle_load_t')
+        .select('id,status,eta_site,eta_basis,permit_kind,sailing_id,plan_delivery_to,combo_length_m,combo_width_m,combo_height_m,combo_weight_t,combo_axle_count,combo_axle_load_t')
         .in('id', ids);
       if (loadsR.error) throw new Error(`loads detour: ${loadsR.error.message}`);
       const byId = new Map((loadsR.data ?? []).map((row) => [String(row.id), row]));
+      const sailingIds = [...new Set(
+        (loadsR.data ?? [])
+          .map((r) => r.sailing_id != null ? String(r.sailing_id) : null)
+          .filter((x): x is string => !!x),
+      )];
+      const sailById = new Map<string, { operator: string | null; dep: string | null }>();
+      if (sailingIds.length) {
+        const sR = await sb.from('sailings')
+          .select('id,departure_at,delayed_departure_at,vessel_id,vessels(name)')
+          .in('id', sailingIds);
+        for (const s of sR.data ?? []) {
+          const v = (s as { vessels?: { name?: string } | null }).vessels;
+          sailById.set(String(s.id), {
+            operator: v?.name != null ? String(v.name) : null,
+            dep: s.delayed_departure_at
+              ? String(s.delayed_departure_at)
+              : (s.departure_at ? String(s.departure_at) : null),
+          });
+        }
+      }
+      const windPeak = new Map<string, number>();
+      const codes = [...new Set(legs.map((l) => l.code))];
+      for (const code of codes) {
+        try {
+          const rows = await this.listCorridorWindForecast!(code, 360);
+          let peak = 0;
+          for (const row of rows) {
+            for (const sample of row.samples as Array<{ gustMs?: number; gust_ms?: number }>) {
+              const g = Number(sample.gustMs ?? sample.gust_ms);
+              if (Number.isFinite(g) && g > peak) peak = g;
+            }
+          }
+          if (peak > 0) windPeak.set(code, peak);
+        } catch {
+          /* brak prognozy → warn w riskCtx */
+        }
+      }
       const out: import('../e49/detourCaseJob.ts').DetourLoadLeg[] = [];
       for (const leg of legs) {
         const row = byId.get(leg.loadId);
@@ -1055,6 +1092,28 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
             position = [c[1]!, c[0]!];
           }
         }
+        const pk = String(row.permit_kind ?? '').toUpperCase();
+        const permitMode = (pk === 'TRASA' || pk === 'FIRMA' || pk === 'NONE')
+          ? pk as 'TRASA' | 'FIRMA' | 'NONE'
+          : 'UNKNOWN';
+        const basis = (row.eta_basis && typeof row.eta_basis === 'object')
+          ? row.eta_basis as Record<string, unknown>
+          : {};
+        const h4 = (basis.h4 && typeof basis.h4 === 'object')
+          ? basis.h4 as Record<string, unknown>
+          : basis;
+        const hoursLeft = Number(
+          h4.remaining_drive_min ?? h4.remainingDriveMin ?? h4.drive_left_min ?? NaN,
+        );
+        const sail = row.sailing_id ? sailById.get(String(row.sailing_id)) : undefined;
+        const riskCtx: import('../e49/detourCaseJob.ts').DetourRiskCtx = {
+          windGustMs: windPeak.has(leg.code) ? windPeak.get(leg.code)! : null,
+          hoursLeftMin: Number.isFinite(hoursLeft) ? hoursLeft : null,
+          ferryOperator: sail?.operator ?? null,
+          ferryDepIso: sail?.dep ?? null,
+          windowEndIso: row.plan_delivery_to ? String(row.plan_delivery_to) : null,
+          pilotCountries: null,
+        };
         out.push({
           loadId: leg.loadId,
           code: leg.code,
@@ -1071,10 +1130,30 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
             axleLoadT: row.combo_axle_load_t != null ? Number(row.combo_axle_load_t) : null,
           },
           position,
-          permitMode: 'UNKNOWN',
+          permitMode,
+          riskCtx,
         });
       }
       return out;
+    },
+    /** F7 #791 r4 B6: pamięć HERE między przebiegami. */
+    async getOpenDetourCache(dedupKey: string) {
+      const r = await sb.from('e49_detour_cases')
+        .select('payload')
+        .eq('dedup_key', dedupKey)
+        .is('closed_at', null)
+        .is('decision', null)
+        .maybeSingle();
+      if (r.error || !r.data?.payload || typeof r.data.payload !== 'object') return null;
+      const payload = r.data.payload as import('../e49/detourCaseJob.ts').DetourCasePayload;
+      const closure = payload.closure;
+      const pos = payload.positionAtCalc;
+      return {
+        payload,
+        position: pos && pos.length >= 2 ? [pos[0]!, pos[1]!] as [number, number] : null,
+        closureLat: Number(closure?.lat ?? NaN),
+        closureLon: Number(closure?.lon ?? NaN),
+      };
     },
     async upsertE49DetourCase(row: import('../e49/detourCaseJob.ts').DetourCaseUpsert) {
       const r = await sb.rpc('e49_detour_case_upsert', {

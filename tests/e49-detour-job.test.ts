@@ -13,6 +13,11 @@ import {
   isOnRouteClosure,
   placeFromRoadTitle,
   projectKmOnCorridor,
+  riskFerryVsEta,
+  riskHoursFromLeft,
+  riskPilotForCountry,
+  riskWindFromGust,
+  riskWindowVsEta,
   runDetourCases,
   viaFromHereNotices,
 } from '../supabase/functions/_shared/e49/detourCaseJob.ts';
@@ -96,19 +101,71 @@ describe('detourCaseJob helpers', () => {
       expect(row.level).toBe('warn');
       expect(row.text).toMatch(/sprawdź/i);
     }
-    const withData = buildNineRisks({
+  });
+
+  it('B8 r4: WIND/HOURS/FERRY/WINDOW/PILOT — ok i warn z wartościami', () => {
+    expect(riskWindFromGust(14).text).toMatch(/14 m\/s — bez wpływu/);
+    expect(riskWindFromGust(14).level).toBe('ok');
+    expect(riskWindFromGust(22).level).toBe('warn');
+    expect(riskWindFromGust(null).text).toMatch(/sprawdź/i);
+
+    expect(riskHoursFromLeft(180, 60).level).toBe('ok');
+    expect(riskHoursFromLeft(180, 60).text).toMatch(/3 h/);
+    expect(riskHoursFromLeft(30, 90).level).toBe('warn');
+    expect(riskHoursFromLeft(null, null).text).toMatch(/sprawdź/i);
+
+    const ferryOk = riskFerryVsEta({
+      operator: 'Tallink',
+      depIso: '2026-11-04T21:30:00Z',
+      etaIso: '2026-11-04T20:20:00Z',
+    });
+    expect(ferryOk.level).toBe('ok');
+    expect(ferryOk.text).toMatch(/Tallink 21:30/);
+    expect(ferryOk.text).toMatch(/zapas 1 h 10 min/);
+    expect(riskFerryVsEta({
+      operator: 'Tallink',
+      depIso: '2026-11-04T21:30:00Z',
+      etaIso: '2026-11-04T22:00:00Z',
+    }).level).toBe('warn');
+    expect(riskFerryVsEta({ operator: null, depIso: null, etaIso: null }).text).toMatch(/sprawdź/i);
+
+    const winOk = riskWindowVsEta({
+      windowEndIso: '2026-11-05T12:00:00Z',
+      etaIso: '2026-11-05T10:00:00Z',
+    });
+    expect(winOk.level).toBe('ok');
+    expect(winOk.text).toMatch(/oknie/);
+    expect(riskWindowVsEta({
+      windowEndIso: '2026-11-05T12:00:00Z',
+      etaIso: '2026-11-05T14:00:00Z',
+    }).level).toBe('warn');
+    expect(riskWindowVsEta({ windowEndIso: null, etaIso: null }).text).toMatch(/sprawdź/i);
+
+    expect(riskPilotForCountry({ country: 'SE', pilotCountries: ['SE', 'PL'] }).level).toBe('ok');
+    expect(riskPilotForCountry({ country: 'SE', pilotCountries: ['PL'] }).level).toBe('warn');
+    expect(riskPilotForCountry({ country: 'SE', pilotCountries: null }).text).toMatch(/sprawdź/i);
+
+    const wired = buildNineRisks({
       side: 'detour',
       country: 'SE',
-      permitMode: 'FIRMA',
+      permitMode: 'TRASA',
       hereNotices: ['ok'],
-      wind: { kind: 'WIND', level: 'ok', text: 'wiatr 12 m/s — OK' },
-      hours: { kind: 'HOURS', level: 'warn', text: 'zostało 1 h jazdy' },
+      etaIso: '2026-11-04T20:20:00Z',
+      needDriveMin: 60,
+      riskCtx: {
+        windGustMs: 14,
+        hoursLeftMin: 180,
+        ferryOperator: 'Tallink',
+        ferryDepIso: '2026-11-04T21:30:00Z',
+        windowEndIso: '2026-11-05T12:00:00Z',
+        pilotCountries: ['SE'],
+      },
     });
-    expect(withData.find((r) => r.kind === 'WIND')).toEqual({
-      kind: 'WIND', level: 'ok', text: 'wiatr 12 m/s — OK',
-    });
-    expect(withData.find((r) => r.kind === 'HOURS')?.level).toBe('warn');
-    expect(withData.find((r) => r.kind === 'LIMITS')?.level).toBe('ok');
+    expect(wired.find((r) => r.kind === 'WIND')?.level).toBe('ok');
+    expect(wired.find((r) => r.kind === 'HOURS')?.level).toBe('ok');
+    expect(wired.find((r) => r.kind === 'FERRY')?.level).toBe('ok');
+    expect(wired.find((r) => r.kind === 'WINDOW')?.level).toBe('ok');
+    expect(wired.find((r) => r.kind === 'PILOT')?.level).toBe('ok');
   });
 
   it('payload: brak HERE → none; z trasą → nadwyżka km/min (B6)', () => {
@@ -256,6 +313,68 @@ describe('runDetourCases', () => {
     expect(maskHereApiKey('https://x?apiKey=secret-key-xyz')).toContain('***');
   });
 
+  it('B4 r4: READY / brak pozycji — 0 upsertów; IN_TRANSIT bez pozycji trzyma keep', async () => {
+    const upserted: string[] = [];
+    let keep: string[] = [];
+    await runDetourCases({
+      now: new Date('2026-11-04T10:00:00Z'),
+      hereApiKey: null,
+      fetch: vi.fn() as unknown as typeof fetch,
+      store: {
+        listOpenRoadClosures: async () => [{
+          closureRef: 'ROAD_SE:SIT:ready',
+          country: 'SE',
+          place: 'most',
+          title: 'closed',
+          detailText: 'avstängd',
+          lat: 62.8,
+          lon: 17.9,
+          noticeIso: '2026-11-04T09:00:00Z',
+          untilIso: null,
+          roadClosed: true,
+          corridor: 'SE_E4',
+          atKm: 120,
+          korytarzDroga: 'on',
+        }],
+        e49DetourLoadLegs: async () => [{
+          loadId: 'a0000000-0000-4000-8000-000000000099',
+          code: 'SE_E4_STO',
+          fromKm: 10,
+          currentLeg: true,
+          status: 'READY',
+          baseEtaIso: null,
+          dims: {
+            lengthM: 25, widthM: 3.2, heightM: 4.0, weightT: 60, axleCount: 8, axleLoadT: 10,
+          },
+          position: [62.5, 17.5],
+          permitMode: 'TRASA',
+        }, {
+          loadId: 'a0000000-0000-4000-8000-000000000098',
+          code: 'SE_E4_STO',
+          fromKm: 10,
+          currentLeg: true,
+          status: 'IN_TRANSIT_SE',
+          baseEtaIso: null,
+          dims: {
+            lengthM: 25, widthM: 3.2, heightM: 4.0, weightT: 60, axleCount: 8, axleLoadT: 10,
+          },
+          position: null,
+          permitMode: 'TRASA',
+        }],
+        upsertE49DetourCase: async (row) => {
+          upserted.push(row.dedupKey);
+          return true;
+        },
+        closeStaleE49DetourCases: async (k) => {
+          keep = k;
+          return 0;
+        },
+      },
+    });
+    expect(upserted).toEqual([]);
+    expect(keep.some((k) => k.includes('000000000098'))).toBe(true);
+  });
+
   it('B4: zamknięcie za autem (atKm < fromKm) — 0 upsertów', async () => {
     const upserted: string[] = [];
     await runDetourCases({
@@ -298,6 +417,87 @@ describe('runDetourCases', () => {
       },
     });
     expect(upserted).toEqual([]);
+  });
+
+  it('B6 r4: pamięć HERE — drugi przebieg bez nowych zapytań przy pozycji <10 km', async () => {
+    const fetchMock = vi.fn(async (url: string) => {
+      const avoid = String(url).includes('avoid');
+      return new Response(JSON.stringify({
+        routes: [{
+          sections: [{
+            summary: { length: avoid ? 40000 : 25000, duration: avoid ? 2400 : 1500 },
+            spans: [{ names: [{ name: 'Kramfors' }], roadNumbers: ['90'] }],
+          }],
+        }],
+      }), { status: 200 });
+    });
+    const cachedPayload = buildDetourPayload({
+      nowIso: '2026-11-04T10:00:00Z',
+      decideByIso: '2026-11-04T12:00:00Z',
+      untilIso: null,
+      baseEtaIso: '2026-11-05T08:00:00Z',
+      country: 'SE',
+      permitMode: 'TRASA',
+      lat: 62.8,
+      lon: 17.9,
+      corridor: 'SE_E4_STO',
+      atKm: 120,
+      here: {
+        lengthM: 40000, durationSec: 2400, notices: [], names: ['Kramfors'], roadNumbers: ['90'], line: null,
+      },
+      noDetourWhy: null,
+      baseLengthM: 25000,
+      baseDurationSec: 1500,
+    });
+    cachedPayload.positionAtCalc = [62.5, 17.5];
+
+    const res = await runDetourCases({
+      now: new Date('2026-11-04T10:30:00Z'),
+      hereApiKey: 'secret-key-xyz',
+      fetch: fetchMock as unknown as typeof fetch,
+      store: {
+        listOpenRoadClosures: async () => [{
+          closureRef: 'ROAD_SE:SIT:1',
+          country: 'SE',
+          place: 'Högakustenbron (E4)',
+          title: 'closed',
+          detailText: 'avstängd',
+          lat: 62.8,
+          lon: 17.9,
+          noticeIso: '2026-11-04T09:00:00Z',
+          untilIso: null,
+          roadClosed: true,
+          corridor: 'SE_E4',
+          atKm: 120,
+          korytarzDroga: 'on',
+        }],
+        e49DetourLoadLegs: async () => [{
+          loadId: 'a0000000-0000-4000-8000-000000000001',
+          code: 'SE_E4_STO',
+          fromKm: 10,
+          currentLeg: true,
+          status: 'IN_TRANSIT_SE',
+          baseEtaIso: '2026-11-05T08:00:00Z',
+          dims: {
+            lengthM: 25, widthM: 3.2, heightM: 4.0, weightT: 60, axleCount: 8, axleLoadT: 10,
+          },
+          position: [62.52, 17.51],
+          permitMode: 'TRASA',
+        }],
+        getOpenDetourCache: async () => ({
+          payload: cachedPayload,
+          position: [62.5, 17.5],
+          closureLat: 62.8,
+          closureLon: 17.9,
+        }),
+        upsertE49DetourCase: async () => true,
+        closeStaleE49DetourCases: async () => 0,
+        noteHereUsage: async () => {},
+        hereMonthSpend: async () => 0,
+      },
+    });
+    expect(res.hereCalls).toBe(0);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 
   it('B3: ROAD_LV × PL_EE_E67 → upsert', async () => {
@@ -351,7 +551,9 @@ describe('TodoPanel B10/B11', () => {
     const src = readFileSync(resolve('src/components/risks/TodoPanel.tsx'), 'utf8');
     expect(src).toMatch(/VITE_AUTH_MODE !== 'supabase'/);
     expect(src).toMatch(/F7 #791 B10/);
-    expect(src).toMatch(/canDecide: role === 'SCX' \|\| accountRole\(role\) === 'HHL_ADMIN'/);
+    expect(src).toMatch(/canDecide: role === 'SCX'/);
+    expect(src).toMatch(/HHL_ADMIN/);
+    expect(src).toMatch(/VITE_AUTH_MODE !== 'supabase'/);
     const block = src.slice(src.indexOf('detourHandlers'), src.indexOf('detourHandlers') + 1800);
     expect(block).toMatch(/VITE_AUTH_MODE !== 'supabase'/);
     expect(block).toMatch(/appendEvent/);

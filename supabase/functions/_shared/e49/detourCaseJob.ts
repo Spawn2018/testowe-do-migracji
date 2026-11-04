@@ -58,6 +58,21 @@ export type RoadClosureCandidate = {
   korytarzDroga?: string | null;
 };
 
+/** Kontekst ryzyk karty (F7 #791 r4 B8) — wartości z bazy; brak = warn „sprawdź …”. */
+export type DetourRiskCtx = {
+  /** Poryw m/s z corridor_wind_forecast na korytarzu. */
+  windGustMs?: number | null;
+  /** Pozostały czas jazdy H-4 (min) z eta_basis. */
+  hoursLeftMin?: number | null;
+  /** Rejs: operator + plan wypłynięcia. */
+  ferryOperator?: string | null;
+  ferryDepIso?: string | null;
+  /** Koniec okna dostawy KSH. */
+  windowEndIso?: string | null;
+  /** Kraje z awizacji pilotów (np. ['SE']). */
+  pilotCountries?: readonly string[] | null;
+};
+
 export type DetourLoadLeg = {
   loadId: string;
   code: string;
@@ -70,6 +85,8 @@ export type DetourLoadLeg = {
   position: readonly [number, number] | null;
   /** Tryb zezwolenia na tym odcinku. */
   permitMode: 'TRASA' | 'FIRMA' | 'NONE' | 'UNKNOWN';
+  /** F7 r4 B8: dane pod zdania ryzyk. */
+  riskCtx?: DetourRiskCtx | null;
 };
 
 export type DetourCasePayload = {
@@ -99,6 +116,8 @@ export type DetourCasePayload = {
   hereUrlMasked?: string;
   /** B6: brak trasy bazowej HERE — upsert ma zachować poprzedni objazd. */
   baseMissing?: boolean;
+  /** F7 r4 B6: pozycja auta przy liczeniu HERE [lat, lon]. */
+  positionAtCalc?: readonly [number, number] | null;
 };
 
 export type DetourCaseUpsert = {
@@ -337,9 +356,141 @@ const DETOUR_RISK_KINDS = [
   'PERMIT', 'LIMITS', 'BAN', 'WORKS', 'WIND', 'HOURS', 'FERRY', 'WINDOW', 'PILOT',
 ] as const;
 
+/** F7 #791 r4 B8: WIND z porywu m/s (E49-a). */
+export function riskWindFromGust(gustMs: number | null | undefined): DetourRiskRow {
+  if (gustMs == null || !Number.isFinite(gustMs)) {
+    return { kind: 'WIND', level: 'warn', text: 'sprawdź wiatr na objeździe / przy zamknięciu' };
+  }
+  const g = Math.round(gustMs);
+  if (g >= 25) {
+    return { kind: 'WIND', level: 'warn', text: `wiatr na objeździe do ${g} m/s — ryzyko postoju` };
+  }
+  if (g >= 20) {
+    return { kind: 'WIND', level: 'warn', text: `wiatr na objeździe do ${g} m/s — spowolnienie` };
+  }
+  return { kind: 'WIND', level: 'ok', text: `wiatr na objeździe do ${g} m/s — bez wpływu` };
+}
+
+/** F7 #791 r4 B8: HOURS z pozostałego czasu jazdy H-4. */
+export function riskHoursFromLeft(leftMin: number | null | undefined, needMin: number | null | undefined): DetourRiskRow {
+  if (leftMin == null || !Number.isFinite(leftMin)) {
+    return { kind: 'HOURS', level: 'warn', text: 'sprawdź czas pracy kierowcy (H-4)' };
+  }
+  const left = Math.max(0, Math.round(leftMin));
+  const need = needMin != null && Number.isFinite(needMin) ? Math.max(0, Math.round(needMin)) : null;
+  if (need != null && left < need) {
+    return {
+      kind: 'HOURS',
+      level: 'warn',
+      text: `zostało ${fmtHm(left)} jazdy H-4 — za mało na wariant (${fmtHm(need)})`,
+    };
+  }
+  return {
+    kind: 'HOURS',
+    level: 'ok',
+    text: need != null
+      ? `zostało ${fmtHm(left)} jazdy H-4 — wystarczy (potrzeba ${fmtHm(need)})`
+      : `zostało ${fmtHm(left)} jazdy H-4`,
+  };
+}
+
+/** F7 #791 r4 B8: FERRY — rejs vs ETA wariantu. */
+export function riskFerryVsEta(args: {
+  operator: string | null | undefined;
+  depIso: string | null | undefined;
+  etaIso: string | null | undefined;
+}): DetourRiskRow {
+  if (!args.operator || !args.depIso || !Number.isFinite(Date.parse(args.depIso))) {
+    return { kind: 'FERRY', level: 'warn', text: 'sprawdź rejs promu względem ETA' };
+  }
+  const dep = Date.parse(args.depIso);
+  const eta = args.etaIso && Number.isFinite(Date.parse(args.etaIso)) ? Date.parse(args.etaIso) : null;
+  const hhmm = new Date(dep).toISOString().slice(11, 16);
+  if (eta == null) {
+    return {
+      kind: 'FERRY',
+      level: 'warn',
+      text: `rejs ${args.operator} ${hhmm} — sprawdź zapas do ETA`,
+    };
+  }
+  const slackMin = Math.round((dep - eta) / 60_000);
+  if (slackMin < 0) {
+    return {
+      kind: 'FERRY',
+      level: 'warn',
+      text: `rejs ${args.operator} ${hhmm} — nie zdąży (spóźnienie ${fmtHm(-slackMin)})`,
+    };
+  }
+  return {
+    kind: 'FERRY',
+    level: 'ok',
+    text: `rejs ${args.operator} ${hhmm} — zdąży (zapas ${fmtHm(slackMin)})`,
+  };
+}
+
+/** F7 #791 r4 B8: WINDOW — okno KSH vs ETA. */
+export function riskWindowVsEta(args: {
+  windowEndIso: string | null | undefined;
+  etaIso: string | null | undefined;
+}): DetourRiskRow {
+  if (!args.windowEndIso || !Number.isFinite(Date.parse(args.windowEndIso))) {
+    return { kind: 'WINDOW', level: 'warn', text: 'sprawdź okno dostawy KSH' };
+  }
+  const end = Date.parse(args.windowEndIso);
+  const eta = args.etaIso && Number.isFinite(Date.parse(args.etaIso)) ? Date.parse(args.etaIso) : null;
+  const endLabel = new Date(end).toISOString().slice(0, 16).replace('T', ' ');
+  if (eta == null) {
+    return { kind: 'WINDOW', level: 'warn', text: `okno KSH do ${endLabel} — sprawdź ETA` };
+  }
+  if (eta > end) {
+    const late = Math.round((eta - end) / 60_000);
+    return {
+      kind: 'WINDOW',
+      level: 'warn',
+      text: `okno KSH do ${endLabel} — ETA po oknie (+${fmtHm(late)})`,
+    };
+  }
+  const slack = Math.round((end - eta) / 60_000);
+  return {
+    kind: 'WINDOW',
+    level: 'ok',
+    text: `okno KSH do ${endLabel} — ETA w oknie (zapas ${fmtHm(slack)})`,
+  };
+}
+
+/** F7 #791 r4 B8: PILOT — awizacja na kraj objazdu. */
+export function riskPilotForCountry(args: {
+  country: DetourCountry;
+  pilotCountries: readonly string[] | null | undefined;
+}): DetourRiskRow {
+  const list = args.pilotCountries;
+  if (!list || list.length === 0) {
+    return { kind: 'PILOT', level: 'warn', text: 'sprawdź pilotów na objeździe' };
+  }
+  const has = list.map((c) => c.toUpperCase()).includes(args.country);
+  if (has) {
+    return { kind: 'PILOT', level: 'ok', text: `pilot ${args.country} w awizacji — jest` };
+  }
+  return {
+    kind: 'PILOT',
+    level: 'warn',
+    text: `pilot ${args.country} — brak w awizacji (jest: ${list.join(', ')})`,
+  };
+}
+
+function fmtHm(min: number): string {
+  const m = Math.max(0, Math.round(min));
+  const h = Math.floor(m / 60);
+  const r = m % 60;
+  if (h <= 0) return `${r} min`;
+  if (r === 0) return `${h} h`;
+  return `${h} h ${r} min`;
+}
+
 /**
- * F7 #791 B8/r3: 9 rodzajów ryzyk (ok/warn) dla postoju i objazdu —
+ * F7 #791 B8/r4: 9 rodzajów ryzyk (ok/warn) dla postoju i objazdu —
  * brak danych → **warn** „sprawdź …”, nigdy `ok` (makieta).
+ * WIND/HOURS/FERRY/WINDOW/PILOT: zdania z wartościami gdy riskCtx / wiersze podane.
  */
 export function buildNineRisks(args: {
   side: 'hold' | 'detour';
@@ -347,7 +498,10 @@ export function buildNineRisks(args: {
   permitMode: DetourLoadLeg['permitMode'];
   hereNotices?: readonly string[];
   noDetour?: boolean;
-  /** Gdy podane — zdania zależne od danych (ok/warn); inaczej warn „sprawdź …”. */
+  etaIso?: string | null;
+  needDriveMin?: number | null;
+  riskCtx?: DetourRiskCtx | null;
+  /** Gdy podane — nadpisują riskCtx (testy). */
   wind?: DetourRiskRow | null;
   hours?: DetourRiskRow | null;
   ferry?: DetourRiskRow | null;
@@ -363,6 +517,22 @@ export function buildNineRisks(args: {
     level: 'warn',
     text: `sprawdź ${checkWhat}`,
   });
+  const ctx = args.riskCtx ?? null;
+  const wind = args.wind ?? riskWindFromGust(ctx?.windGustMs);
+  const hours = args.hours ?? riskHoursFromLeft(ctx?.hoursLeftMin, args.needDriveMin);
+  const ferry = args.ferry ?? riskFerryVsEta({
+    operator: ctx?.ferryOperator,
+    depIso: ctx?.ferryDepIso,
+    etaIso: args.etaIso,
+  });
+  const window = args.window ?? riskWindowVsEta({
+    windowEndIso: ctx?.windowEndIso,
+    etaIso: args.etaIso,
+  });
+  const pilot = args.pilot ?? riskPilotForCountry({
+    country: args.country,
+    pilotCountries: ctx?.pilotCountries,
+  });
   const byKind: Record<string, DetourRiskRow> = {
     PERMIT: permit,
     LIMITS: args.side === 'detour' && !args.noDetour
@@ -374,11 +544,11 @@ export function buildNineRisks(args: {
       : missing('LIMITS', 'ograniczenia wymiarów (postój — bez jazdy objazdem)'),
     BAN: args.ban ?? missing('BAN', 'zakazy czasowe na objeździe'),
     WORKS: args.works ?? missing('WORKS', 'roboty / utrudnienia na objeździe'),
-    WIND: args.wind ?? missing('WIND', 'wiatr na objeździe / przy zamknięciu'),
-    HOURS: args.hours ?? missing('HOURS', 'czas pracy kierowcy (H-4)'),
-    FERRY: args.ferry ?? missing('FERRY', 'rejs promu względem ETA'),
-    WINDOW: args.window ?? missing('WINDOW', 'okno dostawy KSH'),
-    PILOT: args.pilot ?? missing('PILOT', 'pilotów na objeździe'),
+    WIND: wind,
+    HOURS: hours,
+    FERRY: ferry,
+    WINDOW: window,
+    PILOT: pilot,
   };
   return DETOUR_RISK_KINDS.map((k) => byKind[k]!);
 }
@@ -406,6 +576,7 @@ export function buildDetourPayload(args: {
   /** Długość / czas trasy bazowej (te same punkty, bez avoid) — F7 B6. */
   baseLengthM?: number;
   baseDurationSec?: number;
+  riskCtx?: DetourRiskCtx | null;
 }): DetourCasePayload {
   const hold = planHold({
     nowIso: args.nowIso,
@@ -417,6 +588,9 @@ export function buildDetourPayload(args: {
     side: 'hold',
     country: args.country,
     permitMode: args.permitMode,
+    riskCtx: args.riskCtx,
+    etaIso: hold.etaIso,
+    needDriveMin: hold.addMin,
   });
   const avoid = avoidBboxAround(args.lat, args.lon).param;
 
@@ -446,19 +620,23 @@ export function buildDetourPayload(args: {
     roadNumbers: args.here.roadNumbers ?? [],
     notices: args.here.notices,
   });
+  const detourEta = new Date(Date.parse(args.baseEtaIso) + addMin * 60_000).toISOString();
 
   return {
     hold: { ...hold, risks: holdRisks },
     detour: {
       addKm,
       addMin,
-      etaIso: new Date(Date.parse(args.baseEtaIso) + addMin * 60_000).toISOString(),
+      etaIso: detourEta,
       via,
       risks: buildNineRisks({
         side: 'detour',
         country: args.country,
         permitMode: args.permitMode,
         hereNotices: args.here.notices,
+        riskCtx: args.riskCtx,
+        etaIso: detourEta,
+        needDriveMin: addMin + Math.round((Date.parse(args.decideByIso) - Date.parse(args.nowIso)) / 60_000),
       }),
       line: args.here.line,
     },
@@ -472,6 +650,14 @@ export function buildDetourPayload(args: {
   };
 }
 
+export type OpenDetourCache = {
+  payload: DetourCasePayload;
+  /** Ostatnia pozycja auta przy liczeniu HERE [lat, lon]. */
+  position: readonly [number, number] | null;
+  closureLat: number;
+  closureLon: number;
+};
+
 export type DetourJobStore = {
   listOpenRoadClosures?(): Promise<RoadClosureCandidate[]>;
   e49DetourLoadLegs?(): Promise<DetourLoadLeg[]>;
@@ -480,6 +666,8 @@ export type DetourJobStore = {
   noteHereUsage?(service: 'routing', n: number): Promise<void>;
   hereMonthSpend?(): Promise<number>;
   corridorPolylineGeoJson?(code: string): Promise<unknown>;
+  /** F7 r4 B6: pamięć HERE — poprzedni payload otwartej sprawy. */
+  getOpenDetourCache?(dedupKey: string): Promise<OpenDetourCache | null>;
 };
 
 export type DetourJobResult = {
@@ -574,30 +762,36 @@ export async function runDetourCases(args: {
         && leg.status !== 'FERRY'
         && leg.status !== 'DELIVERED'
         && leg.status !== 'CANCELLED'
-        && leg.status !== 'REMOVED',
+        && leg.status !== 'REMOVED'
+        && leg.status !== 'READY'
+        && leg.status !== 'AT_LOADING'
+        && leg.status !== 'PLANNED',
     );
     for (const leg of matched) {
-      // B4: w drodze bez świeżej pozycji (>2 h → null w store) — nie twórz sprawy.
-      const inTransit = /IN_TRANSIT|ON_FERRY|TO_PORT|PRE_/.test(leg.status)
-        || leg.status === 'READY'
-        || leg.status === 'AT_LOADING';
-      if (inTransit && !leg.position && (leg.currentLeg || /IN_TRANSIT/.test(leg.status))) {
+      // F7 r4 B4: sprawa tylko w drodze (IN_TRANSIT_* / ON_FERRY / TO_PORT…) ze świeżą pozycją.
+      const inTransit = /IN_TRANSIT|ON_FERRY|TO_PORT|PRE_/.test(leg.status);
+      if (!inTransit) continue;
+      if (!leg.position) {
+        // Trzymaj otwartą sprawę w keep, jeśli zamknięcie trwa (F7 r4 uwaga).
+        const dedupKeep = detourDedupKey(leg.loadId, c.closureRef);
+        keep.push(dedupKeep);
         warnings.push(`E49-b: brak świeżej pozycji ${leg.loadId} — pominięto sprawę`);
         continue;
       }
       const poly = await loadPoly(leg.code);
-      let atKm = c.atKm;
-      if ((atKm == null || !Number.isFinite(atKm)) && poly.length >= 2) {
+      // F7 r4 B4: atKm zawsze z rzutu na polilinię nogi + próg 25 km (także gdy źródło podało at_km).
+      let atKm: number | null = null;
+      if (poly.length >= 2) {
         atKm = projectKmOnCorridor(poly, c.lat, c.lon);
-        // F7 r3 B4: rzut poza 25 km od polilinii → nie na trasie.
         if (atKm != null) {
           const nearest = pointAtKm(poly, atKm);
           if (nearest && haversineKm([c.lon, c.lat], nearest) > 25) {
             atKm = null;
           }
         }
+      } else if (c.atKm != null && Number.isFinite(c.atKm)) {
+        atKm = c.atKm;
       }
-      // B4: bez km albo zamknięcie za autem → pomiń.
       if (atKm == null || !Number.isFinite(atKm)) {
         warnings.push(`E49-b: brak at_km dla ${c.closureRef} / ${leg.code} — pominięto`);
         continue;
@@ -655,7 +849,51 @@ export async function runDetourCases(args: {
       }
 
       let baseMissing = false;
-      if (hereOk && dims && hereCalls < DETOUR_HERE_MAX_PER_RUN) {
+      // F7 r4 B6: pamięć HERE — bez ponownego pytania gdy pozycja <10 km i to samo zamknięcie.
+      let reusedCache = false;
+      const prev = args.store.getOpenDetourCache
+        ? await args.store.getOpenDetourCache(dedup)
+        : null;
+      if (
+        prev
+        && prev.payload
+        && !('none' in prev.payload.detour && prev.payload.detour.none)
+        && Math.abs(prev.closureLat - c.lat) < 1e-4
+        && Math.abs(prev.closureLon - c.lon) < 1e-4
+        && prev.position
+        && leg.position
+        && haversineKm(
+          [prev.position[1], prev.position[0]],
+          [leg.position[1], leg.position[0]],
+        ) <= 10
+      ) {
+        reusedCache = true;
+        const cached = prev.payload.detour;
+        if (!('none' in cached)) {
+          hereSummary = {
+            lengthM: 0,
+            durationSec: 0,
+            notices: [],
+            names: [],
+            roadNumbers: [],
+            line: cached.line,
+          };
+          // Odtwórz nadwyżkę z cache przez sztuczne base/here (addKm/addMin już w payload —
+          // poniżej zbudujemy świeże ryzyka, ale zachowamy liczby z cache).
+          baseLengthM = 1000;
+          baseDurationSec = 60;
+          hereSummary = {
+            lengthM: 1000 + cached.addKm * 1000,
+            durationSec: 60 + cached.addMin * 60,
+            notices: [],
+            names: cached.via ? [cached.via] : [],
+            roadNumbers: [],
+            line: cached.line,
+          };
+        }
+      }
+
+      if (!reusedCache && hereOk && dims && hereCalls < DETOUR_HERE_MAX_PER_RUN) {
         const avoid = avoidBboxAround(c.lat, c.lon).param;
         const dimsT = dims as TruckDims;
         try {
@@ -726,12 +964,12 @@ export async function runDetourCases(args: {
           baseMissing = true;
           warnings.push(`E49-b HERE: ${e instanceof Error ? maskHereApiKey(e.message) : 'błąd'}`);
         }
-      } else if (!dims) {
+      } else if (!reusedCache && !dims) {
         noWhy = 'Brak objazdu — brak wymiarów zestawu w tabeli (D1)';
-      } else if (!hereOk) {
+      } else if (!reusedCache && !hereOk) {
         noWhy = 'Brak objazdu — HERE niedostępne; tylko postój';
         baseMissing = true;
-      } else if (hereCalls >= DETOUR_HERE_MAX_PER_RUN) {
+      } else if (!reusedCache && hereCalls >= DETOUR_HERE_MAX_PER_RUN) {
         noWhy = 'Brak objazdu w tym przebiegu — limit zapytań HERE; przeliczenie za ≤ 30 min';
         baseMissing = true;
       }
@@ -751,9 +989,16 @@ export async function runDetourCases(args: {
         noDetourWhy: noWhy,
         baseLengthM,
         baseDurationSec,
+        riskCtx: leg.riskCtx,
       });
       if (urlMasked) payload.hereUrlMasked = urlMasked;
       if (baseMissing) payload.baseMissing = true;
+      payload.positionAtCalc = leg.position;
+      // Zachowaj via z cache gdy odtworzono liczby.
+      if (reusedCache && prev && !('none' in prev.payload.detour) && !('none' in payload.detour)) {
+        payload.detour.via = prev.payload.detour.via;
+        payload.detour.line = prev.payload.detour.line;
+      }
 
       const row: DetourCaseUpsert = {
         loadId: leg.loadId,

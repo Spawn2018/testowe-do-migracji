@@ -297,8 +297,10 @@ export function TodoPanel({ role, kind, locale, phone, nowIso, loads, risks, geo
       const save = detourDecideOf();
       const c = i.detour;
       return {
-        // B11: SCX przewoźnika albo Administrator HHL (nie HHL_OPS).
-        canDecide: role === 'SCX' || accountRole(role) === 'HHL_ADMIN',
+        // B11 / F7 r4: SCX albo HHL_ADMIN; w demo konto HHL bez roli = Administrator.
+        canDecide: role === 'SCX'
+          || accountRole(role) === 'HHL_ADMIN'
+          || (role === 'HHL' && accountRole(role) == null && import.meta.env.VITE_AUTH_MODE !== 'supabase'),
         busy: detourBusy === i.id,
         onDecide: save && c ? (pick, note) => {
           setDetourBusy(i.id);

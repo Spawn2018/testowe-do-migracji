@@ -422,6 +422,8 @@ export interface SyncStore {
   upsertE49DetourCase?(row: import('../e49/detourCaseJob.ts').DetourCaseUpsert): Promise<boolean>;
   /** E49-b Z3: zamknij sprawy bez keep (zamknięcie odwołane). */
   closeStaleE49DetourCases?(keepDedup: string[]): Promise<number>;
+  /** E49-b F7 r4 B6: pamięć HERE między przebiegami. */
+  getOpenDetourCache?(dedupKey: string): Promise<import('../e49/detourCaseJob.ts').OpenDetourCache | null>;
   /** E49-a: transport w oknie śledzenia? */
   loadInTrackingWindow?(loadId: string, at?: string): Promise<boolean>;
   /**

@@ -1,4 +1,12 @@
 
+## 2026-11-04 14:30 — #791 F7 r4 B8/B4/B6/B12 (0404)
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
+- Scalanie: brak (F7 r4 niegotowe @ `769375b8`). „F7: gotowe” @ bb440979 nie obowiązuje.
+- CI @ `769375b8`: unit ✔ · visual ✔ · **db** FAIL — security 521≠520 (B12).
+- **Krok F7 r4:** migracja **0404** — B6 upsert tylko przy `baseMissing`; decide uprawnienia przed „brak sprawy”; KSH payload bez `author`; szablon `{{who}}`. Job: B8 WIND/HOURS/FERRY/WINDOW/PILOT z danymi; B4 tylko IN_TRANSIT_*/ON_FERRY + świeża pozycja + zawsze rzut 25 km; B6 pamięć HERE (<10 km); store `riskCtx` + `getOpenDetourCache`. Front demo HHL_ADMIN. security **521** / TEST **517**. Vitest e49-detour* 33/33.
+- **Dalej:** push → CI (+`db`) → F7. Bez push na main.
+
 ## 2026-11-04 13:45 — #791 F7 r3 + B11 (0403) + CI db B1/B2
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
