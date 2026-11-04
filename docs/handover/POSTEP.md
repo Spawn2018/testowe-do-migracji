@@ -1,4 +1,11 @@
 
+## 2026-11-04 12:30 — #791 CI db FAIL cz.2 → 0401 + sections notices
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`. F7 cz.1 @ `bb440979` nie obowiązuje po cz.2 (`5a96a7ed`); czekam F7 cz.2.
+- Scalanie: brak. CI @ `5a96a7ed`: unit ✔ · visual ✔ · **db** FAIL — security B5 (1 zapisujący bez `assert_not_preview`); nullguard `e49_detour_decide` aktywny HHL łapał wzorzec `e49_detour_decide` przy „brak sprawy”.
+- **Krok:** migracja **0401** — `assert_not_preview` + `Brak aktywnego konta`; null-guard GUARD → `Brak aktywnego konta`; `summarizeHereRoute` czyta `sections[].notices` + `spans[].notices` (warunek F7 cz.2) + vitest; EXPECTED security **509** / nullguard **914** (TEST security **505**).
+- **Dalej:** push → CI (+`db`) → F7 cz.2. Bez push na main.
+
 ## 2026-11-04 11:25 — #791 DP-206 E49-b cz.2: job + decide + DETOUR_E49
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`. Bez „F7: gotowe”.

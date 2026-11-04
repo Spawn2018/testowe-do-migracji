@@ -12,7 +12,7 @@ const ROOT = resolve(import.meta.dirname, '../..');
 
 /** Oczekiwane OK na lokalnym Postgresie (gate.sh). */
 export const EXPECTED_LOCAL = {
-  security: 507, // F7 #791 B1: +5 e49_detour_cases RLS (HHL/SCX/KSH/SCX2/anon); było 502
+  security: 509, // DP-206 cz.2: +2 decide (KSH odmowa + SCX HOLD); F7 #791 B1 było 507
   status: 654, // F7 #785 r2: +6 DP-205 wiatr/Z2/korytarze; #782 → 648
   storage: 37,
   money: 200, // DP-167 F7 #734 r2: +2 title_key zmiana; było 198 (r1 +4 od 194 / DP-167 +3 od 191)
@@ -24,7 +24,7 @@ export const EXPECTED_LOCAL = {
   invite: 48,
   risks: 46, // #398: +8 +1 SMS; #411: +3 (blok *_RESOLVED + url)
   import: 425, // #653 revoke enqueue_active_wt: +2 privilege chk; było 423
-  nullguard: 909, // DP-206 cz.1: +4 e49_detour_cases_open EMPTY ×4 konta; było 905 (#685-b)
+  nullguard: 914, // DP-206 cz.2: +5 e49_detour_decide GUARD (4 odmowy + 1 pozytywny HHL); cz.1 było 909
   i2: 675, // #666/0351: +3 actual_departure_at (SCX/OPS/ADMIN odmowa+zgoda); było 672
   i30: 10,
   i31: 10, // D-1300: +korekta n_sek=7
@@ -66,7 +66,7 @@ export const EXPECTED_LOCAL = {
  */
 export const EXPECTED_TEST = {
   ...EXPECTED_LOCAL,
-  security: 503, // 507 - 4 SKIP (B6); F7 #791 B1 +5
+  security: 505, // 509 - 4 SKIP (B6); DP-206 cz.2 +2 decide
   risks: 44, // 46 − 2 SKIP (C1)
   // dec6: 34 − 4 SKIP — wstawki auth.sessions dla kont seeda (FK → auth.users); lokalnie/CI bez FK (stub)
   dec6: 30,

@@ -66,6 +66,16 @@ export type HereRouteSummary = {
   notices: string[];
 };
 
+function pushHereNotices(
+  notices: string[],
+  list: Array<{ code?: string; title?: string }> | undefined,
+): void {
+  for (const n of list ?? []) {
+    const t = [n.code, n.title].filter(Boolean).join(' ');
+    if (t) notices.push(t);
+  }
+}
+
 /** Skrót odpowiedzi HERE — długość, czas, notices. Bez polyline (oszczędność). */
 export function summarizeHereRoute(body: unknown): HereRouteSummary | null {
   const routes = (body as { routes?: Array<{ sections?: Array<Record<string, unknown>> }> })?.routes;
@@ -77,15 +87,17 @@ export function summarizeHereRoute(body: unknown): HereRouteSummary | null {
     const sum = section.summary as { length?: number; duration?: number } | undefined;
     if (sum?.length != null) lengthM += Number(sum.length) || 0;
     if (sum?.duration != null) durationSec += Number(sum.duration) || 0;
+    // F7 #791 cz.2: notices bywają na sections[] (nie tylko spans[]).
+    pushHereNotices(
+      notices,
+      section.notices as Array<{ code?: string; title?: string }> | undefined,
+    );
     const spans = section.spans as Array<{ notices?: Array<{ code?: string; title?: string }> }> | undefined;
     for (const sp of spans ?? []) {
-      for (const n of sp.notices ?? []) {
-        const t = [n.code, n.title].filter(Boolean).join(' ');
-        if (t) notices.push(t);
-      }
+      pushHereNotices(notices, sp.notices);
     }
   }
-  if (lengthM <= 0 && durationSec <= 0) return null;
+  if (lengthM <= 0 && durationSec <= 0 && notices.length === 0) return null;
   return { lengthM, durationSec, notices };
 }
 

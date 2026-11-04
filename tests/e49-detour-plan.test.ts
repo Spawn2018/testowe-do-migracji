@@ -127,6 +127,18 @@ describe('detourHere', () => {
         routes: [{ sections: [{ summary: { length: 1000, duration: 60 }, spans: [] }] }],
       }, '3,52 m'),
     ).toBeNull();
+    // F7 #791 cz.2: violatedVehicleRestriction tylko w sections[].notices (nie spans)
+    expect(
+      noDetourWhyFromBody({
+        routes: [{
+          sections: [{
+            summary: { length: 5000, duration: 300 },
+            notices: [{ code: 'violatedVehicleRestriction', title: 'height' }],
+            spans: [],
+          }],
+        }],
+      }, '3,52 m'),
+    ).toMatch(/Brak objazdu/);
   });
 
   it('maskHereApiKey — apiKey nie trafia do logów / payload (F7 #791 U1)', () => {
