@@ -1725,6 +1725,10 @@ val "DP-206: SCX przewoźnika widzi sprawę" $SCX "select count(*) from e49_deto
 val "DP-206: KSH nie widzi spraw objazdu (RLS)" $KSH "select count(*) from e49_detour_cases where dedup_key='E49_DETOUR_TEST_DP206'" 0
 val "DP-206: SCX innego przewoźnika nie widzi" $SCX2_AUTH "select count(*) from e49_detour_cases where dedup_key='E49_DETOUR_TEST_DP206'" 0
 err "DP-206: anon bez SELECT e49_detour_cases" "" "set local role anon; select count(*) from e49_detour_cases" "permission denied"
+# cz.2: decyzja — KSH odmowa; SCX przewoźnika OK (HOLD)
+CASE206=$(sys "select id::text from e49_detour_cases where dedup_key='E49_DETOUR_TEST_DP206' limit 1" | tail -1)
+err "DP-206: KSH nie decyduje e49_detour_decide" $KSH "select e49_detour_decide('$CASE206'::uuid,'HOLD',null)" "e49_detour_decide"
+val "DP-206: SCX decyduje HOLD" $SCX "select e49_detour_decide('$CASE206'::uuid,'HOLD',null)::text" "true"
 sys "delete from e49_detour_cases where dedup_key='E49_DETOUR_TEST_DP206'" >/dev/null
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"

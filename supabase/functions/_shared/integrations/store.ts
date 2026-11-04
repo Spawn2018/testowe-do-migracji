@@ -978,6 +978,129 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
         samples: Array.isArray(row.samples) ? row.samples : [],
       }));
     },
+    /** E49-b: otwarte ROAD_* z lat/lon — kandydaci na sprawę „Objazd czy postój?”. */
+    async listOpenRoadClosures() {
+      const { countryFromRoadKind, corridorFromRoadKind, placeFromRoadTitle } = await import('../e49/detourCaseJob.ts');
+      const r = await sb.from('risk_signals')
+        .select('dedup_key,kind,title,detail,detected_at,valid_until')
+        .is('resolved_at', null)
+        .in('kind', ['ROAD_SE', 'ROAD_PL', 'ROAD_LT', 'ROAD_LV', 'ROAD_EE', 'ROAD_FI'])
+        .limit(400);
+      if (r.error) throw new Error(`risk_signals closures: ${r.error.message}`);
+      const out: import('../e49/detourCaseJob.ts').RoadClosureCandidate[] = [];
+      for (const row of r.data ?? []) {
+        const detail = (row.detail && typeof row.detail === 'object')
+          ? row.detail as Record<string, unknown>
+          : {};
+        const lat = Number(detail.lat);
+        const lon = Number(detail.lon);
+        if (!Number.isFinite(lat) || !Number.isFinite(lon)) continue;
+        const kind = String(row.kind ?? '');
+        const country = countryFromRoadKind(kind);
+        if (!country) continue;
+        const road = detail.droga != null ? String(detail.droga)
+          : (detail.road != null ? String(detail.road) : null);
+        const title = String(row.title ?? '');
+        const detailText = [
+          detail.opis, detail.oryginal, detail.note, detail.rodzaj,
+        ].filter(Boolean).map(String).join(' ');
+        out.push({
+          closureRef: String(row.dedup_key ?? `${kind}:${lat},${lon}`),
+          country,
+          place: placeFromRoadTitle(title, road),
+          title,
+          detailText,
+          lat,
+          lon,
+          noticeIso: String(row.detected_at ?? new Date().toISOString()),
+          untilIso: row.valid_until ? String(row.valid_until) : (detail.do != null ? String(detail.do) : null),
+          roadClosed: detail.roadClosed === true || detail.rodzaj === 'zamkniecie',
+          corridor: corridorFromRoadKind(kind, road),
+          atKm: detail.at_km != null && Number.isFinite(Number(detail.at_km))
+            ? Number(detail.at_km) : null,
+          obokTrasy: detail.obok_trasy === true,
+        });
+      }
+      return out;
+    },
+    /** E49-b: korytarze + wymiary + pozycja (HERE truck). */
+    async e49DetourLoadLegs() {
+      const legs = await this.e49WindLoadCorridors!();
+      const ids = [...new Set(legs.map((l) => l.loadId))];
+      if (!ids.length) return [];
+      const loadsR = await sb.from('loads')
+        .select('id,status,eta_site,combo_length_m,combo_width_m,combo_height_m,combo_weight_t,combo_axle_count,combo_axle_load_t')
+        .in('id', ids);
+      if (loadsR.error) throw new Error(`loads detour: ${loadsR.error.message}`);
+      const byId = new Map((loadsR.data ?? []).map((row) => [String(row.id), row]));
+      const out: import('../e49/detourCaseJob.ts').DetourLoadLeg[] = [];
+      for (const leg of legs) {
+        const row = byId.get(leg.loadId);
+        if (!row) continue;
+        let position: [number, number] | null = null;
+        const posR = await sb.from('positions')
+          .select('geom_snapped,geom_raw,ts')
+          .eq('load_id', leg.loadId)
+          .gte('ts', new Date(Date.now() - 2 * 3600_000).toISOString())
+          .order('ts', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        const g = (posR.data as { geom_snapped?: unknown; geom_raw?: unknown } | null)?.geom_snapped
+          ?? (posR.data as { geom_raw?: unknown } | null)?.geom_raw;
+        /* GeoJSON Point albo WKT — uproszczenie: [lon,lat] w coordinates. */
+        if (g && typeof g === 'object' && Array.isArray((g as { coordinates?: unknown }).coordinates)) {
+          const c = (g as { coordinates: number[] }).coordinates;
+          if (c.length >= 2 && Number.isFinite(c[0]) && Number.isFinite(c[1])) {
+            position = [c[1]!, c[0]!];
+          }
+        }
+        out.push({
+          loadId: leg.loadId,
+          code: leg.code,
+          fromKm: leg.fromKm,
+          currentLeg: leg.currentLeg,
+          status: String(row.status ?? ''),
+          baseEtaIso: row.eta_site ? String(row.eta_site) : null,
+          dims: {
+            lengthM: row.combo_length_m != null ? Number(row.combo_length_m) : null,
+            widthM: row.combo_width_m != null ? Number(row.combo_width_m) : null,
+            heightM: row.combo_height_m != null ? Number(row.combo_height_m) : null,
+            weightT: row.combo_weight_t != null ? Number(row.combo_weight_t) : null,
+            axleCount: row.combo_axle_count != null ? Number(row.combo_axle_count) : null,
+            axleLoadT: row.combo_axle_load_t != null ? Number(row.combo_axle_load_t) : null,
+          },
+          position,
+          permitMode: 'UNKNOWN',
+        });
+      }
+      return out;
+    },
+    async upsertE49DetourCase(row: import('../e49/detourCaseJob.ts').DetourCaseUpsert) {
+      const r = await sb.rpc('e49_detour_case_upsert', {
+        p_load: row.loadId,
+        p_dedup: row.dedupKey,
+        p_country: row.country,
+        p_place: row.place,
+        p_reason: row.reason,
+        p_reason_detail: row.reasonDetail,
+        p_source: row.source,
+        p_notice_at: row.noticeAt,
+        p_until_at: row.untilAt,
+        p_decide_by: row.decideBy,
+        p_payload: row.payload,
+        p_risk_dedup: row.riskDedupKey,
+      });
+      if (r.error) throw new Error(`e49_detour_case_upsert: ${r.error.message}`);
+      return r.data != null;
+    },
+    async closeStaleE49DetourCases(keepDedup: string[]) {
+      const r = await sb.rpc('e49_detour_cases_close_stale', {
+        p_keep: keepDedup,
+        p_reason: 'closure_cleared',
+      });
+      if (r.error) throw new Error(`e49_detour_cases_close_stale: ${r.error.message}`);
+      return Number(r.data ?? 0) || 0;
+    },
     async loadInTrackingWindow(loadId: string, at?: string) {
       const r = await sb.rpc('load_in_tracking_window', {
         p_load: loadId,

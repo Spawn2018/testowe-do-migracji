@@ -147,6 +147,7 @@ import {
   seWeekendBanHit, plSundayBanHit, banRiskTitle,
 } from '../here/windAndBans.ts';
 import { runCorridorWindCore } from '../e49/corridorWindJob.ts';
+import { runDetourCases } from '../e49/detourCaseJob.ts';
 import { planWindCase, windCaseDedup, type CorridorWindRow } from '../e49/etaWeather.ts';
 import { E49_WIND_DEFAULTS } from '../e49/windEta.ts';
 import { applyPendingRoadTitle, humanizeRoadCode } from '../../../../src/lib/pl/describe.ts';
@@ -413,6 +414,14 @@ export interface SyncStore {
   corridorWindFreshCount?(maxAgeMin: number): Promise<number>;
   /** E49-a Z2: punkty prognozy korytarza (fresh). */
   listCorridorWindForecast?(corridor: string, maxAgeMin?: number): Promise<CorridorWindRow[]>;
+  /** E49-b Z3: otwarte ryzyka ROAD_* wyglądające na zamknięcie (do spraw SCX). */
+  listOpenRoadClosures?(): Promise<import('../e49/detourCaseJob.ts').RoadClosureCandidate[]>;
+  /** E49-b Z3: transporty na korytarzu + wymiary/pozycja pod HERE. */
+  e49DetourLoadLegs?(): Promise<import('../e49/detourCaseJob.ts').DetourLoadLeg[]>;
+  /** E49-b Z3: upsert sprawy „Objazd czy postój?”. */
+  upsertE49DetourCase?(row: import('../e49/detourCaseJob.ts').DetourCaseUpsert): Promise<boolean>;
+  /** E49-b Z3: zamknij sprawy bez keep (zamknięcie odwołane). */
+  closeStaleE49DetourCases?(keepDedup: string[]): Promise<number>;
   /** E49-a: transport w oknie śledzenia? */
   loadInTrackingWindow?(loadId: string, at?: string): Promise<boolean>;
   /**
@@ -5701,12 +5710,33 @@ export async function runRouteHazards(deps: JobDeps): Promise<JobResult> {
       warnings.push('E49: brak żywej serii wiatru drogowego — próg 20 m/s (ops_thresholds WIND_SLOW_MS); job corridor-wind');
     }
   }
+  /* E49-b Z3: zamknięcie drogi/mostu on-route → sprawa SCX + HERE objazd. */
+  let detourUpserts = 0;
+  let detourHere = 0;
+  if (deps.store.listOpenRoadClosures && deps.store.upsertE49DetourCase) {
+    const det = await runDetourCases({
+      store: deps.store,
+      fetch: deps.fetch,
+      now: deps.now(),
+      hereApiKey: deps.env.HERE_API_KEY ?? null,
+    });
+    detourUpserts = det.upserts;
+    detourHere = det.hereCalls;
+    warnings.push(...det.warnings);
+    if (det.candidates > 0) {
+      warnings.push(
+        `E49-b: zamknięcia ${det.candidates}, sprawy ${det.upserts}, HERE ${det.hereCalls}, zamknięte stale ${det.closed}`,
+      );
+    }
+  }
   return {
     job: 'route-hazards', mode: 'LIVE', ok: true, risks,
     warnings, observations: {
       loads: String(loads.length),
       thrMs: String(WIND_GUST_MS_THRESHOLD),
       windCases: String(windKeep.length),
+      detourCases: String(detourUpserts),
+      detourHere: String(detourHere),
     },
   };
 }

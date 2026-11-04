@@ -1,4 +1,11 @@
 
+## 2026-11-04 11:25 — #791 DP-206 E49-b cz.2: job + decide + DETOUR_E49
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`. Bez „F7: gotowe”.
+- Scalanie: brak. CI F7 r1 @ `bb440979`: unit ✔ · visual ✔ · **db** ✔ (`41809600570`).
+- **Krok cz.2:** migracja **0400** — `e49_detour_case_upsert`, `e49_detour_cases_close_stale`, `e49_detour_decide` (Historia `E49_DETOUR_DECISION` + macierz `DECISION`/`SCX_DETOUR_CHOICE`→`scx_detour`); `detourCaseJob` + podpięcie w `route-hazards` (HERE truck, maskApiKey, limit 8/przebieg); store list/upsert; front `e49Live` + `e49Source` + `DETOUR_E49=true`; vitest `e49-detour-job`; allowlist/nullguard decide.
+- **Dalej:** push → CI (+`db`) → F7. ETA linie CLOSURE_HOLD/DETOUR i mapa E45 — kolejne dopracowanie po F7 gdy trzeba.
+
 ## 2026-11-04 10:40 — #791 F7 r1: B1 RLS + U1–U3 + restore cyfry + pl-t
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`. Bez „F7: gotowe”.
