@@ -157,7 +157,7 @@ export const d19Pl: Dict = {
   on: 'WŁ.',
   /* wyglad/strefy-potwierdzenie (#557): wyłączenie strefy wymaga potwierdzenia */
   gf_off_ask: 'Wyłączyć strefę „{name}”?',
-  gf_off_ask_port: 'Bez tej strefy statusy w porcie nie zmienią się same (Port PL, Na promie → Droga SE) i nie przyjdą ostrzeżenia przed portem.',
+  gf_off_ask_port: 'Bez tej strefy statusy w porcie nie zmienią się same (Port wypłynięcia, Na promie → Droga do placu) i nie przyjdą ostrzeżenia przed portem.',
   gf_off_ask_other: 'Bez niej nie będzie zdarzeń wjazdu i wyjazdu ani powiadomień.',
   gf_off_reason: 'wyłączona w Opcjach (potwierdzone)',
   gf_off_yes: 'Wyłącz strefę',
@@ -240,14 +240,15 @@ export const d19Pl: Dict = {
   s_on_ferry: 'Na promie',
   s_on_site: 'Na placu',
   s_planned: 'Zaplanowany',
-  s_port_gdn: 'Port PL',
-  s_port_se: 'Port SE',
+  /* DP-215 (właściciel 04.11 21:10): statusy jak EE/FI; bez rejsu — bez nazwy portu */
+  s_port_gdn: 'Port wypłynięcia',
+  s_port_se: 'Port przypłynięcia',
   s_ready: 'Gotowy',
   s_ready_to_invoice: 'Gotowe do fakturowania',
   s_invoiced: 'Zafakturowano',
-  s_road_pl: 'Droga PL',
-  s_road_se: 'Droga SE',
-  /* BN9-b, decyzja 25A: przeprawy z Estonii — te same statusy, nazwa portu z rejsu */
+  s_road_pl: 'Droga do portu',
+  s_road_se: 'Droga do placu',
+  /* BN9-b / DP-215: port z rejsu (GDN-NYN, GDY-KAA, TLL-HEL…) */
   s_port_out_named: 'Port wypłynięcia — {port}',
   s_port_in_named: 'Port przypłynięcia — {port}',
   s_road_to_port: 'Droga do portu',

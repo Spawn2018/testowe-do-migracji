@@ -154,7 +154,7 @@ describe('Historia — ukryte, kto co widzi, filtry, dni', () => {
   it('filtry i dni od najnowszego', () => {
     const all = buildHistory(list, 'HHL', 'ALL', 'pl');
     expect(all.days.map((d) => d.day)).toEqual(['2026-10-07', '2026-10-06', '2026-10-05']);
-    expect(all.days[0].rows[0]).toMatchObject({ from: 'Droga SE', to: 'Na placu' });
+    expect(all.days[0].rows[0]).toMatchObject({ from: 'Droga do placu', to: 'Na placu' });
     expect(buildHistory(list, 'HHL', 'NUM', 'pl').total).toBe(1);
     expect(buildHistory(list, 'HHL', 'DOC', 'pl').total).toBe(1);
     expect(buildHistory(list, 'KSH', 'PRICE', 'pl').total).toBe(1);

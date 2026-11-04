@@ -1230,7 +1230,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-116 | Cursor | `max_rows=1000` obcina odczyty rejsów (2119 na prod) — przegląd innych jobów ferry + stronicowanie / agregaty; F7 #696 r4: też `openCancelSuspectSailings` (risk_signals range+order, sailings.in ≤150) | F7 #690 r2 / #691 / #696 r4 | BN3 / ferry | SCALONE #693 sailings; cancel-suspect w #696 |
 | DP-123 | Cursor | mutacja „zniknięcie bez wymogu stoi” przeżywa w wąskim przypadku (SOG 0,5–3 kn w geofence + Portnet zniknął) — brakuje testu; kod OK | F7 #696 r4 | BN3 / cancel-suspect | SCALONE (#792 `ba31c223`) |
 | DP-124 | Cursor | UMG: pusta godzina ATA — nie traktować jako ATA (wpis koordynatora 01.11) | F7 #695 / koord. 01.11 | BN3 / UMG | SCALONE (#796 `9a5d7e35`) |
-| DP-215 | Cursor | Neutralne nazwy etapów: Droga do portu / Port wyjścia / Port docelowy / Droga do placu (i18n pl/en/sv) | #798 / właściciel 04.11 19:54 | C2 / UI | W TOKU (`pakiet/c2-dp-215-neutral-stage-names`) |
+| DP-215 | Cursor | Neutralne nazwy etapów + statusów: etapy Port wyjścia/docelowy; statusy Port wypłynięcia/przypłynięcia (+ port z rejsu) / Droga do portu/placu | #798 / właściciel 04.11 19:54+21:10 | C2 / UI | W TOKU (#800) |
 | DP-125 | Cursor | SMS „prom przywrócony” dla kierowców po auto-ODWOLANY — **ANULOWANE** (właściciel 01.11 11:24: „79: bez SMS”; #697) | F7 #698 r2 / #697 | BN3 / #686 | **ANULOWANE** 01.11.2026 |
 | DP-126 | Cursor | F7 #699 r3 nieblokujące: zaprzeczenie „will not be”; wzmocnienie T1; szersze testy filtrów ERR | F7 #699 r3 | BN3 / ERR RSS | w kolejce |
 | DP-127 | Cursor | Odbiór #699: `ferry-status` observations puste — dodać `err_rss_enabled` / `err_rss_items` / `err_rss_hits` (bez migracji) | #699 odbiór / F7 #701 | BN3 / ERR RSS | SCALONE #702 `483a7ce8` |
@@ -2663,6 +2663,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 03.11.2026 21:35 | #777 F7 r1 niegotowe → seed Portnet/Deltamarin, I=IC, dzień przypłynięcia, złożone IBNet | pętla / C2 F7 |
 | 03.11.2026 22:00 | #777 SCALONE `2a99a8e6` (DP-120 / **0391**; F7 gotowe @ `fecc5f7a`); start DP-202+203 (#778+#779) | pętla / C2 |
 | 03.11.2026 23:50 | #780 F7 r3: auto DeepL na luki TV/bałtyk (bez RESOURCE_MISSING:TV_CODE); **0393** memory_auto_24h | pętla / C2 F7 |
+| 04.11.2026 22:20 | #800 DP-215: statusy Polferries/Stena/bez rejsu jak EE (Port wypłynięcia/przypłynięcia); strefy/Pomoc; CI → F7 | pętla / C2 |
 | 04.11.2026 21:45 | #800 DP-215: odświeżenie `kokpit-hhl-pl-1920-light` (StageBar E28); CI → F7 | pętla / C2 |
 | 04.11.2026 21:05 | #799 SCALONE `181b70b2` (#797 / **0407**); start DP-215 (#798) neutralne nazwy etapów | pętla / C2 |
 | 04.11.2026 20:25 | #799 F7: test bn1_seed `perform`→`select` (db 662/663); CI → F7 zgoda po zielonym | pętla / C2 F7 |

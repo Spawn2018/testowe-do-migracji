@@ -1,4 +1,11 @@
 
+## 2026-11-04 22:20 — DP-215 (#800): statusy jak EE (decyzja właściciela 21:10)
+
+- Skrzynka: #550 WSTRZYMANE; #798 DP-215; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: brak (brak „F7: gotowe”; visual zrzuty ✖ @ `f7023d44` / 41910697985 — telefon/bramy ✔).
+- **Krok:** `routeStatusLabel` dla wszystkich tras + bez rejsu: Droga do portu / Port wypłynięcia[ — port] / Port przypłynięcia[ — port] / Droga do placu; `s_*` i18n; `p8c_*` / `p4c_wf_zt_*` / Pomoc `gf_off_ask_port`. Bez `cal_c_*` / `a6_map_road_se`. Testy dp-215, bn9b, status-label, p6-history, w-naprawy-2. Bez migracji. Zrzuty statusów — po visual (wypis w PR).
+- **Dalej:** push → CI → F7. DP-210 nie zaczynać.
+
 ## 2026-11-04 21:45 — DP-215 (#800): odświeżenie migawki Kokpit (StageBar)
 
 - Skrzynka: #550 WSTRZYMANE; #798 DP-215; BN5–8 w planie. Bez nowego `pilne`.

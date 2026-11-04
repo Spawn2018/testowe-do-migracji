@@ -46,13 +46,13 @@ export const PL: Record<string, string> = {
   p4c_wf_zt_out: 'Wyjazd',
   p4c_wf_zt_srem: 'KSH Śrem (załadunek)',
   p4c_wf_zt_srem_in: 'Załadunek',
-  p4c_wf_zt_srem_out: 'Droga PL — po postoju ≥ 5\u00a0min (próg strefy), bez czekania na potwierdzenie załadunku',
-  p4c_wf_zt_portpl: 'Port PL — Gdańsk, Gdynia',
-  p4c_wf_zt_portpl_in: 'Port PL',
+  p4c_wf_zt_srem_out: 'Droga do portu — po postoju ≥ 5\u00a0min (próg strefy), bez czekania na potwierdzenie załadunku',
+  p4c_wf_zt_portpl: 'Port wypłynięcia — Gdańsk, Gdynia',
+  p4c_wf_zt_portpl_in: 'Port wypłynięcia',
   p4c_wf_zt_portpl_out: 'bez zmiany — „Na promie” z odejścia rejsu',
-  p4c_wf_zt_portse: 'Port SE — Nynäshamn, Karlskrona',
-  p4c_wf_zt_portse_in: 'Port SE',
-  p4c_wf_zt_portse_out: 'Droga SE',
+  p4c_wf_zt_portse: 'Port przypłynięcia — Nynäshamn, Karlskrona',
+  p4c_wf_zt_portse_in: 'Port przypłynięcia',
+  p4c_wf_zt_portse_out: 'Droga do placu',
   p4c_wf_zt_site: 'Plac budowy Stegra Boden',
   p4c_wf_zt_site_in: 'Na placu',
   p4c_wf_zt_site_out: 'Dostarczone — po ≥ 10\u00a0min (próg strefy); krócej: sprawa „czy dostarczono?” dla SCX',
@@ -78,7 +78,7 @@ function soonText(key: string): string | null {
   }
   if (key === 'p4c_wf_zt_site_out' && !serverRuleOn('SITE_EXIT_DELIVERED')) return `${PL[key]} — ${SOON}`;
   /* W-naprawy-2 (F7): do A2 wyjazd ze Śremu działa tylko po potwierdzeniu załadunku — jak karta strefy */
-  if (key === 'p4c_wf_zt_srem_out' && !serverRuleOn('SITE_EXIT_DELIVERED')) return 'Droga PL — po potwierdzeniu załadunku';
+  if (key === 'p4c_wf_zt_srem_out' && !serverRuleOn('SITE_EXIT_DELIVERED')) return 'Droga do portu — po potwierdzeniu załadunku';
   if (key === 'p4c_wf_r_gps_d') {
     const on = GPS_PARTS.filter((p) => p.rule === null || serverRuleOn(p.rule)).map((p) => p.text);
     const off = GPS_PARTS.filter((p) => p.rule !== null && !serverRuleOn(p.rule)).map((p) => p.text);
