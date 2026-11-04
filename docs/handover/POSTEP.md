@@ -1,4 +1,26 @@
 
+## 2026-11-04 16:15 — #792: rejestr DP-207–209 (#788/#789) + czekam F7
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
+- Scalanie: brak (brak „F7: gotowe do scalenia” po `ad448bb4`; CI unit/visual ✔).
+- **Krok:** po kolizji numerów — dopisanie pozycji rej. koord. do PLAN §4: **DP-207** = alias **DP-786** SCALONE; **DP-208** (#788 SE_E4 13 pkt / SE-NYN); **DP-209** (#789 EE numer drogi). Kolejka C2: po F7 DP-123 → 208/209/124…; DP-210 nie zaczynać.
+- **Dalej:** push docs → CI → F7 DP-123. Bez push na main.
+
+## 2026-11-04 14:48 — #792: DP-207–209 → DP-210–212 (kolizja rej. koord.)
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
+- Scalanie: brak (brak „F7: gotowe do scalenia” po `5d279f1d`; CI unit/visual ✔).
+- **Krok:** komentarz #792 Spawn2018 — numery 207–209 zajęte w rejestrze koordynatora → przenumerowanie F7 #791 nieblok.: **DP-210** (piloci LT/LV/EE/FI — **do decyzji właściciela, nie zaczynać**), **DP-211** (BAN/WORKS źródła), **DP-212** (WIND okno + N+1). PLAN §4 + §8.
+- **Dalej:** push → CI → F7 DP-123. Bez push na main.
+
+## 2026-11-04 15:25 — #791 SCALONE; start DP-123
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
+- Scalanie: **#791 SCALONE** `4e5ffc99` (DP-206 / **0399**–**0405**; F7: gotowe @ `3735049a`; CI unit/visual/db ✔). `deploy-main` robi resztę. Bez push na main.
+- Rejestr F7 #791 nieblokujące: **DP-207** (piloci LT/LV/EE/FI), **DP-208** (BAN/WORKS źródła), **DP-209** (WIND okno + N+1).
+- **Krok DP-123:** test vitest — Portnet zniknął + SOG 1,5 kn w geofence TLL przed ETA+45 → 0 alarmów (mutacja „zniknięcie bez wymogu stoi”). Gałąź `pakiet/c2-dp-123-cancel-suspect-test`.
+- **Dalej:** push → CI → F7. Bez push na main.
+
 ## 2026-11-04 14:55 — #791 F7 r5 B8a/b/c + B6b + B13 (0405)
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
