@@ -791,15 +791,16 @@ begin
              (p_sev, v_title, coalesce(v_title_key, title_key), v_detail,
               coalesce(coalesce(p_source_url, source_url), ''),
               coalesce(p_valid_until, valid_until));
-    elsif p_kind = 'WEATHER' and p_load is not null and p_dedup like 'E49\_WIND:%' then
+    elsif p_kind = 'WEATHER' and p_load is not null and p_dedup ~ '^E49_WIND:' then
       v_title_key := nullif(coalesce(p_detail, '{}'::jsonb)->>'title_key', '');
       v_detail := coalesce(p_detail, '{}'::jsonb) - 'title_key';
       if (v_detail ? 'params') is not true then
         v_detail := v_detail || '{"params":{}}'::jsonb;
       end if;
       v_title := public.tower_public_title(p_load, p_title, 'CODE');
+      -- waga tylko w górę (kolejność enum INFO<…<CRITICAL); case unika niejednoznaczności greatest()
       update risk_signals
-         set severity = greatest(severity, p_sev),
+         set severity = case when p_sev > severity then p_sev else severity end,
              title = v_title,
              title_key = coalesce(v_title_key, title_key),
              detail = v_detail,
@@ -807,7 +808,8 @@ begin
        where dedup_key = p_dedup and resolved_at is null
          and (severity, title, title_key, detail, valid_until)
              is distinct from
-             (greatest(severity, p_sev), v_title, coalesce(v_title_key, title_key), v_detail,
+             (case when p_sev > severity then p_sev else severity end,
+              v_title, coalesce(v_title_key, title_key), v_detail,
               coalesce(p_valid_until, valid_until));
     end if;
     return false;

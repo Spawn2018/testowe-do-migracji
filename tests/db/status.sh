@@ -3809,6 +3809,7 @@ echo; echo "[DP-205 E49-a] wiatr ETA / Z2 / korytarze"
 chk "DP-205: risk_audience_for WEATHER audience=HHL_PRZEWOZNIK" \
   "select public.risk_audience_for('WEATHER', '{\"audience\":\"HHL_PRZEWOZNIK\"}'::jsonb)::text" HHL_PRZEWOZNIK
 # (a) 22 m/s z boku → +15 % tylko na odcinku; punkty za autem (km < from_km) pomijane.
+# ::text boolean → 'true'/'false' (nie 't'/'f' jak bool bez castu).
 chk "DP-205: 22 m/s CROSS → add_min>0; km za autem pominięte" \
   "begin;
    delete from corridor_wind_forecast where corridor='SE_E4' and km in (0, 25, 100);
@@ -3824,8 +3825,9 @@ chk "DP-205: 22 m/s CROSS → add_min>0; km za autem pominięte" \
      and exists (select 1 from jsonb_array_elements(w->'weather') x where x->>'kind'='WIND' and x->>'side'='CROSS')
    )::text
      from public.e49_wind_weather_for_corridor('SE_E4', 50, now(), 4, now(), '[]'::jsonb) w;
-   rollback" t
+   rollback" true
 # (a) 26 m/s → postój minus okno H-4 (ETA o różnicę, nie suma).
+# from_km=200 → v_at≈now (przy from_km=0 punkt km200 jest ~171 min później → próbka 26 m/s poza ±90 min).
 chk "DP-205: 26 m/s HOLD minus odpoczynek H-4 (max, nie suma)" \
   "begin;
    delete from corridor_wind_forecast where corridor='SE_E4' and km=200;
@@ -3842,7 +3844,7 @@ chk "DP-205: 26 m/s HOLD minus odpoczynek H-4 (max, nie suma)" \
      and (w->>'add_min')::int = 90
    )::text
      from public.e49_wind_weather_for_corridor(
-       'SE_E4', 0, now(), 8, now(),
+       'SE_E4', 200, now(), 8, now(),
        jsonb_build_array(jsonb_build_object(
          'from', now(),
          'to', now() + interval '150 minutes'
@@ -3851,7 +3853,7 @@ chk "DP-205: 26 m/s HOLD minus odpoczynek H-4 (max, nie suma)" \
      lateral jsonb_array_elements(w->'weather') x
     where x->>'kind'='WIND_HOLD'
     limit 1;
-   rollback" t
+   rollback" true
 # (a) wrapper: prognoza 22 m/s na SE → ETA dłuższe niż bez wiatru; transport w PL → wiatr SE od CROSSING.arrival.
 chk "DP-205: wrapper compute_load_eta — WIND na odcinku + PL bez wiatru SE „teraz”" \
   "begin;
@@ -3905,16 +3907,21 @@ chk "DP-205: wrapper compute_load_eta — WIND na odcinku + PL bez wiatru SE „
           )
      from dp205_eta;
    rollback" t
-# (b) raise_integration_risk E49_WIND: drugie wywołanie bez RISK_OPEN; wzrost wagi → 1 RISK_SEVERITY.
+# (b) raise_integration_risk E49_WIND: drugie wywołanie bez RISK_OPEN; wzrost wagi → 1 zdarzenie RISK_SEVERITY.
+# dedup_key powiadomienia = risk:RISK_SEVERITY:id:HIGH:IN:<user> — distinct dedup_key ≠ 1 przy wielu odbiorcach;
+# liczymy distinct prefiks przed :IN: (jedno zdarzenie eskalacji).
 chk "DP-205: raise_integration_risk E49_WIND — 1 OPEN, eskalacja 1 SEVERITY" \
   "begin;
+   update notification_matrix set in_app=true
+     where event_key='risk_route'
+       and role in ('HHL_ADMIN','HHL_OPS','CARRIER_DISPATCH','CARRIER_USER','CLIENT_USER');
    insert into loads (id, project_id, carrier_org_id, hhl_order_no, carrier_order_no, status,
                       plan_load_date, plan_delivery_date, ferry_route, telematics_vehicle_id)
     values ('$L205c','$P','$SCXO','HHL/DP205-C','SCX/DP205-C','IN_TRANSIT_SE',
             current_date, current_date + 3, 'GDN-NYN', 'TEL-DP205C');
    delete from notifications where payload->>'risk_id' in (
-     select id::text from risk_signals where dedup_key like 'E49_WIND:$L205c:%');
-   delete from risk_signals where dedup_key like 'E49_WIND:$L205c:%';
+     select id::text from risk_signals where dedup_key like 'E49\_WIND:$L205c:%' escape '\');
+   delete from risk_signals where dedup_key like 'E49\_WIND:$L205c:%' escape '\';
    select public.raise_integration_risk(
      '$P', '$L205c', 'WEATHER', 'MEDIUM', 'Silny wiatr',
      jsonb_build_object('audience','HHL_PRZEWOZNIK','title_key','rk_wind_strong','params',jsonb_build_object('corridor','SE_E4')),
@@ -3932,16 +3939,16 @@ chk "DP-205: raise_integration_risk E49_WIND — 1 OPEN, eskalacja 1 SEVERITY" \
      and (select severity::text from risk_signals where dedup_key='E49_WIND:$L205c:SE_E4' and resolved_at is null) = 'HIGH'
      and (select count(*) from notifications where channel='IN_APP' and template='RISK_OPEN'
             and payload->>'risk_id' = (select id::text from risk_signals where dedup_key='E49_WIND:$L205c:SE_E4' limit 1)) >= 1
-     -- jedno zdarzenie eskalacji (dedup risk:RISK_SEVERITY:id:HIGH) — ≥1 odbiorca HHL/SCX, 0 KSH
-     and (select count(distinct dedup_key) from notifications where channel='IN_APP' and template='RISK_SEVERITY'
-            and payload->>'risk_id' = (select id::text from risk_signals where dedup_key='E49_WIND:$L205c:SE_E4' limit 1)) = 1
+     and (select count(distinct split_part(dedup_key, ':IN:', 1)) from notifications
+           where channel='IN_APP' and template='RISK_SEVERITY'
+             and payload->>'risk_id' = (select id::text from risk_signals where dedup_key='E49_WIND:$L205c:SE_E4' limit 1)) = 1
      and (select count(*) from notifications n
             join app_users u on u.id = n.user_id
            where n.channel='IN_APP' and n.template in ('RISK_OPEN','RISK_SEVERITY')
              and n.payload->>'risk_id' = (select id::text from risk_signals where dedup_key='E49_WIND:$L205c:SE_E4' limit 1)
              and u.role = 'CLIENT_USER') = 0
    )::text;
-   rollback" t
+   rollback" true
 # (c) transport tylko PL GDN-NYN → bez FI_E75 / SE_E22 / SE_KAA_* obcych tras.
 chk "DP-205: e49_wind_load_corridors PL GDN-NYN bez obcych SE/FI" \
   "begin;
@@ -3962,7 +3969,7 @@ chk "DP-205: e49_wind_load_corridors PL GDN-NYN bez obcych SE/FI" \
           and c.code in ('FI_E75','SE_E22','SE_KAA_INLAND','SE_KAA_TRACK','SE_E4_STO','SE_E18_KPS')
      )
    )::text;
-   rollback" t
+   rollback" true
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

@@ -1,4 +1,11 @@
 
+## 2026-11-04 08:55 — #785 CI db FAIL @ 0020273a → poprawki asercji DP-205
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`. Bez „F7: gotowe”.
+- Scalanie: brak. CI @ `0020273a`: unit ✔; visual ✔; **db** FAIL status 650/4 (oczekiwano 654) — testy DP-205.
+- **Krok:** (1) `::text` boolean → oczekiwane `true` (nie `t`); (2) HOLD: `from_km=200` żeby próbka 26 m/s trafiła w ±90 min od `v_at`; (3) Z2: `count(distinct dedup_key)=1` padało przy wielu odbiorcach (`…:IN:<user>`) → `split_part(…,':IN:',1)`; macierz `risk_route` włączona w teście; (4) 0398: eskalacja `case when p_sev > severity` + `~ '^E49_WIND:'`. Migracja w miejscu (nie na prod).
+- **Dalej:** push → CI (+`db`) → F7. Po scaleniu: E49-b DP-206.
+
 ## 2026-11-04 08:30 — #785 F7 r2 niegotowe → audience macierzy + testy DB
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
