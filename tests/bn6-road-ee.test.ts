@@ -309,7 +309,10 @@ describe('BN6 road-ee parsers', () => {
     expect(icy.severity).toBe('HIGH');
     expect(icy.road).toBe('T4');
     expect(icy.title).toMatch(/ryzyko gołoledzi|słaba widoczność/);
+    /* F7 #784 r2: −1 °C + 95 % → HIGH; 800 m → MEDIUM; 150/120 m → HIGH. */
     expect(wx.some((e) => /temperatura nawierzchni −1 °C/i.test(e.detail ?? '') && e.severity === 'HIGH')).toBe(true);
+    expect(wx.some((e) => /widoczność 800 m/i.test(e.detail ?? '') && e.severity === 'MEDIUM' && e.title === 'słaba widoczność')).toBe(true);
+    expect(wx.some((e) => /widoczność 150 m/i.test(e.detail ?? '') && e.severity === 'HIGH')).toBe(true);
     expect(wx.some((e) => /widoczność 120 m/i.test(e.detail ?? '') && e.severity === 'HIGH')).toBe(true);
     /* id z czasem pomiaru (dwa pomiary tej samej stacji) */
     expect(wx.filter((e) => e.id.startsWith('ee-wx:ee-site-t4-marjamaa')).length).toBeGreaterThanOrEqual(2);

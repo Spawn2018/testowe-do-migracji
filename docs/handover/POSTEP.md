@@ -1,4 +1,11 @@
 
+## 2026-11-04 02:55 — #784 F7 r2: widoczność MEDIUM / <200 m HIGH
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
+- Scalanie: brak „F7: gotowe” po `8ce89f65`. **#784 F7 r2** — jedna zmiana przed F7: słaba widoczność = MEDIUM (bez powiadomień bez transportu); gołoledź HIGH; widoczność < 200 m = HIGH.
+- **Krok:** `parseEeWeatherData` — `coldWet`/`icyText` → HIGH; `lowVis` <200 → HIGH, inaczej MEDIUM; fixture 800/150 m; test 800→MEDIUM, 150→HIGH, −1 °C+95%→HIGH. Bez migracji.
+- **Dalej:** push → CI → F7. Po scaleniu: DP-205/206 E49 (#783), potem DP-123….
+
 ## 2026-11-04 02:35 — #784 F7 r1 niegotowe → DP-204.5 (p.8–12)
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`. #783 E49 bez `dla-cursora` — w rejestrze jako **DP-205/206**.

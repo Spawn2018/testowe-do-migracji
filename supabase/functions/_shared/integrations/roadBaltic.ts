@@ -3686,11 +3686,15 @@ export function parseEeWeatherData(
       humidityPct,
       visibilityM,
     });
-    /* F7 r2 B1: zimno+mokro / lód / słaba widoczność → HIGH. */
+    /* F7 #784 r2: gołoledź HIGH; widoczność <200 m HIGH; <1 km MEDIUM (bez push bez transportu). */
     let severity = eeSeverityForRecord('EE_WEATHER', detail, {
       contentText: detail, visibilityM,
     });
-    if (coldWet || icyText || lowVis) severity = 'HIGH';
+    if (coldWet || icyText) {
+      severity = 'HIGH';
+    } else if (lowVis) {
+      severity = (visibilityM != null && visibilityM < 200) ? 'HIGH' : 'MEDIUM';
+    }
     const measuredAt = (
       lvTag(block, 'measurementTimeDefault')
       || lvTag(block, 'timeDefault')

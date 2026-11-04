@@ -26,13 +26,32 @@
         </basicData>
       </measuredValue>
     </siteMeasurements>
-    <!-- mgła 120 m → spowolnienie -->
+    <!-- mgła 120 m → HIGH + spowolnienie -->
     <siteMeasurements>
       <measurementSiteReference id="ee-site-t4-marjamaa"/>
       <measurementTimeDefault>2026-11-02T10:30:00Z</measurementTimeDefault>
       <measuredValue>
         <basicData>
           <minimumVisibilityDistance><integerMetreDistance>120</integerMetreDistance></minimumVisibilityDistance>
+        </basicData>
+      </measuredValue>
+    </siteMeasurements>
+    <!-- F7 #784 r2: 800 m → MEDIUM; 150 m → HIGH -->
+    <siteMeasurements>
+      <measurementSiteReference id="ee-site-t4-marjamaa"/>
+      <measurementTimeDefault>2026-11-02T10:35:00Z</measurementTimeDefault>
+      <measuredValue>
+        <basicData>
+          <minimumVisibilityDistance><integerMetreDistance>800</integerMetreDistance></minimumVisibilityDistance>
+        </basicData>
+      </measuredValue>
+    </siteMeasurements>
+    <siteMeasurements>
+      <measurementSiteReference id="ee-site-t4-marjamaa"/>
+      <measurementTimeDefault>2026-11-02T10:40:00Z</measurementTimeDefault>
+      <measuredValue>
+        <basicData>
+          <minimumVisibilityDistance><integerMetreDistance>150</integerMetreDistance></minimumVisibilityDistance>
         </basicData>
       </measuredValue>
     </siteMeasurements>
