@@ -1,4 +1,25 @@
 
+## 2026-11-04 05:25 — #787 CI db: asercja count ze spacją jsonb
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne` (poza #550). #786 otwarte.
+- Scalanie: brak F7 „gotowe” po `17d8e72b`. unit+visual ✔; **db** FAIL security 501/502 — DP-786 `grep '"count":2'` vs jsonb::text `"count": 2` (funkcja OK, count=2).
+- **Krok:** `security.sh` — `grep -Eq` ze spacjami wokół `:`. Bez zmiany EXPECTED 502.
+- **Dalej:** push → CI `db` → F7. Po wdrożeniu: #785 rebase + ETA/Z2/`WIND_E49`.
+
+## 2026-11-04 04:45 — #787 F7 r1 niegotowe: mark przez risk_signals
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne` (poza #550). #786 nadal otwarte.
+- Scalanie: **#787 F7 r1 niegotowe** @ `a860fd28` — filtr `ee-wx` w `notifications` łapie 0; łączenie przez `risk_signals.dedup_key like 'ROAD_EE:v2:ee-wx:%'`. Edge OK.
+- **Krok:** `dp786_mark_road_ee_wx_in_app_read()` + exists po `payload.risk_id`; test security 2 ee-wx / 1 inny ROAD_EE; EXPECTED security 502/498.
+- **Dalej:** push → CI (+ `db`) → F7. Po wdrożeniu: #785 rebase migracji + ETA/Z2.
+
+## 2026-11-04 04:35 — PILNE #786: ROAD_EE dedup (przerwa #785)
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. **#786 PILNE** (Spawn2018; bez etykiety `dla-cursora`, ale polecenie w #785 + treść #786) — zalew dzwonków ROAD_EE.
+- Scalanie: brak F7 „gotowe” na #785; CI #785 w toku @ `504d6381` — bez push na tę gałąź (G-15). **#785 wstrzymane do wdrożenia hotfixu.**
+- **Krok:** gałąź `hotfix/dp-786-road-ee-dedup` z `main`: `parseEeWeatherData` id=`ee-wx:${ref}` (merge gorszej wagi); `nameFromEeSiteId` / `isOpaqueEeSiteRef` bez UUID; tytuł bez podwójnego `(EE)`; migracja **0395** IN_APP ROAD_EE ee-wx → `read_at` + `AUDYT17_MARK_READ`; testy #786 + strażnik dedup. `resolveStaleRisks('ROAD_EE:', keep)` zamyka stare klucze z czasem przy następnym przebiegu.
+- **Dalej:** push → CI → F7/scalenie → po wdrożeniu powrót do #785 (rebase migracji 0395/0396 → wolne numery) ETA/Z2/`WIND_E49=true`.
+
 ## 2026-11-04 02:55 — #784 F7 r2: widoczność MEDIUM / <200 m HIGH
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
