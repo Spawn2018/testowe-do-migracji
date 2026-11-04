@@ -790,8 +790,10 @@ export function portCallV2CancelledFleetRisk(
 ): RiskInput {
   const { visit, vessel, sailing } = hit;
   const when = visit.etd ?? visit.eta ?? nowIso;
-  const depIso = sailing?.departure_at ?? visit.etd ?? visit.eta ?? nowIso;
-  const dep = portCallV2DepLabel(depIso);
+  /* F7 #782 r2: bez dopasowanego rejsu — nie wstawiać „teraz” w tytule. */
+  const dep = sailing
+    ? portCallV2DepLabel(sailing.departure_at)
+    : '(bez dopasowania)';
   return {
     kind: 'FERRY',
     severity: 'HIGH',
@@ -805,6 +807,7 @@ export function portCallV2CancelledFleetRisk(
       route: sailing?.route ?? '',
     },
     detail: {
+      audience: 'HHL',
       zrodlo: 'DIGITRAFFIC_PORTCALL_V2',
       visitId: visit.visitId,
       locode: visit.portOfCall,

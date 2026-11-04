@@ -324,7 +324,7 @@ describe('BN3 ferry-portnet × cancel-suspect AIS (F7 #696 r3)', () => {
     expect(risks[0]!.severity).toBe('MEDIUM');
     expect(risks[0]!.titleKey).toBe('rk_ferry_cancel_suspect');
     expect(risks[0]!.dedup).toBe(cancelSuspectRiskDedup('s-gulf-1'));
-    expect(risks[0]!.detail).toMatchObject({ hub: 'TLL' });
+    expect(risks[0]!.detail).toMatchObject({ hub: 'TLL', audience: 'HHL' });
     expect(st.sailings[0]!.status).toBe(statusBefore);
     expect(st.sailings[0]!.actual_arrival_at).toBeNull();
     expect(r.observations?.cancel_suspect_hits).toBe('1');

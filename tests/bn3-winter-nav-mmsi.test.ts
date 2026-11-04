@@ -389,6 +389,14 @@ describe('BN3 winter-nav / MMSI / DP-11', () => {
     expect(risk.severity).toBe('HIGH');
     expect(risk.title).toMatch(/sprawdź rejs/);
     expect(String(risk.params.dep)).toBeTruthy();
+    expect((risk.detail as { audience?: string }).audience).toBe('HHL');
+    const noSail = portCallV2CancelledFleetRisk(
+      { ...hits[0]!, sailing: null },
+      '2026-02-10T12:00:00.000Z',
+      url,
+    );
+    expect(noSail.title).toMatch(/sprawdź rejs \(bez dopasowania\)/);
+    expect(noSail.params.dep).toBe('(bez dopasowania)');
     const reissue = parsePortCallV2Visits([{
       visitId: 'FI-1b', vesselName: 'MEGASTAR', portOfCall: 'FIHEL',
       mmsi: '276829000', vesselId: '9395159',
@@ -501,6 +509,7 @@ describe('F7 #694 R1-B3 ferry-portnet × winter-nav', () => {
     expect(risks[0]!.dedup).not.toMatch(/:\d{4}-\d{2}-\d{2}$/);
     expect(risks[0]!.severity).toBe('HIGH');
     expect(risks[0]!.title).toMatch(/sprawdź rejs/);
+    expect((risks[0]!.detail as { audience?: string }).audience).toBe('HHL');
     expect(st.sailings[0]!.status).toBe('ZAPLANOWANY');
   });
 

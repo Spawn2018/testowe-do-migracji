@@ -3724,6 +3724,26 @@ chk "BN6: risk_audience_for ROAD_EE = WSZYSCY" \
   "select public.risk_audience_for('ROAD_EE', '{}'::jsonb)::text" WSZYSCY
 chk "DP-203: risk_audience_for RESOURCE_MISSING TV_CODE = HHL" \
   "select public.risk_audience_for('RESOURCE_MISSING', '{\"rule\":\"TV_CODE\"}'::jsonb)::text" HHL
+# DP-121 / F7 #782 r2: FERRY detail.audience=HHL → tylko HHL (KSH/SCX nie widzą).
+chk "DP-121: risk_audience_for FERRY audience=HHL → HHL" \
+  "select public.risk_audience_for('FERRY', '{\"audience\":\"HHL\"}'::jsonb)::text" HHL
+chk "DP-121: risk_audience_for FERRY bez audience → WSZYSCY" \
+  "select public.risk_audience_for('FERRY', '{}'::jsonb)::text" WSZYSCY
+HHL=11111111-0000-0000-0000-000000000001
+q "insert into risk_signals (id, project_id, kind, severity, title, title_key, detail, dedup_key)
+   values ('55555555-0000-0000-0000-000000000394','$P','FERRY','HIGH','DP-121 HHL','rk_ferry_portcall_v2_fihel',
+           '{\"audience\":\"HHL\",\"t\":\"dp121ferry0394\"}'::jsonb,
+           'FERRY_PORTCALL_V2_CANCELLED:dp121-test-0394')" >/dev/null
+chk "DP-121: FERRY detail.audience=HHL → audience HHL" \
+  "select audience::text from risk_signals where id='55555555-0000-0000-0000-000000000394'" HHL
+chk "DP-121: KSH nie widzi FERRY audience HHL" \
+  "begin; set local role authenticated; set local request.jwt.claim.sub='$KSH'; select count(*) from risk_signals where id='55555555-0000-0000-0000-000000000394'; rollback" 0
+chk "DP-121: SCX nie widzi FERRY audience HHL" \
+  "begin; set local role authenticated; set local request.jwt.claim.sub='$SCX'; select count(*) from risk_signals where id='55555555-0000-0000-0000-000000000394'; rollback" 0
+q "delete from risk_signals
+    where id='55555555-0000-0000-0000-000000000394'
+       or dedup_key='FERRY_PORTCALL_V2_CANCELLED:dp121-test-0394'
+       or detail->>'t'='dp121ferry0394'" >/dev/null
 chk "BN6: corridor_conditions ROAD_FI" \
   "select count(*) from corridor_conditions where corridor='ROAD_FI'" 1
 chk "BN6: corridor_conditions ROAD_LT" \

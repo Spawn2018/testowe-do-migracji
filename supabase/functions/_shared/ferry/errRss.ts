@@ -186,6 +186,7 @@ export function errRssCancelRisk(hit: ErrCancelHit, nowIso?: string): RiskInput 
     titleKey: 'rk_ferry_err_rss_cancel',
     params: { operator: opLabel, title: item.title.slice(0, 80) },
     detail: {
+      audience: 'HHL',
       zrodlo: 'ERR_RSS',
       tytul: item.title,
       link: item.link,

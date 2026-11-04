@@ -1,4 +1,11 @@
 
+## 2026-11-04 01:40 — #782 F7 r2 niegotowe → 0394 audience HHL
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
+- Scalanie: brak „F7: gotowe” po `cc1e0d04`. **#782 F7 r2 niegotowe** — FERRY → WSZYSCY mimo sygnału HHL.
+- **Krok F7 r2:** migracja **0394** `risk_audience_for` FERRY+`detail.audience=HHL`→HHL; `audience:'HHL'` w port-call v2 / cancel-suspect / ERR; tytuł bez dopasowania „(bez dopasowania)”; status.sh +5 (EXPECTED 648); vitest audience. Bez push na main.
+- **Dalej:** push → CI (unit/db/visual) → F7. Po scaleniu: DP-204, potem C2: 123….
+
 ## 2026-11-04 01:15 — #782 F7 r1 niegotowe → decyzja 100 (tylko HIGH HHL)
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
