@@ -296,7 +296,7 @@ describe('E49-a migracje ETA — strażnik wrappera', () => {
     expect(m398).toMatch(/h_road_eff := h_road;\s+-- E49 Z4/);
     expect(m398).toMatch(/h_pl_eff := h_pl;\s+-- E49 Z4/);
     expect(m398).toMatch(/compute_load_eta_core\(p_load, p_now\)/);
-    expect(m398).toMatch(/E49\\_WIND:%/);
+    expect(m398).toMatch(/E49_WIND:/); /* ~ '^E49_WIND:' (nie LIKE E49\_WIND:%) */
     /* F7 #785 r2: audience → matrix_notify bez KSH */
     expect(m398).toMatch(/new\.audience = 'HHL_PRZEWOZNIK'/);
     expect(m398).toMatch(/p_only_org_kind|FORWARDER'|matrix_notify\([^)]*'FORWARDER'/);
