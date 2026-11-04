@@ -27,6 +27,13 @@
 - **Krok:** gałąź `hotfix/dp-786-road-ee-dedup` z `main`: `parseEeWeatherData` id=`ee-wx:${ref}` (merge gorszej wagi); `nameFromEeSiteId` / `isOpaqueEeSiteRef` bez UUID; tytuł bez podwójnego `(EE)`; migracja **0395** IN_APP ROAD_EE ee-wx → `read_at` + `AUDYT17_MARK_READ`; testy #786 + strażnik dedup. `resolveStaleRisks('ROAD_EE:', keep)` zamyka stare klucze z czasem przy następnym przebiegu.
 - **Dalej:** push → CI → F7/scalenie → po wdrożeniu powrót do #785 (rebase migracji 0395/0396 → wolne numery) ETA/Z2/`WIND_E49=true`.
 
+## 2026-11-04 03:45 — #785 db FAIL → dec6 29 progów WIND_*
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`. Bez PR z „F7: gotowe”.
+- Scalanie: brak. **#785** unit/visual ✔; db FAIL `dec6` (otrzymano 29 progów, oczekiwano 23).
+- **Krok:** `tests/db/dec6.sh` + `gate-suites.mjs` — 29 = 23+6 WIND_* (E49-a / **0396**); asercje WIND_SLOW/HOLD/RESUME. Bez nowej migracji.
+- **Dalej:** push → CI db. Po zielonym: cz.2 job punktów + ETA + Z2 → `WIND_E49=true`.
+
 ## 2026-11-04 03:20 — #784 SCALONE; start E49-a DP-205 (#783)
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`. #783 — prognoza czasu w komentarzu (E49-a 10–14 h + F7; E49-b 12–16 h; wydanie ~23–25.11).
