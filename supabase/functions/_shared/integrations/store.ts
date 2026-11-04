@@ -1019,6 +1019,7 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
           atKm: detail.at_km != null && Number.isFinite(Number(detail.at_km))
             ? Number(detail.at_km) : null,
           obokTrasy: detail.obok_trasy === true,
+          korytarzDroga: detail.korytarz_droga != null ? String(detail.korytarz_droga) : null,
         });
       }
       return out;

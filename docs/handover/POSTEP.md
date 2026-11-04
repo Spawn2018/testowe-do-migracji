@@ -1,4 +1,11 @@
 
+## 2026-11-04 13:25 — #791 F7 r2 B1–B10 (0402 + job + TodoPanel)
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`. CI @ `97d58b95` unit/visual/db ✔ (przed tym krokiem). Brak „F7: gotowe”.
+- Scalanie: brak (F7 r2 niegotowe; B5/B7 przyjęte wcześniej).
+- **Krok F7 r2:** **0402** — B1 `visible_to` HHL+SCX w Historii; B2 upsert bez reopen po decyzji; `close_stale` null=0. Job: B3 `corridorMatchesLeg` (LT/LV/EE→PL_EE_E67, FI→FI_E75, SE_E4_STO/E18); B4 `projectKmOnCorridor` + pomijanie za autem; B6 nadwyżka vs trasa bazowa (2× HERE, punkty wzdłuż korytarza); B8 `buildNineRisks` (9 rodzajów); B9 `viaFromHereSummary` (spans.names). B10 TodoPanel: bez `appendEvent` w supabase. Testy vitest + security +3 (512/508).
+- **Dalej:** push → CI (+`db`) → F7 cz.2. Bez push na main.
+
 ## 2026-11-04 12:30 — #791 CI db FAIL cz.2 → 0401 + sections notices
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`. F7 cz.1 @ `bb440979` nie obowiązuje po cz.2 (`5a96a7ed`); czekam F7 cz.2.

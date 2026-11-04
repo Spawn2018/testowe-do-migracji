@@ -64,6 +64,10 @@ export type HereRouteSummary = {
   durationSec: number;
   /** notices z trasą (ograniczenia zestawu). */
   notices: string[];
+  /** Nazwy z spans[].names (miejscowości / drogi) — F7 #791 B9. */
+  names: string[];
+  /** Numery dróg z spans (roadNumbers / names). */
+  roadNumbers: string[];
 };
 
 function pushHereNotices(
@@ -76,13 +80,71 @@ function pushHereNotices(
   }
 }
 
-/** Skrót odpowiedzi HERE — długość, czas, notices. Bez polyline (oszczędność). */
+function pushUnique(list: string[], value: string | null | undefined): void {
+  const v = (value ?? '').trim();
+  if (!v) return;
+  if (!list.some((x) => x.toLowerCase() === v.toLowerCase())) list.push(v);
+}
+
+function pushSpanNames(
+  names: string[],
+  roads: string[],
+  spans: Array<{
+    names?: Array<{ name?: string; nameType?: string } | string> | string;
+    roadNumbers?: Array<string | number>;
+  }> | undefined,
+): void {
+  for (const sp of spans ?? []) {
+    const rawNames = sp.names;
+    if (Array.isArray(rawNames)) {
+      for (const n of rawNames) {
+        if (typeof n === 'string') pushUnique(names, n);
+        else if (n && typeof n === 'object') pushUnique(names, n.name);
+      }
+    } else if (typeof rawNames === 'string') {
+      pushUnique(names, rawNames);
+    }
+    for (const r of sp.roadNumbers ?? []) {
+      pushUnique(roads, String(r));
+    }
+  }
+}
+
+/**
+ * F7 #791 B9: „przez Kramfors i Sandöbron (droga 90)” z spans.names / roadNumbers.
+ */
+export function viaFromHereSummary(
+  summary: Pick<HereRouteSummary, 'names' | 'roadNumbers' | 'notices'>,
+  fallback = 'objazd HERE',
+): string {
+  const places = summary.names.filter((n) => !/^\d/.test(n) && n.length >= 3).slice(0, 2);
+  const road =
+    summary.roadNumbers.find((r) => /\d/.test(r))
+    ?? summary.names.map((n) => n.match(/\b(?:droga\s*)?(\d{1,3}|E\s*\d{1,3})\b/i)?.[1]).find(Boolean)
+    ?? summary.notices.map((n) => n.match(/\b([A-Z]?\d{1,3}|E\s*\d{1,3}|DK\s*\d+)\b/i)?.[1]).find(Boolean);
+  if (places.length && road) {
+    const roadLabel = /^E/i.test(String(road)) ? String(road).replace(/\s+/g, '') : `droga ${String(road).replace(/\s+/g, '')}`;
+    if (places.length === 1) return `przez ${places[0]} (${roadLabel})`;
+    return `przez ${places[0]} i ${places[1]} (${roadLabel})`;
+  }
+  if (places.length === 2) return `przez ${places[0]} i ${places[1]}`;
+  if (places.length === 1) return `przez ${places[0]}`;
+  if (road) {
+    const roadLabel = /^E/i.test(String(road)) ? String(road).replace(/\s+/g, '') : `droga ${String(road).replace(/\s+/g, '')}`;
+    return `przez ${roadLabel}`;
+  }
+  return fallback;
+}
+
+/** Skrót odpowiedzi HERE — długość, czas, notices, names. Bez polyline (oszczędność). */
 export function summarizeHereRoute(body: unknown): HereRouteSummary | null {
   const routes = (body as { routes?: Array<{ sections?: Array<Record<string, unknown>> }> })?.routes;
   if (!routes?.length) return null;
   let lengthM = 0;
   let durationSec = 0;
   const notices: string[] = [];
+  const names: string[] = [];
+  const roadNumbers: string[] = [];
   for (const section of routes[0]?.sections ?? []) {
     const sum = section.summary as { length?: number; duration?: number } | undefined;
     if (sum?.length != null) lengthM += Number(sum.length) || 0;
@@ -92,13 +154,18 @@ export function summarizeHereRoute(body: unknown): HereRouteSummary | null {
       notices,
       section.notices as Array<{ code?: string; title?: string }> | undefined,
     );
-    const spans = section.spans as Array<{ notices?: Array<{ code?: string; title?: string }> }> | undefined;
+    const spans = section.spans as Array<{
+      notices?: Array<{ code?: string; title?: string }>;
+      names?: Array<{ name?: string; nameType?: string } | string> | string;
+      roadNumbers?: Array<string | number>;
+    }> | undefined;
     for (const sp of spans ?? []) {
       pushHereNotices(notices, sp.notices);
     }
+    pushSpanNames(names, roadNumbers, spans);
   }
-  if (lengthM <= 0 && durationSec <= 0 && notices.length === 0) return null;
-  return { lengthM, durationSec, notices };
+  if (lengthM <= 0 && durationSec <= 0 && notices.length === 0 && names.length === 0) return null;
+  return { lengthM, durationSec, notices, names, roadNumbers };
 }
 
 /** Uprość linię [lat,lon] do maxN punktów (co k-ty + końce). */

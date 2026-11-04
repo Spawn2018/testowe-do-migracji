@@ -1727,9 +1727,19 @@ val "DP-206: SCX innego przewoźnika nie widzi" $SCX2_AUTH "select count(*) from
 err "DP-206: anon bez SELECT e49_detour_cases" "" "set local role anon; select count(*) from e49_detour_cases" "permission denied"
 # cz.2: decyzja — KSH odmowa; SCX przewoźnika OK (HOLD)
 CASE206=$(sys "select id::text from e49_detour_cases where dedup_key='E49_DETOUR_TEST_DP206' limit 1" | tail -1)
-err "DP-206: KSH nie decyduje e49_detour_decide" $KSH "select e49_detour_decide('$CASE206'::uuid,'HOLD',null)" "e49_detour_decide"
+err "DP-206: KSH nie decyduje e49_detour_decide" $KSH "select e49_detour_decide('$CASE206'::uuid,'HOLD',null)" "brak uprawnień|e49_detour_decide"
 val "DP-206: SCX decyduje HOLD" $SCX "select e49_detour_decide('$CASE206'::uuid,'HOLD',null)::text" "true"
-sys "delete from e49_detour_cases where dedup_key='E49_DETOUR_TEST_DP206'" >/dev/null
+# F7 #791 B1: Historia E49_DETOUR_DECISION bez KSH (visible_to FORWARDER+CARRIER)
+val "DP-206 B1: KSH 0 zdarzeń E49_DETOUR_DECISION" $KSH "select count(*) from load_events where load_id='$L2' and event_type='E49_DETOUR_DECISION'" 0
+val "DP-206 B1: HHL widzi E49_DETOUR_DECISION" $HHL "select count(*) from load_events where load_id='$L2' and event_type='E49_DETOUR_DECISION' and dedup_key like 'e49-detour:%'" 1
+# F7 #791 B2: upsert po decyzji nie otwiera nowej sprawy
+sys "select set_config('role', 'service_role', true);
+     select e49_detour_case_upsert(
+       '$L2'::uuid, 'E49_DETOUR_TEST_DP206', 'SE', 'Most testowy', 'WIND', null, 'TRAFIKVERKET',
+       now(), null, now() + interval '2 hours', '{}'::jsonb, null)" >/dev/null
+val "DP-206 B2: po decyzji 0 otwartych spraw tego dedup" $HHL "select count(*) from e49_detour_cases where dedup_key='E49_DETOUR_TEST_DP206' and closed_at is null" 0
+sys "delete from load_events where dedup_key like 'e49-detour:%' and load_id='$L2';
+     delete from e49_detour_cases where dedup_key='E49_DETOUR_TEST_DP206'" >/dev/null
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]
