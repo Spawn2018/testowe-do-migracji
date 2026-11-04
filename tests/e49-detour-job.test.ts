@@ -46,15 +46,18 @@ describe('detourCaseJob helpers', () => {
     expect(placeFromRoadTitle('Warunki drogowe E4: Högakustenbron avstängd', 'E4')).toContain('Högakustenbron');
   });
 
-  it('B3: ROAD_LT/LV/EE → PL_EE_E67; FI → FI_E75; SE_E4 → SE_E4_STO', () => {
+  it('B3: ROAD_LT/LV/EE → PL_EE_E67; FI → FI_E75; SE_E4 → SE_E4_STO; tylko korytarz=on', () => {
     expect(corridorMatchesLeg({ corridor: 'ROAD_LV', country: 'LV', korytarzDroga: 'on' }, 'PL_EE_E67')).toBe(true);
-    expect(corridorMatchesLeg({ corridor: 'ROAD_LT', country: 'LT' }, 'PL_EE_E67')).toBe(true);
-    expect(corridorMatchesLeg({ corridor: 'ROAD_EE', country: 'EE' }, 'PL_EE_E67')).toBe(true);
-    expect(corridorMatchesLeg({ corridor: 'ROAD_FI', country: 'FI' }, 'FI_E75')).toBe(true);
-    expect(corridorMatchesLeg({ corridor: 'SE_E4', country: 'SE' }, 'SE_E4_STO')).toBe(true);
+    expect(corridorMatchesLeg({ corridor: 'ROAD_LT', country: 'LT', korytarzDroga: 'on' }, 'PL_EE_E67')).toBe(true);
+    expect(corridorMatchesLeg({ corridor: 'ROAD_EE', country: 'EE', korytarzDroga: 'on' }, 'PL_EE_E67')).toBe(true);
+    expect(corridorMatchesLeg({ corridor: 'ROAD_FI', country: 'FI', korytarzDroga: 'on' }, 'FI_E75')).toBe(true);
+    expect(corridorMatchesLeg({ corridor: 'SE_E4', country: 'SE', korytarzDroga: 'on' }, 'SE_E4_STO')).toBe(true);
     expect(corridorMatchesLeg({ corridor: 'SE_E4', country: 'SE', korytarzDroga: 'on' }, 'SE_E18_KPS')).toBe(true);
+    expect(corridorMatchesLeg({ corridor: 'SE_E4', country: 'SE', korytarzDroga: 'on' }, 'SE_KAA_INLAND')).toBe(true);
     expect(corridorMatchesLeg({ corridor: 'ROAD_LV', country: 'LV', korytarzDroga: 'off' }, 'PL_EE_E67')).toBe(false);
-    expect(corridorMatchesLeg({ corridor: 'ROAD_LV', country: 'LV' }, 'SE_E4')).toBe(false);
+    expect(corridorMatchesLeg({ corridor: 'ROAD_LV', country: 'LV', korytarzDroga: 'unknown' }, 'PL_EE_E67')).toBe(false);
+    expect(corridorMatchesLeg({ corridor: 'ROAD_LV', country: 'LV' }, 'PL_EE_E67')).toBe(false);
+    expect(corridorMatchesLeg({ corridor: 'ROAD_LV', country: 'LV', korytarzDroga: 'on' }, 'SE_E4')).toBe(false);
   });
 
   it('B4: projectKmOnCorridor + decideBy', () => {
@@ -79,7 +82,7 @@ describe('detourCaseJob helpers', () => {
     })).toBe('przez Kramfors i Sandöbron (droga 90)');
   });
 
-  it('B8: 9 rodzajów ryzyk hold i detour', () => {
+  it('B8: 9 rodzajów — brak danych = warn „sprawdź …”, nie ok', () => {
     const hold = buildNineRisks({ side: 'hold', country: 'SE', permitMode: 'TRASA' });
     const det = buildNineRisks({ side: 'detour', country: 'SE', permitMode: 'TRASA', hereNotices: [] });
     expect(hold.map((r) => r.kind)).toEqual([
@@ -87,6 +90,25 @@ describe('detourCaseJob helpers', () => {
     ]);
     expect(det).toHaveLength(9);
     expect(hold.every((r) => r.text.length > 0)).toBe(true);
+    const missingKinds = ['LIMITS', 'BAN', 'WORKS', 'WIND', 'HOURS', 'FERRY', 'WINDOW', 'PILOT'];
+    for (const k of missingKinds) {
+      const row = hold.find((r) => r.kind === k)!;
+      expect(row.level).toBe('warn');
+      expect(row.text).toMatch(/sprawdź/i);
+    }
+    const withData = buildNineRisks({
+      side: 'detour',
+      country: 'SE',
+      permitMode: 'FIRMA',
+      hereNotices: ['ok'],
+      wind: { kind: 'WIND', level: 'ok', text: 'wiatr 12 m/s — OK' },
+      hours: { kind: 'HOURS', level: 'warn', text: 'zostało 1 h jazdy' },
+    });
+    expect(withData.find((r) => r.kind === 'WIND')).toEqual({
+      kind: 'WIND', level: 'ok', text: 'wiatr 12 m/s — OK',
+    });
+    expect(withData.find((r) => r.kind === 'HOURS')?.level).toBe('warn');
+    expect(withData.find((r) => r.kind === 'LIMITS')?.level).toBe('ok');
   });
 
   it('payload: brak HERE → none; z trasą → nadwyżka km/min (B6)', () => {
@@ -310,7 +332,7 @@ describe('runDetourCases', () => {
           dims: {
             lengthM: null, widthM: null, heightM: null, weightT: null, axleCount: null, axleLoadT: null,
           },
-          position: null,
+          position: [54.5, 23.5],
           permitMode: 'UNKNOWN',
         }],
         upsertE49DetourCase: async (row) => {
@@ -324,11 +346,12 @@ describe('runDetourCases', () => {
   });
 });
 
-describe('TodoPanel B10', () => {
-  it('supabase: decyzja bez lokalnego appendEvent (serwer pisze Historie)', () => {
+describe('TodoPanel B10/B11', () => {
+  it('supabase: decyzja bez lokalnego appendEvent; canDecide SCX|HHL_ADMIN', () => {
     const src = readFileSync(resolve('src/components/risks/TodoPanel.tsx'), 'utf8');
     expect(src).toMatch(/VITE_AUTH_MODE !== 'supabase'/);
     expect(src).toMatch(/F7 #791 B10/);
+    expect(src).toMatch(/canDecide: role === 'SCX' \|\| accountRole\(role\) === 'HHL_ADMIN'/);
     const block = src.slice(src.indexOf('detourHandlers'), src.indexOf('detourHandlers') + 1800);
     expect(block).toMatch(/VITE_AUTH_MODE !== 'supabase'/);
     expect(block).toMatch(/appendEvent/);

@@ -97,6 +97,8 @@ export type DetourCasePayload = {
     avoid: string;
   };
   hereUrlMasked?: string;
+  /** B6: brak trasy bazowej HERE — upsert ma zachować poprzedni objazd. */
+  baseMissing?: boolean;
 };
 
 export type DetourCaseUpsert = {
@@ -117,7 +119,8 @@ export type DetourCaseUpsert = {
 /** Czy ryzyko/sytuacja to zamknięcie na trasie (nie „obok”). */
 export function isOnRouteClosure(c: Pick<RoadClosureCandidate, 'title' | 'detailText' | 'roadClosed' | 'obokTrasy' | 'korytarzDroga'>): boolean {
   if (c.obokTrasy === true) return false;
-  if (c.korytarzDroga === 'off') return false;
+  // F7 r3 B3 / dec. 99: unknown i off = obok trasy — tylko 'on'.
+  if (c.korytarzDroga != null && c.korytarzDroga !== 'on') return false;
   if (/obok trasy/i.test(c.title)) return false;
   return looksLikeRoadClosure(`${c.title} ${c.detailText}`, c.roadClosed);
 }
@@ -158,7 +161,8 @@ export function corridorMatchesLeg(
   closure: Pick<RoadClosureCandidate, 'corridor' | 'country' | 'korytarzDroga'>,
   legCode: string,
 ): boolean {
-  if (closure.korytarzDroga === 'off') return false;
+  // F7 #791 r3 B3: unknown/off = obok trasy (decyzja 99) — tylko korytarz_droga='on'.
+  if (closure.korytarzDroga !== 'on') return false;
   if (closure.corridor === legCode) return true;
 
   const c = closure.corridor.toUpperCase();
@@ -167,23 +171,27 @@ export function corridorMatchesLeg(
   if ((c === 'ROAD_LT' || c === 'ROAD_LV' || c === 'ROAD_EE') && leg === 'PL_EE_E67') return true;
   if (c === 'ROAD_FI' && leg === 'FI_E75') return true;
   if (c === 'PL_ROAD' && (leg === 'PL_ROAD' || leg === 'PL_EE_E67')) return true;
-  if (c === 'SE_E4' && (leg === 'SE_E4' || leg === 'SE_E4_STO')) return true;
-  if (c === 'SE_E22' && leg.includes('E22')) return true;
+  if (c === 'SE_E4' && (leg === 'SE_E4' || leg === 'SE_E4_STO' || leg === 'SE_KAA_INLAND' || leg === 'SE_KAA_TRACK')) {
+    return true;
+  }
+  if (c === 'SE_E22' && (leg.includes('E22') || leg === 'SE_KAA_INLAND' || leg === 'SE_KAA_TRACK')) return true;
   if (c === 'SE_E18_KPS' && (leg === 'SE_E18_KPS' || leg.includes('E18'))) return true;
+  // Alias: zamknięcie oznaczone kodem nogi inland/track.
+  if ((c === 'SE_KAA_INLAND' || c === 'SE_KAA_TRACK') && (leg.startsWith('SE_') || leg.includes('KAA'))) {
+    return true;
+  }
 
-  if (closure.korytarzDroga === 'on' || closure.korytarzDroga == null) {
-    switch (closure.country) {
-      case 'LT':
-      case 'LV':
-      case 'EE':
-        return leg === 'PL_EE_E67';
-      case 'FI':
-        return leg === 'FI_E75';
-      case 'PL':
-        return leg === 'PL_ROAD' || leg === 'PL_EE_E67' || leg.startsWith('PL_');
-      case 'SE':
-        return leg.startsWith('SE_');
-    }
+  switch (closure.country) {
+    case 'LT':
+    case 'LV':
+    case 'EE':
+      return leg === 'PL_EE_E67';
+    case 'FI':
+      return leg === 'FI_E75';
+    case 'PL':
+      return leg === 'PL_ROAD' || leg === 'PL_EE_E67' || leg.startsWith('PL_');
+    case 'SE':
+      return leg.startsWith('SE_') || leg === 'SE_KAA_INLAND' || leg === 'SE_KAA_TRACK';
   }
   return false;
 }
@@ -330,8 +338,8 @@ const DETOUR_RISK_KINDS = [
 ] as const;
 
 /**
- * F7 #791 B8: 9 rodzajów ryzyk (ok/warn) dla postoju i objazdu —
- * brak danych → zdanie „brak danych …”, nie pominięcie.
+ * F7 #791 B8/r3: 9 rodzajów ryzyk (ok/warn) dla postoju i objazdu —
+ * brak danych → **warn** „sprawdź …”, nigdy `ok` (makieta).
  */
 export function buildNineRisks(args: {
   side: 'hold' | 'detour';
@@ -339,23 +347,38 @@ export function buildNineRisks(args: {
   permitMode: DetourLoadLeg['permitMode'];
   hereNotices?: readonly string[];
   noDetour?: boolean;
+  /** Gdy podane — zdania zależne od danych (ok/warn); inaczej warn „sprawdź …”. */
+  wind?: DetourRiskRow | null;
+  hours?: DetourRiskRow | null;
+  ferry?: DetourRiskRow | null;
+  window?: DetourRiskRow | null;
+  pilot?: DetourRiskRow | null;
+  ban?: DetourRiskRow | null;
+  works?: DetourRiskRow | null;
 }): DetourRiskRow[] {
   const permit = permitDetourRisk({ country: args.country, permitMode: args.permitMode });
   const violated = (args.hereNotices ?? []).some((n) => /violatedVehicleRestriction/i.test(n));
+  const missing = (kind: string, checkWhat: string): DetourRiskRow => ({
+    kind,
+    level: 'warn',
+    text: `sprawdź ${checkWhat}`,
+  });
   const byKind: Record<string, DetourRiskRow> = {
     PERMIT: permit,
     LIMITS: args.side === 'detour' && !args.noDetour
       ? (violated
         ? { kind: 'LIMITS', level: 'warn', text: 'ograniczenia zestawu na objeździe (HERE)' }
-        : { kind: 'LIMITS', level: 'ok', text: 'brak naruszeń wymiarów/masy na objeździe (HERE)' })
-      : { kind: 'LIMITS', level: 'ok', text: 'brak danych ograniczeń wymiarów (postój — bez jazdy objazdem)' },
-    BAN: { kind: 'BAN', level: 'ok', text: 'brak danych zakazów czasowych na objeździe' },
-    WORKS: { kind: 'WORKS', level: 'ok', text: 'brak danych o robotach na objeździe' },
-    WIND: { kind: 'WIND', level: 'ok', text: 'brak danych wiatru na objeździe / przy zamknięciu' },
-    HOURS: { kind: 'HOURS', level: 'ok', text: 'brak danych czasu pracy kierowcy (H-4)' },
-    FERRY: { kind: 'FERRY', level: 'ok', text: 'brak danych rejsu promu względem ETA' },
-    WINDOW: { kind: 'WINDOW', level: 'ok', text: 'brak danych okna dostawy KSH' },
-    PILOT: { kind: 'PILOT', level: 'ok', text: 'brak danych o pilotach na objeździe' },
+        : args.hereNotices
+          ? { kind: 'LIMITS', level: 'ok', text: 'brak naruszeń wymiarów/masy na objeździe (HERE)' }
+          : missing('LIMITS', 'ograniczenia wymiarów/masy na objeździe'))
+      : missing('LIMITS', 'ograniczenia wymiarów (postój — bez jazdy objazdem)'),
+    BAN: args.ban ?? missing('BAN', 'zakazy czasowe na objeździe'),
+    WORKS: args.works ?? missing('WORKS', 'roboty / utrudnienia na objeździe'),
+    WIND: args.wind ?? missing('WIND', 'wiatr na objeździe / przy zamknięciu'),
+    HOURS: args.hours ?? missing('HOURS', 'czas pracy kierowcy (H-4)'),
+    FERRY: args.ferry ?? missing('FERRY', 'rejs promu względem ETA'),
+    WINDOW: args.window ?? missing('WINDOW', 'okno dostawy KSH'),
+    PILOT: args.pilot ?? missing('PILOT', 'pilotów na objeździe'),
   };
   return DETOUR_RISK_KINDS.map((k) => byKind[k]!);
 }
@@ -543,31 +566,51 @@ export async function runDetourCases(args: {
   };
 
   for (const c of closures) {
+    // F7 r3 B3: wszystkie pozostałe nogi (nie tylko currentLeg) — „na dalszej trasie”.
     const matched = legs.filter(
       (leg) =>
-        leg.currentLeg
-        && corridorMatchesLeg(c, leg.code)
+        corridorMatchesLeg(c, leg.code)
         && leg.status !== 'AT_SITE'
-        && leg.status !== 'FERRY',
+        && leg.status !== 'FERRY'
+        && leg.status !== 'DELIVERED'
+        && leg.status !== 'CANCELLED'
+        && leg.status !== 'REMOVED',
     );
     for (const leg of matched) {
+      // B4: w drodze bez świeżej pozycji (>2 h → null w store) — nie twórz sprawy.
+      const inTransit = /IN_TRANSIT|ON_FERRY|TO_PORT|PRE_/.test(leg.status)
+        || leg.status === 'READY'
+        || leg.status === 'AT_LOADING';
+      if (inTransit && !leg.position && (leg.currentLeg || /IN_TRANSIT/.test(leg.status))) {
+        warnings.push(`E49-b: brak świeżej pozycji ${leg.loadId} — pominięto sprawę`);
+        continue;
+      }
       const poly = await loadPoly(leg.code);
       let atKm = c.atKm;
       if ((atKm == null || !Number.isFinite(atKm)) && poly.length >= 2) {
         atKm = projectKmOnCorridor(poly, c.lat, c.lon);
+        // F7 r3 B4: rzut poza 25 km od polilinii → nie na trasie.
+        if (atKm != null) {
+          const nearest = pointAtKm(poly, atKm);
+          if (nearest && haversineKm([c.lon, c.lat], nearest) > 25) {
+            atKm = null;
+          }
+        }
       }
       // B4: bez km albo zamknięcie za autem → pomiń.
       if (atKm == null || !Number.isFinite(atKm)) {
         warnings.push(`E49-b: brak at_km dla ${c.closureRef} / ${leg.code} — pominięto`);
         continue;
       }
-      if (atKm < leg.fromKm - 0.5) continue;
+      // Noga przyszła (nie current): fromKm=0 — całe zamknięcie jest „przed” autem.
+      const fromKm = leg.currentLeg ? leg.fromKm : 0;
+      if (atKm < fromKm - 0.5) continue;
 
       const dedup = detourDedupKey(leg.loadId, c.closureRef);
       keep.push(dedup);
       const decideBy = estimateDecideByIso({
         nowIso,
-        fromKm: leg.fromKm,
+        fromKm,
         atKm,
       });
       const baseEta = leg.baseEtaIso && Number.isFinite(Date.parse(leg.baseEtaIso))
@@ -611,11 +654,12 @@ export async function runDetourCases(args: {
         destination = offsetByKm(c.lat, c.lon, brg, DETOUR_SEGMENT_KM);
       }
 
+      let baseMissing = false;
       if (hereOk && dims && hereCalls < DETOUR_HERE_MAX_PER_RUN) {
         const avoid = avoidBboxAround(c.lat, c.lon).param;
         const dimsT = dims as TruckDims;
         try {
-          // Trasa bazowa (bez avoid) — nadwyżka km/min.
+          // Trasa bazowa (bez avoid) — nadwyżka km/min. Bez bazy nie liczymy objazdu (B6).
           if (hereCalls + 1 < DETOUR_HERE_MAX_PER_RUN) {
             const baseUrl = buildDetourRoutingUrl({
               apiKey: args.hereApiKey!,
@@ -629,53 +673,67 @@ export async function runDetourCases(args: {
             if (base.summary) {
               baseLengthM = base.summary.lengthM;
               baseDurationSec = base.summary.durationSec;
+            } else {
+              baseMissing = true;
             }
+          } else {
+            baseMissing = true;
           }
 
-          const url = buildDetourRoutingUrl({
-            apiKey: args.hereApiKey!,
-            origin,
-            destination,
-            dims: dimsT,
-            avoidAreas: [avoid],
-          });
-          urlMasked = maskHereApiKey(url);
-          if (hereCalls >= DETOUR_HERE_MAX_PER_RUN) {
-            noWhy = 'Brak objazdu w tym przebiegu — limit zapytań HERE; przeliczenie za ≤ 30 min';
-          } else {
-            const det = await fetchHereSummary({ fetch: args.fetch, url, dimsLabel });
-            hereCalls++;
-            if (args.store.noteHereUsage) await args.store.noteHereUsage('routing', 1);
-            if (!det.ok) {
-              noWhy = det.noWhy;
-              warnings.push(maskHereApiKey(`E49-b HERE ${det.status} ${url}`));
+          if (!baseMissing && baseLengthM > 0) {
+            const url = buildDetourRoutingUrl({
+              apiKey: args.hereApiKey!,
+              origin,
+              destination,
+              dims: dimsT,
+              avoidAreas: [avoid],
+            });
+            urlMasked = maskHereApiKey(url);
+            if (hereCalls >= DETOUR_HERE_MAX_PER_RUN) {
+              noWhy = 'Brak objazdu w tym przebiegu — limit zapytań HERE; przeliczenie za ≤ 30 min';
+              baseMissing = true;
             } else {
-              noWhy = det.noWhy;
-              if (det.summary && !noWhy) {
-                hereSummary = {
-                  lengthM: det.summary.lengthM,
-                  durationSec: det.summary.durationSec,
-                  notices: det.summary.notices,
-                  names: det.summary.names,
-                  roadNumbers: det.summary.roadNumbers,
-                  line: null,
-                };
-              } else if (!noWhy) {
-                noWhy = 'Brak objazdu dla tego zestawu — tylko postój';
+              const det = await fetchHereSummary({ fetch: args.fetch, url, dimsLabel });
+              hereCalls++;
+              if (args.store.noteHereUsage) await args.store.noteHereUsage('routing', 1);
+              if (!det.ok) {
+                noWhy = det.noWhy;
+                baseMissing = true;
+                warnings.push(maskHereApiKey(`E49-b HERE ${det.status} ${url}`));
+              } else {
+                noWhy = det.noWhy;
+                if (det.summary && !noWhy) {
+                  hereSummary = {
+                    lengthM: det.summary.lengthM,
+                    durationSec: det.summary.durationSec,
+                    notices: det.summary.notices,
+                    names: det.summary.names,
+                    roadNumbers: det.summary.roadNumbers,
+                    line: null,
+                  };
+                } else if (!noWhy) {
+                  noWhy = 'Brak objazdu dla tego zestawu — tylko postój';
+                }
               }
             }
+          } else if (!noWhy) {
+            noWhy = 'Brak objazdu w tym przebiegu — brak trasy bazowej HERE; przeliczenie za ≤ 30 min';
+            baseMissing = true;
           }
         } catch (e) {
           hereCalls++;
           noWhy = 'Brak objazdu dla tego zestawu (błąd HERE) — tylko postój';
+          baseMissing = true;
           warnings.push(`E49-b HERE: ${e instanceof Error ? maskHereApiKey(e.message) : 'błąd'}`);
         }
       } else if (!dims) {
         noWhy = 'Brak objazdu — brak wymiarów zestawu w tabeli (D1)';
       } else if (!hereOk) {
         noWhy = 'Brak objazdu — HERE niedostępne; tylko postój';
+        baseMissing = true;
       } else if (hereCalls >= DETOUR_HERE_MAX_PER_RUN) {
         noWhy = 'Brak objazdu w tym przebiegu — limit zapytań HERE; przeliczenie za ≤ 30 min';
+        baseMissing = true;
       }
 
       const payload = buildDetourPayload({
@@ -695,6 +753,7 @@ export async function runDetourCases(args: {
         baseDurationSec,
       });
       if (urlMasked) payload.hereUrlMasked = urlMasked;
+      if (baseMissing) payload.baseMissing = true;
 
       const row: DetourCaseUpsert = {
         loadId: leg.loadId,

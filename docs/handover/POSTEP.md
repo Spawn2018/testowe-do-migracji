@@ -1,4 +1,12 @@
 
+## 2026-11-04 13:45 — #791 F7 r3 + B11 (0403) + CI db B1/B2
+
+- Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`.
+- Scalanie: brak (F7 r2/r3 niegotowe; „F7: gotowe” @ bb440979 nie obowiązuje).
+- CI @ `829d2c90`: unit ✔ · visual ✔ · **db** FAIL — B1/B2: `e49_detour_decide` w teście bez `commit` → ROLLBACK.
+- **Krok:** migracja **0403** B11 (właściciel 12:37–12:38): decide tylko SCX przewoźnika / `HHL_ADMIN`; Historia z autorem; macierz scx_detour + CARRIER + CLIENT; `matrix_notify` HHL+SCX+KSH (KSH bez `note`); upsert B6 nie nadpisuje dobrego objazdu; B2 unblock po `resolved_at` ryzyka. Job r3: B3 tylko `korytarz=on` + wszystkie nogi + SE_KAA_*; B4 bez pozycji / rzut >25 km; B6 bez trasy bazowej; B8 brak danych → `warn`. Front `canDecide` SCX|HHL_ADMIN. security **520** / TEST **516**.
+- **Dalej:** push → CI (+`db`) → F7. Bez push na main.
+
 ## 2026-11-04 13:25 — #791 F7 r2 B1–B10 (0402 + job + TodoPanel)
 
 - Skrzynka: #550 WSTRZYMANE; #714/#716/#718/#720 w planie. Bez nowego `pilne`. CI @ `97d58b95` unit/visual/db ✔ (przed tym krokiem). Brak „F7: gotowe”.

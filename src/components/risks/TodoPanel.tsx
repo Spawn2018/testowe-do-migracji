@@ -297,7 +297,8 @@ export function TodoPanel({ role, kind, locale, phone, nowIso, loads, risks, geo
       const save = detourDecideOf();
       const c = i.detour;
       return {
-        canDecide: role === 'SCX',
+        // B11: SCX przewoźnika albo Administrator HHL (nie HHL_OPS).
+        canDecide: role === 'SCX' || accountRole(role) === 'HHL_ADMIN',
         busy: detourBusy === i.id,
         onDecide: save && c ? (pick, note) => {
           setDetourBusy(i.id);
