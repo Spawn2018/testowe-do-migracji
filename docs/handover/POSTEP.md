@@ -1,3 +1,11 @@
+## 2026-11-05 07:10 — #808 SCALONE; wznowienie DP-211 (#805)
+
+- Skrzynka: #807 zamknięte po merge; #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: **#808 SCALONE** `5e7a1173` (DP-218 / **0410**; F7 gotowe @ `817f6e3a`; unit+visual+db ✔). `deploy-main` robi resztę. Bez push na main.
+- **Krok DP-211** `pakiet/c2-dp-211-ban-works-sources` (rebase na `main` po #808): BAN/WORKS źródła; bez migracji. DP-210 nie zaczynać.
+- **Dalej:** push → CI → F7. Potem DP-212…
+
+
 ## 2026-11-05 06:35 — DP-218 F7 r1: fixture eta_site (#808)
 
 - Skrzynka: #807 `pilne` otwarte; #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
@@ -13,6 +21,13 @@
 - **Krok DP-218** `pakiet/c2-dp-218-ferry-outside-port` / **0410**: (1) `apply_ferry_ais_arrival_backup` — PORT_IN ON + ląd ≥1 km → FERRY→AT_PORT→IN_TRANSIT_SE (`GPS_FERRY_GAP`); (2) backfill stuck FERRY; (3) `detect_ferry_overdue` actual → `audience=HHL`; (4) status.sh +13 (EXPECTED 676). DP-210 nie zaczynać.
 - **Dalej:** push → CI (+`db`) → F7. Po scaleniu powrót do DP-211 (#805) / DP-212…
 
+
+## 2026-11-05 04:30 — #806 SCALONE; wznowienie DP-211 (#805)
+
+- Skrzynka: #804 zamknięte po merge; #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: **#806 SCALONE** `2723af71` (DP-217 / **0409**; F7 gotowe @ `54cf9d8f`; unit+visual+db ✔). `deploy-main` robi resztę. Bez push na main.
+- **Krok DP-211** `pakiet/c2-dp-211-ban-works-sources` (rebase na `main` po #806): (1) `riskBanForEta` — weekend PL/SE + `truck_ban_holiday_hit`; (2) `riskWorksOnCorridor` — ROAD_* `korytarz_droga=on`; (3) brak źródła → „sprawdź …”; testy e49-detour-job 16/16. Bez migracji. DP-210 nie zaczynać.
+- **Dalej:** push → CI → F7. Potem DP-212…
 
 ## 2026-11-05 03:45 — PILNE #804 DP-217 (przerwane #805 DP-211)
 
