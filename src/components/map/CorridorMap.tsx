@@ -658,6 +658,15 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
           sailingOf: (sid) => (sid ? sailings.find((x) => x.id === sid) : undefined),
           tx: (k, p) => (p ? p9mp(loc, k, p) : p9m(loc, k)),
           vessels,
+          /* DP-222 B1 (F7 #815): tabela Mapy — FERRY z AIS/est, nie GPS auta */
+          shipPos: (load) => {
+            const fk = ferryKeyOf(load);
+            if (!fk) return { kind: 'none' };
+            const ship = shipOf(fk);
+            if (!ship) return { kind: 'none' };
+            if (ship.estimated) return { kind: 'est', lastAisTs: ship.estimated.lastAisTs };
+            return { kind: 'ais', ts: ship.ts };
+          },
         });
       };
       const labels = !embedded && (fleet.length <= LABELS_MAX || zoom >= 7);

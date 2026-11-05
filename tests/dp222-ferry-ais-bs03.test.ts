@@ -1,6 +1,7 @@
 /**
  * DP-222 / #814 — BS-03 „brak AIS” mimo świeżego AIS Nova Star.
  * Etap: C2 / BN9-c2. Auto FERRY z rejsem poza listą klienta → pozycja statku po voyage.sailingId.
+ * F7 #815 B1/B2: tabela Mapy (`mapRow`) — FERRY z AIS/est, nie GPS auta; odtworzenie łańcucha none→ok.
  */
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -13,6 +14,9 @@ import {
 } from '../src/lib/bn9c2Ferry';
 import type { SailingMapRow } from '../src/lib/ferry/estimate';
 import { placeMarkers } from '../src/lib/p9eGroups';
+import { mapRow, type RowCtx } from '../src/lib/p9cMap';
+import { p9m, p9mp } from '../src/i18n/p9c';
+import type { Load } from '../src/types';
 
 const SAILING = '95e2835b-0000-4000-8000-000000000037';
 const GDN = { lat: 54.40372, lon: 18.6813 };
@@ -102,11 +106,82 @@ describe('DP-222 — auto FERRY bez rejsu w store → AIS po sailingId', () => {
     expect(ensureSailingAisMarkers([], [sailRow()], Date.parse('2026-11-04T16:00:00Z'))).toEqual([]);
   });
 
-  it('CorridorMap / aisDb: DP-222 uchwyty', () => {
+  it('CorridorMap / aisDb / MapView: DP-222 uchwyty', () => {
     const m = readFileSync('src/components/map/CorridorMap.tsx', 'utf8');
     expect(m).toContain('aisShipFixForFerryKey');
     expect(m).toContain('x.voyage?.sailingId === fk');
+    expect(m).toContain('shipPos:');
     const db = readFileSync('src/lib/aisDb.ts', 'utf8');
     expect(db).toContain('ensureSailingAisMarkers');
+    const mv = readFileSync('src/views/MapView.tsx', 'utf8');
+    expect(mv).toContain('shipPos:');
+    expect(mv).toContain('ferryTrackInfo');
+  });
+});
+
+/** F7 #815 B1+B2 — wiersze jak SELECT prod BS-03 (0037): FERRY, rejs bez ATD, AIS Nova Star świeży. */
+describe('DP-222 F7 #815 B1+B2 — tabela Mapy FERRY = AIS, nie GPS auta', () => {
+  const nowIso = '2026-11-05T10:00:00Z';
+  const nowMs = Date.parse(nowIso);
+  const tx: RowCtx['tx'] = (k, p) => (p ? p9mp('pl', k, p) : p9m('pl', k));
+  const baseCtx = (over: Partial<RowCtx> = {}): RowCtx => ({
+    role: 'HHL', nowIso, prod: true, hasFix: () => false, sailingOf: () => undefined, tx, ...over,
+  });
+
+  function bs03(over: Partial<Load> = {}): Load {
+    return {
+      id: 'bs-03', code: 'BS-03', itemType: 'BS', qty: 1, stage: 'FERRY', progress: 0.5,
+      status: 'ON_FERRY', plannedLoadDate: '2026-11-03', plannedDeliverDate: '2026-11-06',
+      carrierId: 'scx', sailingId: SAILING,
+      resources: { driverName: 'A', tractorPlate: 'X', trailerPlate: 'Y' },
+      ferry: { vessel: 'Nova Star', departureAt: '2026-11-04T17:00:00Z', arrivalAt: '2026-11-05T11:00:00Z', bookingRef: null, status: 'BOOKED' },
+      etaBoden: '2026-11-06T08:00:00Z', silentMinutes: null, delayed: false,
+      hhlOrderNo: 'HHL/2026/0037', carrierOrderNo: '0037/10/S/2026',
+      ...over,
+    } as unknown as Load;
+  }
+
+  it('B2 odtworzenie: bez shipPos (stary łańcuch) → „statek bez AIS”; z AIS → ok', () => {
+    const [withVoy] = withVoyages([aisFresh], [sailRow()], nowMs);
+    const load = bs03();
+    /* przed: hasFix=false, brak lastFixAt → p9c_pos_ship_none (to, co widział właściciel) */
+    const before = mapRow(load, baseCtx({ hasFix: () => false }));
+    expect(before.pos).toEqual({ kind: 'ship', text: 'statek bez AIS', sub: null, alarm: false });
+    /* łańcuch: ferryTrackInfo po sailingId → ais; mapRow z shipPos → godzina AIS (09:49Z = 10:49 PL) */
+    const track = ferryTrackInfo({
+      vessel: 'Nova Star', sailingId: SAILING, routeText: null, positions: [withVoy], locale: 'pl',
+    });
+    expect(track.pos).toEqual({ kind: 'ais', ts: '2026-11-05T09:49:00Z' });
+    const after = mapRow(load, baseCtx({
+      hasFix: () => false,
+      shipPos: () => track.pos,
+    }));
+    expect(after.pos).toMatchObject({ kind: 'ship', text: '10:49', sub: 'statek (AIS)', alarm: false });
+  });
+
+  it('B1: stary GPS auta w Gdańsku nie maskuje świeżego AIS', () => {
+    const [withVoy] = withVoyages([aisFresh], [sailRow()], nowMs);
+    const load = bs03({ etaDetail: { lastFixAt: '2026-11-04T16:50:00Z' } as Load['etaDetail'] });
+    /* stary łańcuch brał lastFixAt auta (17:50 PL) i pisał „statek (AIS)” — mylące */
+    const before = mapRow(load, baseCtx({ hasFix: () => true }));
+    expect(before.pos.text).toBe('17:50');
+    expect(before.pos.sub).toBe('statek (AIS)');
+    const after = mapRow(load, baseCtx({
+      hasFix: () => true,
+      shipPos: () => ferryTrackInfo({
+        vessel: 'Nova Star', sailingId: SAILING, routeText: null, positions: [withVoy], locale: 'pl',
+      }).pos,
+    }));
+    expect(after.pos).toMatchObject({ kind: 'ship', text: '10:49', sub: 'statek (AIS)' });
+  });
+
+  it('B1: szacunek z rozkładu → est, nie „brak AIS”', () => {
+    const load = bs03();
+    const after = mapRow(load, baseCtx({
+      shipPos: () => ({ kind: 'est', lastAisTs: '2026-11-05T04:00:00Z' }),
+    }));
+    expect(after.pos.kind).toBe('ship');
+    expect(after.pos.text).toBe('05:00');
+    expect(after.pos.sub).toBe('pozycja szacowana z rozkładu');
   });
 });

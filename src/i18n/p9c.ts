@@ -47,6 +47,9 @@ export const PL: Record<string, string> = {
   p9c_pos_gps: 'pozycja GPS',
   p9c_pos_ship: 'statek (AIS)',
   p9c_pos_ship_none: 'statek bez AIS',
+  /* DP-222 B1 (F7 #815): szacunek z rozkładu — jak pasek „Na promie” / p9e */
+  p9c_pos_ship_est: 'pozycja szacowana z rozkładu',
+  p9c_pos_ship_est_none: 'pozycja szacowana z rozkładu · brak AIS',
   p9c_pos_nogps: 'brak GPS od {t}',
   p9c_pos_nogps_sub: 'próg 30\u00a0min w ruchu',
   p9c_pos_rest: 'postój od {t}',

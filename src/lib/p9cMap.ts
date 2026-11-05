@@ -56,6 +56,12 @@ export type MapRow = {
   inWindow: boolean;
 };
 
+/** DP-222 B1 (F7 #815): pozycja statku dla kafelka FERRY — to samo źródło co `ferryTrackInfo` / `shipOf`. */
+export type FerryShipPos =
+  | { kind: 'ais'; ts: string }
+  | { kind: 'est'; lastAisTs: string | null }
+  | { kind: 'none' };
+
 export type RowCtx = {
   role: RoleId;
   nowIso: string;
@@ -67,6 +73,11 @@ export type RowCtx = {
   tx: (key: string, params?: Record<string, string | number>) => string;
   /** DP-17 / B1 (F7 #674): lista statków sesji (z bazy albo zapasowa) — trasa auta na promie bez rejsu. */
   vessels?: readonly VesselGroup[];
+  /**
+   * DP-222 B1 (F7 #815): dla FERRY — AIS / szacunek z rozkładu, nie GPS auta.
+   * „statek bez AIS” tylko gdy statek naprawdę nie ma odczytu (`kind: 'none'`).
+   */
+  shipPos?: (l: Load) => FerryShipPos;
 };
 
 const SE_TILES: ReadonlySet<StageTile> = new Set(['PORT_SE', 'ROAD_SE', 'SITE', 'DELIVERED', 'SETTLE']);
@@ -110,10 +121,28 @@ export function mapRow(l: Load, ctx: RowCtx): MapRow {
 
   /* Pozycja (pkt 6, L22): godzina ostatniej pozycji; prom = statek (AIS); cisza = „brak GPS od”; bez pozycji = powód */
   let pos: MapRow['pos'];
-  if (nogps) {
+  /* DP-222 B1 (F7 #815): FERRY z `shipPos` — najpierw statek (AIS/est), nie GPS auta ani „brak GPS” lokalizatora */
+  if (tile === 'FERRY' && ctx.shipPos) {
+    const ship = ctx.shipPos(l);
+    if (ship.kind === 'ais') {
+      const t = hm(ship.ts);
+      pos = { kind: 'ship', text: t || tx('p9c_pos_ship'), sub: t ? tx('p9c_pos_ship') : null, alarm: false };
+    } else if (ship.kind === 'est') {
+      const t = hm(ship.lastAisTs);
+      pos = {
+        kind: 'ship',
+        text: t || tx('p9c_pos_ship_est'),
+        sub: t ? tx('p9c_pos_ship_est') : tx('p9c_pos_ship_est_none'),
+        alarm: false,
+      };
+    } else {
+      pos = { kind: 'ship', text: tx('p9c_pos_ship_none'), sub: null, alarm: false };
+    }
+  } else if (nogps) {
     const since = l.silentMinutes != null ? new Date(Date.parse(nowIso) - l.silentMinutes * 60_000).toISOString() : lastFixAt;
     pos = { kind: 'nogps', text: tx('p9c_pos_nogps', { t: hm(since) }), sub: tx('p9c_pos_nogps_sub'), alarm: true };
   } else if (tile === 'FERRY') {
+    /* bez `shipPos` (demo / stare wywołania): dotychczasowe zachowanie */
     pos = hasPos
       ? { kind: 'ship', text: hm(lastFixAt) || tx('p9c_pos_ship'), sub: hm(lastFixAt) ? tx('p9c_pos_ship') : null, alarm: false }
       : { kind: 'ship', text: tx('p9c_pos_ship_none'), sub: null, alarm: false };
