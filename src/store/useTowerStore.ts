@@ -69,7 +69,7 @@ import { t, tp } from '../i18n/messages';
 import { localDateOf } from '../lib/money/engine';
 import { withMoneyV2 } from '../lib/money/loadMoney';
 import { milestoneAction, type DriverFix } from '../lib/driverTracking';
-import { fmtLocal, cancelledSailingRisks, checkSailingDraft, ferryFromSailing, sailingAssignDenied, type SailingDraft, type SailingDraftError, type SailingDenied } from '../lib/sailings';
+import { fmtLocal, cancelledSailingRisks, checkSailingDraft, ferryFromSailing, reconcileLoadsFerry, sailingAssignDenied, type SailingDraft, type SailingDraftError, type SailingDenied } from '../lib/sailings';
 import { billDueDate, billParties, billPaymentToday, canMarkPaid, canRegisterBill, canVerifyBill, checkBill, verifyError, type BillDraft } from '../lib/invoices3';
 import { billEditState, editIsCorrection, editNotifyTarget, isHhlAdmin, verificationAfterEdit } from '../lib/invoiceEdit';
 import { isPreviewReadOnly } from '../lib/prodFacade';
@@ -2061,6 +2061,16 @@ export const useTowerStore = create<TowerState>()(
         }
         if (!state) return;
         if (state.role) setPreviewViewRole(state.role);
+        /* DP-225: po odtworzeniu z LS — ferry ze sailingId (stara nazwa promu nie zostaje) */
+        if (Array.isArray(state.loads) && Array.isArray(state.sailings) && state.loads.length && state.sailings.length) {
+          queueMicrotask(() => {
+            try {
+              useTowerStore.setState((st) => ({ loads: reconcileLoadsFerry(st.loads, st.sailings) }));
+            } catch {
+              /* store may be mid-init in tests */
+            }
+          });
+        }
         /* A4 (wyglad/W-faktura-termin, F7): demo — sprawy „Faktura nieopłacona po terminie” z faktur na dziś (zapisany stan) */
         if (!SUPABASE_MODE) {
           queueMicrotask(() => {

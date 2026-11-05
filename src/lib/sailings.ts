@@ -105,6 +105,46 @@ export function ferryFromSailing(s: Sailing | undefined, bookingRef: string | nu
   };
 }
 
+/**
+ * DP-225 (F7 #824): nazwa promu z przypiętego rejsu, nie ze starego `ferry.vessel`
+ * (karta / PDF / AIS byName po zmianie `sailing_id`).
+ */
+export function effectiveFerryVessel(
+  load: Pick<Load, 'sailingId' | 'ferry'>,
+  sailings: readonly Sailing[],
+): string | null {
+  if (load.sailingId) {
+    const s = sailings.find((x) => x.id === load.sailingId);
+    if (s?.vessel) return s.vessel;
+  }
+  return load.ferry.vessel ?? null;
+}
+
+/** DP-225: gdy jest `sailingId`, podmień `ferry` z bieżącego rejsu (bez zmiany bookingRef / CHECKED_IN…). */
+export function reconcileLoadFerry(load: Load, sailings: readonly Sailing[]): Load {
+  if (!load.sailingId) return load;
+  const s = sailings.find((x) => x.id === load.sailingId);
+  if (!s) return load;
+  const next = ferryFromSailing(s, load.ferry.bookingRef, load.ferry);
+  if (
+    next.vessel === load.ferry.vessel
+    && next.departureAt === load.ferry.departureAt
+    && next.arrivalAt === load.ferry.arrivalAt
+    && next.status === load.ferry.status
+  ) return load;
+  return { ...load, ferry: next };
+}
+
+export function reconcileLoadsFerry(loads: Load[], sailings: readonly Sailing[]): Load[] {
+  let changed = false;
+  const out = loads.map((l) => {
+    const n = reconcileLoadFerry(l, sailings);
+    if (n !== l) changed = true;
+    return n;
+  });
+  return changed ? out : loads;
+}
+
 /** BN9-b: `operator` — armator statku z listy (Finlandia → Eckerö, nie pierwszy armator trasy Terminal A) */
 export interface SailingDraft { vessel: string; route: Sailing['route']; departureAt: string; arrivalAt: string; operator?: string }
 export type SailingDraftError = 'VESSEL' | 'TIMES' | 'ORDER' | 'DUPLICATE' | null;
@@ -153,7 +193,8 @@ export function linkSeedSailings(loads: Load[], sailings: Sailing[]): Load[] {
   return loads.map((l) => {
     if (l.sailingId || !l.ferry.vessel || !l.ferry.departureAt) return l;
     const s = sailings.find((x) => x.vessel === l.ferry.vessel && Date.parse(x.departureAt) === Date.parse(l.ferry.departureAt!));
-    return s ? { ...l, sailingId: s.id } : l;
+    /* DP-225: od razu `ferry` z rejsu (nie sam `sailingId`) */
+    return s ? { ...l, sailingId: s.id, ferry: ferryFromSailing(s, l.ferry.bookingRef, l.ferry) } : l;
   });
 }
 
