@@ -25,7 +25,8 @@ export function prefetchMainChunks(): void {
   const warm = () => {
     for (const load of MAIN_CHUNKS) void load().catch(() => undefined)
   }
-  const idle = (window as Window & { requestIdleCallback?: (f: () => void) => void }).requestIdleCallback
-  if (idle) idle(warm)
+  /* F7 #826: bez timeout na zajętej mapie idle może nie odpalić długo — max 5 s */
+  const idle = (window as Window & { requestIdleCallback?: (f: () => void, o?: { timeout: number }) => void }).requestIdleCallback
+  if (idle) idle(warm, { timeout: 5000 })
   else window.setTimeout(warm, 1500)
 }

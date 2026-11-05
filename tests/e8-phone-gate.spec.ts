@@ -1324,9 +1324,12 @@ test.describe('wyglad/P10a-a — nowa wersja, „na żywo”, zamiast pustej str
 
   test('część, która się nie wczyta (plik Ryzyk po wdrożeniu) → komunikat i „Odśwież”; pasek górny i menu zostają', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
-    /* DP-224 B3 (#817): prefetchMainChunks podgrzewa RisksView po starcie — abort przed boot, inaczej klik bierze cache */
+    /* DP-224 B3 (#817) / F7 #826: abort przed boot — prefetch też dostaje błąd (.catch), start bez UI błędu */
     await page.route(/\/assets\/RisksView-[^/]+\.js$/, (r) => r.abort());
     await boot(page, 'HHL');
+    await page.waitForTimeout(1600);
+    await expect(page.locator('[data-part-failed]')).toHaveCount(0);
+    await expect(page.locator('[data-banner="new-version"]')).toHaveCount(0);
     await page.evaluate(() => (document.querySelector('nav button[data-view="risk"]') as HTMLButtonElement).click());
     const fail = page.locator('[data-part-failed]');
     await expect(fail).toBeVisible({ timeout: 20_000 });
@@ -1335,6 +1338,23 @@ test.describe('wyglad/P10a-a — nowa wersja, „na żywo”, zamiast pustej str
     await expect(fail.locator('[data-part-reload]')).toHaveText('Odśwież');
     await expect(page.locator('header.topbar')).toBeVisible();
     await expect(page.locator('nav button[data-view="sched"]')).toBeVisible();
+    await page.unroute(/\/assets\/RisksView-[^/]+\.js$/);
+  });
+
+  /* F7 #826: dowód B3 — po udanym prefetchu późniejsza blokada pliku nie psuje otwarcia Ryzyk */
+  test('DP-224 B3: po prefetchu RisksView otwierają się mimo późniejszego abortu pliku', async ({ page }) => {
+    await page.setViewportSize({ width: 1440, height: 900 });
+    const warmed = page.waitForResponse(
+      (r) => /\/assets\/RisksView-[^/]+\.js$/.test(r.url()) && r.ok(),
+      { timeout: 30_000 },
+    );
+    await boot(page, 'HHL');
+    await warmed;
+    await page.route(/\/assets\/RisksView-[^/]+\.js$/, (r) => r.abort());
+    await openView(page, 'risk');
+    await expect(page.locator('[data-page="risks"]')).toBeVisible({ timeout: 20_000 });
+    await expect(page.locator('[data-part-failed]')).toHaveCount(0);
+    await expect(page.locator('[data-banner="new-version"]')).toHaveCount(0);
     await page.unroute(/\/assets\/RisksView-[^/]+\.js$/);
   });
 

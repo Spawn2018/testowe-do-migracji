@@ -18,6 +18,8 @@ describe('DP-224 B3 prefetchMainChunks', () => {
     expect(src).toMatch(/loadCorridorMapChunk/)
     expect(src).toMatch(/loadLoadDrawerChunk/)
     expect(src).toMatch(/requestIdleCallback/)
+    /* F7 #826: timeout 5 s — na zajętej mapie idle bez limitu może nie odpalić */
+    expect(src).toMatch(/timeout:\s*5000/)
   })
 
   it('TowerShell woła prefetch; *Lazy i LazyCorridorMap dzielą te same loadery', () => {

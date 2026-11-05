@@ -1,3 +1,9 @@
+## 2026-11-05 23:45 — DP-224 B3 F7 #826: dokończenie testów + idle timeout
+
+- Skrzynka: #817 PILNE B3+E; #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: brak — #826 CI było zielone @ `81c4e6b0`, ale F7 r1 wymagało jeszcze: asercja startu bez błędu, osobny test B3 po prefetchu, `requestIdleCallback({ timeout: 5000 })`.
+- **Krok:** P10a + test B3 (prefetch OK → późniejszy abort nie psuje Ryzyk) + idle 5 s. Czekam CI → F7. Potem DP-225.
+
 ## 2026-11-05 22:50 — DP-224 B3+E visual FAIL → abort RisksView przed boot
 
 - Skrzynka: #817 PILNE B3+E; #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
