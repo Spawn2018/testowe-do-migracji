@@ -297,19 +297,24 @@ ver=$(asu "$HHL_465" "select map_display_state()->>'roads_version'")
 if [ -n "$ver" ] && [ "$ver" != "null" ]; then ok=$((ok+1)); echo "  OK    roads_version ustawione ($ver)"; else fail=$((fail+1)); echo "  FAIL  roads_version → $ver"; fi
 unchanged=$(asu "$HHL_465" "select (map_display_state('$ver')->>'roads_unchanged')")
 [ "$unchanged" = "true" ] && { ok=$((ok+1)); echo "  OK    known version → roads_unchanged"; } || { fail=$((fail+1)); echo "  FAIL  roads_unchanged → $unchanged"; }
-roads_null=$(asu "$HHL_465" "select ((map_display_state('$ver')->'roads') is null)::text")
+# jsonb_build_object wstawia SQL NULL jako JSON null — IS NULL na -> jest false (jak F7 #673 r6).
+roads_null=$(asu "$HHL_465" "select (jsonb_typeof(map_display_state('$ver')->'roads') = 'null')::text")
 [ "$roads_null" = "true" ] && { ok=$((ok+1)); echo "  OK    known version → roads null"; } || { fail=$((fail+1)); echo "  FAIL  roads null → $roads_null"; }
 disp_pts=$(asu "$HHL_465" "select coalesce(jsonb_array_length((select e->'points' from jsonb_array_elements(map_display_state()->'roads') e where e->>'leg'='PL-GDN' limit 1)),0)")
 full_pts=$(sys "select jsonb_array_length(points) from here_road_geometry where leg='PL-GDN'")
 awk "BEGIN{exit !($disp_pts+0 >= 2 && $disp_pts+0 <= $full_pts+0)}" 2>/dev/null \
   && { ok=$((ok+1)); echo "  OK    display points ≤ full ($disp_pts ≤ $full_pts)"; } \
   || { fail=$((fail+1)); echo "  FAIL  display/full → $disp_pts / $full_pts"; }
-cron_purge=$(sys "select count(*)::text from cron.job where jobname='tower-here-road-purge'" 2>/dev/null || echo 0)
-if [ "$cron_purge" = "1" ] || [ "$cron_purge" = "0" ]; then
-  # 0 = brak pg_cron w bramie lokalnej; 1 = produkcja/TEST
-  ok=$((ok+1)); echo "  OK    cron tower-here-road-purge ($cron_purge; 0=brak pg_cron w CI)"
+# CI gate bez pg_cron: nie wołaj cron.job (sys 2>&1 + || echo 0 zostawia ERROR w stdout).
+if [ "$(sys "select to_regclass('cron.job') is not null" | tail -1)" = "t" ]; then
+  cron_purge=$(sys "select count(*)::text from cron.job where jobname='tower-here-road-purge'" | tail -1)
+  if [ "$cron_purge" = "1" ]; then
+    ok=$((ok+1)); echo "  OK    cron tower-here-road-purge ($cron_purge)"
+  else
+    fail=$((fail+1)); echo "  FAIL  cron purge → $cron_purge"
+  fi
 else
-  fail=$((fail+1)); echo "  FAIL  cron purge → $cron_purge"
+  ok=$((ok+1)); echo "  OK    cron tower-here-road-purge (0=brak pg_cron w CI)"
 fi
 
 val "ETA TLL-HEL PL_ROAD → PL_ROAD_EE" "select eta_obs_segment_code('TLL-HEL','PL_ROAD')" "PL_ROAD_EE"
