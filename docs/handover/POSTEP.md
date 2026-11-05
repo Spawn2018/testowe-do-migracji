@@ -1,3 +1,11 @@
+## 2026-11-05 07:55 — DP-211 F7 r1 N1 (#805)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: brak F7 gotowe — F7 r1 @ `01cb57ab` **niegotowe** (N1).
+- **Krok N1:** `truckBanHolidayHit` przy `r.error` / `r.data == null` → `null` (nie false); `mergeHolidayBanSamples` — null bez true → `holidayBan null` → BAN warn. Testy h7-h10-h12 + e49-detour-job. Bez migracji. DP-210 nie zaczynać.
+- **Dalej:** push → CI → F7. Potem DP-212…
+
+
 ## 2026-11-05 07:40 — DP-211 F7 r1 niegotowe B1–B4 (#805)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
