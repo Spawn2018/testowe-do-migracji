@@ -566,8 +566,11 @@ pos $L_A5 56.16460 15.63080 "2026-10-05 22:10+00"; pos $L_A5 56.1647 15.6309 "20
 chk "A5 Stena: wjazd Karlskrona → AT_PORT_NYNASHAMN" "$(st $L_A5)" AT_PORT_NYNASHAMN
 # ETA: PORT_IN z trasy rejsu (Karlskrona ≈ 56.16, nie Nynäshamn ≈ 58.94)
 q "select set_config('tower.status_ctx','on',true); update loads set status='FERRY' where id='$L_A5'" >/dev/null
-# DP-222: AIS → trg_vessel_positions_eta (bez ręcznego refresh_load_eta)
-q "insert into vessel_positions (vessel_id, lat, lon, sog_kn, observed_at, source) values
+# DP-222: AIS → trg_vessel_positions_eta (bez ręcznego refresh_load_eta); F7 B1 throttle 5 min
+q "set session_replication_role=replica;
+    update loads set eta_computed_at = now() - interval '6 minutes' where id='$L_A5';
+    set session_replication_role=origin;
+    insert into vessel_positions (vessel_id, lat, lon, sog_kn, observed_at, source) values
  ('66666666-0000-0000-0000-0000000000a5', 55.5, 17.0, 16, now(), 'DIGITRAFFIC')" >/dev/null
 chk "A5 Stena: eta_basis port_route=STENA" "select eta_basis->>'port_route' from loads where id='$L_A5'" STENA
 chk "A5 Stena: wait_ais=false i ferry_eta_at ustawione" \
@@ -575,7 +578,10 @@ chk "A5 Stena: wait_ais=false i ferry_eta_at ustawione" \
 # Polferries nadal Nynäshamn
 L_PF=$(L 71)
 mk $L_PF A5P "'HHL/A5P'" "'SCX/A5P'" FERRY "'$S1'"
-q "insert into vessel_positions (vessel_id, lat, lon, sog_kn, observed_at, source) values
+q "set session_replication_role=replica;
+    update loads set eta_computed_at = now() - interval '6 minutes' where id='$L_PF';
+    set session_replication_role=origin;
+    insert into vessel_positions (vessel_id, lat, lon, sog_kn, observed_at, source) values
  ('66666666-0000-0000-0000-000000000001', 56.5, 18.2, 16, now(), 'DIGITRAFFIC')" >/dev/null
 chk "A5 Polferries: eta_basis port_route=POLFERRIES" "select eta_basis->>'port_route' from loads where id='$L_PF'" POLFERRIES
 chk "A5 READY_TO_INVOICE: ETA jak DELIVERED (segment DONE)" \
@@ -4166,6 +4172,7 @@ chk "DP-219: GEOFENCE_EXIT łącznie ≤ 3 (bez bliźniaków STO)" \
     where load_id='$L219' and event_type='GEOFENCE_EXIT'" true
 
 # DP-222 / #814 pkt 3: AIS vessel_positions odświeża ETA FERRY (bez ręcznego refresh).
+# F7 #819 B1: STATEMENT + NEW TABLE; throttle 5 min; tylko rejs bez ATA.
 echo; echo "[DP-222] vessel_positions → refresh_load_eta (FERRY)"
 V222=66666666-0000-0000-0000-00000000222a
 S222=77777777-0000-0000-0000-00000000222a
@@ -4181,17 +4188,24 @@ insert into sailings (id,project_id,vessel_id,route,departure_at,arrival_at,stat
 mk $L222 T222 "'HHL/T222'" "'SCX/T222'" FERRY "'$S222'"
 q "insert into load_events (load_id,event_type,occurred_at) values
     ('$L222','MILESTONE_LOADED','2026-11-04 08:00+00')" >/dev/null
-chk "DP-222: trigger trg_vessel_positions_eta istnieje" \
-  "select (tgname is not null)::text from pg_trigger
-    where tgname='trg_vessel_positions_eta' and not tgisinternal limit 1" true
+chk "DP-222: trigger STATEMENT + NEW TABLE" \
+  "select (pg_get_triggerdef(oid) ilike '%for each statement%'
+      and pg_get_triggerdef(oid) ilike '%new_rows%')::text
+     from pg_trigger where tgname='trg_vessel_positions_eta' and not tgisinternal limit 1" true
 # Daleko od PORT_IN NYN — ETA ustawione samym INSERT AIS.
-q "insert into vessel_positions (vessel_id, lat, lon, sog_kn, observed_at, source) values
+q "set session_replication_role=replica;
+    update loads set eta_site=null, eta_computed_at=null, eta_basis=null where id='$L222';
+    set session_replication_role=origin;
+    insert into vessel_positions (vessel_id, lat, lon, sog_kn, observed_at, source) values
  ('$V222', 55.0, 18.5, 16, '2026-11-05 08:00+00', 'AISSTREAM')" >/dev/null
 chk "DP-222: AIS daleko → eta_site + ferry_eta=ais (bez ręcznego refresh)" \
   "select (eta_site is not null)::text||'/'||(eta_basis->>'ferry_eta') from loads where id='$L222'" "true/ais"
 ETA1=$(q "select extract(epoch from eta_site)::bigint from loads where id='$L222'")
-# Bliżej PORT_IN — ETA ma spaść (szybszy przyjazd).
-q "insert into vessel_positions (vessel_id, lat, lon, sog_kn, observed_at, source) values
+# Bliżej PORT_IN — ETA ma spaść (szybszy przyjazd); throttle wymaga ≥5 min od ostatniego.
+q "set session_replication_role=replica;
+    update loads set eta_computed_at = now() - interval '6 minutes' where id='$L222';
+    set session_replication_role=origin;
+    insert into vessel_positions (vessel_id, lat, lon, sog_kn, observed_at, source) values
  ('$V222', 58.5, 18.0, 16, '2026-11-05 10:00+00', 'AISSTREAM')" >/dev/null
 chk "DP-222: drugi AIS bliżej → eta_site wcześniejsze" \
   "select (extract(epoch from eta_site)::bigint < $ETA1)::text from loads where id='$L222'" true
@@ -4206,6 +4220,51 @@ q "insert into vessel_positions (vessel_id, lat, lon, sog_kn, observed_at, sourc
  ('$V222', 58.6, 18.05, 15, '2026-11-05 10:05+00', 'AISSTREAM')" >/dev/null
 chk "DP-222: AIS nie rusza ETA poza FERRY" \
   "select (eta_site = '2026-11-06 12:00+00')::text from loads where id='$L222b'" true
+
+# F7 #819 B1: wsad 20 → 1; po 1 min → 0; po 6 min → 1 (vessel/UUID własne DP-222c).
+echo; echo "[DP-222 B1] STATEMENT throttle 5 min"
+V222c=66666666-0000-0000-0000-00000000222c
+S222c=77777777-0000-0000-0000-00000000222c
+L222c=55555555-0000-0000-0000-00000000222c
+q "
+insert into vessels (id,name,operator) values
+ ('$V222c','DP-222c Nova batch','Polferries')
+ on conflict (id) do nothing;
+insert into sailings (id,project_id,vessel_id,route,departure_at,arrival_at,status,source) values
+ ('$S222c','$P','$V222c','GDN-NYN',
+  '2026-11-04 17:00+00','2026-11-05 11:00+00','W_REJSIE','RECZNIE');
+" >/dev/null
+mk $L222c T222c "'HHL/T222c'" "'SCX/T222c'" FERRY "'$S222c'"
+q "insert into load_events (load_id,event_type,occurred_at) values
+    ('$L222c','MILESTONE_LOADED','2026-11-04 08:00+00');
+    set session_replication_role=replica;
+    update loads set eta_site=null, eta_computed_at=null, eta_basis=null where id='$L222c';
+    set session_replication_role=origin;
+    insert into vessel_positions (vessel_id, lat, lon, sog_kn, observed_at, source)
+    select '$V222c', 55.0 + g.i * 0.01, 18.5, 16,
+           '2026-11-05 08:00+00'::timestamptz + (g.i || ' seconds')::interval, 'AISSTREAM'
+      from generate_series(0, 19) as g(i)" >/dev/null
+chk "DP-222 B1: wsad 20 → 1 przeliczenie (eta_computed_at)" \
+  "select (eta_computed_at is not null and eta_site is not null)::text from loads where id='$L222c'" true
+q "set session_replication_role=replica;
+    update loads set eta_computed_at = now() - interval '1 minute' where id='$L222c';
+    set session_replication_role=origin" >/dev/null
+ETA_1M=$(q "select extract(epoch from eta_computed_at)::bigint from loads where id='$L222c'")
+q "insert into vessel_positions (vessel_id, lat, lon, sog_kn, observed_at, source)
+    select '$V222c', 56.0 + g.i * 0.01, 18.2, 16,
+           '2026-11-05 09:00+00'::timestamptz + (g.i || ' seconds')::interval, 'AISSTREAM'
+      from generate_series(0, 19) as g(i)" >/dev/null
+chk "DP-222 B1: drugi wsad po 1 min → 0" \
+  "select (extract(epoch from eta_computed_at)::bigint = $ETA_1M)::text from loads where id='$L222c'" true
+q "set session_replication_role=replica;
+    update loads set eta_computed_at = now() - interval '6 minutes' where id='$L222c';
+    set session_replication_role=origin;
+    insert into vessel_positions (vessel_id, lat, lon, sog_kn, observed_at, source)
+    select '$V222c', 57.0 + g.i * 0.01, 18.0, 16,
+           '2026-11-05 10:00+00'::timestamptz + (g.i || ' seconds')::interval, 'AISSTREAM'
+      from generate_series(0, 19) as g(i)" >/dev/null
+chk "DP-222 B1: wsad po 6 min → 1" \
+  "select (eta_computed_at > now() - interval '1 minute')::text from loads where id='$L222c'" true
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

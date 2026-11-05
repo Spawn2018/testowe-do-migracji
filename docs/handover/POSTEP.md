@@ -1,3 +1,10 @@
+## 2026-11-05 14:15 — DP-222 F7 #819 B1 (0413 STATEMENT + throttle)
+
+- Skrzynka: #814 PILNE w toku (#819); #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne` poza #814.
+- Scalanie: brak F7 gotowe — F7 #819 @ `fb0a795f` **niegotowe** (B1). #813 nadal wstrzymane.
+- **Krok F7 B1:** `trg_vessel_positions_eta` → `FOR EACH STATEMENT` + `REFERENCING NEW TABLE AS new_rows` (`distinct vessel_id`); przeliczenie tylko gdy `eta_computed_at` null/<5 min; tylko `status=FERRY` i `actual_arrival_at is null`. Testy: wsad 20→1, po 1 min→0, po 6 min→1; A5/i2 z odsuniętym `eta_computed_at`. EXPECTED status **689**.
+- **Dalej:** push → CI (+`db`) → F7. Bez push na main.
+
 ## 2026-11-05 14:00 — #818 SCALONE; DP-222 ETA FERRY z AIS (0413)
 
 - Skrzynka: #814 PILNE w toku (pkt 3 ETA); #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne` poza #814.
