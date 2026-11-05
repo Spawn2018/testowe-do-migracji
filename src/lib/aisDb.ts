@@ -8,7 +8,7 @@ import { getSupabase } from '../auth/client';
 import type { AisPosition } from './ais';
 import { visibleFerryMarkers, type TrackFix } from './map/draw';
 import { estimateFerryPositions, type SailingMapRow } from './ferry/estimate';
-import { ensureSailingAisMarkers, withVoyages } from './bn9c2Ferry';
+import { ensureSailingAisMarkers, setSailingVesselIndex, withVoyages } from './bn9c2Ferry';
 
 export interface VesselPositionRow {
   vessel_id: string;
@@ -69,6 +69,8 @@ export async function fetchMapFerryMarkers(): Promise<AisPosition[]> {
   if (res.error || !Array.isArray(res.data)) throw new Error(res.error?.message ?? 'ferry_track_sample: brak danych');
   const sailRows = !sail.error && Array.isArray(sail.data) ? (sail.data as SailingMapRow[]) : [];
   const nowMs = Date.now();
+  /* F7 #824: sailing_id → vessel_id dla aisShipFix (gdy markera bez voyage) */
+  setSailingVesselIndex(sailRows);
   /* BN9-c2: rejs statku (trasa portami w dymku, kierunek bez COG) z tych samych wierszy `ferry_sailings_map` */
   /* DP-222: ensureSailingAisMarkers — świeży AIS aktywnego rejsu, gdy Q-18 odfiltrował ślad */
   return withVoyages(
