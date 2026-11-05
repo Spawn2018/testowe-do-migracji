@@ -64,9 +64,53 @@ export type RoadClosureCandidate = {
   korytarzDroga?: string | null;
 };
 
+/** Punkt prognozy wiatru (DP-212) — próbki godzinowe z `corridor_wind_forecast`. */
+export type DetourWindRow = {
+  km: number;
+  samples: readonly {
+    at: string;
+    gustMs?: number | null;
+    windMs?: number | null;
+    gust_ms?: number | null;
+    wind_ms?: number | null;
+  }[];
+};
+
+/**
+ * DP-212 / F7 #791 nieblok.: szczyt porywu w oknie jazdy wariantu (nie cały horyzont).
+ * Brak próbek w oknie → null → WIND warn.
+ */
+export function peakGustInDriveWindow(args: {
+  rows: readonly DetourWindRow[];
+  fromIso: string;
+  toIso: string;
+}): number | null {
+  const from = Date.parse(args.fromIso);
+  const to = Date.parse(args.toIso);
+  if (!Number.isFinite(from) || !Number.isFinite(to) || !args.rows.length) return null;
+  const t0 = Math.min(from, to);
+  const t1 = Math.max(from, to);
+  let peak: number | null = null;
+  for (const row of args.rows) {
+    for (const s of row.samples ?? []) {
+      const at = Date.parse(s.at);
+      if (!Number.isFinite(at) || at < t0 || at > t1) continue;
+      const g = Number(s.gustMs ?? s.gust_ms ?? s.windMs ?? s.wind_ms);
+      if (!Number.isFinite(g)) continue;
+      if (peak == null || g > peak) peak = g;
+    }
+  }
+  return peak;
+}
+
 /** Kontekst ryzyk karty (F7 #791 r4/r5 B8) — wartości z bazy; brak = warn „sprawdź …”. */
 export type DetourRiskCtx = {
-  /** Poryw m/s z corridor_wind_forecast na korytarzu. */
+  /**
+   * DP-212: punkty korytarza przed autem — szczyt liczony w oknie jazdy wariantu
+   * (`banFromIso`/`banToIso` w `buildNineRisks`).
+   */
+  windRows?: readonly DetourWindRow[] | null;
+  /** Poryw m/s (fallback testów / bez okna); produkcja: windRows + okno. */
   windGustMs?: number | null;
   /** Pozostały czas jazdy H-4 (min) do najbliższego EU_DAILY_REST. */
   hoursLeftMin?: number | null;
@@ -826,7 +870,17 @@ export function buildNineRisks(args: {
     text: `sprawdź ${checkWhat}`,
   });
   const ctx = args.riskCtx ?? null;
-  const wind = args.wind ?? riskWindFromGust(ctx?.windGustMs);
+  // DP-212: WIND ze szczytu w oknie jazdy wariantu (te same banFrom/banTo co BAN).
+  const wind = args.wind ?? (() => {
+    if (ctx?.windRows && args.banFromIso && args.banToIso) {
+      return riskWindFromGust(peakGustInDriveWindow({
+        rows: ctx.windRows,
+        fromIso: args.banFromIso,
+        toIso: args.banToIso,
+      }));
+    }
+    return riskWindFromGust(ctx?.windGustMs);
+  })();
   const hours = args.hours ?? riskHoursFromLeft(ctx?.hoursLeftMin, args.needDriveMin);
   const ferryEta = args.ferryEtaIso ?? args.etaIso;
   const ferry = args.ferry ?? riskFerryVsEta({

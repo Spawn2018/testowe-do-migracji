@@ -25,6 +25,7 @@ import {
   etaPortForVariant,
   riskWindFromGust,
   riskWindowVsEta,
+  peakGustInDriveWindow,
   runDetourCases,
   viaFromHereNotices,
 } from '../supabase/functions/_shared/e49/detourCaseJob.ts';
@@ -108,6 +109,58 @@ describe('detourCaseJob helpers', () => {
       expect(row.level).toBe('warn');
       expect(row.text).toMatch(/sprawdź/i);
     }
+  });
+
+  it('DP-212: WIND — szczyt w oknie jazdy wariantu (nie cały horyzont)', () => {
+    const rows = [{
+      km: 100,
+      samples: [
+        { at: '2026-11-05T08:00:00Z', gustMs: 14 },
+        { at: '2026-11-05T14:00:00Z', gustMs: 28 }, // poza oknem objazdu
+        { at: '2026-11-05T09:00:00Z', gustMs: 18 },
+      ],
+    }];
+    // Okno objazdu 08:00–10:00 → szczyt 18, nie 28.
+    expect(peakGustInDriveWindow({
+      rows,
+      fromIso: '2026-11-05T08:00:00Z',
+      toIso: '2026-11-05T10:00:00Z',
+    })).toBe(18);
+    expect(peakGustInDriveWindow({
+      rows,
+      fromIso: '2026-11-05T12:00:00Z',
+      toIso: '2026-11-05T13:00:00Z',
+    })).toBeNull();
+
+    const win = banDriveWindow({
+      side: 'detour',
+      nowIso: '2026-11-05T08:00:00Z',
+      decideByIso: '2026-11-05T08:00:00Z',
+      driveMin: 120,
+    })!;
+    const wired = buildNineRisks({
+      side: 'detour',
+      country: 'SE',
+      permitMode: 'TRASA',
+      hereNotices: ['ok'],
+      banFromIso: win.fromIso,
+      banToIso: win.toIso,
+      riskCtx: { windRows: rows },
+    });
+    expect(wired.find((r) => r.kind === 'WIND')?.text).toMatch(/18 m\/s/);
+    expect(wired.find((r) => r.kind === 'WIND')?.level).toBe('ok');
+    // Bez próbek w oknie → warn (nie bierze szczytu spoza okna).
+    const emptyWin = buildNineRisks({
+      side: 'detour',
+      country: 'SE',
+      permitMode: 'TRASA',
+      hereNotices: ['ok'],
+      banFromIso: '2026-11-05T12:00:00Z',
+      banToIso: '2026-11-05T13:00:00Z',
+      riskCtx: { windRows: rows },
+    });
+    expect(emptyWin.find((r) => r.kind === 'WIND')?.level).toBe('warn');
+    expect(emptyWin.find((r) => r.kind === 'WIND')?.text).toMatch(/sprawdź/i);
   });
 
   it('B8 r4/r5: WIND/HOURS/FERRY/WINDOW/PILOT — ok i warn z wartościami', () => {

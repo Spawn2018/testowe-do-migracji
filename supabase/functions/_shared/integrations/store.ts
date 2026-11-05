@@ -962,13 +962,24 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
       if (r.error) return 0;
       return r.count ?? 0;
     },
-    async listCorridorWindForecast(corridor: string, maxAgeMin = 180) {
+    /**
+     * E49-a / DP-212: punkty prognozy.
+     * `corridor` = jeden kod albo lista — **jedno zapytanie** na przebieg (`.in`, bez N+1).
+     */
+    async listCorridorWindForecast(corridor: string | readonly string[], maxAgeMin = 180) {
+      const codes = [...new Set(
+        (Array.isArray(corridor) ? corridor : [corridor])
+          .map((c) => String(c ?? '').trim())
+          .filter(Boolean),
+      )];
+      if (!codes.length) return [];
       const since = new Date(Date.now() - maxAgeMin * 60_000).toISOString();
-      const r = await sb.from('corridor_wind_forecast')
+      let q = sb.from('corridor_wind_forecast')
         .select('corridor,km,lon,lat,bearing_deg,source,samples')
-        .eq('corridor', corridor)
         .gte('fetched_at', since)
         .order('km');
+      q = codes.length === 1 ? q.eq('corridor', codes[0]!) : q.in('corridor', codes);
+      const r = await q;
       if (r.error) throw new Error(`corridor_wind_forecast: ${r.error.message}`);
       return (r.data ?? []).map((row) => ({
         corridor: String(row.corridor),
@@ -1077,22 +1088,16 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
           pilotsByLoad.set(lid, list);
         }
       }
-      const windPeak = new Map<string, number>();
+      // DP-212 / F7 #791: jedno zapytanie wiatru na przebieg (nie N+1); błąd → throw (nie cichy).
       const codes = [...new Set(legs.map((l) => l.code))];
-      for (const code of codes) {
-        try {
-          const rows = await this.listCorridorWindForecast!(code, 360);
-          let peak = 0;
-          for (const row of rows) {
-            for (const sample of row.samples as Array<{ gustMs?: number; gust_ms?: number }>) {
-              const g = Number(sample.gustMs ?? sample.gust_ms);
-              if (Number.isFinite(g) && g > peak) peak = g;
-            }
-          }
-          if (peak > 0) windPeak.set(code, peak);
-        } catch {
-          /* brak prognozy → warn w riskCtx */
-        }
+      const allWind = codes.length && this.listCorridorWindForecast
+        ? await this.listCorridorWindForecast(codes, 360)
+        : [];
+      const windByCode = new Map<string, typeof allWind>();
+      for (const row of allWind) {
+        const list = windByCode.get(row.corridor) ?? [];
+        list.push(row);
+        windByCode.set(row.corridor, list);
       }
       const out: import('../e49/detourCaseJob.ts').DetourLoadLeg[] = [];
       for (const leg of legs) {
@@ -1180,8 +1185,26 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
             holidayBan = null;
           }
         }
+        // DP-212: punkty przed autem (km ≥ fromKm); szczyt w oknie wariantu liczy job.
+        const fromKmWind = leg.currentLeg ? leg.fromKm : 0;
+        const windRows = (windByCode.get(leg.code) ?? [])
+          .filter((w) => Number.isFinite(w.km) && w.km >= fromKmWind - 0.01)
+          .map((w) => ({
+            km: w.km,
+            samples: (w.samples as Array<{
+              at?: string;
+              gustMs?: number | null;
+              windMs?: number | null;
+              gust_ms?: number | null;
+              wind_ms?: number | null;
+            }>).map((s) => ({
+              at: String(s.at ?? ''),
+              gustMs: s.gustMs ?? s.gust_ms ?? null,
+              windMs: s.windMs ?? s.wind_ms ?? null,
+            })),
+          }));
         const riskCtx: import('../e49/detourCaseJob.ts').DetourRiskCtx = {
-          windGustMs: windPeak.has(leg.code) ? windPeak.get(leg.code)! : null,
+          windRows: windRows.length ? windRows : null,
           hoursLeftMin: hoursLeft,
           ferryOperator: sail?.operator ?? null,
           ferryDepIso,
