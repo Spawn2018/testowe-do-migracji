@@ -1,12 +1,15 @@
 /**
- * BN3 — Urząd Morski w Gdyni: statki spodziewane / w porcie / wychodzące (HTML).
- * Zapasowe ETA/ATA/ETD dla Gdynia–Karlskrona (Stena Spirit / Estelle / Ebba).
+ * BN3 / DP-222 — Urząd Morski w Gdyni: statki spodziewane / w porcie / wychodzące (HTML).
+ * Zapasowe ETA/ATA/ETD:
+ *   - Port Gdynia → Stena GDY↔KAA (BN3);
+ *   - Gdańsk Nowy Port → Polferries GDN↔NYN (DP-222 #814: Digitraffic bez Zatoki,
+ *     AISSTREAM rzadko daje parę geofence ≤20 min → ATD z AIS pada BEZ_PRZEJSCIA).
  *
  * https://www.umgdy.gov.pl/bezpieczenstwo-morskie/ruch-statkow/
- * Tylko sekcja „Port Gdynia” (Gdańsk pomijany). User-Agent uczciwy; bez klucza.
+ * User-Agent uczciwy; bez klucza.
  */
 import { localToUtc } from './polferries.ts';
-import { STENA_FERRIES } from './stenaAis.ts';
+import { POLFERRIES, STENA_FERRIES } from './stenaAis.ts';
 
 export const UMG_EXPECTED_URL =
   'https://www.umgdy.gov.pl/bezpieczenstwo-morskie/ruch-statkow/statki-spodziewane/';
@@ -14,7 +17,7 @@ export const UMG_IN_PORT_URL =
   'https://www.umgdy.gov.pl/bezpieczenstwo-morskie/ruch-statkow/statki-w-porcie/';
 export const UMG_OUTGOING_URL =
   'https://www.umgdy.gov.pl/bezpieczenstwo-morskie/ruch-statkow/statki-wychodzace/';
-export const UMG_UA = 'Watch Tower (https://tower.log-mar.pl; ferry backup Stena Gdynia)';
+export const UMG_UA = 'Watch Tower (https://tower.log-mar.pl; ferry backup UMG Gdynia/Gdansk)';
 export const UMG_ATTRIBUTION = 'Ruch statków: Urząd Morski w Gdyni (umgdy.gov.pl)';
 
 const STENA_BY_IMO = new Map(STENA_FERRIES.map((v) => [v.imo, v.name]));
@@ -22,6 +25,12 @@ const STENA_BY_NAME: Record<string, string> = {
   'stena spirit': 'M/F Stena Spirit',
   'stena estelle': 'M/F Stena Estelle',
   'stena ebba': 'M/F Stena Ebba',
+};
+
+const POL_BY_IMO = new Map(POLFERRIES.map((v) => [v.imo, v.name]));
+const POL_BY_NAME: Record<string, string> = {
+  wawel: 'M/F Wawel',
+  'nova star': 'M/F Nova Star',
 };
 
 export type UmgKind = 'ETA' | 'ATA' | 'ETD';
@@ -58,6 +67,17 @@ function stripTags(s: string): string {
 /** Wycinek HTML sekcji Port Gdynia (do następnego h2 albo końca). */
 export function extractPortGdyniaHtml(html: string): string | null {
   const m = html.match(/<h2[^>]*>\s*Port\s+Gdynia\s*<\/h2>([\s\S]*?)(?=<h2\b|$)/i);
+  return m ? m[1]! : null;
+}
+
+/**
+ * DP-222: terminal Polferries Westerplatte = sekcja „Gdańsk Nowy Port”
+ * (nie „Port Gdańsk” / Port Północny).
+ */
+export function extractGdanskNowyPortHtml(html: string): string | null {
+  const m = html.match(
+    /<h2[^>]*>\s*Gda[nń]sk\s+Nowy\s+Port\s*<\/h2>([\s\S]*?)(?=<h2\b|$)/i,
+  );
   return m ? m[1]! : null;
 }
 
@@ -100,28 +120,38 @@ function mapStenaVessel(name: string, imoRaw: string): string | null {
   return STENA_BY_NAME[n] ?? null;
 }
 
+export function mapPolferriesVessel(name: string, imoRaw: string): string | null {
+  const imo = Number(imoRaw.replace(/\D/g, ''));
+  if (Number.isFinite(imo) && POL_BY_IMO.has(imo)) return POL_BY_IMO.get(imo)!;
+  const n = name.trim().toLowerCase().replace(/^m\/?s\s+/i, '').replace(/^m\/f\s+/i, '');
+  return POL_BY_NAME[n] ?? null;
+}
+
 export function isKarlskronaNote(note: string | null | undefined): boolean {
   return /karlskrona|karlskron/i.test(note ?? '');
 }
 
-/**
- * Parser desktopowej tabeli `table-striped` w sekcji Port Gdynia.
- * Kolumny: Call ID | Nazwa | IMO | Agent | czas | port/nabrzeże.
- */
-export function parseUmgdyGdyniaHtml(html: string, kind: UmgKind): UmgParseResult {
+/** DP-222: linia GDN↔NYN — note „Poprzedni port” / kierunek Nynäshamn. */
+export function isNynashamnNote(note: string | null | undefined): boolean {
+  return /nyn[aä]shamn|nynashamn/i.test(note ?? '');
+}
+
+type VesselMapper = (name: string, imoRaw: string) => string | null;
+
+function parseUmgSectionTable(
+  section: string,
+  kind: UmgKind,
+  mapVessel: VesselMapper,
+  sectionLabel: string,
+): UmgParseResult {
   const warnings: string[] = [];
   const rows: UmgShipRow[] = [];
   let emptyTime = 0;
-  const section = extractPortGdyniaHtml(html);
-  if (!section) {
-    warnings.push('Struktura UMG zmieniona: brak sekcji Port Gdynia.');
-    return { rows, warnings, emptyTime };
-  }
   const table = section.match(
     /<table[^>]*class="[^"]*table-striped[^"]*"[^>]*>[\s\S]*?<\/table>/i,
   );
   if (!table) {
-    warnings.push('Struktura UMG zmieniona: brak tabeli desktopowej Port Gdynia.');
+    warnings.push(`Struktura UMG zmieniona: brak tabeli desktopowej ${sectionLabel}.`);
     return { rows, warnings, emptyTime };
   }
   /* F7 #695 r1 B3: <tr class=…> też; brak nagłówków / pusta tabela = awaria struktury. */
@@ -137,7 +167,7 @@ export function parseUmgdyGdyniaHtml(html: string, kind: UmgKind): UmgParseResul
       continue;
     }
     dataRows += 1;
-    const vessel = mapStenaVessel(cells[1]!, cells[2] ?? '');
+    const vessel = mapVessel(cells[1]!, cells[2] ?? '');
     if (!vessel) continue;
     const timeRaw = cells[4] ?? '';
     const atUtc = parseUmgLocalTime(timeRaw);
@@ -166,12 +196,41 @@ export function parseUmgdyGdyniaHtml(html: string, kind: UmgKind): UmgParseResul
     });
   }
   if (!hasHeader) {
-    warnings.push('Struktura UMG zmieniona: brak nagłówków kolumn Port Gdynia.');
+    warnings.push(`Struktura UMG zmieniona: brak nagłówków kolumn ${sectionLabel}.`);
   }
   if (dataRows === 0) {
-    warnings.push('UMG Port Gdynia: pusta tabela (brak wierszy).');
+    warnings.push(`UMG ${sectionLabel}: pusta tabela (brak wierszy).`);
   }
   return { rows, warnings, emptyTime };
+}
+
+/**
+ * Parser desktopowej tabeli `table-striped` w sekcji Port Gdynia.
+ * Kolumny: Call ID | Nazwa | IMO | Agent | czas | port/nabrzeże.
+ */
+export function parseUmgdyGdyniaHtml(html: string, kind: UmgKind): UmgParseResult {
+  const section = extractPortGdyniaHtml(html);
+  if (!section) {
+    return {
+      rows: [],
+      warnings: ['Struktura UMG zmieniona: brak sekcji Port Gdynia.'],
+      emptyTime: 0,
+    };
+  }
+  return parseUmgSectionTable(section, kind, mapStenaVessel, 'Port Gdynia');
+}
+
+/** DP-222: Polferries w sekcji Gdańsk Nowy Port (ten sam układ kolumn). */
+export function parseUmgdyGdanskNowyHtml(html: string, kind: UmgKind): UmgParseResult {
+  const section = extractGdanskNowyPortHtml(html);
+  if (!section) {
+    return {
+      rows: [],
+      warnings: ['Struktura UMG zmieniona: brak sekcji Gdańsk Nowy Port.'],
+      emptyTime: 0,
+    };
+  }
+  return parseUmgSectionTable(section, kind, mapPolferriesVessel, 'Gdańsk Nowy Port');
 }
 
 /**
@@ -182,5 +241,16 @@ export function stenaUmgCandidates(rows: readonly UmgShipRow[]): UmgShipRow[] {
   return rows.filter((r) => {
     if (r.kind === 'ATA') return true;
     return isKarlskronaNote(r.note);
+  });
+}
+
+/**
+ * DP-222: ETA/ETD tylko z Nynäshamn (linia GDN↔NYN).
+ * ATA w Nowym Porcie: wszystkie Polferries.
+ */
+export function polferriesUmgCandidates(rows: readonly UmgShipRow[]): UmgShipRow[] {
+  return rows.filter((r) => {
+    if (r.kind === 'ATA') return true;
+    return isNynashamnNote(r.note);
   });
 }

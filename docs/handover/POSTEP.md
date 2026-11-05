@@ -1,3 +1,12 @@
+## 2026-11-05 12:15 — DP-222 ATD GDN-NYN (UMG + backfill 0412)
+
+- Skrzynka: #814 PILNE w toku; #550 WSTRZYMANE; BN5–8 w planie.
+- Scalanie: #815 CI unit+visual ✔ @ `1dcc457b` — brak F7 gotowe (po B1+B2). #813 F7 niegotowe (wstrzymane na #814).
+- **Przyczyna ATD:** Digitraffic bez Zatoki; AISSTREAM rzadko daje parę geofence ≤20 min → `BEZ_PRZEJSCIA_GEOFENCE` (3/3 GDN-NYN). Stena GDY ma UMG — Polferries nie.
+- **Krok ATD** `pakiet/c2-dp-222-atd-gdn-nyn` / **0412**: UMG „Gdańsk Nowy Port” → past ETD Wawel/Nova + Nynäshamn → `actual_departure_at` GDN-NYN; backfill 7 d z `vessel_positions` (DP-128 3/4 km). Testy dp222-atd-gdn-umg + bn3-umg 27/27.
+- **Dalej:** push → CI (+`db`) → F7. Po #815+#ATD: #813 B1/B2 → DP-220. Bez push na main.
+
+
 ## 2026-11-05 11:35 — DP-222 F7 #815 B1+B2 (tabela Mapy = AIS)
 
 - Skrzynka: #814 PILNE w toku; #550 WSTRZYMANE; BN5–8 w planie (bez przerwania).

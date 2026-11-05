@@ -47,7 +47,8 @@ import {
 } from '../ferry/cancelSuspect.ts';
 import {
   UMG_ATTRIBUTION, UMG_EXPECTED_URL, UMG_IN_PORT_URL, UMG_OUTGOING_URL, UMG_UA,
-  parseUmgdyGdyniaHtml, stenaUmgCandidates, type UmgKind, type UmgShipRow,
+  parseUmgdyGdanskNowyHtml, parseUmgdyGdyniaHtml, polferriesUmgCandidates,
+  stenaUmgCandidates, type UmgKind, type UmgShipRow,
 } from '../ferry/umgdyShipMovements.ts';
 import {
   PORT_TALLINN_ARRIVALS_URL, PORT_TALLINN_DEPARTURES_URL, PORT_TALLINN_UA,
@@ -2211,8 +2212,10 @@ async function applyUmgdyStenaBackup(deps: JobDeps, sinceIso: string): Promise<{
   ];
   const warnings: string[] = [];
   const allRows: UmgShipRow[] = [];
+  const gdanskRows: UmgShipRow[] = [];
   let okPages = 0;
   let inPortPageOk = false;
+  let gdanskInPortPageOk = false;
   let emptyTime = 0;
   const umgStructureFail = (ws: string[]) =>
     ws.some((w) => /struktura|pusta tabela/i.test(w));
@@ -2225,10 +2228,26 @@ async function applyUmgdyStenaBackup(deps: JobDeps, sinceIso: string): Promise<{
     const parsed = parseUmgdyGdyniaHtml(page.text, p.kind);
     warnings.push(...parsed.warnings);
     emptyTime += parsed.emptyTime;
-    if (umgStructureFail(parsed.warnings)) continue;
-    okPages += 1;
-    if (p.kind === 'ATA') inPortPageOk = true;
-    allRows.push(...parsed.rows);
+    if (!umgStructureFail(parsed.warnings)) {
+      okPages += 1;
+      if (p.kind === 'ATA') inPortPageOk = true;
+      allRows.push(...parsed.rows);
+    }
+    /* DP-222: Gdańsk Nowy Port (Polferries). Sekcja opcjonalna — bez „brak sekcji”.
+     * Pusta tabela OK (brak Polferries w porcie ≠ awaria); struktura = brak tabeli/nagłówków. */
+    const gdansk = parseUmgdyGdanskNowyHtml(page.text, p.kind);
+    const gdanskMissing = gdansk.warnings.some((w) => /brak sekcji Gdańsk Nowy Port/i.test(w));
+    if (!gdanskMissing) {
+      const gdanskBroken = gdansk.warnings.some((w) =>
+        /brak tabeli desktopowej|brak nagłówków kolumn/i.test(w));
+      warnings.push(...gdansk.warnings.filter((w) =>
+        !/pusta tabela/i.test(w) && !/brak sekcji/i.test(w)));
+      emptyTime += gdansk.emptyTime;
+      if (!gdanskBroken) {
+        if (p.kind === 'ATA') gdanskInPortPageOk = true;
+        gdanskRows.push(...gdansk.rows);
+      }
+    }
   }
   /* F7 #695 r1 B3: zamykać SOURCE_DOWN tylko gdy wszystkie 3 strony OK. */
   let risks = 0;
@@ -2245,6 +2264,7 @@ async function applyUmgdyStenaBackup(deps: JobDeps, sinceIso: string): Promise<{
   }
 
   const candidates = stenaUmgCandidates(allRows);
+  const polCandidates = polferriesUmgCandidates(gdanskRows);
   const vessels = await deps.store.vessels();
   const byName = new Map(vessels.map((v) => [v.name, v.id]));
   const existing = await deps.store.sailingsSince(sinceIso);
@@ -2257,8 +2277,14 @@ async function applyUmgdyStenaBackup(deps: JobDeps, sinceIso: string): Promise<{
   const stenaStatusDown = deps.store.hasOpenRisk
     ? await deps.store.hasOpenRisk('SOURCE_DOWN:STENA_STATUS:')
     : false;
+  const polStatusDown = deps.store.hasOpenRisk
+    ? await deps.store.hasOpenRisk('SOURCE_DOWN:POLFERRIES_STATUS:')
+    : false;
   /* Statki nadal na liście „w porcie” — past ETD nie może stać się actual. */
   const inPortNames = new Set(allRows.filter((r) => r.kind === 'ATA').map((r) => r.vessel));
+  const gdanskInPortNames = new Set(
+    gdanskRows.filter((r) => r.kind === 'ATA').map((r) => r.vessel),
+  );
   let updated = 0;
 
   for (const c of candidates) {
@@ -2397,10 +2423,153 @@ async function applyUmgdyStenaBackup(deps: JobDeps, sinceIso: string): Promise<{
     }
   }
 
+  /* DP-222 #814: Polferries GDN-NYN — past ETD z Gdańsk Nowy Port → actual_departure_at.
+   * Digitraffic nie pokrywa Zatoki; AISSTREAM często bez pary geofence ≤20 min. */
+  for (const c of polCandidates) {
+    const vesselId = byName.get(c.vessel);
+    if (!vesselId) continue;
+    if (c.kind === 'ATA' && !c.atUtc) continue;
+    if (!c.atUtc) continue;
+    const t = Date.parse(c.atUtc);
+    if (!Number.isFinite(t)) continue;
+
+    if (c.kind === 'ATA') {
+      const pool = existing.filter((s) =>
+        s.vessel_id === vesselId
+        && s.route === 'NYN-GDN'
+        && s.actual_arrival_at == null
+        && s.status !== 'ODWOLANY');
+      const pick = pickUniqueInWindow(pool, t, (s) => Date.parse(s.arrival_at), WINDOW_MS);
+      if (pick.kind === 'ambiguous') {
+        warnings.push(`UMG ATA niejednoznaczna: ${c.vessel} NYN-GDN (±3 h, ${pick.items.length} rejsy)`);
+        if (await deps.store.raiseRisk({
+          kind: 'FERRY', severity: 'MEDIUM',
+          title: `UMG: niejednoznaczne dopasowanie ATA ${c.vessel} — bez zmiany, do weryfikacji HHL`,
+          titleKey: 'rk_ferry_status_unknown',
+          params: { vessel: c.vessel, dep: c.atUtc.slice(0, 16) },
+          detail: { zrodlo: 'UMG_GDN', statek: c.vessel, ata: c.atUtc, rejsy: pick.items.length },
+          dedup: `FERRY_UNKNOWN:UMG_GDN_ATA:${vesselId}:${c.atUtc}`,
+        })) risks += 1;
+        continue;
+      }
+      if (pick.kind !== 'hit') continue;
+      const hit = pick.item;
+      const patch = sailingActualPatch(hit, { actual_arrival_at: c.atUtc }, 'DOPLYNAL');
+      if (await deps.store.updateSailing(hit.id, patch)) {
+        updated += 1;
+        hit.actual_arrival_at = c.atUtc;
+        if (hit.source !== 'RECZNIE' && hit.status !== 'ODWOLANY') hit.status = 'DOPLYNAL';
+      }
+      continue;
+    }
+
+    if (c.kind === 'ETD') {
+      if (t > nowMs) {
+        if (!polStatusDown) continue;
+        const pool = existing.filter((s) =>
+          s.vessel_id === vesselId
+          && s.route === 'GDN-NYN'
+          && s.actual_departure_at == null
+          && s.source !== 'RECZNIE'
+          && s.status !== 'ODWOLANY');
+        const pick = pickUniqueInWindow(pool, t, (s) => Date.parse(s.departure_at), WINDOW_MS);
+        if (pick.kind === 'ambiguous') {
+          warnings.push(`UMG ETD niejednoznaczna: ${c.vessel} GDN-NYN (±3 h, ${pick.items.length} rejsy)`);
+          if (await deps.store.raiseRisk({
+            kind: 'FERRY', severity: 'MEDIUM',
+            title: `UMG: niejednoznaczne dopasowanie ETD ${c.vessel} — bez zmiany, do weryfikacji HHL`,
+            titleKey: 'rk_ferry_status_unknown',
+            params: { vessel: c.vessel, dep: c.atUtc.slice(0, 16) },
+            detail: { zrodlo: 'UMG_GDN', statek: c.vessel, etd: c.atUtc, rejsy: pick.items.length },
+            dedup: `FERRY_UNKNOWN:UMG_GDN_ETD:${vesselId}:${c.atUtc}`,
+          })) risks += 1;
+          continue;
+        }
+        if (pick.kind !== 'hit') continue;
+        const hit = pick.item;
+        if (t - Date.parse(hit.departure_at) < delayMinMs) continue;
+        if (hit.delayed_departure_at === c.atUtc) continue;
+        if (await deps.store.updateSailing(hit.id, { delayed_departure_at: c.atUtc })) {
+          updated += 1;
+          hit.delayed_departure_at = c.atUtc;
+        }
+        continue;
+      }
+      if (!gdanskInPortPageOk || gdanskInPortNames.has(c.vessel)) continue;
+      const pool = existing.filter((s) =>
+        s.vessel_id === vesselId
+        && s.route === 'GDN-NYN'
+        && s.actual_departure_at == null
+        && s.status !== 'ODWOLANY');
+      const pick = pickUniqueInWindow(pool, t, (s) => Date.parse(s.departure_at), WINDOW_MS);
+      if (pick.kind === 'ambiguous') {
+        warnings.push(`UMG ETD niejednoznaczna: ${c.vessel} GDN-NYN (±3 h, ${pick.items.length} rejsy)`);
+        if (await deps.store.raiseRisk({
+          kind: 'FERRY', severity: 'MEDIUM',
+          title: `UMG: niejednoznaczne dopasowanie ETD ${c.vessel} — bez zmiany, do weryfikacji HHL`,
+          titleKey: 'rk_ferry_status_unknown',
+          params: { vessel: c.vessel, dep: c.atUtc.slice(0, 16) },
+          detail: { zrodlo: 'UMG_GDN', statek: c.vessel, etd: c.atUtc, rejsy: pick.items.length },
+          dedup: `FERRY_UNKNOWN:UMG_GDN_ETD:${vesselId}:${c.atUtc}`,
+        })) risks += 1;
+        continue;
+      }
+      if (pick.kind !== 'hit') continue;
+      const hit = pick.item;
+      const patch = sailingActualPatch(hit, { actual_departure_at: c.atUtc }, 'W_REJSIE');
+      if (await deps.store.updateSailing(hit.id, patch)) {
+        updated += 1;
+        hit.actual_departure_at = c.atUtc;
+        if (hit.source !== 'RECZNIE' && hit.status !== 'ODWOLANY') hit.status = 'W_REJSIE';
+      }
+      continue;
+    }
+
+    if (c.kind === 'ETA') {
+      if (!polStatusDown) continue;
+      const pool = existing.filter((s) =>
+        s.vessel_id === vesselId
+        && s.route === 'NYN-GDN'
+        && s.actual_arrival_at == null
+        && s.source !== 'RECZNIE'
+        && s.status !== 'ODWOLANY');
+      const pick = pickUniqueInWindow(pool, t, (s) => Date.parse(s.arrival_at), WINDOW_MS);
+      if (pick.kind === 'ambiguous') {
+        warnings.push(`UMG ETA niejednoznaczna: ${c.vessel} NYN-GDN (±3 h, ${pick.items.length} rejsy)`);
+        if (await deps.store.raiseRisk({
+          kind: 'FERRY', severity: 'MEDIUM',
+          title: `UMG: niejednoznaczne dopasowanie ETA ${c.vessel} — bez zmiany, do weryfikacji HHL`,
+          titleKey: 'rk_ferry_status_unknown',
+          params: { vessel: c.vessel, dep: c.atUtc.slice(0, 16) },
+          detail: { zrodlo: 'UMG_GDN', statek: c.vessel, eta: c.atUtc, rejsy: pick.items.length },
+          dedup: `FERRY_UNKNOWN:UMG_GDN_ETA:${vesselId}:${c.atUtc}`,
+        })) risks += 1;
+        continue;
+      }
+      if (pick.kind !== 'hit') continue;
+      const hit = pick.item;
+      if (t - Date.parse(hit.arrival_at) < delayMinMs) continue;
+      if (hit.delayed_arrival_at === c.atUtc) continue;
+      if (await deps.store.updateSailing(hit.id, { delayed_arrival_at: c.atUtc })) {
+        updated += 1;
+        hit.delayed_arrival_at = c.atUtc;
+      }
+    }
+  }
+
   if (candidates.length) {
     warnings.push(`${UMG_ATTRIBUTION}: ${candidates.length} Stena`);
   }
-  return { updated, rows: candidates.length, emptyTime, risks, warnings };
+  if (polCandidates.length) {
+    warnings.push(`${UMG_ATTRIBUTION}: ${polCandidates.length} Polferries (Gdańsk Nowy Port)`);
+  }
+  return {
+    updated,
+    rows: candidates.length + polCandidates.length,
+    emptyTime,
+    risks,
+    warnings,
+  };
 }
 
 /**
