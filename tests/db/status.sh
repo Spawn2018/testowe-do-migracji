@@ -3950,22 +3950,24 @@ chk "DP-205: raise_integration_risk E49_WIND — 1 OPEN, eskalacja 1 SEVERITY" \
    )::text;
    rollback" true
 # (c) transport tylko PL GDN-NYN → bez FI_E75 / SE_E22 / SE_KAA_* obcych tras.
+# Okno od 03:00 PL — plan_load_date=current_date pada w CI przed 03:00 (DP-216 noc ~01:00 UTC).
+L205d=aaaaaaaa-0000-0000-0000-00000000205d
 chk "DP-205: e49_wind_load_corridors PL GDN-NYN bez obcych SE/FI" \
   "begin;
    insert into loads (id, project_id, carrier_org_id, hhl_order_no, carrier_order_no, status,
                       plan_load_date, plan_delivery_date, ferry_route, telematics_vehicle_id,
                       tracking_opened_at)
-    values ('$L205a','$P','$SCXO','HHL/DP205-COR','SCX/DP205-COR','IN_TRANSIT_PL',
-            current_date, current_date + 3, 'GDN-NYN', 'TEL-DP205COR',
-            public.tracking_window_start(current_date));
+    values ('$L205d','$P','$SCXO','HHL/DP205-COR','SCX/DP205-COR','IN_TRANSIT_PL',
+            current_date - 1, current_date + 2, 'GDN-NYN', 'TEL-DP205COR',
+            public.tracking_window_start(current_date - 1));
    insert into positions (load_id, ts, geom_raw, source) values
-    ('$L205a', now() - interval '5 minutes', st_setsrid(st_makepoint(17.02, 52.50), 4326), 'TELEMATICS_API');
+    ('$L205d', now() - interval '5 minutes', st_setsrid(st_makepoint(17.02, 52.50), 4326), 'TELEMATICS_API');
    select (
-     exists (select 1 from public.e49_wind_load_corridors(now()) c where c.load_id='$L205a' and c.leg='PL')
-     and exists (select 1 from public.e49_wind_load_corridors(now()) c where c.load_id='$L205a' and c.code='SE_E4')
+     exists (select 1 from public.e49_wind_load_corridors(now()) c where c.load_id='$L205d' and c.leg='PL')
+     and exists (select 1 from public.e49_wind_load_corridors(now()) c where c.load_id='$L205d' and c.code='SE_E4')
      and not exists (
        select 1 from public.e49_wind_load_corridors(now()) c
-        where c.load_id='$L205a'
+        where c.load_id='$L205d'
           and c.code in ('FI_E75','SE_E22','SE_KAA_INLAND','SE_KAA_TRACK','SE_E4_STO','SE_E18_KPS')
      )
    )::text;

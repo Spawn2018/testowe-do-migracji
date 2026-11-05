@@ -1,4 +1,11 @@
 
+## 2026-11-05 02:10 — DP-216 (#802): CI fix (visual NBSP + db okno śledzenia)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie; bez nowego `pilne`.
+- Scalanie: brak — brak „F7: gotowe”; CI @ `65c235c5`: unit ✔, visual zrzuty ✖ (`30 min` łamie linię na stan-systemu), db ✖ DP-205 korytarze (noc przed 03:00 PL).
+- **Krok:** `sysDemo` cadence/why `30\u00a0min`; status.sh DP-205 corridor → L205d + `plan_load_date=current_date-1` (okno już otwarte). Bez migracji.
+- **Dalej:** push → CI (+`db`) → F7. DP-210 nie zaczynać.
+
 ## 2026-11-05 01:25 — DP-216 (#802): F7 r1 B1–B3 (FI wx)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 (#714/#716/#718/#720) w planie; bez nowego `pilne`.
