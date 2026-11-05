@@ -48,7 +48,7 @@ import { detourLineOk, detourLineTip } from '../../lib/e49Detour';
 import { e49t } from '../../i18n/e49';
 import { lazyRetry } from '../../lib/lazyRetry';
 import { etaDuration } from '../../lib/etaDuration';
-import { ferryMarkerHeading, ferryMarkerName } from '../../lib/bn9c2Ferry';
+import { aisShipFixForFerryKey, ferryMarkerHeading, ferryMarkerName } from '../../lib/bn9c2Ferry';
 
 /* III-5 — odtwarzanie przebiegu z bazy: tylko build Supabase (chunk leniwy); demo bez zmian */
 const TrackReplay = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('./TrackReplay'))) : null;
@@ -615,18 +615,20 @@ export function CorridorMap({ loads, embedded = false, slot = embedded ? 'kokpit
         const s = sailings.find((x) => x.id === fk);
         if (s) return { vessel: s.vessel, route: s.route, departureAt: s.delayedDepartureAt ?? s.departureAt };
         const l = visibleLoads.find((x) => ferryKeyOf(x) === fk);
-        if (!l) return null;
-        const ls = l.sailingId ? undefined : sailings.find((x) => vesselKeyOf(x.vessel) === vesselKeyOf(l.ferry.vessel) && x.departureAt === l.ferry.departureAt);
-        /* DP-4: bez rejsu — trasa z armatora statku (jedna trasa wyjazdowa), nie domyślne GDN-NYN */
-        return { vessel: l.ferry.vessel, route: ls?.route ?? routeOfVessel(l.ferry.vessel, vessels), departureAt: l.ferry.departureAt };
+        /* DP-222: rejs poza listą klienta — nazwa/trasa z markera AIS (`voyage.sailingId`) */
+        const ais = aisPositions.find((x) => x.source !== 'seed' && x.voyage?.sailingId === fk);
+        if (!l && !ais) return null;
+        const ls = l && !l.sailingId
+          ? sailings.find((x) => vesselKeyOf(x.vessel) === vesselKeyOf(l.ferry.vessel) && x.departureAt === l.ferry.departureAt)
+          : undefined;
+        const vessel = l?.ferry.vessel
+          ?? (ais?.name ? ais.name.replace(/^M\/F\s+/i, '').trim() || ais.name : null);
+        const route = ls?.route ?? ais?.voyage?.route ?? (l ? routeOfVessel(l.ferry.vessel, vessels) : null);
+        return { vessel, route, departureAt: l?.ferry.departureAt ?? null };
       };
       const shipOf = (fk: string): ShipFix | null => {
-        const v = vesselKey(ferryInfo(fk)?.vessel);
-        if (!v) return null;
-        /* I-2e: pozycje przykładowe (seed) nie są pozycją statku */
-        const p = aisPositions.find((x) => x.source !== 'seed' && vesselKey(x.name) === v);
-        if (!p) return null;
-        return { lat: p.lat, lng: p.lng, ts: p.ts, stale: !p.estimated && ferryMarkerTone(p.ts, getNowIso()) === 'stale', vessel: p.name, estimated: p.estimated };
+        /* DP-222 / #814: match po voyage.sailingId, potem nazwa — bez „brak AIS” gdy rejsu nie ma w store */
+        return aisShipFixForFerryKey(fk, aisPositions, ferryInfo(fk)?.vessel, getNowIso(), ferryMarkerTone);
       };
       const fleet0 = PROD_BUILD ? prodFleetMarkers(markerIn, gpsFixes) : demoAnchored();
       /* 22.10.2026 (SG-17 „stoi w porcie”): tracker milknie na promie — auto „Na promie” stoi na pozycji statku z AIS

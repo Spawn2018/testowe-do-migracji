@@ -1,3 +1,11 @@
+## 2026-11-05 11:05 — PILNE #814 DP-222 (mapa „brak AIS”); #813 wstrzymane
+
+- Skrzynka: #814 PILNE (Spawn2018) — BS-03 „brak AIS” mimo świeżego AIS Nova Star; #550 WSTRZYMANE. F7 #813 **niegotowe** (B1 prefiksy vt/kt/st/mt, B2 numeracja DP-220↔221) — wstrzymane do po #814.
+- Scalanie: brak F7 gotowe na HEAD.
+- **Krok DP-222** `pakiet/c2-dp-222-ferry-ais-bs03`: (1) `aisShipFixForFerryKey` / `ferryInfo` — match AIS po `voyage.sailingId` gdy rejsu nie ma w store; (2) `ensureSailingAisMarkers` — świeży AIS aktywnego rejsu gdy Q-18 odfiltrował ślad; (3) pasek „Na promie” z `sailingId`. Rejestr: DP-220=ETA, DP-221=FI (#813), DP-222=W TOKU. Testy dp222 + bn9-c2 / w-prom / p9e 60/60. Bez migracji. ATD rejsu + ETA (pkt 2–3 #814) — następny krok po F7 mapy albo w tym PR.
+- **Dalej:** push → CI → F7. Potem #813 B1/B2 (jako DP-221) → DP-220.
+
+
 ## 2026-11-05 10:10 — #811 SCALONE; start DP-219 (filtr trasy GEOFENCE)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.

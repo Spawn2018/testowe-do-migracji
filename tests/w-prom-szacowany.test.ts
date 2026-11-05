@@ -113,7 +113,7 @@ describe('grupa aut na promie', () => {
     expect(g).toContain("ais: ship ? (ship.estimated ? 'est' : ship.stale ? 'stale' : 'ok') : 'none'");
     expect(g).toContain("g.ais === 'est' ? (g.at ? ctx.tx('p9e_ais_est'");
     expect(readFileSync('src/i18n/p9e.ts', 'utf8')).toContain("p9e_ais_est: 'pozycja szacowana z rozkładu · ostatni AIS {t}'");
-    expect(readFileSync('src/components/map/CorridorMap.tsx', 'utf8')).toContain("vessel: p.name, estimated: p.estimated }");
+    expect(readFileSync('src/components/map/CorridorMap.tsx', 'utf8')).toContain('aisShipFixForFerryKey');
   });
 
   it('CSS: przerywany obrys po regule .wt-dot', () => {

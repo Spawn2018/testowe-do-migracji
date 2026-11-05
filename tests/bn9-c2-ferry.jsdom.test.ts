@@ -98,7 +98,9 @@ describe('BN9-c2 — trasa rejsu w dymku markera promu', () => {
     expect(m).toContain('const tip = esc(stale');
     expect(m).not.toContain('p.name || p.mmsi');
     const db = readFileSync('src/lib/aisDb.ts', 'utf8');
-    expect(db).toContain('withVoyages(withEstimates(markersFromTrack(res.data), sailRows, nowMs), sailRows, nowMs)');
+    expect(db).toContain('ensureSailingAisMarkers(markersFromTrack(res.data), sailRows, nowMs)');
+    expect(db).toContain('withVoyages(');
+    expect(db).toContain('withEstimates(');
     expect(db.match(/sb\.rpc\(/g)?.length).toBe(2);
   });
 });
