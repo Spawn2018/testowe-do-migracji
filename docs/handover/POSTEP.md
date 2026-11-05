@@ -1,3 +1,10 @@
+## 2026-11-05 15:35 — #819 SCALONE; DP-224 A (0414 map_display simplify)
+
+- Skrzynka: #817 PILNE DP-224 W TOKU; #814 drobne po DP-224; #550 WSTRZYMANE; BN5–8 w planie.
+- Scalanie: **#819 SCALONE** `fea386be` (F7 gotowe @ `448616ac`; unit+visual+db ✔). #813 nadal wstrzymane.
+- **Krok DP-224 A** `pakiet/c2-dp-224-map-display-perf` / **0414**: `points_display` (~50 m); `map_display_state(p_known_version)` bez `purge` w odczycie; `roads_version` / `roads_unchanged`; cron `tower-here-road-purge`; klient LS `wt-map-roads-v1`. EXPECTED bmapa **210**. Dalej B–E (#817).
+- Bez push na main.
+
 ## 2026-11-05 14:50 — DP-222 #819 CI fix (AIS freshness) + DP-224 w rejestrze
 
 - Skrzynka: #814 PILNE w toku (#819); **#817 PILNE DP-224** wpisane do rejestru; #550 WSTRZYMANE; BN5–8 w planie.

@@ -34,11 +34,49 @@ function tilesForcedOff(): boolean {
 }
 
 /**
- * AUD-01: jeden odczyt `map_display_state` na stronę (TTL 60 s) — wspólny dla podkładu i geometrii trasy.
- * Wcześniej dwa osobne wywołania przy każdym zamontowaniu mapy.
+ * AUD-01 / DP-224: jeden odczyt `map_display_state` na stronę.
+ * `roads_version` w localStorage — RPC z `p_known_version` pomija roads przy tej samej wersji
+ * (`roads_unchanged`). TTL pamięci 60 s; force bez wersji (pełny payload).
  */
-type DisplayState = { tiles_open?: boolean; month?: string; roads?: unknown; ferries?: unknown } | null;
+type DisplayState = {
+  tiles_open?: boolean;
+  month?: string;
+  roads?: unknown;
+  ferries?: unknown;
+  roads_version?: string;
+  roads_unchanged?: boolean;
+  route_legs?: unknown;
+} | null;
+const ROADS_CACHE_KEY = 'wt-map-roads-v1';
+type RoadsCache = { version: string; roads: unknown; route_legs?: unknown };
 let displayState: { at: number; p: Promise<DisplayState> } | null = null;
+
+function readRoadsCache(): RoadsCache | null {
+  try {
+    const raw = localStorage.getItem(ROADS_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw) as RoadsCache;
+    if (!parsed || typeof parsed.version !== 'string' || !Array.isArray(parsed.roads)) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function writeRoadsCache(version: string, roads: unknown, route_legs: unknown): void {
+  if (!version || !Array.isArray(roads)) return;
+  try {
+    const payload: RoadsCache = {
+      version,
+      roads,
+      route_legs: Array.isArray(route_legs) ? route_legs : undefined,
+    };
+    localStorage.setItem(ROADS_CACHE_KEY, JSON.stringify(payload));
+  } catch {
+    /* prywatny tryb / limit */
+  }
+}
+
 export function readMapDisplayState(force = false): Promise<DisplayState> {
   const now = Date.now();
   if (!force && displayState && now - displayState.at < 60_000) return displayState.p;
@@ -46,14 +84,34 @@ export function readMapDisplayState(force = false): Promise<DisplayState> {
     try {
       const { getSupabase } = await import('../../auth/client');
       const sb = await getSupabase();
-      const { data, error } = await sb.rpc('map_display_state');
-      return error ? null : (data as DisplayState);
+      const cached = force ? null : readRoadsCache();
+      const args = cached?.version ? { p_known_version: cached.version } : {};
+      const { data, error } = await sb.rpc('map_display_state', args);
+      if (error || !data || typeof data !== 'object') return null;
+      const state = data as DisplayState;
+      const version = typeof state.roads_version === 'string' ? state.roads_version : '';
+      if (state.roads_unchanged === true && cached && cached.version === version) {
+        return {
+          ...state,
+          roads: cached.roads,
+          route_legs: cached.route_legs ?? state.route_legs,
+        };
+      }
+      if (version && Array.isArray(state.roads)) {
+        writeRoadsCache(version, state.roads, state.route_legs);
+      }
+      return state;
     } catch {
       return null;
     }
   })();
   displayState = { at: now, p };
   return p;
+}
+
+/** DP-224: testy — czyść LS. */
+export function __resetMapRoadsLocalCacheForTests(): void {
+  try { localStorage.removeItem(ROADS_CACHE_KEY); } catch { /* */ }
 }
 
 /**
@@ -382,6 +440,7 @@ export function __resetRoadLinesCacheForTests(): void {
   displayState = null;
   hereRoadsSessionAt = 0;
   hereRoadsInFlight = null;
+  __resetMapRoadsLocalCacheForTests();
 }
 
 /** #667 F7 r6 B6: okno sesji 0 w teście in-flight (żeby drugi call nie odpadał po finally). */

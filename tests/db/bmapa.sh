@@ -18,8 +18,8 @@ val "H-1 zostaje wyłączone" "select enabled::text from security_flags where ke
 val "H-3 zostaje wyłączone" "select enabled::text from security_flags where key='H3_' || 'CORRIDOR_OBSTACLES'" "false"
 val "H-6 jest wyłączone" "select enabled::text from security_flags where key='H6_MAP_OBSTACLES'" "false"
 val "funkcja H-6 zwraca fałsz" "select h6_map_enabled()::text" "false"
-val "anon nie czyta stanu mapy" "select has_function_privilege('anon','map_display_state()','execute')::text" "false"
-val "zalogowany czyta stan mapy" "select has_function_privilege('authenticated','map_display_state()','execute')::text" "true"
+val "anon nie czyta stanu mapy" "select has_function_privilege('anon','map_display_state(text)','execute')::text" "false"
+val "zalogowany czyta stan mapy" "select has_function_privilege('authenticated','map_display_state(text)','execute')::text" "true"
 val "anon nie bierze próbki promu" "select has_function_privilege('anon','ferry_track_sample()','execute')::text" "false"
 val "zalogowany bierze próbkę promu" "select has_function_privilege('authenticated','ferry_track_sample()','execute')::text" "true"
 # #460: wywołanie (nie tylko privilege) — 0258 miało 42702 ambiguous vessel_id w CTE u
@@ -49,6 +49,7 @@ sys "update here_road_geometry set fetched_at = now() - interval '31 days' where
 val "geometria starsza niż 30 dni jest kasowana" "select purge_here_road_geometry(now())::text" "1"
 val "podsumowanie zostaje po kasowaniu punktów" "select summary || ':' || coalesce(points::text,'null') from here_road_geometry where leg='PL-GDN'" "trasa drogowa Śrem–Gdańsk:null"
 val "DP-184 geom/n_points po purge" "select (geom is null and n_points is null)::text from here_road_geometry where leg='PL-GDN'" "true"
+val "DP-224 points_display po purge" "select (points_display is null)::text from here_road_geometry where leg='PL-GDN'" "true"
 # BN7 #718 / 0381: podpis + length_m/duration_s (stary 4-arg usunięty)
 val "konto nie zapisuje geometrii HERE" "select has_function_privilege('authenticated','here_store_road(text,jsonb,text,timestamptz,double precision,double precision)','execute')::text" "false"
 # H-2-PL: osobna pula traffic
@@ -286,6 +287,31 @@ fk_post=$(sys "select count(*)::text from pg_constraint where conname='ferry_rou
 [ "$fk_post" = "1" ] && { ok=$((ok+1)); echo "  OK    FK ferry_routes.road_corridor_post"; } || { fail=$((fail+1)); echo "  FAIL  FK post → $fk_post"; }
 rl=$(asu "$HHL_465" "select jsonb_array_length(coalesce(map_display_state()->'route_legs','[]'::jsonb))")
 if [ "$rl" -ge 8 ] 2>/dev/null; then ok=$((ok+1)); echo "  OK    map_display_state().route_legs ≥ 8 ($rl)"; else fail=$((fail+1)); echo "  FAIL  route_legs → $rl"; fi
+
+# DP-224 (#817): bez purge w odczycie; points_display; roads_version / cache
+echo; echo "[#817] DP-224 map_display simplify + version cache"
+sys "select here_store_road('PL-GDN', (select jsonb_agg(jsonb_build_array(52.07 + i*0.01, 17.02 + i*0.005) order by i) from generate_series(0, 199) i), 'DP-224 dense PL-GDN', now())" >/dev/null
+val "DP-224 points_display po store" "select (points_display is not null and jsonb_array_length(points_display) >= 2 and jsonb_array_length(points_display) <= jsonb_array_length(points))::text from here_road_geometry where leg='PL-GDN'" "true"
+val "DP-224 map_display bez purge" "select (pg_get_functiondef('public.map_display_state(text)'::regprocedure) not ilike '%purge_here_road_geometry%')::text" "true"
+ver=$(asu "$HHL_465" "select map_display_state()->>'roads_version'")
+if [ -n "$ver" ] && [ "$ver" != "null" ]; then ok=$((ok+1)); echo "  OK    roads_version ustawione ($ver)"; else fail=$((fail+1)); echo "  FAIL  roads_version → $ver"; fi
+unchanged=$(asu "$HHL_465" "select (map_display_state('$ver')->>'roads_unchanged')")
+[ "$unchanged" = "true" ] && { ok=$((ok+1)); echo "  OK    known version → roads_unchanged"; } || { fail=$((fail+1)); echo "  FAIL  roads_unchanged → $unchanged"; }
+roads_null=$(asu "$HHL_465" "select ((map_display_state('$ver')->'roads') is null)::text")
+[ "$roads_null" = "true" ] && { ok=$((ok+1)); echo "  OK    known version → roads null"; } || { fail=$((fail+1)); echo "  FAIL  roads null → $roads_null"; }
+disp_pts=$(asu "$HHL_465" "select coalesce(jsonb_array_length((select e->'points' from jsonb_array_elements(map_display_state()->'roads') e where e->>'leg'='PL-GDN' limit 1)),0)")
+full_pts=$(sys "select jsonb_array_length(points) from here_road_geometry where leg='PL-GDN'")
+awk "BEGIN{exit !($disp_pts+0 >= 2 && $disp_pts+0 <= $full_pts+0)}" 2>/dev/null \
+  && { ok=$((ok+1)); echo "  OK    display points ≤ full ($disp_pts ≤ $full_pts)"; } \
+  || { fail=$((fail+1)); echo "  FAIL  display/full → $disp_pts / $full_pts"; }
+cron_purge=$(sys "select count(*)::text from cron.job where jobname='tower-here-road-purge'" 2>/dev/null || echo 0)
+if [ "$cron_purge" = "1" ] || [ "$cron_purge" = "0" ]; then
+  # 0 = brak pg_cron w bramie lokalnej; 1 = produkcja/TEST
+  ok=$((ok+1)); echo "  OK    cron tower-here-road-purge ($cron_purge; 0=brak pg_cron w CI)"
+else
+  fail=$((fail+1)); echo "  FAIL  cron purge → $cron_purge"
+fi
+
 val "ETA TLL-HEL PL_ROAD → PL_ROAD_EE" "select eta_obs_segment_code('TLL-HEL','PL_ROAD')" "PL_ROAD_EE"
 val "ETA TLL-HEL SE_ROAD → FI_ROAD" "select eta_obs_segment_code('TLL-HEL','SE_ROAD')" "FI_ROAD"
 val "ETA TLL-STO SE_ROAD → SE_ROAD_STO" "select eta_obs_segment_code('TLL-STO','SE_ROAD')" "SE_ROAD_STO"
