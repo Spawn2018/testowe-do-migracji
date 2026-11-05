@@ -567,7 +567,7 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
       return [...best.entries()].map(([vesselId, observedAt]) => ({ vesselId, observedAt }));
     },
     /**
-     * DP-128 F7 r1: ATD = p_in przy przejściu ≤3 km → >4 km w ≤20 min (od sinceIso).
+     * DP-128 / DP-222: ATD = p_in (prefer. SOG≥1) przy ≤3→>4 km; luka ≤20/60 min.
      * radiusKm zachowane w sygnaturze (kompatybilność SyncStore); klasyfikacja IN/OUT stała 3/4.
      */
     async lastPortPosition(

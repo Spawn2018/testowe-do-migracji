@@ -1,6 +1,6 @@
 /**
  * DP-222 / #814 — ATD GDN-NYN z UMG „Gdańsk Nowy Port” (Polferries).
- * Digitraffic bez Zatoki + AISSTREAM rzadko daje parę geofence ≤20 min → BEZ_PRZEJSCIA.
+ * Digitraffic bez Zatoki + AISSTREAM rzadki; UMG + geofence ≤60 min (F7 #818 B1).
  * Etap: C2 / BN9-c2. Decyzja: ten sam wzorzec co BN3 UMG Stena/Gdynia.
  */
 import { describe, expect, it } from 'vitest';

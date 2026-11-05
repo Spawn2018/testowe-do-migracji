@@ -3,7 +3,7 @@
  * Zapasowe ETA/ATA/ETD:
  *   - Port Gdynia → Stena GDY↔KAA (BN3);
  *   - Gdańsk Nowy Port → Polferries GDN↔NYN (DP-222 #814: Digitraffic bez Zatoki,
- *     AISSTREAM rzadko daje parę geofence ≤20 min → ATD z AIS pada BEZ_PRZEJSCIA).
+ *     AISSTREAM rzadko daje parę geofence — ATD z AIS bywa BEZ_PRZEJSCIA; DP-222: ≤60 min).
  *
  * https://www.umgdy.gov.pl/bezpieczenstwo-morskie/ruch-statkow/
  * User-Agent uczciwy; bez klucza.

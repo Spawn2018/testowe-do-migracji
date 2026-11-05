@@ -1,7 +1,8 @@
 /**
- * DP-128 F7 r2: ATD/ATA z AIS tylko przy przejściu geofence z histerezą i luką ≤20 min.
- * Pas 3–4 km pomijany (nie przerywa pary). Świadomy skutek (decyzja 81): przerwa
- * sygnału >20 min przy nabrzeżu → brak godziny zamiast zgadywania.
+ * DP-128 F7 r2 + DP-222 F7 #818 B1: ATD/ATA z AIS przy przejściu geofence (histereza 3/4 km).
+ * ATA: luka ≤20 min. ATD: ≤20 min, albo ≤60 min gdy p_out ma SOG≥3 albo kolejne
+ * pozycje oddalają się od portu (AISSTREAM co 10–25 min w Zatoce). ATD = ostatnia
+ * w strefie z SOG≥1, inaczej ostatnia w strefie. Pas 3–4 km pomijany.
  */
 
 export type GeofencePos = {
@@ -17,8 +18,12 @@ export const GEOFENCE_QUERY_RADIUS_KM = 15;
 export const GEOFENCE_IN_KM = 3;
 /** Poza hubem — histereza względem IN (ATD p_out / ATA „poprzednia”). */
 export const GEOFENCE_OUT_KM = 4;
-/** Maks. przerwa między p_in a p_out (ATD) albo poprzednią a wejściem (ATA). */
+/** Maks. przerwa pary ATD/ATA bez dowodu ruchu (SOG / oddalanie). */
 export const GEOFENCE_PAIR_MAX_MS = 20 * 60_000;
+/** DP-222: AISSTREAM rzadki — para ATD do 60 min przy SOG≥3 albo oddalaniu. */
+export const GEOFENCE_ATD_SPARSE_MAX_MS = 60 * 60_000;
+/** ATD = ostatnia w strefie z SOG ≥ 1 kn (ruszanie z nabrzeża). */
+export const GEOFENCE_ATD_MOVING_SOG_KN = 1;
 export const GEOFENCE_CLEAR_SOG_KN = 3;
 
 export const VESSEL_POS_PAGE_SIZE = 1000;
@@ -53,10 +58,32 @@ function isClearOutside(dKm: number, sogKn: number | null): boolean {
   return sogKn != null && Number.isFinite(sogKn) && sogKn >= GEOFENCE_CLEAR_SOG_KN;
 }
 
+function sogAtLeast(sogKn: number | null, minKn: number): boolean {
+  return sogKn != null && Number.isFinite(sogKn) && sogKn >= minKn;
+}
+
+/** DP-222: para ATD może mieć lukę do 60 min przy dowodzie ruchu. */
+function atdAllowsSparseGap(
+  sorted: GeofencePos[],
+  outIdx: number,
+  hub: { lat: number; lon: number },
+): boolean {
+  const pOut = sorted[outIdx]!;
+  if (sogAtLeast(pOut.sog_kn, GEOFENCE_CLEAR_SOG_KN)) return true;
+  const dOut = haversineKm(pOut.lat, pOut.lon, hub.lat, hub.lon);
+  for (let j = outIdx + 1; j < sorted.length; j++) {
+    const r = sorted[j]!;
+    const d = haversineKm(r.lat, r.lon, hub.lat, hub.lon);
+    if (d <= GEOFENCE_IN_KM) return false;
+    if (d > dOut + 0.05) return true;
+  }
+  return false;
+}
+
 /**
- * ATD: p_in = ostatnia pozycja ≤3 km, p_out = pierwsza późniejsza >4 km,
- * bez pozycji ≤3 km pomiędzy (pas 3–4 km pomijany). p_out.t − p_in.t ≤ 20 min.
- * Czas = p_in.t. `rows` — pozycje w okolicy hubu od since; kolejność dowolna.
+ * ATD: p_in = ostatnia ≤3 km (prefer. SOG≥1), p_out = pierwsza późniejsza >4 km,
+ * pas 3–4 km pomijany. Luka ≤20 min, albo ≤60 min przy SOG≥3 / oddalaniu (DP-222).
+ * Czas = p_in. `rows` — pozycje w okolicy hubu od since; kolejność dowolna.
  */
 export function findAtdTransitionIso(
   rows: GeofencePos[],
@@ -67,11 +94,14 @@ export function findAtdTransitionIso(
     .slice()
     .sort((a, b) => a.observed_at.localeCompare(b.observed_at));
   let lastIn: GeofencePos | null = null;
+  let lastInMoving: GeofencePos | null = null;
   let best: string | null = null;
-  for (const row of sorted) {
+  for (let i = 0; i < sorted.length; i++) {
+    const row = sorted[i]!;
     const d = haversineKm(row.lat, row.lon, hub.lat, hub.lon);
     if (d <= GEOFENCE_IN_KM) {
       lastIn = row;
+      if (sogAtLeast(row.sog_kn, GEOFENCE_ATD_MOVING_SOG_KN)) lastInMoving = row;
       continue;
     }
     if (d <= GEOFENCE_OUT_KM) {
@@ -80,11 +110,16 @@ export function findAtdTransitionIso(
     }
     /* d > 4 km = p_out */
     if (lastIn) {
-      const gap = Date.parse(row.observed_at) - Date.parse(lastIn.observed_at);
-      if (gap >= 0 && gap <= GEOFENCE_PAIR_MAX_MS) {
-        best = new Date(lastIn.observed_at).toISOString();
+      const pin = lastInMoving ?? lastIn;
+      const gap = Date.parse(row.observed_at) - Date.parse(pin.observed_at);
+      const maxMs = atdAllowsSparseGap(sorted, i, hub)
+        ? GEOFENCE_ATD_SPARSE_MAX_MS
+        : GEOFENCE_PAIR_MAX_MS;
+      if (gap >= 0 && gap <= maxMs) {
+        best = new Date(pin.observed_at).toISOString();
       }
       lastIn = null;
+      lastInMoving = null;
     }
   }
   return best;

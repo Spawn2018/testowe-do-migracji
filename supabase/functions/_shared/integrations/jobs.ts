@@ -356,8 +356,8 @@ export interface SyncStore {
   /** AIS-POLF: ostatnia pozycja AISSTREAM każdego statku od sinceIso (zapis: ferry-ais-listen co minutę). */
   latestAisstreamFixes?(sinceIso: string): Promise<{ vesselId: string; fix: VesselFix }[]>;
   /**
-   * DP-128 F7 r1: ATD — para p_in (≤3 km) → p_out (>4 km) w ≤20 min od `sinceIso`
-   * (zwykle max(plan−2h, prevArr)). Brak pary → null.
+   * DP-128 / DP-222: ATD — para p_in (≤3 km) → p_out (>4 km); ≤20 min albo ≤60 min
+   * przy SOG≥3 / oddalaniu; czas = ostatnia w strefie z SOG≥1. Brak pary → null.
    */
   lastPortPosition?(
     vesselId: string,
@@ -3531,7 +3531,7 @@ export async function runFerryAis(deps: JobDeps): Promise<JobResult> {
     }
     observations[v.name] = obs;
 
-    // #421 F7 + DP-128 F7 r1: ATD tylko przy parze geofence ≤20 min (histereza 3/4 km).
+    // #421 / DP-128 / DP-222: ATD przy parze geofence (3/4 km; ≤20/60 min + SOG≥1).
     // BN4 F7 #701: bez mapy portu wyjścia — bez geofence (nigdy GDN dla TLLA-HEL).
     if (s.actual_departure_at == null) {
       const ageMin = (Date.parse(now) - Date.parse(fix.timestampUtc)) / 60_000;

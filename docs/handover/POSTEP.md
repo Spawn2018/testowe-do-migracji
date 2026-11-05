@@ -1,3 +1,10 @@
+## 2026-11-05 12:25 — DP-222 F7 #818 B1 (geofence ≤60 min) + #815 SCALONE
+
+- Skrzynka: #814 PILNE w toku (#818); #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne` poza #814.
+- Scalanie: **#815 SCALONE** `e78368f5` (F7 gotowe @ `1dcc457b`; unit+visual ✔). #818 F7 **niegotowe** B1 → poprawka. #813 nadal wstrzymane.
+- **Krok F7 B1** `pakiet/c2-dp-222-atd-gdn-nyn` / **0412**: `findAtdTransitionIso` — luka ≤60 min gdy SOG≥3 / oddalanie; ATD = ostatnia w strefie z SOG≥1; backfill SQL to samo + plan ±3 h. Test Nova Star 04.11 → 17:09:44 + W_REJSIE; postój 2 h → bez ATD. Testy dp128+dp222+integrations+bn3-umg 100/100.
+- **Dalej:** push → CI (+`db`) → F7. Po scaleniu: liczba ATD GDN-NYN z 7 d (oczekiwane Nova 02/04.11). Bez push na main.
+
 ## 2026-11-05 12:15 — DP-222 ATD GDN-NYN (UMG + backfill 0412)
 
 - Skrzynka: #814 PILNE w toku; #550 WSTRZYMANE; BN5–8 w planie.
