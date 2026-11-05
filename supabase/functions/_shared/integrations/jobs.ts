@@ -119,7 +119,8 @@ import {
   eeDatexFeedUrl, fiCorridorBboxes, fiTrafficUrl, filterInEeBboxes, filterInFiBboxes,
   filterInLvBboxes, dimensionLimitRisk, filterInLtBboxes, getEeHeavyFeedCache, getEeSitesCache,
   isDimensionLimitEvent, isEeHeavyFeedCode,
-  isFiWeightLimitLike, fiWeatherToRiskEvents, ltWeatherToSlowdownEvents, lvFileInfoFirstId, lvIsFileIdMismatch,
+  isFiWeightLimitLike, fiWeatherToRiskEvents, fiWeatherSegmentsAhead, fiWxLoadSlipRisk,
+  ltWeatherToSlowdownEvents, lvFileInfoFirstId, lvIsFileIdMismatch,
   lvNapKeyAllowedForUrl, lvNapKeyEnv, lvNapUrlEnv,
   normalizeLvNapUrl,
   lvWeatherToSlowdownEvents, parseEeFeedBody, parseFiTrafficMessages, parseFiWeatherStationsData,
@@ -3916,9 +3917,12 @@ export async function runRoadFi(deps: JobDeps): Promise<JobResult> {
   await fetchKind(FI_ANNOUNCEMENTS_URL);
   await fetchKind(FI_WEIGHT_URL);
 
-  /* DP-216 / F7 #802: Digitraffic weather ≤ 3 km → klaster 25 km; HIGH tylko z transportem FI_E75. */
+  /* DP-216 / F7 #802 + DP-217 / #804: Digitraffic weather ≤ 3 km → klaster 25 km (MEDIUM);
+   * HIGH 1× na transport (odcinki przed autem, audience HHL+SCX) — bez fali MEDIUM→HIGH. */
   let weatherFetched = 0;
   let weatherEvents = 0;
+  let fiWxLoadAlerts = 0;
+  const fiWxLoadRisks: NonNullable<ReturnType<typeof fiWxLoadSlipRisk>>[] = [];
   {
     const metaR = await readText(deps, FI_WEATHER_STATIONS_URL, { headers });
     const dataR = await readText(deps, FI_WEATHER_STATIONS_DATA_URL, { headers });
@@ -3927,19 +3931,37 @@ export async function runRoadFi(deps: JobDeps): Promise<JobResult> {
       try {
         const meta = parseFiWeatherStationsMeta(JSON.parse(metaR.text));
         const readings = parseFiWeatherStationsData(JSON.parse(dataR.text), meta);
-        let hasTransportOnFiE75 = false;
-        if (deps.store.e49WindActiveCorridors) {
-          try {
-            const active = await deps.store.e49WindActiveCorridors();
-            hasTransportOnFiE75 = active.some((c) => /FI_E75|ROAD_FI/i.test(c));
-          } catch {
-            /* brak RPC → MEDIUM (bez zalewu powiadomień) */
-          }
-        }
-        const wx = fiWeatherToRiskEvents(readings, undefined, { hasTransportOnFiE75 });
+        const wx = fiWeatherToRiskEvents(readings);
         weatherEvents = wx.length;
         for (const e of wx) {
           if (!byId.has(e.id)) byId.set(e.id, { event: e, sourceUrl: FI_WEATHER_STATIONS_DATA_URL });
+        }
+        /* DP-217: zbiorcze HIGH tylko dla FI_E75 z bieżącym odcinkiem (currentLeg). */
+        if (wx.length && deps.store.e49WindLoadCorridors) {
+          try {
+            const loads = await deps.store.e49WindLoadCorridors();
+            const onFi = loads.filter((l) => (
+              l.currentLeg && /FI_E75|ROAD_FI/i.test(l.code)
+            ));
+            const seen = new Set<string>();
+            for (const leg of onFi) {
+              if (seen.has(leg.loadId)) continue;
+              seen.add(leg.loadId);
+              const ahead = fiWeatherSegmentsAhead(wx, leg.fromKm);
+              const risk = fiWxLoadSlipRisk({
+                loadId: leg.loadId,
+                ahead,
+                sourceUrl: FI_WEATHER_STATIONS_DATA_URL,
+                nowMs: deps.now().getTime(),
+              });
+              if (risk) fiWxLoadRisks.push(risk);
+            }
+            fiWxLoadAlerts = fiWxLoadRisks.length;
+          } catch (e) {
+            warnings.push(
+              `E49 wind load corridors (FI slip): ${e instanceof Error ? e.message : 'błąd'}`,
+            );
+          }
         }
       } catch {
         warnings.push('FI Digitraffic: nieczytelna odpowiedź (weather stations)');
@@ -4008,6 +4030,12 @@ export async function runRoadFi(deps: JobDeps): Promise<JobResult> {
     keep.push(risk.dedup);
     if (await deps.store.raiseRisk(risk)) risks++;
   }
+  /* DP-217 / #804: 1× HIGH na transport (HHL+SCX); segmenty zostają MEDIUM. */
+  for (const loadRisk of fiWxLoadRisks) {
+    if (!loadRisk) continue;
+    keep.push(loadRisk.dedup);
+    if (await deps.store.raiseRisk(loadRisk)) risks++;
+  }
   /* F7 B3: zamykaj zniknięcia tylko przy komplecie (jak ROAD_SE situationsStatus===ok). */
   if (complete && deps.store.resolveStaleRisks) {
     await deps.store.resolveStaleRisks('ROAD_FI:', keep);
@@ -4042,6 +4070,7 @@ export async function runRoadFi(deps: JobDeps): Promise<JobResult> {
       fi_off_corridor: String(fiOffCorridor),
       fi_weather_fetched: String(weatherFetched),
       fi_weather_events: String(weatherEvents),
+      fi_wx_load_alerts: String(fiWxLoadAlerts),
     },
   };
 }

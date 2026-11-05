@@ -1,3 +1,10 @@
+## 2026-11-05 03:45 — PILNE #804 DP-217 (przerwane #805 DP-211)
+
+- Skrzynka: **#804 `pilne`** (Spawn2018) — FI gołoledź fala dzwonków + tytuły odcinków; #550 WSTRZYMANE; BN5–8 w planie.
+- Scalanie: brak „F7: gotowe do scalenia” po ostatnim commitcie otwartych PR. #805 (DP-211) **nie scalać** przed F7 — przerwane na polecenie w #804/#805.
+- **Krok DP-217** `pakiet/c2-dp-217-fi-wx-slip-flood` / **0409**: (1) `fi-wx:seg:*` zawsze MEDIUM (bez load_id); (2) 1× HIGH `fi-wx:load:{id}` przed autem w horyzoncie 6 h, `audience=HHL_PRZEWOZNIK`; (3) etykiety odcinków z gęstych miejscowości CORRIDOR_FI (nie „Vuosaari–Tornio”); (4) vitest bn6-road-fi 26/26. DP-210 nie zaczynać.
+- **Dalej:** push → CI (+`db`) → F7. Po scaleniu powrót do DP-211 (#805) / DP-212…
+
 
 ## 2026-11-05 02:50 — #802 SCALONE; start DP-213 (#793)
 

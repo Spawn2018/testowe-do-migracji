@@ -208,6 +208,8 @@ const pl: Dict = {
   rk_road_baltic_weight: 'Warunki drogowe {road} ({country}){off}: Ograniczenie masy {limit} t (ładunek {load} t)',
   rk_road_baltic_weight_check: 'Warunki drogowe {road} ({country}){off}: Ograniczenie masy {limit} t — sprawdź zezwolenie',
   rk_road_baltic_dim_check: 'Warunki drogowe {road} ({country}){off}: {event}',
+  /** DP-217 / #804: zbiorcza gołoledź FI przy transporcie (1× HIGH); `{event}` = pełny tytuł PL */
+  rk_road_fi_slip: '{event}',
   /** SE: dopisek decyzji 99 gdy zdarzenie spoza E4/E22 */
   rk_road_se_off: 'Warunki drogowe {road} · obok trasy: {event}',
   rk_flow_closed: '{code}: droga zamknięta przy pozycji auta',

@@ -27,7 +27,12 @@ import {
   fiSeverity,
   fiTrafficUrl,
   fiTypeLabelPl,
+  fiE75SegmentLabel,
+  fiWeatherSegmentsAhead,
   fiWeatherToRiskEvents,
+  fiWxLoadSlipDedup,
+  fiWxLoadSlipRisk,
+  fiWxLoadSlipTitle,
   filterInFiBboxes,
   isSlipperySurface,
   nearFiPortTerminal,
@@ -61,11 +66,16 @@ class MemStore implements SyncStore {
   staleCalls: { prefix: string; keep: string[] }[] = [];
   runs: { job: string; ok: boolean; result: JobResult }[] = [];
   corridor: { corridor: string; slowdownMult: number; reason: string | null } | null = null;
+  /** DP-217: transporty na FI_E75 (fromKm). */
+  fiLoadCorridors: Array<{
+    loadId: string; code: string; leg: 'PL' | 'SE'; fromKm: number; currentLeg: boolean;
+  }> = [];
   async projectId() { return 'p1'; }
   async vessels() { return []; }
   async sailingsSince() { return []; }
   async insertSailings() { /* */ }
   async updateSailing() { return false; }
+  async e49WindLoadCorridors() { return this.fiLoadCorridors; }
   async raiseRisk(r: RiskInput & { loadId?: string }) {
     if (this.risks.some((x) => x.dedup === r.dedup)) return false;
     this.risks.push(r);
@@ -180,7 +190,7 @@ describe('BN6 road-fi — Digitraffic', () => {
     });
   });
 
-  it('F7 #802 B2/B3: klaster 25 km; tytuł gołoledzi; MEDIUM bez transportu', () => {
+  it('F7 #802 B2/B3 + DP-217: klaster 25 km; tytuł gołoledzi; odcinki zawsze MEDIUM', () => {
     const meta = parseFiWeatherStationsMeta(JSON.parse(FI_WX_META));
     const readings = parseFiWeatherStationsData(JSON.parse(FI_WX_DATA), meta);
     const ev = fiWeatherToRiskEvents(readings);
@@ -192,13 +202,103 @@ describe('BN6 road-fi — Digitraffic', () => {
     expect(icy?.title).toMatch(/E75 \(FI\), .+, nawierzchnia /);
     expect(coldWet?.title).toMatch(/Ryzyko gołoledzi: E75 \(FI\)/);
     expect(ev.every((e) => !/Warunki pogodowe/.test(e.title))).toBe(true);
-    const withTransport = fiWeatherToRiskEvents(readings, undefined, {
+    /* DP-217: hasTransport nie podbija odcinków do HIGH (fala dzwonków). */
+    const withTransportFlag = fiWeatherToRiskEvents(readings, undefined, {
       hasTransportOnFiE75: true,
     });
-    expect(withTransport.every((e) => e.severity === 'HIGH')).toBe(true);
+    expect(withTransportFlag.every((e) => e.severity === 'MEDIUM')).toBe(true);
     const risk = balticRoadRisk('FI', icy!, 'https://tie.digitraffic.fi/api/weather/v1/stations/data', FI_ATTRIBUTION);
     expect(risk.title).toMatch(/^Śliska nawierzchnia: E75 \(FI\)/);
     expect(risk.severity).toBe('MEDIUM');
+  });
+
+  it('DP-217 / #804: unikalne etykiety odcinków; HIGH 1× przed autem', () => {
+    const labels = [0, 1, 2, 3, 4, 5].map((s) => fiE75SegmentLabel(s));
+    expect(new Set(labels).size).toBe(labels.length);
+    expect(labels.every((l) => !/^Vuosaari–Tornio$/.test(l))).toBe(true);
+    expect(fiE75SegmentLabel(3)).toMatch(/Lahti|Heinola/);
+    expect(fiE75SegmentLabel(7)).toMatch(/Jyväskylä|Äänekoski/);
+
+    /* 10 śliskich odcinków 0…9 (0–250 km); auto na km 100 → HIGH tylko przed + horyzont. */
+    const dens = densifyCorridor(CORRIDOR_FI);
+    const fake: FiWeatherSensorReading[] = [];
+    for (let seg = 0; seg < 10; seg++) {
+      const km = seg * FI_WX_SEG_KM + 5;
+      /* punkt wzdłuż CORRIDOR_FI ≈ km (przybliżenie liniowe po dens). */
+      let cum = 0;
+      let lat = CORRIDOR_FI[0]![0];
+      let lon = CORRIDOR_FI[0]![1];
+      for (let i = 1; i < dens.length; i++) {
+        const a = dens[i - 1]!;
+        const b = dens[i]!;
+        const R = 6371;
+        const dLat = ((b[0] - a[0]) * Math.PI) / 180;
+        const dLon = ((b[1] - a[1]) * Math.PI) / 180;
+        const la1 = (a[0] * Math.PI) / 180;
+        const la2 = (b[0] * Math.PI) / 180;
+        const h = Math.sin(dLat / 2) ** 2
+          + Math.cos(la1) * Math.cos(la2) * Math.sin(dLon / 2) ** 2;
+        const step = 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
+        if (cum + step >= km) {
+          const u = step > 0 ? (km - cum) / step : 0;
+          lat = a[0] + (b[0] - a[0]) * u;
+          lon = a[1] + (b[1] - a[1]) * u;
+          break;
+        }
+        cum += step;
+        lat = b[0];
+        lon = b[1];
+      }
+      fake.push({
+        id: `s${seg}`,
+        lat,
+        lon,
+        name: `stacja ${seg}`,
+        airC: -5,
+        surfaceC: -0.7 - seg * 0.1,
+        windMs: null,
+        gustMs: null,
+        conditionRaw: 'Moist',
+        conditionPl: 'wilgotna',
+        moist: true,
+        icy: false,
+        slippery: true,
+      });
+    }
+    const ev = fiWeatherToRiskEvents(fake, dens);
+    expect(ev.length).toBe(10);
+    expect(ev.every((e) => e.severity === 'MEDIUM')).toBe(true);
+    const placeNames = ev.map((e) => e.placeName);
+    expect(new Set(placeNames).size).toBeGreaterThan(1);
+
+    const fromKm = 100;
+    const ahead = fiWeatherSegmentsAhead(ev, fromKm);
+    /* Odcinki z końcem ≥ 100 → seg≥4 (100–125); horyzont 420 → do seg 20. */
+    expect(ahead.every((e) => {
+      const seg = Number(String(e.id).replace('fi-wx:seg:', ''));
+      return (seg + 1) * FI_WX_SEG_KM >= fromKm;
+    })).toBe(true);
+    expect(ahead.length).toBeLessThan(10); /* za autem (seg 0–3) odpadają */
+    expect(ahead.length).toBeGreaterThan(0);
+
+    const loadRisk = fiWxLoadSlipRisk({
+      loadId: '11111111-1111-4111-8111-111111111217',
+      ahead,
+      nowMs: Date.parse('2026-11-05T04:00:00Z'),
+    });
+    expect(loadRisk).not.toBeNull();
+    expect(loadRisk!.severity).toBe('HIGH');
+    expect(loadRisk!.loadId).toBe('11111111-1111-4111-8111-111111111217');
+    expect(loadRisk!.dedup).toBe(
+      fiWxLoadSlipDedup('11111111-1111-4111-8111-111111111217'),
+    );
+    expect(loadRisk!.detail.audience).toBe('HHL_PRZEWOZNIK');
+    expect(loadRisk!.title).toMatch(/Ryzyko gołoledzi na trasie: \d+ odcinki E75/);
+    expect(fiWxLoadSlipTitle(ahead)).toBe(loadRisk!.title);
+    expect(fiWxLoadSlipRisk({
+      loadId: '11111111-1111-4111-8111-111111111217',
+      ahead: [],
+    })).toBeNull();
   });
 
   it('F7 #802 B2: 30 śliskich stacji → ≤ N odcinków; 0 HIGH bez transportu', () => {
@@ -439,6 +539,36 @@ describe('BN6 runRoadFi — F7 #726', () => {
       expect(c.headers['Digitraffic-User']).toBeTruthy();
       expect(c.headers['Accept-Encoding']).toBe('gzip');
     }
+  });
+
+  it('DP-217 / #804: 1× HIGH load + MEDIUM odcinki; 0 HIGH bez transportu', async () => {
+    const stNo = new MemStore();
+    const rNo = await runRoadFi(deps(stNo, allOkPages()).d);
+    expect(Number(rNo.observations?.fi_weather_events ?? 0)).toBeGreaterThan(0);
+    expect(rNo.observations?.fi_wx_load_alerts).toBe('0');
+    const segNo = stNo.risks.filter((x) => /fi-wx:seg:/.test(x.dedup));
+    expect(segNo.length).toBeGreaterThan(0);
+    expect(segNo.every((x) => x.severity === 'MEDIUM')).toBe(true);
+    expect(stNo.risks.some((x) => /fi-wx:load:/.test(x.dedup))).toBe(false);
+
+    const st = new MemStore();
+    st.fiLoadCorridors = [{
+      loadId: '22222222-2222-4222-8222-222222222217',
+      code: 'FI_E75',
+      leg: 'SE',
+      fromKm: 100,
+      currentLeg: true,
+    }];
+    const r = await runRoadFi(deps(st, allOkPages()).d);
+    expect(r.observations?.fi_wx_load_alerts).toBe('1');
+    const loadRisks = st.risks.filter((x) => /fi-wx:load:/.test(x.dedup));
+    expect(loadRisks).toHaveLength(1);
+    expect(loadRisks[0]!.severity).toBe('HIGH');
+    expect(loadRisks[0]!.loadId).toBe('22222222-2222-4222-8222-222222222217');
+    expect(loadRisks[0]!.detail.audience).toBe('HHL_PRZEWOZNIK');
+    const segs = st.risks.filter((x) => /fi-wx:seg:/.test(x.dedup));
+    expect(segs.every((x) => x.severity === 'MEDIUM')).toBe(true);
+    expect(segs.every((x) => x.loadId == null)).toBe(true);
   });
 
   it('SOURCE_DOWN po 3× fetched_ok===0', async () => {
