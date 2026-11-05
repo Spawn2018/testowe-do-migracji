@@ -1,4 +1,6 @@
-/** Lazy import z ponowieniem przy stale chunku po deployu (Failed to fetch dynamically imported module). */
+/** Lazy import z obsługą stale chunku po deployu (Failed to fetch dynamically imported module). */
+import { clearNewVersionSignal, signalNewVersion } from './newVersionSignal';
+
 const FLAG = 'wt_chunk_reload';
 /**
  * #274: okno po odświeżeniu (ms). W tym czasie żaden kawałek nie odświeża strony drugi raz i nie zdejmuje znacznika —
@@ -6,6 +8,23 @@ const FLAG = 'wt_chunk_reload';
  * a ta sama brakująca część (np. Ryzyka) odświeżała stronę w kółko zamiast pokazać komunikat „Odśwież”.
  */
 const FRESH_MS = 15_000;
+
+export type LazyRetryStale = 'reload' | 'bar';
+
+export type LazyRetryOpts = {
+  retries?: number;
+  /** `reload` — start/logowanie (AuthGate, powłoka). `bar` — reszta: pasek NewVersionBar + PartBoundary (#817 B2 / F7 #822). */
+  stale?: LazyRetryStale;
+};
+
+/** F7 #822 B3: błąd do PartBoundary zamiast wiszącego Suspense (`new Promise(() => {})`). */
+export class StaleChunkError extends Error {
+  readonly code = 'STALE_CHUNK' as const;
+  constructor(message = 'Ta część jest już w nowej wersji — Odśwież') {
+    super(message);
+    this.name = 'StaleChunkError';
+  }
+}
 
 function flagFresh(): boolean {
   try {
@@ -24,22 +43,43 @@ function hasFlag(): boolean {
   try { return !!sessionStorage.getItem(FLAG); } catch { return true; /* bez sessionStorage — bez pętli odświeżeń */ }
 }
 
-export function lazyRetry<T>(factory: () => Promise<{ default: T }>, retries = 1): () => Promise<{ default: T }> {
+function normalize(retriesOrOpts: number | LazyRetryOpts | undefined): Required<LazyRetryOpts> {
+  if (typeof retriesOrOpts === 'number' || retriesOrOpts === undefined) {
+    return { retries: retriesOrOpts ?? 1, stale: 'bar' };
+  }
+  return { retries: retriesOrOpts.retries ?? 1, stale: retriesOrOpts.stale ?? 'bar' };
+}
+
+export function lazyRetry<T>(
+  factory: () => Promise<{ default: T }>,
+  retriesOrOpts: number | LazyRetryOpts = 1,
+): () => Promise<{ default: T }> {
+  const { retries, stale } = normalize(retriesOrOpts);
   return async () => {
     try {
       const mod = await factory();
       /* audyt 17.10 (N4): udane wczytanie zdejmuje znacznik — przy następnym wdrożeniu znów jedno odświeżenie
          (poza oknem tuż po odświeżeniu, #274) */
-      try { if (typeof window !== 'undefined' && !flagFresh()) sessionStorage.removeItem('wt_chunk_reload'); } catch { /* brak sessionStorage */ }
+      try {
+        if (typeof window !== 'undefined' && !flagFresh()) sessionStorage.removeItem('wt_chunk_reload');
+      } catch { /* brak sessionStorage */ }
+      /* F7 #822 B1: po udanym wczytaniu powłoki/logowania zdejmij sygnał paska (sessionStorage przeżywa reload). */
+      if (stale === 'reload') clearNewVersionSignal();
       return mod;
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
       if (retries > 0 && /Failed to fetch dynamically imported module|Loading chunk|Importing a module script failed/i.test(msg)) {
-        // Jednorazowe twarde odświeżenie — stary HTML wskazuje na usunięty hash assetu.
+        // Jednorazowa reakcja na stary HTML po wdrożeniu.
         if (typeof window !== 'undefined' && !hasFlag()) {
           try { sessionStorage.setItem(FLAG, String(Date.now())); } catch { /* brak sessionStorage */ }
-          window.location.reload();
-          return new Promise(() => {});
+          if (stale === 'reload') {
+            // Start / logowanie: twarde odświeżenie.
+            window.location.reload();
+            return new Promise(() => {});
+          }
+          // DP-224 C / #817 B2 / F7 #822 B3: pasek + PartBoundary (bez wiszącego Suspense).
+          signalNewVersion('chunk');
+          throw new StaleChunkError();
         }
         return factory();
       }

@@ -1,3 +1,17 @@
+## 2026-11-05 18:50 — DP-224 C F7 #822 niegotowe (pasek / alarm / Suspense)
+
+- Skrzynka: #817 PILNE W TOKU (cz. C F7); #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne` poza bieżącym.
+- Scalanie: brak F7 gotowe — F7 #822 @ `1641ffa7` **niegotowe** (3 usterki). Deploy #821 rerun `42072314367` ✔. #813 wstrzymane.
+- **Krok F7 C:** `clearNewVersionSignal` przed Odśwież + po boot; `kind='info'` + migracja **0415** (watch/newCount bez alarmu; Stan systemu `known`); `StaleChunkError` → PartBoundary zamiast wiszącego Promise (naprawia też visual P10a). Testy unit + i2/security EXPECTED. Dalej CI→F7, potem D/B1/B3/E (#817).
+- Bez push na main.
+
+## 2026-11-05 18:15 — #821 SCALONE; DP-224 C lazyRetry→pasek
+
+- Skrzynka: #817 PILNE W TOKU (cz. C); #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: **#821 SCALONE** `701a3114` (F7 gotowe @ `8d53a7a4`; unit+visual ✔). #813 wstrzymane.
+- **Krok DP-224 C** `pakiet/c2-dp-224-c-lazy-retry`: `lazyRetry` domyślnie `stale:'bar'` → `signalNewVersion` + NewVersionBar (bez cichego `reload`); AuthGate/powłoka/DriverPwa → `stale:'reload'`; `client_errors` `new_version_shown:chunk`. Testy lazy-retry + p10a. Dalej D/B1/B3/E (#817).
+- Bez push na main.
+
 ## 2026-11-05 17:40 — DP-224 B F7 #821 niegotowe (TTL + pokrycie)
 
 - Skrzynka: #817 PILNE W TOKU (cz. B→C/E); #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.

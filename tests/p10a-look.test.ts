@@ -15,7 +15,8 @@ describe('E22 — teksty', () => {
     const all = Object.values(A10_PL).join('\n').toLowerCase();
     for (const bad of ['sms:', 'mailto:', 'supabase']) expect(all).not.toContain(bad);
   });
-  it('produkcja: bez paska nowej wersji i bez znacznika „na żywo” do podłączenia', async () => {
+  it('produkcja: bez sygnału — bez paska; „na żywo” nadal null do podłączenia Realtime', async () => {
+    /* DP-224 C / #817 B2 / E22: pasek w PROD po sygnale lazyRetry; bez sygnału jak dotąd false. */
     vi.stubEnv('VITE_AUTH_MODE', 'supabase');
     try {
       vi.resetModules();
@@ -31,4 +32,21 @@ describe('E22 — teksty', () => {
       vi.resetModules();
     }
   });
+
+  it('produkcja: sygnał chunk → pasek nowej wersji', async () => {
+    vi.stubEnv('VITE_AUTH_MODE', 'supabase');
+    try {
+      vi.resetModules();
+      const sig = await import('../src/lib/newVersionSignal');
+      sig.signalNewVersion('chunk');
+      const src = await import('../src/lib/p10aSource');
+      const probe = () => createElement('i', null, String(src.useNewVersion()));
+      expect(renderToString(createElement(probe))).toContain('true');
+      sig.clearNewVersionSignal();
+    } finally {
+      vi.unstubAllEnvs();
+      vi.resetModules();
+    }
+  });
 });
+

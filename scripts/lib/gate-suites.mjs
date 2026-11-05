@@ -12,7 +12,7 @@ const ROOT = resolve(import.meta.dirname, '../..');
 
 /** Oczekiwane OK na lokalnym Postgresie (gate.sh). */
 export const EXPECTED_LOCAL = {
-  security: 521, // F7 #791 r4 B12: CI @769375b8 = 521 OK; B11 było 520
+  security: 523, // DP-224 F7 #822: +2 newCount/state known dla info; było 521
   status: 689, // DP-222 F7 #819 B1: +3 STATEMENT/throttle; #814 było 686 (+4 od 682)
   storage: 37,
   money: 200, // DP-167 F7 #734 r2: +2 title_key zmiana; było 198 (r1 +4 od 194 / DP-167 +3 od 191)
@@ -25,7 +25,7 @@ export const EXPECTED_LOCAL = {
   risks: 46, // #398: +8 +1 SMS; #411: +3 (blok *_RESOLVED + url)
   import: 425, // #653 revoke enqueue_active_wt: +2 privilege chk; było 423
   nullguard: 914, // DP-206 cz.2: +5 e49_detour_decide GUARD (4 odmowy + 1 pozytywny HHL); cz.1 było 909
-  i2: 675, // #666/0351: +3 actual_departure_at (SCX/OPS/ADMIN odmowa+zgoda); było 672
+  i2: 677, // DP-224 F7 #822: +2 info/watch OK; #666 było 675
   i30: 10,
   i31: 10, // D-1300: +korekta n_sek=7
   dec2: 73, // #455: +2 Działaj jako; katalog 28 typów (#581 ETA_CALIBRATION_APPROVAL; #563/#590)
@@ -66,7 +66,7 @@ export const EXPECTED_LOCAL = {
  */
 export const EXPECTED_TEST = {
   ...EXPECTED_LOCAL,
-  security: 517, // 521 - 4 SKIP (B6); F7 #791 r4 B12
+  security: 519, // 523 - 4 SKIP (B6); DP-224 F7 #822
   risks: 44, // 46 − 2 SKIP (C1)
   // dec6: 34 − 4 SKIP — wstawki auth.sessions dla kont seeda (FK → auth.users); lokalnie/CI bez FK (stub)
   dec6: 30,
