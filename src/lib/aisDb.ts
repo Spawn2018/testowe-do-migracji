@@ -8,7 +8,7 @@ import { getSupabase } from '../auth/client';
 import type { AisPosition } from './ais';
 import { visibleFerryMarkers, type TrackFix } from './map/draw';
 import { estimateFerryPositions, type SailingMapRow } from './ferry/estimate';
-import { withVoyages } from './bn9c2Ferry';
+import { ensureSailingAisMarkers, withVoyages } from './bn9c2Ferry';
 
 export interface VesselPositionRow {
   vessel_id: string;
@@ -70,7 +70,12 @@ export async function fetchMapFerryMarkers(): Promise<AisPosition[]> {
   const sailRows = !sail.error && Array.isArray(sail.data) ? (sail.data as SailingMapRow[]) : [];
   const nowMs = Date.now();
   /* BN9-c2: rejs statku (trasa portami w dymku, kierunek bez COG) z tych samych wierszy `ferry_sailings_map` */
-  return withVoyages(withEstimates(markersFromTrack(res.data), sailRows, nowMs), sailRows, nowMs);
+  /* DP-222: ensureSailingAisMarkers — świeży AIS aktywnego rejsu, gdy Q-18 odfiltrował ślad */
+  return withVoyages(
+    withEstimates(ensureSailingAisMarkers(markersFromTrack(res.data), sailRows, nowMs), sailRows, nowMs),
+    sailRows,
+    nowMs,
+  );
 }
 
 type TrackRow = {

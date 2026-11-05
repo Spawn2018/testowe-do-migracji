@@ -1,3 +1,19 @@
+## 2026-11-05 11:35 — DP-222 F7 #815 B1+B2 (tabela Mapy = AIS)
+
+- Skrzynka: #814 PILNE w toku; #550 WSTRZYMANE; BN5–8 w planie (bez przerwania).
+- Scalanie: brak F7 gotowe — F7 #815 @ `4a170add` **niegotowe** (B1+B2). CI poprzedniego HEAD unit+visual ✔ (po G-15).
+- **Krok F7 B1+B2:** `mapRow` FERRY bierze `shipPos` (AIS/est z `ferryTrackInfo` / `shipOf`), nie GPS auta; „statek bez AIS” tylko przy braku odczytu. `MapView` + `CorridorMap` podają `shipPos`. Testy: before none → after ok (BS-03), stary GPS GDN nie maskuje AIS, est. Bez migracji. ATD GDN-NYN + backfill 7 d — **osobny PR zaraz po tym** (F7).
+- **Dalej:** push → CI → F7. Potem PR ATD GDN-NYN; potem #813 B1/B2 (DP-221) → DP-220.
+
+
+## 2026-11-05 11:05 — PILNE #814 DP-222 (mapa „brak AIS”); #813 wstrzymane
+
+- Skrzynka: #814 PILNE (Spawn2018) — BS-03 „brak AIS” mimo świeżego AIS Nova Star; #550 WSTRZYMANE. F7 #813 **niegotowe** (B1 prefiksy vt/kt/st/mt, B2 numeracja DP-220↔221) — wstrzymane do po #814.
+- Scalanie: brak F7 gotowe na HEAD.
+- **Krok DP-222** `pakiet/c2-dp-222-ferry-ais-bs03`: (1) `aisShipFixForFerryKey` / `ferryInfo` — match AIS po `voyage.sailingId` gdy rejsu nie ma w store; (2) `ensureSailingAisMarkers` — świeży AIS aktywnego rejsu gdy Q-18 odfiltrował ślad; (3) pasek „Na promie” z `sailingId`. Rejestr: DP-220=ETA, DP-221=FI (#813), DP-222=W TOKU. Testy dp222 + bn9-c2 / w-prom / p9e 60/60. Bez migracji. ATD rejsu + ETA (pkt 2–3 #814) — następny krok po F7 mapy albo w tym PR.
+- **Dalej:** push → CI → F7. Potem #813 B1/B2 (jako DP-221) → DP-220.
+
+
 ## 2026-11-05 10:10 — #811 SCALONE; start DP-219 (filtr trasy GEOFENCE)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.

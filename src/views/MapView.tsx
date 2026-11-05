@@ -7,15 +7,16 @@ import { t, tp } from '../i18n/messages';
 import { p9m, p9mp } from '../i18n/p9c';
 import { p9e } from '../i18n/p9e';
 import { PROD_BUILD } from '../lib/prodFacade';
-import { latestReadAt, subscribeFerryPositions, type AisMode } from '../lib/ais';
+import { latestReadAt, subscribeFerryPositions, type AisMode, type AisPosition } from '../lib/ais';
 import { clickableRow } from '../lib/clickableRow';
 import { StageBar, StageChip } from '../components/shell/StageBar';
-import { nextTrackingStarts } from '../lib/stageTiles';
+import { nextTrackingStarts, stageTileOf } from '../lib/stageTiles';
 import { filterLoadsForRole } from '../lib/permissions';
 import { getNow } from '../lib/frozenNow';
 import { formatTableDay } from '../lib/time';
 import { useIsPhone } from '../lib/useIsPhone';
 import { useVesselGroups } from '../lib/useVesselGroups';
+import { ferryTrackInfo } from '../lib/bn9c2Ferry';
 import { headCounts, hm, mapRow, rowMatches, searchHintKey, type MapRow } from '../lib/p9cMap';
 import type { Load } from '../types';
 import { etaDuration } from '../lib/etaDuration';
@@ -73,6 +74,8 @@ export function MapView() {
   const phone = useIsPhone();
   const [aisMode, setAisMode] = useState<AisMode>(PROD_BUILD ? 'none' : 'seed');
   const [aisReadAt, setAisReadAt] = useState<string | null>(null);
+  /** DP-222 B1 (F7 #815): pozycje AIS w tabeli Mapy — FERRY nie bierze GPS auta. */
+  const [aisPositions, setAisPositions] = useState<readonly AisPosition[]>([]);
   const [timing, setTiming] = useState<TimingFilter>('all');
   const [layersOpen, setLayersOpen] = useState(false);
   const [sheetId, setSheetId] = useState<string | null>(null);
@@ -80,7 +83,11 @@ export function MapView() {
   useEffect(() => {
     return subscribeFerryPositions({
       prod: PROD_BUILD,
-      onUpdate: (pos, mode) => { setAisMode(mode); setAisReadAt(mode === 'db' ? latestReadAt(pos) : null); },
+      onUpdate: (pos, mode) => {
+        setAisMode(mode);
+        setAisPositions(pos);
+        setAisReadAt(mode === 'db' ? latestReadAt(pos) : null);
+      },
     });
   }, []);
 
@@ -126,9 +133,21 @@ export function MapView() {
       sailingOf: (sid: string | null | undefined) => (sid ? sailings.find((s) => s.id === sid) : undefined),
       tx: (k: string, p?: Record<string, string | number>) => (p ? p9mp(locale, k, p) : p9m(locale, k)),
       vessels,
+      /* DP-222 B1 (F7 #815): FERRY → ferryTrackInfo (AIS/est), nie lastFixAt auta */
+      shipPos: (l: Load) => {
+        if (stageTileOf(l) !== 'FERRY') return { kind: 'none' as const };
+        const s = l.sailingId ? sailings.find((x) => x.id === l.sailingId) : undefined;
+        return ferryTrackInfo({
+          vessel: s?.vessel ?? l.ferry.vessel,
+          sailingId: l.sailingId,
+          routeText: null,
+          positions: aisPositions,
+          locale,
+        }).pos;
+      },
     };
     return roleStage.map((l) => ({ load: l, row: mapRow(l, ctx) }));
-  }, [roleStage, role, nowIso, fixIds, sailings, locale, vessels]);
+  }, [roleStage, role, nowIso, fixIds, sailings, locale, vessels, aisPositions]);
 
   /* pkt 1 (pyt. 1 A): bez kafelka — tylko okno śledzenia; z kafelkiem — cały etap */
   const scoped = useMemo(

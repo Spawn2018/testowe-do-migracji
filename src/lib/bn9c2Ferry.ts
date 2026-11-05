@@ -7,7 +7,7 @@ import type { Locale } from '../types';
 import type { AisPosition } from './ais';
 import { bearing, type SailingMapRow } from './ferry/estimate';
 import { portName } from './portName';
-import { rpcPortName } from './ferryCatalog';
+import { isOutbound, rpcPortName } from './ferryCatalog';
 import { t, tp } from '../i18n/messages';
 import { formatOpsDateTime } from './time';
 import { etaDuration } from './etaDuration';
@@ -106,6 +106,73 @@ export function withVoyages(markers: readonly AisPosition[], rows: readonly Sail
 }
 
 /**
+ * DP-222 (#814): gdy Q-18 ukryje świeży AIS (historia bez strefy / bez COG), a rejs wyjazdowy trwa —
+ * dołóż ostatnią pozycję z `ferry_sailings_map`, żeby auto na promie nie dostało „brak AIS”.
+ */
+export function ensureSailingAisMarkers(
+  markers: readonly AisPosition[],
+  rows: readonly SailingMapRow[],
+  nowMs: number,
+): AisPosition[] {
+  if (!rows.length) return markers.slice();
+  const out = markers.slice();
+  for (const r of rows) {
+    if (r.status === 'ODWOLANY' || r.arrived_at) continue;
+    if (!isOutbound(r.route)) continue;
+    const dep = Date.parse(r.departed_at ?? r.departure_at ?? '');
+    const arr = Date.parse(r.arrival_at ?? '');
+    if (!Number.isFinite(dep) || nowMs < dep) continue;
+    if (Number.isFinite(arr) && nowMs >= arr + 3 * 3600_000) continue;
+    if (r.ais_lat == null || r.ais_lon == null || !r.ais_observed_at) continue;
+    const mmsi = r.mmsi != null ? String(r.mmsi) : '';
+    const exists = out.some((m) => m.vesselId === r.vessel_id
+      || (!!mmsi && m.mmsi === mmsi)
+      || (!!r.vessel_name && vesselKey(m.name) === vesselKey(r.vessel_name)));
+    if (exists) continue;
+    out.push({
+      mmsi,
+      vesselId: r.vessel_id,
+      name: r.vessel_name ?? mmsi,
+      lat: r.ais_lat,
+      lng: r.ais_lon,
+      ts: r.ais_observed_at,
+      source: 'db',
+    });
+  }
+  return out;
+}
+
+/**
+ * DP-222: pozycja statku dla auta na promie — najpierw `voyage.sailingId` (= `loads.sailing_id`),
+ * potem nazwa (bez „M/F”). Dzięki temu działa, gdy rejsu nie ma w `useTowerStore.sailings`.
+ */
+export function aisShipFixForFerryKey(
+  ferryKey: string,
+  positions: readonly AisPosition[],
+  vesselName: string | null | undefined,
+  nowIso: string,
+  tone: (ts: string, nowIso: string) => 'fresh' | 'stale',
+): {
+  lat: number; lng: number; ts: string; stale: boolean; vessel: string;
+  estimated?: { lastAisTs: string | null };
+} | null {
+  const live = positions.filter((x) => x.source !== 'seed');
+  const byVoyage = live.find((x) => x.voyage?.sailingId === ferryKey);
+  const key = vesselKey(vesselName);
+  const byName = key ? live.find((x) => vesselKey(x.name) === key) : undefined;
+  const p = byVoyage ?? byName;
+  if (!p) return null;
+  return {
+    lat: p.lat,
+    lng: p.lng,
+    ts: p.ts,
+    stale: !p.estimated && tone(p.ts, nowIso) === 'stale',
+    vessel: p.name,
+    estimated: p.estimated,
+  };
+}
+
+/**
  * Kierunek strzałki markera promu: COG z AIS; bez COG — namiar port wyjścia → port przypłynięcia rejsu (każda trasa,
  * także GDN-NYN i GDY-KAA — DP-141). Statek bez wiersza rejsu — dotychczasowa reguła (demo: rejs z rozkładu, 20° / 200°).
  */
@@ -163,12 +230,19 @@ export function ferryTrackingLines(info: FerryTrackInfo, locale: Locale, nowIso:
  */
 export function ferryTrackInfo(opts: {
   vessel: string | null;
+  /** DP-222: `loads.sailing_id` — gdy rejsu nie ma w store, i tak trafiamy AIS po `voyage.sailingId`. */
+  sailingId?: string | null;
   routeText: string | null;
   positions: readonly AisPosition[];
   locale: Locale;
 }): FerryTrackInfo {
+  const live = opts.positions.filter((x) => x.source !== 'seed');
+  const byVoyage = opts.sailingId
+    ? live.find((x) => x.voyage?.sailingId === opts.sailingId)
+    : undefined;
   const key = vesselKey(opts.vessel);
-  const p = key ? opts.positions.find((x) => x.source !== 'seed' && vesselKey(x.name) === key) : undefined;
+  const byName = key ? live.find((x) => vesselKey(x.name) === key) : undefined;
+  const p = byVoyage ?? byName;
   const route = opts.routeText || (p?.voyage ? voyageRouteText(opts.locale, p.voyage) : null);
   const pos: FerryTrackInfo['pos'] = !p ? { kind: 'none' }
     : p.estimated ? { kind: 'est', lastAisTs: p.estimated.lastAisTs }

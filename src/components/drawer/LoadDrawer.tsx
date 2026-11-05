@@ -205,6 +205,7 @@ export function LoadDrawer() {
     const sail = loadSailing(load, sailings);
     return ferryTrackInfo({
       vessel: sail?.vessel ?? load.ferry.vessel ?? null,
+      sailingId: load.sailingId,
       routeText: sail?.route ? ferryRouteLabel(locale, sail.route) || null : null,
       positions: ferryPos,
       locale,
