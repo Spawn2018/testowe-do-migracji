@@ -21,6 +21,7 @@ import type { WaterTrackId } from '../../lib/ferryCatalog';
 import { paintRoadLegs } from './orangeRoads';
 import { useTowerStore } from '../../store/useTowerStore';
 import { reportBasemapFailure } from '../../lib/p9aSource';
+import { destroyLeafletMap, stopLeafletMap } from '../../lib/destroyLeafletMap';
 import { TILE_RETRY_MS, TILE_TRIES, tileVia, watchTiles, type TileHealth, type TileVia } from './tileHealth';
 
 export type MapSlot = 'map' | 'kokpit' | 'drawer';
@@ -454,7 +455,8 @@ export function acquireMap(root: HTMLElement, slot: MapSlot, spec?: LinesSpec): 
   // Powrót do tego samego miejsca bez zmiany rozmiaru i widoku → nic (zero nowych kafelków). Inaczej widok ustawiany
   // od nowa (`reset`) — piksel w piksel jak świeżo utworzona mapa (wzorce wizualne), kafelki z pamięci przeglądarki.
   if (!untouched) {
-    programmatic(e.map, () => e.map.setView(target?.center ?? L.latLng(DEFAULT_CENTER), target?.zoom ?? DEFAULT_ZOOM, { reset: true } as L.ZoomPanOptions));
+    /* DP-224 E: bez animacji — odmontowanie w trakcie pan/zoom → `_leaflet_pos` */
+    programmatic(e.map, () => e.map.setView(target?.center ?? L.latLng(DEFAULT_CENTER), target?.zoom ?? DEFAULT_ZOOM, { reset: true, animate: false } as L.ZoomPanOptions));
     // Warstwy wektorowe od nowa w tej samej kolejności (obcięcie linii i wzór kresek jak w świeżej mapie). Bez kafelków.
     const { route, ferryLeg, detour, geofences, poi, fleet, situations, ais } = e.layers;
     const on = [route, ferryLeg, detour, geofences, poi, fleet, situations, ais].filter((l) => e.map.hasLayer(l));
@@ -472,7 +474,8 @@ export function releaseMap(e: PoolEntry, slot: MapSlot): void {
     /* podkład zamówiony przed zamknięciem (plik podkładu jeszcze się pobiera) nie trafia już na usuniętą mapę —
        wcześniej: „Cannot read properties of undefined (reading 'appendChild')” po szybkim otwarciu panelu */
     e.basemapSeq += 1;
-    e.map.remove();
+    /* DP-224 E (#817): stop + guard `_mapPane` przed remove — unikaj `_leaflet_pos` po animacji */
+    destroyLeafletMap(e.map);
     e.unwatch?.();
     e.unwatch = null;
     e.healthSubs.clear();
@@ -480,6 +483,8 @@ export function releaseMap(e: PoolEntry, slot: MapSlot): void {
     poolStats.destroyed += 1;
     return;
   }
+  /* DP-224 E: zatrzymaj zoom/pan zanim mapa zniknie ze slotu React */
+  stopLeafletMap(e.map);
   // Element jest już odpięty przez React (sprzątanie efektów po usunięciu DOM) — rozmiar z pamięci Leaflet.
   const { x: w, y: h } = e.map.getSize();
   e.views.set(slot, { center: e.map.getCenter(), zoom: e.map.getZoom(), w, h });

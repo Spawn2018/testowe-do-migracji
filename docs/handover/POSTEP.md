@@ -1,3 +1,10 @@
+## 2026-11-05 22:15 — #825 SCALONE; DP-224 B3 prefetch + E `_leaflet_pos`
+
+- Skrzynka: #817 PILNE B3+E; #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: **#825 SCALONE** `8b29630f` (F7 gotowe @ `8691de25`; unit+visual ✔). #813 wstrzymane.
+- **Krok B3+E** `pakiet/c2-dp-224-b3-prefetch-e`: `prefetchMainChunks` (Mapa/Harmonogram/Ryzyka/Dokumenty/CorridorMap/LoadDrawer) + `destroyLeafletMap`/`stopLeafletMap` w mapPool i ZonesMap. Dalej DP-225.
+- Bez push na main.
+
 ## 2026-11-05 21:05 — #824 SCALONE; DP-224 B1 keep-previous-assets + DP-225
 
 - Skrzynka: #817 PILNE B1; #814 BS-04 SCALONE; #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.

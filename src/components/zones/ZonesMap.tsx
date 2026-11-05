@@ -17,6 +17,7 @@ import { ferryLaneLines, ferryLaneOptions, restyleFerryLanes } from '../../lib/m
 import { coreLegsOnly } from '../../lib/map/routeLegs';
 import { p8ct } from '../../i18n/p8c';
 import { fitWithLabels, LABEL_BOX, LABEL_PLACE, labelOffset, type LabelPlace } from './zoneLabels';
+import { destroyLeafletMap } from '../../lib/destroyLeafletMap';
 
 type Circle = { lat: number; lng: number; radiusM: number };
 /* stałe puste listy — nowa pusta tablica przy każdym renderze przerysowywałaby mapę */
@@ -131,7 +132,8 @@ export default function ZonesMap({ mode, zones = NO_ZONES, zone, prev, draft, ne
     const t = window.setTimeout(() => map.invalidateSize(), 200);
     return () => {
       window.clearTimeout(t);
-      map.remove();
+      /* DP-224 E (#817): stop + guard `_mapPane` — unikaj `_leaflet_pos` po animacji */
+      destroyLeafletMap(map);
       mapRef.current = null;
       groupRef.current = null;
       routeRef.current = null;
