@@ -2673,6 +2673,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 03.11.2026 21:35 | #777 F7 r1 niegotowe → seed Portnet/Deltamarin, I=IC, dzień przypłynięcia, złożone IBNet | pętla / C2 F7 |
 | 03.11.2026 22:00 | #777 SCALONE `2a99a8e6` (DP-120 / **0391**; F7 gotowe @ `fecc5f7a`); start DP-202+203 (#778+#779) | pętla / C2 |
 | 03.11.2026 23:50 | #780 F7 r3: auto DeepL na luki TV/bałtyk (bez RESOURCE_MISSING:TV_CODE); **0393** memory_auto_24h | pętla / C2 F7 |
+| 06.11.2026 00:15 | #826 SCALONE `2ae9b68c` (DP-224 B3+E F7 @ `b0f9dd76`); start DP-225 ferry.vessel sync | pętla / C2 |
 | 05.11.2026 21:00 | #824 SCALONE `e70fe81c` (DP-222 BS-04 F7 @ `1d22e821`); rejestr **DP-225** (stary `load.ferry.vessel`); start DP-224 B1 keep-previous-assets | pętla / C2 PILNE |
 | 05.11.2026 20:10 | #823 SCALONE `e9986f72` (DP-224 D F7 @ `ed9b4777`); start DP-222 BS-04 zła pozycja (Nova vs Wawel) przed B1 | pętla / C2 PILNE |
 | 05.11.2026 18:50 | #822 F7 niegotowe: clear sygnału; `kind=info`+**0415**; StaleChunkError→PartBoundary; rerun deploy #821 OK | pętla / C2 PILNE |
