@@ -465,11 +465,14 @@ export type RoadLegLine = { leg: string; line: LatLng[] };
 export async function loadRoadLegs(): Promise<{
   legs: RoadLegLine[];
   routeLegs: { route: string; pre: string | null; post: string | null }[];
+  /** DP-224 B: wszystkie kody z `roads` (także bez geometrii) — pokrycie zakresu bez ponownego pobierania. */
+  roadLegCodes: string[];
 }> {
-  if (!SUPABASE_AUTH_ENABLED) return { legs: [], routeLegs: [] };
+  if (!SUPABASE_AUTH_ENABLED) return { legs: [], routeLegs: [], roadLegCodes: [] };
   const state = await readMapDisplayState();
   const roads = Array.isArray(state?.roads) ? state!.roads : [];
   const legs: RoadLegLine[] = [];
+  const roadLegCodes: string[] = [];
   for (const row of roads) {
     if (!row || typeof row !== 'object') continue;
     const r = row as {
@@ -483,6 +486,7 @@ export async function loadRoadLegs(): Promise<{
       summary?: string;
     };
     const leg = String(r.leg ?? '');
+    if (leg && !roadLegCodes.includes(leg)) roadLegCodes.push(leg);
     const spec = roadSpecFromRow(r);
     if (!spec || !Array.isArray(r.points) || r.points.length < 2) continue;
     const line: LatLng[] = [];
@@ -511,7 +515,7 @@ export async function loadRoadLegs(): Promise<{
       });
     }
   }
-  return { legs, routeLegs };
+  return { legs, routeLegs, roadLegCodes };
 }
 
 /** #667 F7 r1 N4: loadRoadLines + loadFerryLines dzielą cache `readMapDisplayState` (TTL 60 s). */

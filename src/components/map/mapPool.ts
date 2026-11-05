@@ -66,8 +66,15 @@ export type PoolEntry = {
     spec: LinesSpec; legs: { leg: string; line: readonly LatLng[] }[] | null; routeLegs: RouteLegRow[];
     /** Przeprawy z HERE (PROD, `loadFerryLines`), gdy przeszły sprawdzenie. */
     ferries: { leg: string; line: readonly LatLng[] }[];
+    /** DP-224 B F7: kiedy wczytano legi (TTL `LINES_CACHE_TTL_MS`). */
+    loadedAt: number | null;
+    /** DP-224 B F7: kody z ostatniego odczytu (+ zakres `spec`) — pokrycie bez „pula niepusta”. */
+    serverLegCodes: ReadonlySet<string>;
   };
 };
+
+/** DP-224 B F7 #821: ponowny odczyt legów po 10 min (tani: `p_known_version` → `roads_unchanged`). */
+export const LINES_CACHE_TTL_MS = 10 * 60_000;
 
 /**
  * BN9-c5 (#718 BN7 §4): co rysuje mapa — trasy (kody rejsów) i czy z rdzeniem Polska–Szwecja czy bez (karta transportu:
@@ -273,7 +280,7 @@ function build(pooled: boolean, root: HTMLElement): PoolEntry {
     layers: { tiles, route, ferryLeg, detour, geofences, poi, fleet, situations, ais },
     health: { state: 'loading', tries: 0, via: 'fallback', reported: false, cause: 'tiles' },
     healthSubs: new Set(), unwatch: null, chunkFails: 0, slot: 'map',
-    lines: { spec: BASELINE_LINES, legs: null, routeLegs: [], ferries: [] },
+    lines: { spec: BASELINE_LINES, legs: null, routeLegs: [], ferries: [], loadedAt: null, serverLegCodes: new Set() },
   };
   /* #667 A / BN9-c5: drogi (demo: linie przykładowe; PROD: legi z `map_display_state`) i tory — od razu rdzeń
      Polska–Szwecja; CorridorMap przerysowuje zakres widoku (karta transportu, Mapa, Kokpit) */
@@ -306,6 +313,20 @@ function paintHereFerries(e: PoolEntry, scope: CorridorScope): void {
 }
 
 /**
+ * DP-224 B F7 #821: legi w puli świeże (TTL) i pokrywają wszystkie kody wymagane przez `spec`
+ * (nie wystarczy „pula niepusta” — karta z inną trasą musi dociągnąć brakujący leg).
+ */
+export function poolLinesReusable(e: PoolEntry, spec: LinesSpec, now = Date.now()): boolean {
+  if (!e.lines.legs || e.lines.loadedAt == null) return false;
+  if (now - e.lines.loadedAt > LINES_CACHE_TTL_MS) return false;
+  const scope = scopeOfSpec(spec, e.lines.routeLegs);
+  for (const leg of scope.legs) {
+    if (!e.lines.serverLegCodes.has(leg)) return false;
+  }
+  return true;
+}
+
+/**
  * BN9-c5 (#718 BN7 §4): linie tras na mapie z puli — legi drogowe (`#E5A544`) i tory wodne (`ferryLaneOptions`) tylko
  * z zakresu `spec`. Tory i legi już wczytane — od razu (wspólna mapa przechodzi między widokami bez starych linii);
  * `load` — wczytanie legów (demo: linie przykładowe; PROD: `loadRoadLines` + `loadRoadLegs`, przeprawy z HERE).
@@ -320,12 +341,14 @@ export function drawCorridorLines(e: PoolEntry, spec: LinesSpec, load: boolean):
   paintHereFerries(e, pre);
   if (e.lines.legs) paintRoadLegs(route, linesInScope(e.lines.legs, pre).map((l) => l.line));
   if (!load) return Promise.resolve();
-  /* DP-224 B (#817): legi już w puli sesji — Kokpit↔Mapa↔karta tylko przerysowuje zakres, bez map_display_state */
-  if (e.lines.legs) return Promise.resolve();
+  /* DP-224 B F7: świeże + wszystkie legi `spec` w puli — Kokpit↔Mapa↔karta bez map_display_state */
+  if (poolLinesReusable(e, spec)) return Promise.resolve();
   /* Bramka przez import.meta.env (nie PROD_BUILD), żeby Vite wyciął applyBasemap z paczki demo (I-2). */
   if (import.meta.env.VITE_AUTH_MODE !== 'supabase') {
     /* audyt D-07 (E45, E1): demo — odcinki lądowe; BN9-c5: legi przykładowe z kodem, ten sam filtr co PROD */
     e.lines.legs = DEMO_ROAD_LEGS.map((l) => ({ leg: l.leg, line: l.line }));
+    e.lines.loadedAt = Date.now();
+    e.lines.serverLegCodes = new Set([...DEMO_ROAD_LEGS.map((l) => l.leg), ...pre.legs]);
     paintRoadLegs(route, linesInScope(e.lines.legs, pre).map((l) => l.line));
     return Promise.resolve();
   }
@@ -333,11 +356,14 @@ export function drawCorridorLines(e: PoolEntry, spec: LinesSpec, load: boolean):
   return import('./applyBasemap').then(async ({ loadRoadLines, loadRoadLegs, loadFerryLines }) => {
     /* #667: `loadRoadLines` dociąga brakujące legi rdzenia (here-roads); legi z kodem z tego samego odczytu stanu */
     await loadRoadLines();
-    const { legs, routeLegs } = await loadRoadLegs();
+    const { legs, routeLegs, roadLegCodes } = await loadRoadLegs();
     e.lines.legs = legs;
     e.lines.routeLegs = routeLegs;
     /* zakres z chwili zakończenia (widok mógł się zmienić w trakcie wczytywania) — późniejszy widok wygrywa */
     const scope = scopeOfSpec(e.lines.spec, routeLegs);
+    /* kody z odczytu + zakres bieżącego spec (puste BN7 / brak geometrii nie wymuszają pętli pobrań) */
+    e.lines.serverLegCodes = new Set([...roadLegCodes, ...scope.legs]);
+    e.lines.loadedAt = Date.now();
     fitTracks.set(e.map, scope.tracks);
     paintRoadLegs(route, linesInScope(legs, scope).map((l) => l.line));
     /* E45 pkt 1 (L56): przeprawy według HERE, gdy serwer je poda; inaczej zostają stałe tory wodne */
