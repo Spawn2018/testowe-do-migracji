@@ -1,3 +1,11 @@
+## 2026-11-05 06:35 — DP-218 F7 r1: fixture eta_site (#808)
+
+- Skrzynka: #807 `pilne` otwarte; #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: #808 bez F7 (CI db FAIL 675/676 — `eta_site po Droga SE`); #805 bez F7 (WSTRZYMANE).
+- **Krok:** fixture DP-218 — świeża `positions` (jak W3f) przed `refresh_load_eta`; logika **0410** bez zmian (prod OK). DP-210 nie zaczynać.
+- **Dalej:** push → CI (+`db`) → F7. Po scaleniu powrót do DP-211 (#805) / DP-212…
+
+
 ## 2026-11-05 06:15 — PILNE #807 DP-218 (przerwane #805 DP-211)
 
 - Skrzynka: **#807 `pilne`** (Spawn2018) — FERRY zostaje „Prom” gdy pierwsza pozycja po ATA poza PORT_IN (SG 0040); #550 WSTRZYMANE; BN5–8 w planie.

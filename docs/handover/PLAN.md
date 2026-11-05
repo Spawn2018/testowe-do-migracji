@@ -2667,6 +2667,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 03.11.2026 21:35 | #777 F7 r1 niegotowe → seed Portnet/Deltamarin, I=IC, dzień przypłynięcia, złożone IBNet | pętla / C2 F7 |
 | 03.11.2026 22:00 | #777 SCALONE `2a99a8e6` (DP-120 / **0391**; F7 gotowe @ `fecc5f7a`); start DP-202+203 (#778+#779) | pętla / C2 |
 | 03.11.2026 23:50 | #780 F7 r3: auto DeepL na luki TV/bałtyk (bez RESOURCE_MISSING:TV_CODE); **0393** memory_auto_24h | pętla / C2 F7 |
+| 05.11.2026 06:35 | #808 F7 r1: fixture DP-218 świeża positions przed refresh_load_eta (eta_site); logika 0410 bez zmian | pętla / C2 |
 | 05.11.2026 06:15 | #807 PILNE DP-218 start (przerwane #805); FERRY+ATA+pozycja poza PORT_IN → Droga / **0410**; DP-210 nie zaczynać | pętla / C2 |
 | 05.11.2026 04:30 | #806 SCALONE `2723af71` (DP-217 / **0409**; F7 @ `54cf9d8f`); wznowienie DP-211 (#805); DP-210 nie zaczynać | pętla / C2 |
 | 05.11.2026 03:45 | #804 PILNE DP-217 start (przerwane #805 DP-211); fi-wx MEDIUM + 1× HIGH/load HHL+SCX / **0409**; DP-210 nie zaczynać | pętla / C2 |

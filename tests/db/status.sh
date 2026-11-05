@@ -4086,7 +4086,8 @@ chk "DP-218: powod przerwa GPS" \
 # process_position e2e (PORT_IN ON) — ten sam warunek
 pos $L218b 60.173 24.827 "2026-11-05 04:20+00"
 chk "DP-218: process_position → IN_TRANSIT_SE" "$(st $L218b)" IN_TRANSIT_SE
-# ETA po przejściu (HERE FI-HEL)
+# ETA po przejściu (HERE FI-HEL). Świeża pozycja jak W3f — backup nie wstawia positions,
+# a compute_load_eta dla IN_TRANSIT_SE wymaga v_fresh (prod SG 0041 ma GPS).
 chk "DP-218: eta_site po Droga SE" \
   "begin;
    insert into here_road_geometry (leg, points, summary, fetched_at, length_m, duration_s, n_points)
@@ -4095,6 +4096,9 @@ chk "DP-218: eta_site po Droga SE" \
       summary=excluded.summary, n_points=excluded.n_points;
    update loads set plan_delivery_date = current_date + 3, ferry_route = 'TLL-HEL'
     where id = '$L218a';
+   insert into positions (load_id, ts, geom_raw, source) values
+    ('$L218a', now() - interval '10 minutes',
+     st_setsrid(st_makepoint(24.827, 60.173), 4326), 'TELEMATICS_API');
    select public.refresh_load_eta('$L218a');
    select (eta_site is not null)::text from loads where id='$L218a';
    rollback" true
