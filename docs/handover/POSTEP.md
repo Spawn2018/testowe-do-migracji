@@ -1,3 +1,10 @@
+## 2026-11-05 19:15 — #822 SCALONE; DP-224 D ignoreCommand / skip front
+
+- Skrzynka: #817 PILNE W TOKU (cz. D); #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne` poza bieżącym.
+- Scalanie: **#822 SCALONE** `98e723d1` (F7 gotowe @ `9a38848b`; unit+visual+db ✔). #813 wstrzymane.
+- **Krok DP-224 D** `pakiet/c2-dp-224-d-ignore-frontend`: `scripts/ci/skip-frontend-deploy.py` — pomijaj Vercel, gdy diff tylko `supabase/`/`docs/`/`tests/`; `vercel.json` `ignoreCommand`; `deploy-main` krok „Czy wdrażać front” + LH razem z Produkcja. Testy skip-frontend + hosting-switch. Dalej B1 skew / B3 prefetch / E (#817).
+- Bez push na main.
+
 ## 2026-11-05 18:50 — DP-224 C F7 #822 niegotowe (pasek / alarm / Suspense)
 
 - Skrzynka: #817 PILNE W TOKU (cz. C F7); #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne` poza bieżącym.

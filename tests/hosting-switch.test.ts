@@ -11,7 +11,9 @@ describe('PR8: przełączenie hostingu Vercel ↔ Cloudflare Pages', () => {
   // Cloudflare Pages go nie ma (`_redirects` nie przekazuje do obcych hostów) — klient po 404/HTML przechodzi
   // wtedy wprost na funkcję (`edgeMissing` w applyBasemap.ts), więc przełączenie hostingu dalej działa.
   it('vercel.json: bez nagłówków /download, funkcji, cronów (O2); jedyne przepisania = /tiles (AUD-01c → api/tiles, fra1); SEC: XFO/XCTO OK', () => {
-    expect(Object.keys(vercel)).toEqual(['headers', 'rewrites', 'regions'])
+    // DP-224 D: ignoreCommand pomija build przy samym supabase/docs/tests (#817).
+    expect(Object.keys(vercel)).toEqual(['ignoreCommand', 'headers', 'rewrites', 'regions'])
+    expect(String(vercel.ignoreCommand)).toMatch(/skip-frontend-deploy\.py/)
     expect(vercel.regions).toEqual(['fra1'])
     expect(vercel.headers.every((h) => !h.source.includes('download'))).toBe(true)
     const keys = vercel.headers.flatMap((h) => h.headers.map((x) => x.key))
