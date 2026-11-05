@@ -1,3 +1,10 @@
+## 2026-11-05 19:45 — DP-224 D F7 #823 niegotowe (baza porównania)
+
+- Skrzynka: #817 PILNE W TOKU (cz. D F7); #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne` poza bieżącym.
+- Scalanie: brak F7 gotowe — F7 #823 @ `4a0c1997` **niegotowe** (baza przy Vercel=skipped z braku kluczy). CI unit+visual ✔ na `4a0c1997`. #813 wstrzymane.
+- **Krok F7 D:** `frontend-deploy-base-ok.py` — baza tylko gdy Produkcja Vercel=success albo (Czy wdrażać front=success i Vercel=skipped); `deploy-main` używa skryptu; testy. `ignoreCommand` zostaje (ochrona integracji Git). Dalej CI→F7, potem B1/B3/E (#817).
+- Bez push na main.
+
 ## 2026-11-05 19:15 — #822 SCALONE; DP-224 D ignoreCommand / skip front
 
 - Skrzynka: #817 PILNE W TOKU (cz. D); #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne` poza bieżącym.

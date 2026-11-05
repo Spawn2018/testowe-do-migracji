@@ -56,10 +56,45 @@ describe('skip-frontend-deploy.py — DP-224 D', () => {
 
   it('vercel.json ma ignoreCommand na skrypt; deploy-main pomija Produkcja/LH przy skip', () => {
     const v = JSON.parse(readFileSync('vercel.json', 'utf8')) as { ignoreCommand?: string }
+    // Zostawiamy ignoreCommand: CI używa `vercel deploy` (bez .git → i tak build),
+    // ale chroni przy ewentualnej integracji Git Vercel (F7 #823 nieblokujące).
     expect(v.ignoreCommand).toMatch(/skip-frontend-deploy\.py/)
     const yml = readFileSync('.github/workflows/deploy-main.yml', 'utf8')
     expect(yml).toMatch(/Czy wdrażać front/)
     expect(yml).toMatch(/steps\.front\.outputs\.skip != 'true'/)
     expect(yml).toMatch(/skip-frontend-deploy\.py/)
+    expect(yml).toMatch(/frontend-deploy-base-ok\.py/)
   })
 })
+
+describe('frontend-deploy-base-ok.py — F7 #823 baza porównania', () => {
+  function base(front: string, vercel: string): { out: string; code: number } {
+    try {
+      const out = execFileSync(PY, ['scripts/ci/frontend-deploy-base-ok.py', front, vercel], {
+        encoding: 'utf8',
+      }).trim()
+      return { out, code: 0 }
+    } catch (e) {
+      const err = e as { status?: number; stdout?: string }
+      return { out: String(err.stdout ?? '').trim(), code: err.status ?? 1 }
+    }
+  }
+
+  it('Vercel success → accept (także bez kroku decyzji — stare przebiegi)', () => {
+    expect(base('success', 'success')).toEqual({ out: 'accept', code: 0 })
+    expect(base('', 'success')).toEqual({ out: 'accept', code: 0 })
+    expect(base('skipped', 'success')).toEqual({ out: 'accept', code: 0 })
+  })
+
+  it('celowy skip frontu (decyzja success + Vercel skipped) → accept', () => {
+    expect(base('success', 'skipped')).toEqual({ out: 'accept', code: 0 })
+  })
+
+  it('brak kluczy / samo Vercel skipped bez decyzji → reject', () => {
+    expect(base('', 'skipped')).toEqual({ out: 'reject', code: 1 })
+    expect(base('skipped', 'skipped')).toEqual({ out: 'reject', code: 1 })
+    expect(base('', '')).toEqual({ out: 'reject', code: 1 })
+    expect(base('failure', 'skipped')).toEqual({ out: 'reject', code: 1 })
+  })
+})
+

@@ -204,14 +204,18 @@ jobs:
         run: |
           set -euo pipefail
           set +x
+          # F7 #823: baza = Vercel success ALBO (decyzja front success + Vercel skipped).
+          # Samo „Produkcja Vercel=skipped” bywa też brakiem kluczy — wtedy nie baza.
           before=""
           if command -v gh >/dev/null 2>&1; then
             while IFS=$'\t' read -r run_id sha; do
               [ -z "${run_id:-}" ] && continue
               [ "$sha" = "${GITHUB_SHA}" ] && continue
-              front_concl="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/jobs" \
+              dec_concl="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/jobs" \
+                --jq '[.jobs[].steps[]? | select(.name == "Czy wdrażać front") | .conclusion][0] // empty' 2>/dev/null || true)"
+              ver_concl="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/jobs" \
                 --jq '[.jobs[].steps[]? | select(.name == "Produkcja Vercel") | .conclusion][0] // empty' 2>/dev/null || true)"
-              if [ "$front_concl" = "success" ] || [ "$front_concl" = "skipped" ]; then
+              if python3 scripts/ci/frontend-deploy-base-ok.py "$dec_concl" "$ver_concl" >/dev/null; then
                 before="$sha"
                 break
               fi
