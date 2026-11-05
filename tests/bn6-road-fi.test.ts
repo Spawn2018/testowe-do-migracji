@@ -18,6 +18,8 @@ import {
   densifyCorridor,
   eventInFiBboxes,
   extractFiRoadRef,
+  formatBalticRoadTitle,
+  scrubEmptyRoadNrPhrase,
   fiBboxInLimit,
   fiCorridorBboxes,
   fiRoadConditionLabelPl,
@@ -566,5 +568,33 @@ describe('BN6 runRoadFi — F7 #726', () => {
     expect(street?.severity).toBe('LOW');
     expect(street?.title).toMatch(/obok trasy/);
     expect(Number(r.observations?.fi_off_corridor)).toBeGreaterThan(0);
+  });
+});
+
+describe('DP-213 FI: bez pustego „Droga nr ,” (#793)', () => {
+  it('scrubEmptyRoadNrPhrase zostawia miejscowość', () => {
+    expect(scrubEmptyRoadNrPhrase('Droga nr , Jämsä')).toBe('Jämsä');
+    expect(scrubEmptyRoadNrPhrase('Tie , Äänekoski')).toBe('Äänekoski');
+    expect(scrubEmptyRoadNrPhrase('Droga nr ,')).toBe('');
+  });
+
+  it('tytuł ROAD_FI bez „Droga nr ,” gdy numer tylko w road', () => {
+    const e: BalticRoadEvent = {
+      id: 'fi-jamsa',
+      title: 'roboty drogowe',
+      detail: 'Droga nr , Jämsä',
+      severity: 'LOW',
+      lat: 61.86,
+      lon: 25.19,
+      kind: 'road work',
+      start: null,
+      end: null,
+      road: '343',
+      corridorMatch: 'off',
+    };
+    const titled = formatBalticRoadTitle('FI', e);
+    expect(titled.title).not.toMatch(/Droga\s+nr\s*,/i);
+    expect(titled.title).toMatch(/Jämsä/);
+    expect(titled.roadLabel).toMatch(/343|droga 343/);
   });
 });

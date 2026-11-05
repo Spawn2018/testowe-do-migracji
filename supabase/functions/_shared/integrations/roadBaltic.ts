@@ -784,14 +784,67 @@ export function compactEuroRoad(road: string): string {
 }
 
 /**
+ * DP-213 / #793: pusty „Droga nr ,” / „Tie ,” z DeepL (fińskie „Tie” bez numeru).
+ * Numer drogi i tak jest w `roadLabel` — tu usuwamy tylko pustą frazę, zostaje miejscowość.
+ */
+export function scrubEmptyRoadNrPhrase(
+  text: string | null | undefined,
+  _opts?: { road?: string | null },
+): string {
+  let s = String(text ?? '').replace(/\s+/g, ' ').trim();
+  if (!s) return '';
+  /* „Droga nr , Jämsä” / „Tie , Äänekoski” / „…, Droga nr , …” */
+  s = s.replace(/(?:^|[\s,.;:·])(?:Droga\s+nr|Tie)\s*,\s*/giu, (m) => (
+    m[0] && /[\s,.;:·]/.test(m[0]) ? m[0]! : ''
+  ));
+  /* „Droga nr .” bez cyfry zaraz potem */
+  s = s.replace(/(?:^|[\s,.;:·])(?:Droga\s+nr|Tie)\s*\.(?!\d)/giu, (m) => (
+    m[0] && /[\s,.;:·]/.test(m[0]) ? m[0]! : ''
+  ));
+  return s.replace(/\s+/g, ' ').replace(/^[·,.;:\s-]+|[·,.;:\s-]+$/g, '').trim();
+}
+
+/**
+ * DP-213: opis zdarzenia (LV/LT/ET/FI) ≠ nazwa miejsca.
+ * Diakrytyki bałtyckie / fińskie w „okolice …” albo dłuższy zdaniowy opis → odrzuć.
+ */
+export function looksLikeBalticEventDescription(text: string | null | undefined): boolean {
+  const s = String(text ?? '').replace(/\s+/g, ' ').trim();
+  if (!s) return false;
+  const body = s.replace(/^okolice\s+/i, '').trim();
+  if (!body) return false;
+  /* LV āēīūčģķļņšž; LT ąčęėįšųūž; EE õäöüšž; FI äöå */
+  if (/[āēīūčģķļņšžĄĒĪŪČĢĶĻŅŠŽąčęėįšųūžĄČĘĖĮŠŲŪŽõäöüšžÕÄÖÜŠŽäöåÄÖÅ]/u.test(body)) {
+    /* Krótka nazwa miejscowości z diakrytykiem (Ķekava, Jämsä) — OK gdy 1–2 słowa ≤ 28 znaków. */
+    const words = body.split(/\s+/);
+    if (words.length <= 2 && body.length <= 28 && !/[.!?()]/.test(body)) return false;
+    return true;
+  }
+  /* Zdanie / opis techniczny bez diakrytyków (po DeepL też nie jako „miejsce” w roadLabel). */
+  if (wordsLikeDescription(body)) return true;
+  return false;
+}
+
+function wordsLikeDescription(body: string): boolean {
+  if (body.length > 36) return true;
+  if (/[()]/.test(body)) return true;
+  if (/\b(puses|brauktuve|transpor|satiksme|organiz|ceļa|malā|pamests|slēgta|labās)\b/i.test(body)) {
+    return true;
+  }
+  if (/\b(Droga\s+nr|Tie)\s*,/i.test(body)) return true;
+  return false;
+}
+
+/**
  * DP-204.5 / #781 pkt 8: krótkie miejsce w tytule (≤ 40 znaków).
  * Bez wykonawcy/telefonu; bez powtórzonego numeru drogi / typu zdarzenia.
+ * DP-213: usuwa puste „Droga nr ,”; opis zdarzenia ≠ miejsce.
  */
 export function balticShortPlace(
   detail: string | null | undefined,
   opts?: { road?: string | null; typePl?: string | null; maxLen?: number },
 ): string {
-  let s = String(detail ?? '').replace(/\s+/g, ' ').trim();
+  let s = scrubEmptyRoadNrPhrase(detail, { road: opts?.road });
   if (!s) return '';
   s = s
     .replace(/\bWykonawca\s*:?\s*[^,.;]*/giu, ' ')
@@ -809,6 +862,20 @@ export function balticShortPlace(
     s = s.slice(typePl.length).replace(/^[\s,.:;·-]+/, '').trim();
   }
   s = s.replace(/^[·,.;:\s-]+|[·,.;:\s-]+$/g, '').trim();
+  /* DP-213: „Jämsä. Roboty…” → sama miejscowość (pierwszy krótki człon). */
+  if (looksLikeBalticEventDescription(s)) {
+    const first = (s.split(/[.;]/)[0] ?? '').replace(/^[·,:\s-]+|[·,:\s-]+$/g, '').trim();
+    if (
+      first
+      && first.length <= 28
+      && first.split(/\s+/).length <= 2
+      && !looksLikeBalticEventDescription(first)
+    ) {
+      s = first;
+    } else {
+      return '';
+    }
+  }
   const maxLen = opts?.maxLen ?? 40;
   if (s.length > maxLen) s = `${s.slice(0, Math.max(1, maxLen - 1)).trimEnd()}…`;
   return s;
@@ -877,7 +944,9 @@ export function balticRoadLabel(
     if (/^T\d+/i.test(r)) return r.toUpperCase();
     return r;
   }
-  const place = String(opts?.placeName ?? '').replace(/\s+/g, ' ').trim();
+  const placeRaw = scrubEmptyRoadNrPhrase(opts?.placeName);
+  /* DP-213: opis LV/FI ≠ miejsce w roadLabel. */
+  const place = placeRaw && !looksLikeBalticEventDescription(placeRaw) ? placeRaw : '';
   if (place) {
     const withCountry = /\(([A-Z]{2})\)$/.test(place) ? place : `${place} (${country})`;
     return withCountry.length > 48 ? `${withCountry.slice(0, 47)}…` : withCountry;
@@ -1008,14 +1077,19 @@ export function formatBalticRoadTitle(
   const when = from && to ? `od ${from} do ${to}` : from ? `od ${from}` : to ? `do ${to}` : '';
   /* Odcinek / miejscowość — krótki fragment detail bez kodów technicznych. */
   let place = '';
-  const det = String(e.detail ?? '').replace(/\s+/g, ' ').trim();
-  if (det && !/^(mass|width|height|virtual|restriction)/i.test(det)) {
+  const placeHint = scrubEmptyRoadNrPhrase(e.placeName);
+  if (placeHint && !looksLikeBalticEventDescription(placeHint)) {
+    place = balticShortPlace(placeHint, { road: e.road ?? roadLabel, typePl: type, maxLen: 40 });
+  }
+  const det = scrubEmptyRoadNrPhrase(e.detail).replace(/\s+/g, ' ').trim();
+  if (!place && det && !/^(mass|width|height|virtual|restriction)/i.test(det)) {
     /* DP-204.2: surowy „A7_L · km 6.2” nie jako place — jest w formatLvTechSuffix. */
     const lvcKm = country === 'LV'
       && /^(?:[AVP]\d+(?:_[A-Za-z]+)?\s*[·,]\s*)?km\s*\d/i.test(det);
     /* EE pogoda: detail = jednostki PL — nie powielaj w tytule jako place. */
     const eeWx = (country === 'EE' || country === 'FI')
       && /temperatura nawierzchni|wilgotność|widoczność|nawierzchnia |poryw |wiatr /i.test(det);
+    /* DP-213: LV — nie wstawiaj łotewskiego opisu; FI — „Droga nr , X” → sama miejscowość. */
     if (!lvcKm && !eeWx) {
       place = balticShortPlace(det, { road: e.road ?? roadLabel, typePl: type, maxLen: 40 });
     }
@@ -1623,14 +1697,22 @@ export function applyBalticCorridorRoadFilter(
     ) {
       road = nearestCorridorRoad(country, capped.lat, capped.lon, nearKm);
     }
-    /* DP-204.5 pkt 10c: bez drogi — nazwa miejsca zamiast „droga b.d.”. */
+    /* DP-204.5 pkt 10c / DP-213: bez drogi — tylko prawdziwa nazwa miejsca (nie opis LV/FI).
+     * Brak miejsca → balticRoadLabel da „okolice trasy” / „droga b.d.”; nie wstawiaj opisu. */
+    if (!road && placeName && looksLikeBalticEventDescription(placeName)) {
+      placeName = null;
+    }
     if (!road && !placeName) {
-      const short = balticShortPlace(capped.detail ?? capped.title, { maxLen: 40 });
-      if (short && !/^(mass|width|height|virtual)/i.test(short)) {
-        placeName = short.startsWith('stacja ') || short.startsWith('okolice ')
-          ? short
-          : `okolice ${short}`;
+      const rawPlace = (capped.placeName ?? '').trim();
+      if (rawPlace && !looksLikeBalticEventDescription(rawPlace)) {
+        const short = balticShortPlace(rawPlace, { maxLen: 40 });
+        if (short && !/^(mass|width|height|virtual)/i.test(short)) {
+          placeName = short.startsWith('stacja ') || short.startsWith('okolice ')
+            ? short
+            : `okolice ${short}`;
+        }
       }
+      /* EE: stacja pogodowa już w placeName; LV/LT/FI bez gazetera — nie zgaduj z detail. */
     }
     return {
       ...capped,

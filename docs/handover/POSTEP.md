@@ -1,4 +1,11 @@
 
+## 2026-11-05 02:50 — #802 SCALONE; start DP-213 (#793)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie; #801 do zamknięcia po DP-216. Bez nowego `pilne`.
+- Scalanie: **#802 SCALONE** `4e74d3cf` (DP-216 / **0408**; F7 gotowe @ `0c602707`; unit+visual+db ✔). `deploy-main` robi resztę. Bez push na main.
+- **Krok DP-213** `pakiet/c2-dp-213-lv-fi-titles`: (1) LV — opis zdarzenia ≠ `placeName`/`okolice …` w roadLabel; (2) FI — `scrubEmptyRoadNrPhrase` usuwa puste „Droga nr ,” / „Tie ,”; (3) testy bn6-road-lv/fi. Bez migracji. Tytuły na prod odświeży następny `road-lv`/`road-fi` (ten sam dedup, bez nowych powiadomień — lekcja #786). DP-210 nie zaczynać.
+- **Dalej:** push → CI → F7. Potem DP-211/212…
+
 ## 2026-11-05 02:10 — DP-216 (#802): CI fix (visual NBSP + db okno śledzenia)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie; bez nowego `pilne`.
