@@ -77,8 +77,10 @@ export type DetourWindRow = {
 };
 
 /**
- * DP-212 / F7 #791 nieblok.: szczyt porywu w oknie jazdy wariantu (nie cały horyzont).
- * Brak próbek w oknie → null → WIND warn.
+ * DP-212 / F7 #791 nieblok. + F7 #811 B1: szczyt porywu w oknie jazdy wariantu.
+ * Próbki prognozy są godzinowe — okno rozszerzamy do pełnych godzin
+ * [floor_h(from), ceil_h(to)], żeby krótki objazd (np. 10:20–10:50) widział 10:00 i 11:00.
+ * Brak próbek w rozszerzonym oknie → null → WIND warn.
  */
 export function peakGustInDriveWindow(args: {
   rows: readonly DetourWindRow[];
@@ -88,8 +90,11 @@ export function peakGustInDriveWindow(args: {
   const from = Date.parse(args.fromIso);
   const to = Date.parse(args.toIso);
   if (!Number.isFinite(from) || !Number.isFinite(to) || !args.rows.length) return null;
-  const t0 = Math.min(from, to);
-  const t1 = Math.max(from, to);
+  const HOUR_MS = 3_600_000;
+  const lo = Math.min(from, to);
+  const hi = Math.max(from, to);
+  const t0 = Math.floor(lo / HOUR_MS) * HOUR_MS;
+  const t1 = Math.ceil(hi / HOUR_MS) * HOUR_MS;
   let peak: number | null = null;
   for (const row of args.rows) {
     for (const s of row.samples ?? []) {
@@ -1088,9 +1093,23 @@ export type OpenDetourCache = {
   closureLon: number;
 };
 
+/** Wynik nóg E49-b: tablica (testy) albo legi + ostrzeżenia (prod, F7 #811 B2). */
+export type DetourLoadLegsResult =
+  | DetourLoadLeg[]
+  | { legs: DetourLoadLeg[]; warnings?: string[] };
+
+export function normalizeDetourLoadLegs(raw: DetourLoadLegsResult | undefined | null): {
+  legs: DetourLoadLeg[];
+  warnings: string[];
+} {
+  if (raw == null) return { legs: [], warnings: [] };
+  if (Array.isArray(raw)) return { legs: raw, warnings: [] };
+  return { legs: raw.legs ?? [], warnings: raw.warnings ?? [] };
+}
+
 export type DetourJobStore = {
   listOpenRoadClosures?(): Promise<RoadClosureCandidate[]>;
-  e49DetourLoadLegs?(): Promise<DetourLoadLeg[]>;
+  e49DetourLoadLegs?(): Promise<DetourLoadLegsResult>;
   upsertE49DetourCase?(row: DetourCaseUpsert): Promise<boolean>;
   closeStaleE49DetourCases?(keepDedup: string[]): Promise<number>;
   noteHereUsage?(service: 'routing', n: number): Promise<void>;
@@ -1157,7 +1176,10 @@ export async function runDetourCases(args: {
   } catch (e) {
     warnings.push(`E49-b listOpenRoadClosures: ${e instanceof Error ? e.message : 'błąd'}`);
   }
-  const legs = args.store.e49DetourLoadLegs ? await args.store.e49DetourLoadLegs() : [];
+  const { legs, warnings: legWarnings } = normalizeDetourLoadLegs(
+    args.store.e49DetourLoadLegs ? await args.store.e49DetourLoadLegs() : [],
+  );
+  for (const w of legWarnings) warnings.push(w);
   const keep: string[] = [];
   let upserts = 0;
   let hereCalls = 0;

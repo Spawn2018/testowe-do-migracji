@@ -1088,11 +1088,26 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
           pilotsByLoad.set(lid, list);
         }
       }
-      // DP-212 / F7 #791: jedno zapytanie wiatru na przebieg (nie N+1); błąd → throw (nie cichy).
+      // DP-212 / F7 #811 B2: jedno zapytanie wiatru na przebieg; błąd → warn, nie blokuj spraw.
       const codes = [...new Set(legs.map((l) => l.code))];
-      const allWind = codes.length && this.listCorridorWindForecast
-        ? await this.listCorridorWindForecast(codes, 360)
-        : [];
+      const legWarnings: string[] = [];
+      let allWind: Array<{
+        corridor: string;
+        km: number;
+        lon: number;
+        lat: number;
+        bearingDeg: number;
+        source: 'SMHI' | 'FMI';
+        samples: unknown[];
+      }> = [];
+      if (codes.length && this.listCorridorWindForecast) {
+        try {
+          allWind = await this.listCorridorWindForecast(codes, 360);
+        } catch {
+          legWarnings.push('E49-b: prognoza wiatru niedostępna');
+          allWind = [];
+        }
+      }
       const windByCode = new Map<string, typeof allWind>();
       for (const row of allWind) {
         const list = windByCode.get(row.corridor) ?? [];
@@ -1234,7 +1249,8 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
           riskCtx,
         });
       }
-      return out;
+      // F7 #811 B2: ostrzeżenie joba przy błędzie wiatru (sprawy i tak powstają, WIND=warn).
+      return legWarnings.length ? { legs: out, warnings: legWarnings } : out;
     },
     /** F7 #791 r4 B6: pamięć HERE między przebiegami. */
     async getOpenDetourCache(dedupKey: string) {

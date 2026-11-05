@@ -1,3 +1,11 @@
+## 2026-11-05 09:40 — DP-212 F7 #811 B1+B2 (niegotowe → poprawka)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: brak F7 gotowe — F7 #811 @ `0105ebf8` **niegotowe** (B1+B2).
+- **Krok:** B1 `peakGustInDriveWindow` → okno [floor_h, ceil_h]; B2 `e49DetourLoadLegs` łapie błąd wiatru → `windRows=null` + warning „E49-b: prognoza wiatru niedostępna” (sprawy powstają). Testy e49-detour-job 18/18. Bez migracji.
+- **Dalej:** push → CI → F7. Potem DP-219–221.
+
+
 ## 2026-11-05 09:10 — #810 SCALONE; start DP-212 (WIND okno + N+1)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.

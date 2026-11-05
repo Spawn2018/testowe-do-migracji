@@ -132,6 +132,26 @@ describe('detourCaseJob helpers', () => {
       toIso: '2026-11-05T13:00:00Z',
     })).toBeNull();
 
+    // F7 #811 B1: krótki objazd 10:20–10:50 → pełne godziny 10:00 i 11:00.
+    const shortRows = [{
+      km: 100,
+      samples: [
+        { at: '2026-11-05T10:00:00Z', gustMs: 12 },
+        { at: '2026-11-05T11:00:00Z', gustMs: 22 },
+      ],
+    }];
+    expect(peakGustInDriveWindow({
+      rows: shortRows,
+      fromIso: '2026-11-05T10:20:00Z',
+      toIso: '2026-11-05T10:50:00Z',
+    })).toBe(22);
+    // Bez próbek w ±1 h wokół okna → null.
+    expect(peakGustInDriveWindow({
+      rows: [{ km: 1, samples: [{ at: '2026-11-05T08:00:00Z', gustMs: 30 }] }],
+      fromIso: '2026-11-05T10:20:00Z',
+      toIso: '2026-11-05T10:50:00Z',
+    })).toBeNull();
+
     const win = banDriveWindow({
       side: 'detour',
       nowIso: '2026-11-05T08:00:00Z',
@@ -149,6 +169,18 @@ describe('detourCaseJob helpers', () => {
     });
     expect(wired.find((r) => r.kind === 'WIND')?.text).toMatch(/18 m\/s/);
     expect(wired.find((r) => r.kind === 'WIND')?.level).toBe('ok');
+    // B1: krótki objazd → WIND warn z wartością 22 (nie „sprawdź”).
+    const shortWired = buildNineRisks({
+      side: 'detour',
+      country: 'SE',
+      permitMode: 'TRASA',
+      hereNotices: ['ok'],
+      banFromIso: '2026-11-05T10:20:00Z',
+      banToIso: '2026-11-05T10:50:00Z',
+      riskCtx: { windRows: shortRows },
+    });
+    expect(shortWired.find((r) => r.kind === 'WIND')?.text).toMatch(/22 m\/s/);
+    expect(shortWired.find((r) => r.kind === 'WIND')?.level).toBe('warn');
     // Bez próbek w oknie → warn (nie bierze szczytu spoza okna).
     const emptyWin = buildNineRisks({
       side: 'detour',
@@ -827,6 +859,60 @@ describe('runDetourCases', () => {
       },
     });
     expect(upserted).toHaveLength(1);
+  });
+
+  it('F7 #811 B2: błąd prognozy wiatru → sprawa powstaje, WIND warn „sprawdź”, warning w wyniku', async () => {
+    const upserted: Array<{ wind?: string; level?: string }> = [];
+    const res = await runDetourCases({
+      now: new Date('2026-11-04T10:00:00Z'),
+      hereApiKey: null,
+      fetch: vi.fn() as unknown as typeof fetch,
+      store: {
+        listOpenRoadClosures: async () => [{
+          closureRef: 'ROAD_SE:SIT:wind-fail',
+          country: 'SE',
+          place: 'most',
+          title: 'closed',
+          detailText: 'avstängd',
+          lat: 62.8,
+          lon: 17.9,
+          noticeIso: '2026-11-04T09:00:00Z',
+          untilIso: null,
+          roadClosed: true,
+          corridor: 'SE_E4',
+          atKm: 120,
+          korytarzDroga: 'on',
+        }],
+        // Jak store po catch listCorridorWindForecast: windRows=null + ostrzeżenie joba.
+        e49DetourLoadLegs: async () => ({
+          warnings: ['E49-b: prognoza wiatru niedostępna'],
+          legs: [{
+            loadId: 'a0000000-0000-4000-8000-000000000212',
+            code: 'SE_E4_STO',
+            fromKm: 10,
+            currentLeg: true,
+            status: 'IN_TRANSIT_SE',
+            baseEtaIso: '2026-11-05T08:00:00Z',
+            dims: {
+              lengthM: 25, widthM: 3.2, heightM: 4.0, weightT: 60, axleCount: 8, axleLoadT: 10,
+            },
+            position: [62.5, 17.5],
+            permitMode: 'TRASA',
+            riskCtx: { windRows: null },
+          }],
+        }),
+        upsertE49DetourCase: async (row) => {
+          const wind = row.payload.hold.risks.find((r) => r.kind === 'WIND');
+          upserted.push({ wind: wind?.text, level: wind?.level });
+          return true;
+        },
+        closeStaleE49DetourCases: async () => 0,
+      },
+    });
+    expect(res.upserts).toBe(1);
+    expect(res.warnings).toContain('E49-b: prognoza wiatru niedostępna');
+    expect(upserted[0]?.level).toBe('warn');
+    expect(upserted[0]?.wind).toMatch(/sprawdź/i);
   });
 });
 

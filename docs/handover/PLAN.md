@@ -2670,6 +2670,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 03.11.2026 21:35 | #777 F7 r1 niegotowe → seed Portnet/Deltamarin, I=IC, dzień przypłynięcia, złożone IBNet | pętla / C2 F7 |
 | 03.11.2026 22:00 | #777 SCALONE `2a99a8e6` (DP-120 / **0391**; F7 gotowe @ `fecc5f7a`); start DP-202+203 (#778+#779) | pętla / C2 |
 | 03.11.2026 23:50 | #780 F7 r3: auto DeepL na luki TV/bałtyk (bez RESOURCE_MISSING:TV_CODE); **0393** memory_auto_24h | pętla / C2 F7 |
+| 05.11.2026 09:40 | #811 F7 niegotowe B1+B2: floor/ceil godzin WIND; błąd prognozy → warn joba, sprawy OK | pętla / C2 F7 |
 | 05.11.2026 09:10 | #810 SCALONE `18ab51c6` (DP-210; F7 @ `6f368b0f`); start DP-212 (WIND okno wariantu + 1× listCorridorWindForecast) | pętla / C2 |
 | 05.11.2026 08:30 | #805 SCALONE `4cbcb472` (DP-211; F7 @ `8e26133b`); #809 decyzja 105 → start DP-210 (pilot niewymagany EE/LV/LT/FI); DP-219–221 w rejestrze | pętla / C2 |
 | 05.11.2026 07:10 | #808 SCALONE `5e7a1173` (DP-218 / **0410**; F7 @ `817f6e3a`); wznowienie DP-211 (#805); DP-210 nie zaczynać | pętla / C2 |

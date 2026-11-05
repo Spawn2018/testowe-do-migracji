@@ -423,7 +423,7 @@ export interface SyncStore {
   /** E49-b Z3: otwarte ryzyka ROAD_* wyglądające na zamknięcie (do spraw SCX). */
   listOpenRoadClosures?(): Promise<import('../e49/detourCaseJob.ts').RoadClosureCandidate[]>;
   /** E49-b Z3: transporty na korytarzu + wymiary/pozycja pod HERE. */
-  e49DetourLoadLegs?(): Promise<import('../e49/detourCaseJob.ts').DetourLoadLeg[]>;
+  e49DetourLoadLegs?(): Promise<import('../e49/detourCaseJob.ts').DetourLoadLegsResult>;
   /** E49-b Z3: upsert sprawy „Objazd czy postój?”. */
   upsertE49DetourCase?(row: import('../e49/detourCaseJob.ts').DetourCaseUpsert): Promise<boolean>;
   /** E49-b Z3: zamknij sprawy bez keep (zamknięcie odwołane). */
