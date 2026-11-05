@@ -221,10 +221,30 @@ export function parseFiWeatherStationsData(
 /** F7 #802 B2: stały podział korytarza FI_E75 co 25 km (jak punkty wiatru Z1). */
 export const FI_WX_SEG_KM = 25;
 
-/** Miejscowości FI_E75 do tytułu odcinka (zgodne z e49/etaWeather CORRIDOR_WIND_PLACES). */
-const FI_E75_TOWNS: ReadonlyArray<{ km: number; name: string }> = [
-  { km: 0, name: 'Vuosaari' }, { km: 120, name: 'Jyväskylä' },
-  { km: 250, name: 'Oulu' }, { km: 320, name: 'Kemi' }, { km: 360, name: 'Tornio' },
+/**
+ * DP-217: horyzont jazdy dla HIGH przy transporcie — 6 h × ~70 km/h (#804).
+ * Odcinki poza horyzontem zostają MEDIUM w Ryzykach (bez dzwonka).
+ */
+export const FI_WX_HORIZON_KM = 6 * 70;
+
+/**
+ * Miejscowości FI_E75 — km wzdłuż `CORRIDOR_FI` (haversine).
+ * DP-217 / #804: gęstsza lista, żeby odcinki 25 km nie dzieliły tytułu „Vuosaari–Tornio”.
+ */
+export const FI_E75_TOWNS: ReadonlyArray<{ km: number; name: string }> = [
+  { km: 0, name: 'Vuosaari' },
+  { km: 27, name: 'Porvoo' },
+  { km: 90, name: 'Lahti' },
+  { km: 120, name: 'Heinola' },
+  { km: 180, name: 'Jyväskylä' },
+  { km: 250, name: 'Äänekoski' },
+  { km: 320, name: 'Viitasaari' },
+  { km: 400, name: 'Pyhäjärvi' },
+  { km: 480, name: 'Liminka' },
+  { km: 539, name: 'Oulu' },
+  { km: 600, name: 'Ii' },
+  { km: 630, name: 'Kemi' },
+  { km: 652, name: 'Tornio' },
 ];
 
 /** Rzut na polilinię korytarza → km od startu (najbliższy punkt zagęszczony). */
@@ -250,37 +270,160 @@ export function corridorKmOfPoint(
   return bestKm;
 }
 
-function fiE75SegmentTowns(km: number): string {
+/** Najbliższa miejscowość do km na FI_E75 (DP-217). */
+export function fiE75NearestTown(km: number): string {
   const towns = FI_E75_TOWNS;
-  if (towns.length < 2) return towns[0]?.name ?? 'E75';
-  let lo = towns[0]!;
-  let hi = towns[towns.length - 1]!;
-  for (let i = 0; i < towns.length - 1; i++) {
-    if (km >= towns[i]!.km && km <= towns[i + 1]!.km) {
-      lo = towns[i]!;
-      hi = towns[i + 1]!;
-      break;
-    }
-    if (km < towns[i]!.km) {
-      lo = towns[Math.max(0, i - 1)]!;
-      hi = towns[i]!;
-      break;
+  if (!towns.length) return 'E75';
+  let best = towns[0]!;
+  let bestD = Math.abs(km - best.km);
+  for (let i = 1; i < towns.length; i++) {
+    const t = towns[i]!;
+    const d = Math.abs(km - t.km);
+    if (d < bestD) {
+      best = t;
+      bestD = d;
     }
   }
-  return lo.name === hi.name ? lo.name : `${lo.name}–${hi.name}`;
+  return best.name;
 }
 
 /**
- * DP-216 / F7 #802 B2–B3: stacje ≤ 3 km → **jedno ryzyko na odcinek 25 km**.
- * Dedup `fi-wx:seg:{n}` (bez czasu). HIGH tylko gdy transport na FI_E75 w oknie śledzenia;
- * bez transportu — MEDIUM (tylko Ryzyka, jak widoczność #784).
+ * DP-217: etykieta odcinka 25 km — miejscowości przy starcie i końcu odcinka
+ * (nie para kotwic całej trasy). Przy tej samej miejscowości: stacje albo „km a–b”.
+ */
+export function fiE75SegmentLabel(
+  seg: number,
+  stations?: ReadonlyArray<Pick<FiWeatherSensorReading, 'name' | 'id'>>,
+): string {
+  const startKm = Math.max(0, seg) * FI_WX_SEG_KM;
+  const endKm = startKm + FI_WX_SEG_KM;
+  const a = fiE75NearestTown(startKm);
+  const b = fiE75NearestTown(endKm);
+  if (a !== b) return `${a}–${b}`;
+  const names = [...new Set(
+    (stations ?? [])
+      .map((s) => (s.name ?? '').trim())
+      .filter((n) => n.length >= 2),
+  )];
+  if (names.length >= 2) return `${names[0]}–${names[1]}`;
+  if (names.length === 1) {
+    return `${names[0]} · km ${Math.round(startKm)}–${Math.round(endKm)}`;
+  }
+  return `${a} · km ${Math.round(startKm)}–${Math.round(endKm)}`;
+}
+
+/** Prefiks dedup spraw zbiorczych gołoledzi FI przy transporcie (DP-217 / #804). */
+export function fiWxLoadSlipDedup(loadId: string): string {
+  return `ROAD_FI:${BALTIC_RISK_DEDUP_VER}:fi-wx:load:${loadId}`;
+}
+
+/**
+ * DP-217 / #804: odcinki śliskie **przed** autem (koniec odcinka ≥ fromKm)
+ * i w horyzoncie jazdy (start ≤ fromKm + horizon).
+ */
+export function fiWeatherSegmentsAhead(
+  events: BalticRoadEvent[],
+  fromKm: number,
+  horizonKm: number = FI_WX_HORIZON_KM,
+): BalticRoadEvent[] {
+  const from = Math.max(0, fromKm);
+  const until = from + Math.max(0, horizonKm);
+  return events.filter((e) => {
+    const m = /^fi-wx:seg:(\d+)$/.exec(String(e.id));
+    if (!m) return false;
+    const seg = Number(m[1]);
+    if (!Number.isFinite(seg)) return false;
+    const start = seg * FI_WX_SEG_KM;
+    const end = start + FI_WX_SEG_KM;
+    return end >= from && start <= until;
+  });
+}
+
+/** Tytuł zbiorczy 1× na transport (DP-217): bez fali RISK_SEVERITY na każdy odcinek. */
+export function fiWxLoadSlipTitle(ahead: BalticRoadEvent[]): string {
+  if (!ahead.length) return 'Ryzyko gołoledzi na trasie: E75 (FI)';
+  if (ahead.length === 1) {
+    /* Jedno HIGH przy transporcie — ten sam opis odcinka, bez podbijania 10×. */
+    return ahead[0]!.title;
+  }
+  const places = ahead
+    .map((e) => (e.placeName ?? '').trim())
+    .filter(Boolean);
+  const span = places.length
+    ? (places[0] === places[places.length - 1]
+      ? places[0]!
+      : `${places[0]}–${places[places.length - 1]}`)
+    : 'E75';
+  let minSurface: number | null = null;
+  for (const e of ahead) {
+    const m = /nawierzchnia\s+(-?\d+(?:[.,]\d+)?)\s*°?\s*C/i.exec(
+      `${e.title} ${e.detail ?? ''}`,
+    );
+    if (!m) continue;
+    const v = Number(String(m[1]).replace(',', '.'));
+    if (!Number.isFinite(v)) continue;
+    minSurface = minSurface == null ? v : Math.min(minSurface, v);
+  }
+  const tempBit = minSurface != null
+    ? `, nawierzchnia do ${minSurface} °C`
+    : '';
+  return `Ryzyko gołoledzi na trasie: ${ahead.length} odcinki E75, ${span}${tempBit}`;
+}
+
+/**
+ * DP-217: jedna sprawa HIGH na transport (audience HHL+SCX), gdy są odcinki przed autem.
+ * Segmenty `fi-wx:seg:*` zostają MEDIUM bez load_id (Ryzyka, bez dzwonków).
+ */
+export function fiWxLoadSlipRisk(args: {
+  loadId: string;
+  ahead: BalticRoadEvent[];
+  sourceUrl?: string;
+  nowMs?: number;
+}): (RiskInput & { loadId: string }) | null {
+  if (!args.ahead.length) return null;
+  const first = args.ahead[0]!;
+  const title = fiWxLoadSlipTitle(args.ahead);
+  const validUntil = new Date((args.nowMs ?? Date.now()) + 24 * 3600_000).toISOString();
+  return {
+    kind: 'ROAD_FI',
+    severity: 'HIGH',
+    title,
+    titleKey: 'rk_road_fi_slip',
+    params: {
+      country: 'FI',
+      road: 'E75 (FI)',
+      event: title,
+      off: '',
+    },
+    detail: {
+      opis: title,
+      rodzaj: 'FI_WEATHER_LOAD',
+      droga: 'E75',
+      lat: first.lat,
+      lon: first.lon,
+      zrodlo: FI_ATTRIBUTION,
+      /* Jak E49 Z2 — risk_audience_for (0409) → HHL+SCX, bez KSH. */
+      audience: 'HHL_PRZEWOZNIK',
+      fi_wx_segs: args.ahead.map((e) => e.id),
+      fi_wx_count: args.ahead.length,
+    },
+    dedup: fiWxLoadSlipDedup(args.loadId),
+    loadId: args.loadId,
+    sourceUrl: args.sourceUrl ?? FI_WEATHER_STATIONS_DATA_URL,
+    validUntil,
+  };
+}
+
+/**
+ * DP-216 / F7 #802 B2–B3 + DP-217 / #804: stacje ≤ 3 km → **jedno ryzyko na odcinek 25 km**.
+ * Dedup `fi-wx:seg:{n}` (bez czasu). Zawsze **MEDIUM** (bez load_id) — HIGH tylko w
+ * `fiWxLoadSlipRisk` dla odcinków przed autem (1 powiadomienie / transport / przebieg).
  */
 export function fiWeatherToRiskEvents(
   readings: FiWeatherSensorReading[],
   densified: LatLon[] = densifyCorridor(CORRIDOR_FI),
-  opts?: { hasTransportOnFiE75?: boolean },
+  _opts?: { hasTransportOnFiE75?: boolean },
 ): BalticRoadEvent[] {
-  const hasTransport = opts?.hasTransportOnFiE75 === true;
   type Cluster = {
     seg: number;
     stations: FiWeatherSensorReading[];
@@ -315,8 +458,7 @@ export function fiWeatherToRiskEvents(
   const out: BalticRoadEvent[] = [];
   for (const c of [...clusters.values()].sort((a, b) => a.seg - b.seg)) {
     const n = c.stations.length;
-    const kmAvg = c.kmSum / n;
-    const towns = fiE75SegmentTowns(kmAvg);
+    const towns = fiE75SegmentLabel(c.seg, c.stations);
     const tempBit = c.minSurface != null
       ? `nawierzchnia ${c.minSurface} °C`
       : '';
@@ -338,7 +480,7 @@ export function fiWeatherToRiskEvents(
       id: `fi-wx:seg:${c.seg}`,
       title,
       detail: detailParts.join(' · '),
-      severity: (hasTransport ? 'HIGH' : 'MEDIUM') as RiskSeverity,
+      severity: 'MEDIUM' as RiskSeverity,
       lat: c.latSum / n,
       lon: c.lonSum / n,
       kind: 'FI_WEATHER',

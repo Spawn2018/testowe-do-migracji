@@ -65,11 +65,17 @@ const CORRIDOR_WIND_PLACES: Record<string, CorridorPlace> = {
       { km: 0, name: 'Baltezers' }, { km: 40, name: 'Saulkrasti' }, { km: 100, name: 'Ainaži' },
     ],
   },
+  /* DP-217: km jak CORRIDOR_FI (haversine) — te same kotwice co fi-wx:seg. */
   FI_E75: {
     road: 'E75', country: 'FI',
     towns: [
-      { km: 0, name: 'Vuosaari' }, { km: 120, name: 'Jyväskylä' },
-      { km: 250, name: 'Oulu' }, { km: 320, name: 'Kemi' }, { km: 360, name: 'Tornio' },
+      { km: 0, name: 'Vuosaari' }, { km: 27, name: 'Porvoo' },
+      { km: 90, name: 'Lahti' }, { km: 120, name: 'Heinola' },
+      { km: 180, name: 'Jyväskylä' }, { km: 250, name: 'Äänekoski' },
+      { km: 320, name: 'Viitasaari' }, { km: 400, name: 'Pyhäjärvi' },
+      { km: 480, name: 'Liminka' }, { km: 539, name: 'Oulu' },
+      { km: 600, name: 'Ii' }, { km: 630, name: 'Kemi' },
+      { km: 652, name: 'Tornio' },
     ],
   },
   SE_E4: {
