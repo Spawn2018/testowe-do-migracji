@@ -1321,7 +1321,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-219 | Cursor | wyjazd SG 0040 ze strefy portu zapisany 6× (uwaga po DP-218) — filtr trasy w `process_position` + EXIT dedup wizyty / **0411** | #809 lista poranna 05.11 | BN8 / geofence | SCALONE (#812 `e396a758` / **0411**) |
 | DP-220 | Cursor | ostrzeżenie o opóźnieniu wobec planu nie przelicza się po nowym ETA (pokazuje stare minuty) | #809 lista poranna 05.11; F7 #813 B2 | C2 / ETA | w kolejce |
 | DP-221 | Cursor | 2 nazwy odcinków FI = kody stacji (`vt`/`kt`/`st`/`mt` + numer) zamiast tytułów PL | #809; F7 #813 B1/B2 (PR #813 = ten DP) | BN6 / ROAD_FI | W TOKU (`pakiet/c2-dp-220-fi-segment-titles` / #813; wstrzymane na PILNE #814) |
-| DP-222 | Cursor | **PILNE** BS-03 mapa AIS (**#815 SCALONE**); **ATD/ATA GDN-NYN** — UMG + geofence ≤60 min + backfill **0412** + DOPLYNAL bez wiszącego W_REJSIE (F7 #818 B2) | #814 | C2 / BN9-c2 | W TOKU (`pakiet/c2-dp-222-atd-gdn-nyn` / #818) |
+| DP-222 | Cursor | **PILNE** BS-03 mapa AIS (**#815 SCALONE**); ATD/ATA GDN-NYN (**#818 SCALONE** `5879a31e` / **0412**); **ETA FERRY z AIS** — `trg_vessel_positions_eta` / **0413** | #814 | C2 / BN9-c2 | W TOKU (`pakiet/c2-dp-222-ferry-eta-refresh` / **0413**) |
 | DP-121 | Cursor | Digitraffic `port-call/v2/visits?status=cancelled` (bez `locode`); filtr MMSI/IMO floty FIHEL/FIVUO ±3 h → ryzyko HIGH HHL (bez ODWOLANY); re-zgłoszenie aktywnej wizyty ±3 h → bez ryzyka; dedup `…:<visitId>` bez daty; F7 r2: `detail.audience=HHL` + `risk_audience_for` (**0394**) | F7 #694 r1; F7 #782 r1–r2 | BN3 / Portnet | SCALONE (#782 `4b9e0d9a` / **0394**) |
 | DP-99 | Cursor | `operatorFromSailingSource` fallback MUU-VUO → VIKING (prod tylko ECKERO), domyślnie TALLINK → z `data-company` ts.ee albo `ferry_route_operators` (DP-1) | F7 #683 | BN3 | w kolejce |
 | DP-100 | Cursor | dedup AUTO tylko aplikacyjny → partial unique index `(sailing_id, kind) where source='AUTO'` albo `.neq('status','ODWOLANY')` w update | F7 #683 | BN3 | w kolejce |
@@ -2671,6 +2671,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 03.11.2026 21:35 | #777 F7 r1 niegotowe → seed Portnet/Deltamarin, I=IC, dzień przypłynięcia, złożone IBNet | pętla / C2 F7 |
 | 03.11.2026 22:00 | #777 SCALONE `2a99a8e6` (DP-120 / **0391**; F7 gotowe @ `fecc5f7a`); start DP-202+203 (#778+#779) | pętla / C2 |
 | 03.11.2026 23:50 | #780 F7 r3: auto DeepL na luki TV/bałtyk (bez RESOURCE_MISSING:TV_CODE); **0393** memory_auto_24h | pętla / C2 F7 |
+| 05.11.2026 14:00 | #818 SCALONE `5879a31e` (DP-222 ATD/ATA / **0412** F7 @ `96721391`); start ETA FERRY z AIS **0413** (#814 pkt 3) | pętla / C2 PILNE |
 | 05.11.2026 12:25 | #815 SCALONE `e78368f5` (DP-222 mapa F7); #818 F7 B1: geofence ATD ≤60 min/SOG≥1 + backfill **0412** | pętla / C2 PILNE |
 | 05.11.2026 12:55 | #818 F7 B2: ATA NYN ≤60 min + DOPLYNAL (późniejszy ATD / arrival+6h); closeStale po UMG; rebase na #815 | pętla / C2 PILNE |
 | 05.11.2026 12:15 | DP-222 ATD GDN-NYN: UMG Gdańsk Nowy Port (Polferries) + backfill AIS 7 d **0412**; mapa #815 CI ✔ czekam F7 | pętla / C2 PILNE |

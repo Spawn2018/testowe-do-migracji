@@ -1,3 +1,9 @@
+## 2026-11-05 14:00 — #818 SCALONE; DP-222 ETA FERRY z AIS (0413)
+
+- Skrzynka: #814 PILNE w toku (pkt 3 ETA); #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne` poza #814.
+- Scalanie: **#818 SCALONE** `5879a31e` (F7 gotowe @ `96721391`; unit+visual+db ✔). #813 nadal wstrzymane.
+- **Krok #814 pkt 3:** migracja **0413** — `trg_vessel_positions_eta` AFTER INSERT → `refresh_load_eta` dla `loads.status=FERRY` na tym `vessel_id` (AIS nie zostawia eta_site z pierwszego FERRY). Testy status +4 (A5/i2 bez ręcznego refresh); EXPECTED status **686**.
+- **Dalej:** push → CI (+`db`) → F7. Potem #813 B1/B2 (DP-221) → DP-220. Bez push na main.
 ## 2026-11-05 13:20 — DP-222 F7 #818 B2fix db (0412 CASE→v_max)
 
 - Skrzynka: #814 PILNE w toku (#818); #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne` poza #814.
