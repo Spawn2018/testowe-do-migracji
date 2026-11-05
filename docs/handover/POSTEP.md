@@ -1,3 +1,10 @@
+## 2026-11-05 20:10 — #823 SCALONE; start DP-222 BS-04 (zła pozycja)
+
+- Skrzynka: #814 PILNE BS-04 (przed DP-224 B1); #817 D SCALONE; #550 WSTRZYMANE; BN5–8 w planie.
+- Scalanie: **#823 SCALONE** `e9986f72` (F7 gotowe @ `ed9b4777`; unit+visual ✔). #813 wstrzymane.
+- **Krok BS-04** `pakiet/c2-dp-222-bs04-wrong-ship`: `aisShipFixForFerryKey` / `ferryTrackInfo` — nie bierz markera z obcym `voyage.sailingId`; `ensureSailingAisMarkers` exists tylko vessel_id/MMSI. Test `dp222-bs04-wrong-ship`. Potem DP-224 B1/B3/E.
+- Bez push na main.
+
 ## 2026-11-05 19:45 — DP-224 D F7 #823 niegotowe (baza porównania)
 
 - Skrzynka: #817 PILNE W TOKU (cz. D F7); #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne` poza bieżącym.

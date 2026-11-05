@@ -125,9 +125,9 @@ export function ensureSailingAisMarkers(
     if (Number.isFinite(arr) && nowMs >= arr + 3 * 3600_000) continue;
     if (r.ais_lat == null || r.ais_lon == null || !r.ais_observed_at) continue;
     const mmsi = r.mmsi != null ? String(r.mmsi) : '';
+    /* DP-222 BS-04: tylko vessel_id / MMSI — samą nazwą nie uznawaj „jest” (ryzyko kolizji / pominięcia Wawla). */
     const exists = out.some((m) => m.vesselId === r.vessel_id
-      || (!!mmsi && m.mmsi === mmsi)
-      || (!!r.vessel_name && vesselKey(m.name) === vesselKey(r.vessel_name)));
+      || (!!mmsi && m.mmsi === mmsi));
     if (exists) continue;
     out.push({
       mmsi,
@@ -142,9 +142,29 @@ export function ensureSailingAisMarkers(
   return out;
 }
 
+function shipFixFromAis(
+  p: AisPosition,
+  nowIso: string,
+  tone: (ts: string, nowIso: string) => 'fresh' | 'stale',
+): {
+  lat: number; lng: number; ts: string; stale: boolean; vessel: string;
+  estimated?: { lastAisTs: string | null };
+} {
+  return {
+    lat: p.lat,
+    lng: p.lng,
+    ts: p.ts,
+    stale: !p.estimated && tone(p.ts, nowIso) === 'stale',
+    vessel: p.name,
+    estimated: p.estimated,
+  };
+}
+
 /**
  * DP-222: pozycja statku dla auta na promie — najpierw `voyage.sailingId` (= `loads.sailing_id`),
  * potem nazwa (bez „M/F”). Dzięki temu działa, gdy rejsu nie ma w `useTowerStore.sailings`.
+ * BS-04 (#814): przy dwóch statkach tej samej linii (GDN→NYN i NYN→GDN) nie bierz markera
+ * już przypiętego do **innego** rejsu — nawet gdy nazwa z `ferry` / store jest nieaktualna.
  */
 export function aisShipFixForFerryKey(
   ferryKey: string,
@@ -158,18 +178,16 @@ export function aisShipFixForFerryKey(
 } | null {
   const live = positions.filter((x) => x.source !== 'seed');
   const byVoyage = live.find((x) => x.voyage?.sailingId === ferryKey);
-  const key = vesselKey(vesselName);
-  const byName = key ? live.find((x) => vesselKey(x.name) === key) : undefined;
-  const p = byVoyage ?? byName;
-  if (!p) return null;
-  return {
-    lat: p.lat,
-    lng: p.lng,
-    ts: p.ts,
-    stale: !p.estimated && tone(p.ts, nowIso) === 'stale',
-    vessel: p.name,
-    estimated: p.estimated,
-  };
+  if (byVoyage) return shipFixFromAis(byVoyage, nowIso, tone);
+  const key = vesselKey(vesselName) || (ferryKey.startsWith('v:') ? ferryKey.slice(2) : '');
+  if (!key) return null;
+  const byName = live.find((x) => {
+    if (vesselKey(x.name) !== key) return false;
+    /* obcy rejs na markerze = statek z przeciwnego kursu / inny rejs tej samej linii */
+    if (x.voyage?.sailingId && x.voyage.sailingId !== ferryKey) return false;
+    return true;
+  });
+  return byName ? shipFixFromAis(byName, nowIso, tone) : null;
 }
 
 /**
@@ -237,11 +255,17 @@ export function ferryTrackInfo(opts: {
   locale: Locale;
 }): FerryTrackInfo {
   const live = opts.positions.filter((x) => x.source !== 'seed');
-  const byVoyage = opts.sailingId
-    ? live.find((x) => x.voyage?.sailingId === opts.sailingId)
-    : undefined;
+  const sid = opts.sailingId || null;
+  const byVoyage = sid ? live.find((x) => x.voyage?.sailingId === sid) : undefined;
   const key = vesselKey(opts.vessel);
-  const byName = key ? live.find((x) => vesselKey(x.name) === key) : undefined;
+  const byName = key
+    ? live.find((x) => {
+      if (vesselKey(x.name) !== key) return false;
+      /* DP-222 BS-04: nie bierz pozycji obcego rejsu tej samej linii */
+      if (sid && x.voyage?.sailingId && x.voyage.sailingId !== sid) return false;
+      return true;
+    })
+    : undefined;
   const p = byVoyage ?? byName;
   const route = opts.routeText || (p?.voyage ? voyageRouteText(opts.locale, p.voyage) : null);
   const pos: FerryTrackInfo['pos'] = !p ? { kind: 'none' }
