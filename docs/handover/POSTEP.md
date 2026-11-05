@@ -1,3 +1,10 @@
+## 2026-11-05 21:05 — #824 SCALONE; DP-224 B1 keep-previous-assets + DP-225
+
+- Skrzynka: #817 PILNE B1; #814 BS-04 SCALONE; #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: **#824 SCALONE** `e70fe81c` (F7 gotowe @ `1d22e821`; unit+visual ✔). #813 wstrzymane.
+- **Krok B1** `pakiet/c2-dp-224-b1-skew-assets`: Vite ≠ Skew Protection (Pro/Next…) → `keep-previous-assets.mjs` po `vite build` (prod Vercel) kopiuje `/assets/` z `tower.log-mar.pl` + do 2 generacji `_tower_kept.json`. Rejestr **DP-225** (stary `load.ferry.vessel`). Dalej B3 prefetch / E.
+- Bez push na main.
+
 ## 2026-11-05 20:35 — DP-222 BS-04 F7 #824 niegotowe → vessel_id
 
 - Skrzynka: #814 PILNE BS-04; #817 po BS-04; #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
