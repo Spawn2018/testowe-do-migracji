@@ -6,6 +6,9 @@ import { describe, expect, it, vi } from 'vitest';
 import {
   buildDetourPayload,
   buildNineRisks,
+  riskBanForEta,
+  riskWorksOnCorridor,
+  looksLikeRoadWorks,
   corridorFromRoadKind,
   corridorMatchesLeg,
   countryFromRoadKind,
@@ -192,6 +195,71 @@ describe('detourCaseJob helpers', () => {
     expect(wired.find((r) => r.kind === 'FERRY')?.level).toBe('ok');
     expect(wired.find((r) => r.kind === 'WINDOW')?.level).toBe('ok');
     expect(wired.find((r) => r.kind === 'PILOT')?.level).toBe('ok');
+  });
+
+  it('DP-211: BAN/WORKS — źródła → ok/warn; brak → sprawdź', () => {
+    // BAN: SE sobota → warn; wtorek + holiday false → ok; LT bez kalendarza → sprawdź.
+    expect(riskBanForEta({
+      country: 'SE',
+      etaIso: '2026-11-07T12:00:00Z', // sobota
+      holidayHit: false,
+    }).level).toBe('warn');
+    expect(riskBanForEta({
+      country: 'SE',
+      etaIso: '2026-11-07T12:00:00Z',
+      holidayHit: false,
+    }).text).toMatch(/Zakaz czasowy SE/i);
+    expect(riskBanForEta({
+      country: 'PL',
+      etaIso: '2026-11-03T12:00:00Z', // wtorek
+      holidayHit: false,
+    })).toEqual({
+      kind: 'BAN',
+      level: 'ok',
+      text: 'brak zakazu czasowego PL w ETA wariantu',
+    });
+    expect(riskBanForEta({
+      country: 'PL',
+      etaIso: '2026-11-03T12:00:00Z',
+      holidayHit: true,
+    }).level).toBe('warn');
+    expect(riskBanForEta({ country: 'LT', etaIso: '2026-11-03T12:00:00Z' }).text)
+      .toMatch(/sprawdź/i);
+    expect(riskBanForEta({ country: 'SE', etaIso: null }).text).toMatch(/sprawdź/i);
+
+    // WORKS: null → sprawdź; true → warn z tytułem; false → ok.
+    expect(riskWorksOnCorridor({ hit: null }).text).toMatch(/sprawdź/i);
+    expect(riskWorksOnCorridor({ hit: true, title: 'Roboty E4 Sundsvall' }).text)
+      .toMatch(/Roboty E4 Sundsvall/);
+    expect(riskWorksOnCorridor({ hit: false })).toEqual({
+      kind: 'WORKS',
+      level: 'ok',
+      text: 'brak otwartych robót ROAD_* na korytarzu objazdu',
+    });
+    expect(looksLikeRoadWorks({
+      title: 'Roboty drogowe E4',
+      detailText: 'vägarbete',
+      roadClosed: false,
+    })).toBe(true);
+    expect(looksLikeRoadWorks({
+      title: 'Most zamknięty',
+      detailText: 'bridge closed',
+      roadClosed: true,
+    })).toBe(false);
+
+    const wired = buildNineRisks({
+      side: 'detour',
+      country: 'SE',
+      permitMode: 'TRASA',
+      hereNotices: [],
+      etaIso: '2026-11-03T15:00:00Z', // wtorek
+      riskCtx: {
+        holidayBan: false,
+        worksHit: false,
+      },
+    });
+    expect(wired.find((r) => r.kind === 'BAN')?.level).toBe('ok');
+    expect(wired.find((r) => r.kind === 'WORKS')?.level).toBe('ok');
   });
 
   it('payload: brak HERE → none; z trasą → nadwyżka km/min (B6)', () => {

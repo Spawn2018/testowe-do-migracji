@@ -22,6 +22,13 @@
 - **Dalej:** push → CI (+`db`) → F7. Po scaleniu powrót do DP-211 (#805) / DP-212…
 
 
+## 2026-11-05 03:20 — #803 SCALONE; start DP-211 (BAN/WORKS)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie; #793 zamknięte po merge. Bez nowego `pilne`.
+- Scalanie: **#803 SCALONE** `96e6f20b` (DP-213; F7 gotowe @ `fc0b5de0`; unit+visual+db ✔). `deploy-main` robi resztę. Bez push na main.
+- **Krok DP-211** `pakiet/c2-dp-211-ban-works-sources`: (1) `riskBanForEta` — weekend PL/SE + `truck_ban_holiday_hit`; (2) `riskWorksOnCorridor` — ROAD_* `korytarz_droga=on` z `listOpenRoadClosures`; (3) brak źródła → „sprawdź …”; testy e49-detour-job. Bez migracji. DP-210 nie zaczynać.
+- **Dalej:** push → CI → F7. Potem DP-212…
+
 ## 2026-11-05 02:50 — #802 SCALONE; start DP-213 (#793)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie; #801 do zamknięcia po DP-216. Bez nowego `pilne`.

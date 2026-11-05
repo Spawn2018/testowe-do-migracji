@@ -1156,6 +1156,21 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
           }
         }
         const pilots = pilotsByLoad.get(leg.loadId) ?? [];
+        // DP-211: święto H-12 przy ETA (PL/SE); weekend liczy riskBanForEta z ETA wariantu.
+        let holidayBan: boolean | null = null;
+        const banCountry = /^SE[_-]/i.test(leg.code) || leg.code === 'SE_E4' || leg.code === 'SE_E22'
+          ? 'SE' as const
+          : (/^PL[_-]|PL_ROAD|PL_EE/i.test(leg.code) ? 'PL' as const : null);
+        const banTs = row.eta_site
+          ? String(row.eta_site)
+          : (ferryDepIso && Number.isFinite(Date.parse(ferryDepIso)) ? ferryDepIso : null);
+        if (banCountry && banTs) {
+          try {
+            holidayBan = await this.truckBanHolidayHit(banCountry, banTs);
+          } catch {
+            holidayBan = null;
+          }
+        }
         const riskCtx: import('../e49/detourCaseJob.ts').DetourRiskCtx = {
           windGustMs: windPeak.has(leg.code) ? windPeak.get(leg.code)! : null,
           hoursLeftMin: hoursLeft,
@@ -1165,6 +1180,7 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
           ferryPast,
           windowEndIso: row.plan_delivery_to ? String(row.plan_delivery_to) : null,
           pilotCountries: pilots.length ? pilots : null,
+          holidayBan,
         };
         out.push({
           loadId: leg.loadId,

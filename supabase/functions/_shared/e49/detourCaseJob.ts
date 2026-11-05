@@ -25,6 +25,12 @@ import {
   type TruckDims,
 } from './detourHere.ts';
 import { completeDims, type SetDims } from '../here/routeCheck.ts';
+import {
+  banRiskTitle,
+  holidayBanHit,
+  plSundayBanHit,
+  seWeekendBanHit,
+} from '../here/windAndBans.ts';
 import { haversineKm, bearingDeg } from './corridorWind.ts';
 
 const USER_AGENT = 'WatchTower/1.0 (E49 detour; +https://tower.log-mar.pl)';
@@ -79,6 +85,17 @@ export type DetourRiskCtx = {
   pilotCountries?: readonly string[] | null;
   /** true gdy baseEta jest syntetyczne (decideBy+6h) — WINDOW/FERRY bez ok. */
   syntheticEta?: boolean;
+  /**
+   * DP-211: święto H-12 (`truck_ban_holiday_hit`) przy ETA wariantu.
+   * `null` = nie sprawdzono (kalendarz weekendów PL/SE i tak działa).
+   */
+  holidayBan?: boolean | null;
+  /**
+   * DP-211: otwarte ROAD_* (korytarz_droga=on) z robotami na korytarzu objazdu.
+   * `null` = brak źródła (lista nieczytana); `false` = źródło OK, brak robót.
+   */
+  worksHit?: boolean | null;
+  worksTitle?: string | null;
 };
 
 export type DetourLoadLeg = {
@@ -368,6 +385,90 @@ const DETOUR_RISK_KINDS = [
   'PERMIT', 'LIMITS', 'BAN', 'WORKS', 'WIND', 'HOURS', 'FERRY', 'WINDOW', 'PILOT',
 ] as const;
 
+/**
+ * DP-211 / F7 #791: BAN — zakazy czasowe w oknie ETA wariantu.
+ * PL/SE: weekend (H-12) + opcjonalnie święto z bazy; inne kraje / brak ETA → „sprawdź …”.
+ */
+export function riskBanForEta(args: {
+  country: DetourCountry;
+  etaIso?: string | null;
+  holidayHit?: boolean | null;
+}): DetourRiskRow {
+  if (args.country !== 'PL' && args.country !== 'SE') {
+    return { kind: 'BAN', level: 'warn', text: 'sprawdź zakazy czasowe na objeździe' };
+  }
+  const eta = args.etaIso ?? null;
+  if (!eta || !Number.isFinite(Date.parse(eta))) {
+    return { kind: 'BAN', level: 'warn', text: 'sprawdź zakazy czasowe na objeździe' };
+  }
+  const weekend = args.country === 'SE' ? seWeekendBanHit(eta) : plSundayBanHit(eta);
+  const holiday = holidayBanHit(args.holidayHit);
+  if (weekend || holiday) {
+    const tz = args.country === 'SE' ? 'Europe/Stockholm' : 'Europe/Warsaw';
+    const whenLocal = new Intl.DateTimeFormat('pl-PL', {
+      timeZone: tz,
+      weekday: 'short',
+      day: 'numeric',
+      month: 'short',
+      hour: '2-digit',
+      minute: '2-digit',
+    }).format(new Date(eta));
+    return {
+      kind: 'BAN',
+      level: 'warn',
+      text: banRiskTitle(args.country, whenLocal),
+    };
+  }
+  if (args.holidayHit == null) {
+    return {
+      kind: 'BAN',
+      level: 'ok',
+      text: `brak weekendu/niedzieli ${args.country} w ETA wariantu`,
+    };
+  }
+  return {
+    kind: 'BAN',
+    level: 'ok',
+    text: `brak zakazu czasowego ${args.country} w ETA wariantu`,
+  };
+}
+
+/**
+ * DP-211 / F7 #791: WORKS — otwarte ROAD_* (korytarz_droga=on) na korytarzu objazdu.
+ * Brak źródła (`hit == null`) → „sprawdź …”; źródło bez robót → ok.
+ */
+export function riskWorksOnCorridor(args: {
+  hit?: boolean | null;
+  title?: string | null;
+}): DetourRiskRow {
+  if (args.hit == null) {
+    return { kind: 'WORKS', level: 'warn', text: 'sprawdź roboty / utrudnienia na objeździe' };
+  }
+  if (args.hit) {
+    const t = (args.title ?? '').replace(/\s+/g, ' ').trim();
+    return {
+      kind: 'WORKS',
+      level: 'warn',
+      text: t
+        ? `roboty / utrudnienia na objeździe: ${t.slice(0, 100)}`
+        : 'roboty / utrudnienia na korytarzu objazdu',
+    };
+  }
+  return {
+    kind: 'WORKS',
+    level: 'ok',
+    text: 'brak otwartych robót ROAD_* na korytarzu objazdu',
+  };
+}
+
+/** Czy kandydat ROAD_* to roboty / utrudnienia (nie samo zamknięcie mostu). */
+export function looksLikeRoadWorks(c: Pick<RoadClosureCandidate, 'title' | 'detailText' | 'roadClosed'>): boolean {
+  if (classifyClosureReason(`${c.title} ${c.detailText}`) === 'WORKS') return true;
+  if (c.roadClosed === true) return false;
+  return /roboty|utrudn|works|arbete|vägarbete|tietyö|remont|budowa|construction|lane.?closure/i
+    .test(`${c.title} ${c.detailText}`);
+}
+
 /** F7 #791 r4 B8: WIND z porywu m/s (E49-a). */
 export function riskWindFromGust(gustMs: number | null | undefined): DetourRiskRow {
   if (gustMs == null || !Number.isFinite(gustMs)) {
@@ -549,7 +650,7 @@ function fmtHm(min: number): string {
 /**
  * F7 #791 B8/r4: 9 rodzajów ryzyk (ok/warn) dla postoju i objazdu —
  * brak danych → **warn** „sprawdź …”, nigdy `ok` (makieta).
- * WIND/HOURS/FERRY/WINDOW/PILOT: zdania z wartościami gdy riskCtx / wiersze podane.
+ * WIND/HOURS/FERRY/WINDOW/PILOT/BAN/WORKS: zdania z wartościami gdy riskCtx / wiersze podane.
  */
 export function buildNineRisks(args: {
   side: 'hold' | 'detour';
@@ -557,7 +658,7 @@ export function buildNineRisks(args: {
   permitMode: DetourLoadLeg['permitMode'];
   hereNotices?: readonly string[];
   noDetour?: boolean;
-  /** ETA placu (WINDOW). */
+  /** ETA placu (WINDOW) / ETA wariantu (BAN). */
   etaIso?: string | null;
   /** ETA do portu przeprawy (FERRY); domyślnie etaIso. */
   ferryEtaIso?: string | null;
@@ -601,6 +702,16 @@ export function buildNineRisks(args: {
     country: args.country,
     pilotCountries: ctx?.pilotCountries,
   });
+  // DP-211: BAN z kalendarza PL/SE + święta; WORKS z ROAD_* na korytarzu.
+  const ban = args.ban ?? riskBanForEta({
+    country: args.country,
+    etaIso: args.etaIso,
+    holidayHit: ctx?.holidayBan,
+  });
+  const works = args.works ?? riskWorksOnCorridor({
+    hit: ctx?.worksHit,
+    title: ctx?.worksTitle,
+  });
   const byKind: Record<string, DetourRiskRow> = {
     PERMIT: permit,
     LIMITS: args.side === 'detour' && !args.noDetour
@@ -610,8 +721,8 @@ export function buildNineRisks(args: {
           ? { kind: 'LIMITS', level: 'ok', text: 'brak naruszeń wymiarów/masy na objeździe (HERE)' }
           : missing('LIMITS', 'ograniczenia wymiarów/masy na objeździe'))
       : missing('LIMITS', 'ograniczenia wymiarów (postój — bez jazdy objazdem)'),
-    BAN: args.ban ?? missing('BAN', 'zakazy czasowe na objeździe'),
-    WORKS: args.works ?? missing('WORKS', 'roboty / utrudnienia na objeździe'),
+    BAN: ban,
+    WORKS: works,
     WIND: wind,
     HOURS: hours,
     FERRY: ferry,
@@ -886,9 +997,21 @@ export async function runDetourCases(args: {
       const baseEta = !syntheticEta
         ? leg.baseEtaIso!
         : new Date(Date.parse(decideBy) + 6 * 3600_000).toISOString();
+      // DP-211: WORKS z ROAD_* (korytarz_droga=on) na nodze — w tym bieżące zamknięcie gdy roboty.
+      const worksPeers = closuresOk
+        ? closures.filter((x) =>
+          corridorMatchesLeg(x, leg.code) && looksLikeRoadWorks(x)
+        )
+        : [];
       const riskCtx: DetourRiskCtx = {
         ...(leg.riskCtx ?? {}),
         syntheticEta: syntheticEta || leg.riskCtx?.syntheticEta === true,
+        worksHit: closuresOk ? worksPeers.length > 0 : null,
+        worksTitle: closuresOk
+          ? (worksPeers.find((x) => x.closureRef === c.closureRef)?.title
+            ?? worksPeers[0]?.title
+            ?? null)
+          : null,
       };
 
       let hereSummary: {
