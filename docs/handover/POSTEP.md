@@ -1,3 +1,11 @@
+## 2026-11-05 08:30 — #805 SCALONE; start DP-210 (decyzja 105)
+
+- Skrzynka: #809 zamknięte (102–104 OK; **105: brak pilota EE/LV/LT/FI**); #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: **#805 SCALONE** `4cbcb472` (DP-211; F7 gotowe @ `8e26133b`; unit+visual+db ✔). `deploy-main` robi resztę. Bez push na main.
+- **Krok DP-210** `pakiet/c2-dp-210-pilot-not-required`: PILOT LT/LV/EE/FI → `ok` „pilot niewymagany ({kraj})”; bez rozszerzania `load_escorts.scope`; PL/SE bez zmian; testy e49-detour-job. DP-219–221 wpisane do rejestru (#809). Potem DP-212.
+- **Dalej:** push → CI → F7.
+
+
 ## 2026-11-05 07:55 — DP-211 F7 r1 N1 (#805)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
