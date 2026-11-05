@@ -23,9 +23,10 @@ describe('AUD-01e: jedna mapa na sesję (źródło)', () => {
     expect(pool).toMatch(/if \(e\.tilesTheme === theme\) return Promise\.resolve\(e\.layers\.tiles\)/);
     expect(pool).toMatch(/holder\.style\.width = `\$\{Math\.max\(1, w\)\}px`/);
     expect(pool).toMatch(/views\.set\(slot/);
-    expect(pool).toMatch(/if \(!e\.pooled\) \{\n(?:    (?:\/\*|   ).*\n|    e\.basemapSeq \+= 1;\n)*    e\.map\.remove\(\)/);
+    /* DP-224 E (#817): destroyLeafletMap zamiast gołego e.map.remove() — unikaj `_leaflet_pos` */
+    expect(pool).toMatch(/if \(!e\.pooled\) \{\n(?:    (?:\/\*|   ).*\n|    e\.basemapSeq \+= 1;\n)*    destroyLeafletMap\(e\.map\)/);
     /* wyglad/W-dane: spóźniony podkład nie trafia na zamkniętą mapę jednorazową (błąd „appendChild”) */
-    expect(pool).toMatch(/e\.basemapSeq \+= 1;\n    e\.map\.remove\(\)/);
+    expect(pool).toMatch(/e\.basemapSeq \+= 1;\n    destroyLeafletMap\(e\.map\)/);
     expect(pool).toMatch(/e\.basemapSeq !== seq \? e\.layers\.tiles : applyBasemap\(/);
     expect(pool).not.toMatch(/prefetch|keepBuffer|preload/i);
   });
