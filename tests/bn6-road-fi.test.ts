@@ -28,6 +28,7 @@ import {
   fiTrafficUrl,
   fiTypeLabelPl,
   fiE75SegmentLabel,
+  fiStationDisplayName,
   fiWeatherSegmentsAhead,
   fiWeatherToRiskEvents,
   fiWxLoadSlipDedup,
@@ -210,6 +211,22 @@ describe('BN6 road-fi — Digitraffic', () => {
     const risk = balticRoadRisk('FI', icy!, 'https://tie.digitraffic.fi/api/weather/v1/stations/data', FI_ATTRIBUTION);
     expect(risk.title).toMatch(/^Śliska nawierzchnia: E75 \(FI\)/);
     expect(risk.severity).toBe('MEDIUM');
+  });
+
+  it('DP-220 / #809: kody stacji vt4_… → tytuł PL bez prefiksu', () => {
+    expect(fiStationDisplayName('vt4_Mäntsälä_Ohkola')).toBe('Mäntsälä–Ohkola');
+    expect(fiStationDisplayName('vt4_Helsinki_Konala')).toBe('Helsinki–Konala');
+    expect(fiStationDisplayName('Porvoo')).toBe('Porvoo');
+    expect(fiStationDisplayName('vt4')).toBeNull();
+    /* Ta sama miejscowość na odcinku → stacje humanizowane, nie surowy kod. */
+    const sameTownSeg = Math.floor(90 / FI_WX_SEG_KM); /* Lahti…Lahti gdy end też Lahti */
+    const withCodes = fiE75SegmentLabel(sameTownSeg, [
+      { id: '123', name: 'vt4_Mäntsälä_Ohkola' },
+      { id: '124', name: 'vt4_Helsinki_Konala' },
+    ]);
+    expect(withCodes).not.toMatch(/vt\d+_/i);
+    expect(withCodes).toMatch(/Mäntsälä–Ohkola/);
+    expect(withCodes).toMatch(/Helsinki–Konala/);
   });
 
   it('DP-217 / #804: unikalne etykiety odcinków; HIGH 1× przed autem', () => {

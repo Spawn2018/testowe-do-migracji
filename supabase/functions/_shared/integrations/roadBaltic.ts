@@ -288,8 +288,23 @@ export function fiE75NearestTown(km: number): string {
 }
 
 /**
+ * DP-220 / #809: Digitraffic często zwraca `name` = „vt4_Mäntsälä_Ohkola”.
+ * Do tytułu odcinka: bez prefiksu `vtN_`, `_` → „–”; pusty / sam kod → null.
+ */
+export function fiStationDisplayName(raw: string | null | undefined): string | null {
+  const s = (raw ?? '').trim();
+  if (s.length < 2) return null;
+  const stripped = s.replace(/^vt\d+_/i, '').replace(/_+/g, '–').trim();
+  if (stripped.length < 2) return null;
+  /* Sam identyfikator bez części miejscowości (np. „vt4”) — odrzuć. */
+  if (/^vt\d+$/i.test(stripped)) return null;
+  return stripped;
+}
+
+/**
  * DP-217: etykieta odcinka 25 km — miejscowości przy starcie i końcu odcinka
  * (nie para kotwic całej trasy). Przy tej samej miejscowości: stacje albo „km a–b”.
+ * DP-220: nazwy stacji przez `fiStationDisplayName` (bez kodów vt4_…).
  */
 export function fiE75SegmentLabel(
   seg: number,
@@ -302,8 +317,8 @@ export function fiE75SegmentLabel(
   if (a !== b) return `${a}–${b}`;
   const names = [...new Set(
     (stations ?? [])
-      .map((s) => (s.name ?? '').trim())
-      .filter((n) => n.length >= 2),
+      .map((s) => fiStationDisplayName(s.name) ?? fiStationDisplayName(s.id))
+      .filter((n): n is string => !!n && n.length >= 2),
   )];
   if (names.length >= 2) return `${names[0]}–${names[1]}`;
   if (names.length === 1) {
