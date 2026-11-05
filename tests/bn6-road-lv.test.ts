@@ -32,6 +32,7 @@ import {
   extractLvRoadKm,
   filterInLvBboxes,
   formatBalticRoadTitle,
+  looksLikeBalticEventDescription,
   isDimensionLimitEvent,
   lvCoordsFromRecord,
   lvFileInfoFirstId,
@@ -732,6 +733,50 @@ describe('DP-204 LV E67: A6 km / A5 Babīte + gęstszy CORRIDOR_LV (#781)', () =
     expect(densifyCorridor(CORRIDOR_LV, 2).length).toBeGreaterThan(densifyCorridor([
       [56.25, 24.45], [56.55, 24.20], [56.95, 24.10], [57.35, 24.40], [57.75, 24.55], [57.90, 24.40],
     ], 2).length);
+  });
+});
+
+describe('DP-213 LV: opis zdarzenia ≠ miejsce w tytule (#793)', () => {
+  it('bez nazwy miejsca — nie wstawia łotewskiego opisu jako „okolice …”', () => {
+    const lvDesc = 'Slēgta labās puses brauktuve (Rīgas). Darbi.';
+    expect(looksLikeBalticEventDescription(lvDesc)).toBe(true);
+    expect(looksLikeBalticEventDescription(`okolice ${lvDesc}`)).toBe(true);
+    expect(looksLikeBalticEventDescription('Ķekava')).toBe(false);
+
+    const filtered = applyBalticCorridorRoadFilter('LV', [{
+      id: 'lv-nop', title: 'roboty drogowe', detail: lvDesc,
+      severity: 'HIGH', lat: 55.0, lon: 26.0, kind: 'ROADWORKS',
+      start: null, end: null, road: null, corridorMatch: 'off',
+    }])[0]!;
+    expect(filtered.placeName == null || filtered.placeName === '').toBe(true);
+    expect(filtered.road == null || filtered.road === '').toBe(true);
+
+    const titled = formatBalticRoadTitle('LV', {
+      ...filtered,
+      road: null,
+      placeName: null,
+      detail: 'Zamknięty pas ruchu po prawej stronie (Ryga).',
+      note: 'Zamknięty pas ruchu po prawej stronie (Ryga).',
+    }, 'roboty drogowe');
+    expect(titled.title).not.toMatch(/Slēgta|brauktuve|labās|puses/i);
+    expect(titled.title).not.toMatch(/okolice Slēgta/i);
+    expect(titled.roadLabel).toMatch(/okolice trasy \(LV\)|droga b\.d\./);
+  });
+
+  it('A6_K bez placeName → numer drogi A6, nie opis', () => {
+    const filtered = applyBalticCorridorRoadFilter('LV', [{
+      id: 'a6k', title: 'heightRestrictions · A6_K', detail: 'Ceļa malā pamests transporlīdzeklis',
+      severity: 'MEDIUM', lat: 56.88, lon: 24.45, kind: 'OBSTRUCTION',
+      start: null, end: null, road: null,
+    }])[0]!;
+    expect(filtered.road).toBe('A6');
+    expect(filtered.placeName).toBeNull();
+    const titled = formatBalticRoadTitle('LV', {
+      ...filtered,
+      detail: 'Pojazd porzucony na poboczu',
+    }, 'przeszkoda');
+    expect(titled.roadLabel).toBe('A6');
+    expect(titled.title).not.toMatch(/Ceļa|pamests|transpor/i);
   });
 });
 
