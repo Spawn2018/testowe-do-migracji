@@ -415,12 +415,15 @@ export interface SyncStore {
   }): Promise<void>;
   /** E49-a: liczba świeżych punktów prognozy (Stan systemu / route-hazards). */
   corridorWindFreshCount?(maxAgeMin: number): Promise<number>;
-  /** E49-a Z2: punkty prognozy korytarza (fresh). */
-  listCorridorWindForecast?(corridor: string, maxAgeMin?: number): Promise<CorridorWindRow[]>;
+  /** E49-a Z2 / DP-212: punkty prognozy — jeden kod albo lista (jedno zapytanie). */
+  listCorridorWindForecast?(
+    corridor: string | readonly string[],
+    maxAgeMin?: number,
+  ): Promise<CorridorWindRow[]>;
   /** E49-b Z3: otwarte ryzyka ROAD_* wyglądające na zamknięcie (do spraw SCX). */
   listOpenRoadClosures?(): Promise<import('../e49/detourCaseJob.ts').RoadClosureCandidate[]>;
   /** E49-b Z3: transporty na korytarzu + wymiary/pozycja pod HERE. */
-  e49DetourLoadLegs?(): Promise<import('../e49/detourCaseJob.ts').DetourLoadLeg[]>;
+  e49DetourLoadLegs?(): Promise<import('../e49/detourCaseJob.ts').DetourLoadLegsResult>;
   /** E49-b Z3: upsert sprawy „Objazd czy postój?”. */
   upsertE49DetourCase?(row: import('../e49/detourCaseJob.ts').DetourCaseUpsert): Promise<boolean>;
   /** E49-b Z3: zamknij sprawy bez keep (zamknięcie odwołane). */
@@ -5746,18 +5749,29 @@ export async function runRouteHazards(deps: JobDeps): Promise<JobResult> {
           deps.store.openRiskDedups ? await deps.store.openRiskDedups('E49_WIND:') : [],
         );
         const statusById = new Map(loads.map((l) => [l.id, l.status ?? ''] as const));
-        const byCorr = new Map<string, CorridorWindRow[]>();
+        // DP-212: jedno listCorridorWindForecast na przebieg (nie N+1 per korytarz).
         const seen = new Set<string>();
-        for (const leg of legs) {
-          if (!leg.currentLeg) continue; // odcinek SE/FI dla auta jeszcze w PL liczy tylko ETA (Z1)
+        const activeLegs = legs.filter((leg) => {
+          if (!leg.currentLeg) return false; // odcinek SE/FI dla auta jeszcze w PL liczy tylko ETA (Z1)
           const st = statusById.get(leg.loadId) ?? '';
-          if (st === 'AT_SITE' || st === 'FERRY') continue; // nie na placu budowy / promie
+          if (st === 'AT_SITE' || st === 'FERRY') return false; // nie na placu budowy / promie
           const dedup = windCaseDedup(leg.loadId, leg.code);
-          if (seen.has(dedup)) continue;
+          if (seen.has(dedup)) return false;
           seen.add(dedup);
-          if (!byCorr.has(leg.code)) {
-            byCorr.set(leg.code, await deps.store.listCorridorWindForecast(leg.code, 180));
-          }
+          return true;
+        });
+        const codes = [...new Set(activeLegs.map((l) => l.code))];
+        const allWind = codes.length
+          ? await deps.store.listCorridorWindForecast(codes, 180)
+          : [];
+        const byCorr = new Map<string, CorridorWindRow[]>();
+        for (const row of allWind) {
+          const list = byCorr.get(row.corridor) ?? [];
+          list.push(row);
+          byCorr.set(row.corridor, list);
+        }
+        for (const leg of activeLegs) {
+          const dedup = windCaseDedup(leg.loadId, leg.code);
           const plan = planWindCase({
             loadId: leg.loadId,
             corridor: leg.code,

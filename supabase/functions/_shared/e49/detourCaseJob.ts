@@ -64,9 +64,58 @@ export type RoadClosureCandidate = {
   korytarzDroga?: string | null;
 };
 
+/** Punkt prognozy wiatru (DP-212) — próbki godzinowe z `corridor_wind_forecast`. */
+export type DetourWindRow = {
+  km: number;
+  samples: readonly {
+    at: string;
+    gustMs?: number | null;
+    windMs?: number | null;
+    gust_ms?: number | null;
+    wind_ms?: number | null;
+  }[];
+};
+
+/**
+ * DP-212 / F7 #791 nieblok. + F7 #811 B1: szczyt porywu w oknie jazdy wariantu.
+ * Próbki prognozy są godzinowe — okno rozszerzamy do pełnych godzin
+ * [floor_h(from), ceil_h(to)], żeby krótki objazd (np. 10:20–10:50) widział 10:00 i 11:00.
+ * Brak próbek w rozszerzonym oknie → null → WIND warn.
+ */
+export function peakGustInDriveWindow(args: {
+  rows: readonly DetourWindRow[];
+  fromIso: string;
+  toIso: string;
+}): number | null {
+  const from = Date.parse(args.fromIso);
+  const to = Date.parse(args.toIso);
+  if (!Number.isFinite(from) || !Number.isFinite(to) || !args.rows.length) return null;
+  const HOUR_MS = 3_600_000;
+  const lo = Math.min(from, to);
+  const hi = Math.max(from, to);
+  const t0 = Math.floor(lo / HOUR_MS) * HOUR_MS;
+  const t1 = Math.ceil(hi / HOUR_MS) * HOUR_MS;
+  let peak: number | null = null;
+  for (const row of args.rows) {
+    for (const s of row.samples ?? []) {
+      const at = Date.parse(s.at);
+      if (!Number.isFinite(at) || at < t0 || at > t1) continue;
+      const g = Number(s.gustMs ?? s.gust_ms ?? s.windMs ?? s.wind_ms);
+      if (!Number.isFinite(g)) continue;
+      if (peak == null || g > peak) peak = g;
+    }
+  }
+  return peak;
+}
+
 /** Kontekst ryzyk karty (F7 #791 r4/r5 B8) — wartości z bazy; brak = warn „sprawdź …”. */
 export type DetourRiskCtx = {
-  /** Poryw m/s z corridor_wind_forecast na korytarzu. */
+  /**
+   * DP-212: punkty korytarza przed autem — szczyt liczony w oknie jazdy wariantu
+   * (`banFromIso`/`banToIso` w `buildNineRisks`).
+   */
+  windRows?: readonly DetourWindRow[] | null;
+  /** Poryw m/s (fallback testów / bez okna); produkcja: windRows + okno. */
   windGustMs?: number | null;
   /** Pozostały czas jazdy H-4 (min) do najbliższego EU_DAILY_REST. */
   hoursLeftMin?: number | null;
@@ -826,7 +875,17 @@ export function buildNineRisks(args: {
     text: `sprawdź ${checkWhat}`,
   });
   const ctx = args.riskCtx ?? null;
-  const wind = args.wind ?? riskWindFromGust(ctx?.windGustMs);
+  // DP-212: WIND ze szczytu w oknie jazdy wariantu (te same banFrom/banTo co BAN).
+  const wind = args.wind ?? (() => {
+    if (ctx?.windRows && args.banFromIso && args.banToIso) {
+      return riskWindFromGust(peakGustInDriveWindow({
+        rows: ctx.windRows,
+        fromIso: args.banFromIso,
+        toIso: args.banToIso,
+      }));
+    }
+    return riskWindFromGust(ctx?.windGustMs);
+  })();
   const hours = args.hours ?? riskHoursFromLeft(ctx?.hoursLeftMin, args.needDriveMin);
   const ferryEta = args.ferryEtaIso ?? args.etaIso;
   const ferry = args.ferry ?? riskFerryVsEta({
@@ -1034,9 +1093,23 @@ export type OpenDetourCache = {
   closureLon: number;
 };
 
+/** Wynik nóg E49-b: tablica (testy) albo legi + ostrzeżenia (prod, F7 #811 B2). */
+export type DetourLoadLegsResult =
+  | DetourLoadLeg[]
+  | { legs: DetourLoadLeg[]; warnings?: string[] };
+
+export function normalizeDetourLoadLegs(raw: DetourLoadLegsResult | undefined | null): {
+  legs: DetourLoadLeg[];
+  warnings: string[];
+} {
+  if (raw == null) return { legs: [], warnings: [] };
+  if (Array.isArray(raw)) return { legs: raw, warnings: [] };
+  return { legs: raw.legs ?? [], warnings: raw.warnings ?? [] };
+}
+
 export type DetourJobStore = {
   listOpenRoadClosures?(): Promise<RoadClosureCandidate[]>;
-  e49DetourLoadLegs?(): Promise<DetourLoadLeg[]>;
+  e49DetourLoadLegs?(): Promise<DetourLoadLegsResult>;
   upsertE49DetourCase?(row: DetourCaseUpsert): Promise<boolean>;
   closeStaleE49DetourCases?(keepDedup: string[]): Promise<number>;
   noteHereUsage?(service: 'routing', n: number): Promise<void>;
@@ -1103,7 +1176,10 @@ export async function runDetourCases(args: {
   } catch (e) {
     warnings.push(`E49-b listOpenRoadClosures: ${e instanceof Error ? e.message : 'błąd'}`);
   }
-  const legs = args.store.e49DetourLoadLegs ? await args.store.e49DetourLoadLegs() : [];
+  const { legs, warnings: legWarnings } = normalizeDetourLoadLegs(
+    args.store.e49DetourLoadLegs ? await args.store.e49DetourLoadLegs() : [],
+  );
+  for (const w of legWarnings) warnings.push(w);
   const keep: string[] = [];
   let upserts = 0;
   let hereCalls = 0;

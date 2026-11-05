@@ -1,3 +1,19 @@
+## 2026-11-05 09:40 — DP-212 F7 #811 B1+B2 (niegotowe → poprawka)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: brak F7 gotowe — F7 #811 @ `0105ebf8` **niegotowe** (B1+B2).
+- **Krok:** B1 `peakGustInDriveWindow` → okno [floor_h, ceil_h]; B2 `e49DetourLoadLegs` łapie błąd wiatru → `windRows=null` + warning „E49-b: prognoza wiatru niedostępna” (sprawy powstają). Testy e49-detour-job 18/18. Bez migracji.
+- **Dalej:** push → CI → F7. Potem DP-219–221.
+
+
+## 2026-11-05 09:10 — #810 SCALONE; start DP-212 (WIND okno + N+1)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: **#810 SCALONE** `18ab51c6` (DP-210; F7 gotowe @ `6f368b0f`; unit+visual+db ✔). `deploy-main` robi resztę. Bez push na main.
+- **Krok DP-212** `pakiet/c2-dp-212-wind-window`: (1) `peakGustInDriveWindow` + `windRows` w riskCtx — szczyt WIND w oknie jazdy wariantu (nie cały horyzont/km); (2) `listCorridorWindForecast(codes[])` — jedno zapytanie na przebieg (detour + route-hazards); błąd throw. Bez migracji. Potem DP-219–221.
+- **Dalej:** testy → push → CI → F7.
+
+
 ## 2026-11-05 08:30 — #805 SCALONE; start DP-210 (decyzja 105)
 
 - Skrzynka: #809 zamknięte (102–104 OK; **105: brak pilota EE/LV/LT/FI**); #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.

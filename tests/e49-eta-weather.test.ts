@@ -264,8 +264,13 @@ const baseStore = (over: WindStore = {}): { store: WindStore; raised: string[]; 
       { id: 'c0000000-0000-4000-8000-000000000001', status: 'AT_SITE' },
     ],
     corridorWindFreshCount: async () => 5,
-    listCorridorWindForecast: async (code: string) =>
-      code === 'SE_E4' ? [gustRow(25, 22), gustRow(50, 23), gustRow(75, 21)] : [],
+    // DP-212: job woła listę kodów jednym zapytaniem (string | string[]).
+    listCorridorWindForecast: async (corridor: string | readonly string[]) => {
+      const codes = Array.isArray(corridor) ? corridor : [corridor];
+      return codes.includes('SE_E4')
+        ? [gustRow(25, 22), gustRow(50, 23), gustRow(75, 21)]
+        : [];
+    },
     e49WindLoadCorridors: async () => [
       { loadId: LOAD, code: 'SE_E4', leg: 'SE', fromKm: 0, currentLeg: true },
       { loadId: LOAD, code: 'FI_E75', leg: 'SE', fromKm: 0, currentLeg: false },
