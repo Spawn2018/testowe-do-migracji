@@ -1,6 +1,6 @@
 /**
- * DP-128 F7 r2 — przejście geofence ATD/ATA (histereza 3/4 km, luka ≤20 min,
- * pas 3–4 km pomijany, stronicowanie). Etap: BN4 / AIS; źródło F7 #703 r2 B1/P1/P2.
+ * DP-128 F7 r2 + DP-222 F7 #818 B1/B2 — geofence ATD/ATA (3/4 km;
+ * ATD/ATA ≤20/60 min + SOG; pas 3–4; stronicowanie). Etap: BN4 / C2.
  */
 import { describe, expect, it } from 'vitest';
 import {
@@ -70,17 +70,22 @@ function denseOutboundTrack(
   return rows;
 }
 
-/** Oczekiwany ATD: ostatnia pozycja ≤3 km przed pierwszą >4 km. */
+/** Oczekiwany ATD: ostatnia ≤3 km z SOG≥1 (inaczej ostatnia ≤3) przed pierwszą >4. */
 function expectedAtdFromTrack(
   rows: GeofencePos[],
   hub: { lat: number; lon: number },
 ): string | null {
   const sorted = rows.slice().sort((a, b) => a.observed_at.localeCompare(b.observed_at));
   let lastIn: string | null = null;
+  let lastMoving: string | null = null;
   for (const r of sorted) {
     const d = haversineKm(r.lat, r.lon, hub.lat, hub.lon);
-    if (d <= GEOFENCE_IN_KM) lastIn = new Date(r.observed_at).toISOString();
-    else if (d > GEOFENCE_OUT_KM && lastIn) return lastIn;
+    if (d <= GEOFENCE_IN_KM) {
+      lastIn = new Date(r.observed_at).toISOString();
+      if (r.sog_kn != null && r.sog_kn >= 1) lastMoving = lastIn;
+    } else if (d > GEOFENCE_OUT_KM && lastIn) {
+      return lastMoving ?? lastIn;
+    }
   }
   return null;
 }
@@ -103,7 +108,7 @@ describe('DP-128 geofenceTransition — pure', () => {
     expect(findAtaTransitionIso(rows, TLLA)).toBe('2026-11-01T12:18:52.731Z');
   });
 
-  it('R3 ATD: przerwa >20 min między GDY a pozycją 5 km → bez ATD', () => {
+  it('R3 ATD: przerwa >60 min między GDY a pozycją 5 km → bez ATD', () => {
     const out = northOf(GDY, 5);
     const rows = [
       pos('2026-10-22T06:10:00.000Z', GDY.lat, GDY.lon, 0),
@@ -119,6 +124,49 @@ describe('DP-128 geofenceTransition — pure', () => {
       pos('2026-10-22T08:15:00.000Z', out.lat, out.lon, 8),
     ];
     expect(findAtdTransitionIso(rows, GDY)).toBe('2026-10-22T08:05:00.000Z');
+  });
+
+  it('DP-222 B1: Nova Star 04.11 (prod AISSTREAM) luka 22 min + SOG≥3 → ATD 17:09', () => {
+    /* Dokładnie 4 wiersze z F7 #818 (vessel_positions); hub Westerplatte = GDN. */
+    const rows = [
+      pos('2026-11-04T16:59:35.000Z', 54.4041, 18.6781, 0),
+      pos('2026-11-04T17:09:44.000Z', 54.4048, 18.6687, 5),
+      pos('2026-11-04T17:31:34.000Z', 54.4426, 18.6676, 10.3),
+      pos('2026-11-04T17:47:45.000Z', 54.4858, 18.7435, 16.6),
+    ];
+    expect(haversineKm(54.4048, 18.6687, GDN.lat, GDN.lon)).toBeLessThanOrEqual(GEOFENCE_IN_KM);
+    expect(haversineKm(54.4426, 18.6676, GDN.lat, GDN.lon)).toBeGreaterThan(GEOFENCE_OUT_KM);
+    expect(findAtdTransitionIso(rows, GDN)).toBe('2026-11-04T17:09:44.000Z');
+  });
+
+  it('DP-222 B1: statek stoi w porcie 2 h po ETD → bez ATD', () => {
+    const t0 = Date.parse('2026-11-04T16:00:00.000Z');
+    const rows: GeofencePos[] = [];
+    for (let m = 0; m <= 120; m += 15) {
+      rows.push(pos(new Date(t0 + m * 60_000).toISOString(), GDN.lat, GDN.lon, 0));
+    }
+    expect(findAtdTransitionIso(rows, GDN)).toBeNull();
+  });
+
+  it('DP-222 B1: luka 22 min bez SOG≥3 i bez oddalania → bez ATD', () => {
+    const out = northOf(GDN, 4.5);
+    const rows = [
+      pos('2026-11-04T16:00:00.000Z', GDN.lat, GDN.lon, 0),
+      pos('2026-11-04T16:22:00.000Z', out.lat, out.lon, 0),
+    ];
+    expect(findAtdTransitionIso(rows, GDN)).toBeNull();
+  });
+
+  it('DP-222 B2: ATA NYN luka 40 min + SOG≥3 → wejście; bez SOG/zbliżania → bez', () => {
+    const out = northOf(NYN, 6);
+    expect(findAtaTransitionIso([
+      pos('2026-11-03T10:00:00.000Z', out.lat, out.lon, 8),
+      pos('2026-11-03T10:40:00.000Z', NYN.lat, NYN.lon, 0),
+    ], NYN)).toBe('2026-11-03T10:40:00.000Z');
+    expect(findAtaTransitionIso([
+      pos('2026-11-03T10:00:00.000Z', out.lat, out.lon, 0),
+      pos('2026-11-03T10:40:00.000Z', NYN.lat, NYN.lon, 0),
+    ], NYN)).toBeNull();
   });
 
   it('histereza HEL↔HELA (~3,27 km): w strefie martwej 3–4 km bez ATD/ATA', () => {

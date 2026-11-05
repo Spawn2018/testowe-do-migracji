@@ -1,3 +1,33 @@
+## 2026-11-05 13:20 — DP-222 F7 #818 B2fix db (0412 CASE→v_max)
+
+- Skrzynka: #814 PILNE w toku (#818); #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne` poza #814.
+- Scalanie: brak F7 gotowe. #818 @ `e793d9da`: unit+visual ✔, **db FAIL** — `0412` ATA: `CASE` w warunku `IF` → `syntax error at end of input`. #813 wstrzymane.
+- **Krok:** `dp222_ata_from_ais_nyn` — jak ATD: `v_max := case …`; `if v_gap … <= v_max`. Logika bez zmian.
+- **Dalej:** push → CI (+`db`) → F7. Bez push na main.
+
+## 2026-11-05 12:55 — DP-222 F7 #818 B2 (ATA NYN + DOPLYNAL)
+
+- Skrzynka: #814 PILNE w toku (#818); #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne` poza #814.
+- Scalanie: brak F7 gotowe — F7 #818 r1 @ `1631229` **niegotowe** (B2). Rebase na `main` (#815 `e78368f5`). #813 nadal wstrzymane.
+- **Krok F7 B2:** (1) `findAtaTransitionIso` — luka ≤60 min przy SOG≥3 / zbliżaniu; (2) backfill **0412** — ATA NYN + status DOPLYNAL gdy ATA / późniejszy ATD / arrival+6h, inaczej W_REJSIE; (3) `statusAfterGdnNynAtd` + `closeStaleGdnNynWithoutAta` po UMG i w AIS. Testy: Wawel + późniejszy ATD → DOPLYNAL; BS-03 trwający → W_REJSIE; dp128+dp222+integrations **84/84**.
+- **Dalej:** push → CI (+`db`) → F7. Po nałożeniu 0412: lista ATD/ATA/status GDN-NYN 7 d. Bez push na main.
+
+## 2026-11-05 12:25 — DP-222 F7 #818 B1 (geofence ≤60 min) + #815 SCALONE
+
+- Skrzynka: #814 PILNE w toku (#818); #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne` poza #814.
+- Scalanie: **#815 SCALONE** `e78368f5` (F7 gotowe @ `1dcc457b`; unit+visual ✔). #818 F7 **niegotowe** B1 → poprawka. #813 nadal wstrzymane.
+- **Krok F7 B1** `pakiet/c2-dp-222-atd-gdn-nyn` / **0412**: `findAtdTransitionIso` — luka ≤60 min gdy SOG≥3 / oddalanie; ATD = ostatnia w strefie z SOG≥1; backfill SQL to samo + plan ±3 h. Test Nova Star 04.11 → 17:09:44 + W_REJSIE; postój 2 h → bez ATD. Testy dp128+dp222+integrations+bn3-umg 100/100.
+- **Dalej:** push → CI (+`db`) → F7. Po scaleniu: liczba ATD GDN-NYN z 7 d (oczekiwane Nova 02/04.11). Bez push na main.
+
+## 2026-11-05 12:15 — DP-222 ATD GDN-NYN (UMG + backfill 0412)
+
+- Skrzynka: #814 PILNE w toku; #550 WSTRZYMANE; BN5–8 w planie.
+- Scalanie: #815 CI unit+visual ✔ @ `1dcc457b` — brak F7 gotowe (po B1+B2). #813 F7 niegotowe (wstrzymane na #814).
+- **Przyczyna ATD:** Digitraffic bez Zatoki; AISSTREAM rzadko daje parę geofence ≤20 min → `BEZ_PRZEJSCIA_GEOFENCE` (3/3 GDN-NYN). Stena GDY ma UMG — Polferries nie.
+- **Krok ATD** `pakiet/c2-dp-222-atd-gdn-nyn` / **0412**: UMG „Gdańsk Nowy Port” → past ETD Wawel/Nova + Nynäshamn → `actual_departure_at` GDN-NYN; backfill 7 d z `vessel_positions` (DP-128 3/4 km). Testy dp222-atd-gdn-umg + bn3-umg 27/27.
+- **Dalej:** push → CI (+`db`) → F7. Po #815+#ATD: #813 B1/B2 → DP-220. Bez push na main.
+
+
 ## 2026-11-05 11:35 — DP-222 F7 #815 B1+B2 (tabela Mapy = AIS)
 
 - Skrzynka: #814 PILNE w toku; #550 WSTRZYMANE; BN5–8 w planie (bez przerwania).

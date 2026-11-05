@@ -453,6 +453,85 @@ describe('ferry-ais — Digitraffic (prawdziwa odpowiedź 25.09.2026)', () => {
     await runFerryAis(deps(st2, { 'digitraffic.fi': near }, {}, new Date('2026-09-24T20:00:00Z')).d);
     expect(st2.sailings.find((s) => s.vessel_id === NS)?.actual_departure_at ?? null).toBeNull();
   });
+  it('DP-222 F7 B1: Nova Star 04.11 luka 22 min + SOG≥3 → ATD 17:09 + W_REJSIE', async () => {
+    const st = new MemStore();
+    st.sailings.push(sail(NS, '2026-11-04T17:00:00.000Z', '2026-11-05T07:00:00.000Z'));
+    for (const p of [
+      { lat: 54.4041, lon: 18.6781, observedAt: '2026-11-04T16:59:35.000Z', sogKn: 0 },
+      { lat: 54.4048, lon: 18.6687, observedAt: '2026-11-04T17:09:44.000Z', sogKn: 5 },
+      { lat: 54.4426, lon: 18.6676, observedAt: '2026-11-04T17:31:34.000Z', sogKn: 10.3 },
+      { lat: 54.4858, lon: 18.7435, observedAt: '2026-11-04T17:47:45.000Z', sogKn: 16.6 },
+    ]) {
+      st.vesselPositions.push({ vesselId: NS, ...p });
+    }
+    const out = AIS.replace('17.850695, 57.980348', '18.7435, 54.4858')
+      .replace('"sog" : 17.1', '"sog" : 16.6')
+      .replace('1790278580817', String(Date.parse('2026-11-04T17:47:45.000Z')));
+    const r = await runFerryAis(deps(st, { 'digitraffic.fi': out }, {}, new Date('2026-11-04T17:50:00Z')).d);
+    const s = st.sailings.find((x) => x.vessel_id === NS)!;
+    expect(s.actual_departure_at).toBe('2026-11-04T17:09:44.000Z');
+    expect(s.status).toBe('W_REJSIE');
+    expect(r.observations?.['M/F Nova Star:DEP']).toMatch(/^WYPŁYNĄŁ_/);
+  });
+  it('DP-222 F7 B1: postój w porcie 2 h po ETD → bez ATD', async () => {
+    const st = new MemStore();
+    st.sailings.push(sail(NS, '2026-11-04T16:00:00.000Z', '2026-11-05T06:00:00.000Z'));
+    for (let m = 0; m <= 120; m += 20) {
+      st.vesselPositions.push({
+        vesselId: NS, lat: 54.40372, lon: 18.68130,
+        observedAt: new Date(Date.parse('2026-11-04T16:00:00.000Z') + m * 60_000).toISOString(),
+        sogKn: 0,
+      });
+    }
+    const dock = AIS.replace('17.850695, 57.980348', '18.68130, 54.40372')
+      .replace('"sog" : 17.1', '"sog" : 0')
+      .replace('1790278580817', String(Date.parse('2026-11-04T18:00:00.000Z')));
+    const r = await runFerryAis(deps(st, { 'digitraffic.fi': dock }, {}, new Date('2026-11-04T18:05:00Z')).d);
+    expect(st.sailings.find((x) => x.vessel_id === NS)?.actual_departure_at ?? null).toBeNull();
+    expect(r.observations?.['M/F Nova Star:DEP']).toBeUndefined();
+  });
+  it('DP-222 F7 B2: ATD + późniejszy rejs z ATD → DOPLYNAL (bez ATA)', async () => {
+    const st = new MemStore();
+    const old = sail(WAW, '2026-11-03T17:00:00.000Z', '2026-11-04T07:00:00.000Z');
+    old.status = 'W_REJSIE';
+    old.actual_departure_at = '2026-11-03T17:10:00.000Z';
+    const next = sail(WAW, '2026-11-04T17:14:00.000Z', '2026-11-05T07:00:00.000Z', 'NYN-GDN');
+    next.id = 'ais-waw-nyn-gdn';
+    next.actual_departure_at = '2026-11-04T17:20:00.000Z';
+    next.status = 'W_REJSIE';
+    st.sailings.push(old, next);
+    /* Mid-sea fix — bez nowego ATD; closeStale zamyka stary GDN-NYN. */
+    const mid = AIS.replace('1790278580817', String(Date.parse('2026-11-05T12:00:00.000Z')));
+    const r = await runFerryAis(deps(st, { 'digitraffic.fi': mid }, {}, new Date('2026-11-05T12:05:00Z')).d);
+    expect(st.sailings.find((x) => x.id === old.id)).toMatchObject({
+      status: 'DOPLYNAL',
+      actual_arrival_at: null,
+      actual_departure_at: '2026-11-03T17:10:00.000Z',
+    });
+    expect(r.observations?.dp222_closed_gdn).toBe('1');
+  });
+  it('DP-222 F7 B2: rejs trwający (przed arrival+6h, bez późniejszego ATD) → W_REJSIE', async () => {
+    const st = new MemStore();
+    st.sailings.push(sail(NS, '2026-11-04T17:00:00.000Z', '2026-11-05T07:00:00.000Z'));
+    for (const p of [
+      { lat: 54.4041, lon: 18.6781, observedAt: '2026-11-04T16:59:35.000Z', sogKn: 0 },
+      { lat: 54.4048, lon: 18.6687, observedAt: '2026-11-04T17:09:44.000Z', sogKn: 5 },
+      { lat: 54.4426, lon: 18.6676, observedAt: '2026-11-04T17:31:34.000Z', sogKn: 10.3 },
+      { lat: 54.4858, lon: 18.7435, observedAt: '2026-11-04T17:47:45.000Z', sogKn: 16.6 },
+    ]) {
+      st.vesselPositions.push({ vesselId: NS, ...p });
+    }
+    const out = AIS.replace('17.850695, 57.980348', '18.7435, 54.4858')
+      .replace('"sog" : 17.1', '"sog" : 16.6')
+      .replace('1790278580817', String(Date.parse('2026-11-04T17:47:45.000Z')));
+    /* Jak BS-03 przed ATA — now = 17:50, arrival 07:00+1d → W_REJSIE. */
+    await runFerryAis(deps(st, { 'digitraffic.fi': out }, {}, new Date('2026-11-04T17:50:00Z')).d);
+    expect(st.sailings.find((x) => x.vessel_id === NS)).toMatchObject({
+      actual_departure_at: '2026-11-04T17:09:44.000Z',
+      status: 'W_REJSIE',
+      actual_arrival_at: null,
+    });
+  });
   it('KAA-GDY w Karlskronie (port odejścia) → bez fałszywego dopłynięcia; NYN-GDN w Gdańsku + geofence → actual_arrival', async () => {
     const st = new MemStore();
     st.sailings.push(sail(NS, '2026-09-24T16:00:00.000Z', '2026-09-25T10:00:00.000Z', 'KAA-GDY'));
