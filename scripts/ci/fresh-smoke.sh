@@ -33,7 +33,10 @@ if (echo >/dev/tcp/127.0.0.1/"$PORT") 2>/dev/null; then
 fi
 
 echo "[fresh] HEAD $(git rev-parse --short HEAD) → $TMP"
-git archive HEAD | tar -x -C "$TMP"
+# DP-225 / CI: `shots-baseline` jest LFS i niepotrzebny w fresh-smoke (migawki = tests/__screenshots__/).
+# Smudge LFS przy `git archive` → HTTP 502 GitHub = fałszywe czerwone visual (PR #827).
+GIT_LFS_SKIP_SMUDGE=1 git -c filter.lfs.smudge= -c filter.lfs.process= -c filter.lfs.required=false \
+  archive HEAD -- . ':(exclude)shots-baseline' | tar -x -C "$TMP"
 ln -s "$ROOT/node_modules" "$TMP/node_modules"
 ( cd "$TMP" && VITE_AUTH_MODE=demo "$ROOT/node_modules/.bin/vite" build --outDir "$TMP/dist" --logLevel warn )
 if grep -l -i "supabase" "$TMP"/dist/assets/*.js >/dev/null 2>&1; then
