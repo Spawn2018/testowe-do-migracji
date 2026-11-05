@@ -13,7 +13,7 @@ const ROOT = resolve(import.meta.dirname, '../..');
 /** Oczekiwane OK na lokalnym Postgresie (gate.sh). */
 export const EXPECTED_LOCAL = {
   security: 521, // F7 #791 r4 B12: CI @769375b8 = 521 OK; B11 było 520
-  status: 663, // #797: +9 Tallinn EE geofence/AT_PORT/promote; F7 #785 r2 → 654
+  status: 676, // DP-218/#807: +13 FERRY poza PORT_IN / ETA / HHL overdue; #797→663
   storage: 37,
   money: 200, // DP-167 F7 #734 r2: +2 title_key zmiana; było 198 (r1 +4 od 194 / DP-167 +3 od 191)
   release: 146,

@@ -4033,5 +4033,84 @@ chk "#797: bn1_seed poprawia country/route" \
     where project_id='$P' and name='Terminal Tallinn D HEL';
    rollback" "EE/TLL-HEL"
 
+# DP-218 / #807: FERRY + ATA + pozycja ~4 km od T2 HEL przy aktywnej PORT_IN → Droga + ETA.
+# Vessel/UUID własne (L 218*); PORT_IN FI zostaje ON (prod).
+V218=66666666-0000-0000-0000-00000000218a
+S218a=77777777-0000-0000-0000-00000000218a
+S218b=77777777-0000-0000-0000-00000000218b
+L218a=55555555-0000-0000-0000-00000000218a
+L218b=55555555-0000-0000-0000-00000000218b
+L218c=55555555-0000-0000-0000-00000000218c
+chk "DP-218: finland_land 60.173/24.827 (4 km od T2)" \
+  "select st_covers(public.finland_land_geom(), st_setsrid(st_makepoint(24.827, 60.173), 4326))" t
+chk "DP-218: dystans T2 ≥1 km (prod SG 0040)" \
+  "select (st_distance(
+     (select geom from geofences where project_id='$P' and name='Terminal Helsinki West Harbour T2' limit 1)::geography,
+     st_setsrid(st_makepoint(24.827, 60.173), 4326)::geography) >= 1000)" t
+chk "DP-218: PORT_IN FI TLL-HEL aktywna" \
+  "select (count(*) > 0) from geofences
+    where project_id='$P' and kind='PORT_IN' and country='FI' and active
+      and public.ferry_geofence_matches_route(route, 'TLL-HEL')" t
+q "insert into vessels (id, name, operator) values
+    ('$V218','DP-218 HEL test','TALLINK')
+    on conflict (id) do nothing;
+   insert into sailings (id, project_id, vessel_id, route, departure_at, arrival_at,
+     actual_departure_at, actual_arrival_at, status, source) values
+    ('$S218a','$P','$V218','TLL-HEL',
+     '2026-11-04 20:00+00','2026-11-04 22:30+00',
+     '2026-11-04 20:00+00','2026-11-04 22:21+00','DOPLYNAL','TALLINK'),
+    ('$S218b','$P','$V218','TLL-HEL',
+     '2026-11-03 20:00+00','2026-11-03 22:30+00',
+     '2026-11-03 20:00+00','2026-11-03 22:21+00','DOPLYNAL','TALLINK')
+    on conflict (id) do nothing" >/dev/null
+mk $L218a A218 "'HHL/A218'" "'SCX/A218'" FERRY "'$S218a'"
+mk $L218b B218 "'HHL/B218'" "'SCX/B218'" FERRY "'$S218a'"
+mk $L218c C218 "'HHL/C218'" "'SCX/C218'" FERRY "'$S218b'"
+q "insert into load_events (load_id, event_type, occurred_at) values
+    ('$L218a','MILESTONE_LOADED','2026-11-04 08:00+00'),
+    ('$L218b','MILESTONE_LOADED','2026-11-04 08:00+00'),
+    ('$L218c','MILESTONE_LOADED','2026-11-03 08:00+00')" >/dev/null
+# Bezpośrednio backup (PORT_IN ON) — jak process_position po geofence miss.
+# ATA 04.11 22:21Z; pozycja 05.11 04:15Z (~4 km od T2, jak SG 0040).
+chk "DP-218: PORT_IN ON + 4 km HEL → backup true" \
+  "select public.apply_ferry_ais_arrival_backup('$L218a', 60.173, 24.827, '2026-11-05 04:15+00')" t
+chk "DP-218: status → IN_TRANSIT_SE" "$(st $L218a)" IN_TRANSIT_SE
+chk "DP-218: source GPS_FERRY_GAP" \
+  "select payload->>'source' from load_events
+    where load_id='$L218a' and event_type='STATUS_AUTO' and payload->>'to'='IN_TRANSIT_SE'
+    order by occurred_at desc limit 1" GPS_FERRY_GAP
+chk "DP-218: powod przerwa GPS" \
+  "select (payload->>'powod') from load_events
+    where load_id='$L218a' and event_type='STATUS_AUTO' and payload->>'to'='IN_TRANSIT_SE'
+    order by occurred_at desc limit 1" "pozycja po przypłynięciu poza portem (przerwa GPS na promie)"
+# process_position e2e (PORT_IN ON) — ten sam warunek
+pos $L218b 60.173 24.827 "2026-11-05 04:20+00"
+chk "DP-218: process_position → IN_TRANSIT_SE" "$(st $L218b)" IN_TRANSIT_SE
+# ETA po przejściu (HERE FI-HEL)
+chk "DP-218: eta_site po Droga SE" \
+  "begin;
+   insert into here_road_geometry (leg, points, summary, fetched_at, length_m, duration_s, n_points)
+    values ('FI-HEL', '$HERE_FI'::jsonb, 'DP-218 FI', now(), 900000, 50000, jsonb_array_length('$HERE_FI'::jsonb))
+    on conflict (leg) do update set points=excluded.points, fetched_at=excluded.fetched_at,
+      summary=excluded.summary, n_points=excluded.n_points;
+   update loads set plan_delivery_date = current_date + 3, ferry_route = 'TLL-HEL'
+    where id = '$L218a';
+   select public.refresh_load_eta('$L218a');
+   select (eta_site is not null)::text from loads where id='$L218a';
+   rollback" true
+# Regresja: w strefie + PORT_IN ON → backup false (geofence)
+q "select set_config('tower.status_ctx','on',true); update loads set status='FERRY' where id='$L218b'" >/dev/null
+chk "DP-218: w porcie HEL + PORT_IN ON → backup false" \
+  "select public.apply_ferry_ais_arrival_backup('$L218b', 60.15400, 24.91400, '2026-11-05 04:30+00')" f
+chk "DP-218: w porcie status bez zmian z backupu" "$(st $L218b)" FERRY
+# Ostrzeżenie HHL: ATA+2 h, nadal FERRY, bez lądu (S218b ATA 03.11 22:21 → 05.11 01:00)
+chk "DP-218: ATA+2h FERRY → detect_ferry_overdue" \
+  "select (public.detect_ferry_overdue('2026-11-05 01:00+00') >= 1)::text" true
+chk "DP-218: FERRY_OVERDUE audience HHL" \
+  "select audience::text from risk_signals
+    where dedup_key = 'FERRY_OVERDUE:' || '$L218c' || ':' || '$S218b'
+      and resolved_at is null
+    limit 1" HHL
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]
