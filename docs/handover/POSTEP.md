@@ -1,3 +1,11 @@
+## 2026-11-05 10:10 — #811 SCALONE; start DP-219 (filtr trasy GEOFENCE)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: **#811 SCALONE** `12621eea` (DP-212; F7 gotowe @ `bcdcfc9c`; unit+visual+db ✔). `deploy-main` robi resztę. Bez push na main.
+- **Krok DP-219** `pakiet/c2-dp-219-geofence-exit-dedup` / **0411**: `process_position` — PRE_PORT/PORT_OUT/PORT_IN tylko przy `ferry_geofence_matches_route`; EXIT dedup po `entered_at` wizyty; status.sh +6 (EXPECTED 682). Potem DP-220–221.
+- **Dalej:** push → CI → F7.
+
+
 ## 2026-11-05 09:40 — DP-212 F7 #811 B1+B2 (niegotowe → poprawka)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
