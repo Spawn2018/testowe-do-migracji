@@ -57,7 +57,7 @@ begin
       v_pin := coalesce(v_last_in_moving, v_last_in);
       v_gap := r.observed_at - v_pin;
       v_allow_sparse := (r.sog_kn is not null and r.sog_kn >= 3);
-      if not v_allow_sparse then
+      if (v_allow_sparse) is not true then
         v_out_km := v_km;
         for v_later in
           select vp2.lat, vp2.lon, vp2.observed_at
