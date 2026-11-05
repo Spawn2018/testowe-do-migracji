@@ -1,3 +1,19 @@
+## 2026-11-05 06:35 — DP-218 F7 r1: fixture eta_site (#808)
+
+- Skrzynka: #807 `pilne` otwarte; #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: #808 bez F7 (CI db FAIL 675/676 — `eta_site po Droga SE`); #805 bez F7 (WSTRZYMANE).
+- **Krok:** fixture DP-218 — świeża `positions` (jak W3f) przed `refresh_load_eta`; logika **0410** bez zmian (prod OK). DP-210 nie zaczynać.
+- **Dalej:** push → CI (+`db`) → F7. Po scaleniu powrót do DP-211 (#805) / DP-212…
+
+
+## 2026-11-05 06:15 — PILNE #807 DP-218 (przerwane #805 DP-211)
+
+- Skrzynka: **#807 `pilne`** (Spawn2018) — FERRY zostaje „Prom” gdy pierwsza pozycja po ATA poza PORT_IN (SG 0040); #550 WSTRZYMANE; BN5–8 w planie.
+- Scalanie: #805 CI zielone @ `f98ccdeb`, **bez** „F7: gotowe do scalenia” — przerwane na #807. #806 SCALONE wcześniej (`2723af71` / **0409**).
+- **Krok DP-218** `pakiet/c2-dp-218-ferry-outside-port` / **0410**: (1) `apply_ferry_ais_arrival_backup` — PORT_IN ON + ląd ≥1 km → FERRY→AT_PORT→IN_TRANSIT_SE (`GPS_FERRY_GAP`); (2) backfill stuck FERRY; (3) `detect_ferry_overdue` actual → `audience=HHL`; (4) status.sh +13 (EXPECTED 676). DP-210 nie zaczynać.
+- **Dalej:** push → CI (+`db`) → F7. Po scaleniu powrót do DP-211 (#805) / DP-212…
+
+
 ## 2026-11-05 03:45 — PILNE #804 DP-217 (przerwane #805 DP-211)
 
 - Skrzynka: **#804 `pilne`** (Spawn2018) — FI gołoledź fala dzwonków + tytuły odcinków; #550 WSTRZYMANE; BN5–8 w planie.
