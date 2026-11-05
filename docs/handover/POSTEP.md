@@ -2,7 +2,7 @@
 
 - Skrzynka: #817 PILNE W TOKU (cz. B); #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
 - Scalanie: **#820 SCALONE** `a7c0bfb2` (F7 gotowe @ `a5c173a3`; unit+visual+db ✔). #813 wstrzymane.
-- **Krok DP-224 B** `pakiet/c2-dp-224-b-mappool`: po wczytaniu legów `drawCorridorLines` nie woła ponownie `map_display_state` / here-roads (Kokpit↔Mapa↔karta); `poolStats.roadsLoads`; testy `dp224-b-mappool`. Dalej C–E (#817).
+- **Krok DP-224 B** `pakiet/c2-dp-224-b-mappool`: po wczytaniu legów `drawCorridorLines` nie woła ponownie `map_display_state` / here-roads (Kokpit↔Mapa↔karta); `poolStats.roadsLoads`; test źródłowy `dp224-b-mappool`. Dalej C–E (#817).
 - Bez push na main.
 
 ## 2026-11-05 15:55 — DP-224 A F7 #820 niegotowe (tsc + refetch)
