@@ -1,3 +1,17 @@
+## 2026-11-05 17:40 — DP-224 B F7 #821 niegotowe (TTL + pokrycie)
+
+- Skrzynka: #817 PILNE W TOKU (cz. B→C/E); #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: brak F7 gotowe — F7 #821 @ `e01afbac` **niegotowe** (TTL / brakujące legi / test). #813 wstrzymane.
+- **Krok F7 B:** `loadedAt` + `LINES_CACHE_TTL_MS` 10 min; `poolLinesReusable` = świeże i wszystkie legi `spec` w `serverLegCodes` (nie „pula niepusta”); `loadRoadLegs.roadLegCodes`; test jsdom z mockiem `applyBasemap` (2× load → 1; po TTL → 2; leg spoza puli → +1). Dalej C/E (#817: lazyRetry→pasek, prefetch, ignoreCommand, client_errors).
+- Bez push na main.
+
+## 2026-11-05 17:05 — #820 SCALONE; DP-224 B mapPool
+
+- Skrzynka: #817 PILNE W TOKU (cz. B); #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: **#820 SCALONE** `a7c0bfb2` (F7 gotowe @ `a5c173a3`; unit+visual+db ✔). #813 wstrzymane.
+- **Krok DP-224 B** `pakiet/c2-dp-224-b-mappool`: po wczytaniu legów `drawCorridorLines` nie woła ponownie `map_display_state` / here-roads (Kokpit↔Mapa↔karta); `poolStats.roadsLoads`; test źródłowy `dp224-b-mappool`. Dalej C–E (#817).
+- Bez push na main.
+
 ## 2026-11-05 15:55 — DP-224 A F7 #820 niegotowe (tsc + refetch)
 
 - Skrzynka: #817 PILNE W TOKU (#820); #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
