@@ -1,3 +1,23 @@
+## 2026-11-05 14:50 — DP-222 #819 CI fix (AIS freshness) + DP-224 w rejestrze
+
+- Skrzynka: #814 PILNE w toku (#819); **#817 PILNE DP-224** wpisane do rejestru; #550 WSTRZYMANE; BN5–8 w planie.
+- Scalanie: brak F7 gotowe — CI @ `461fab69` czerwone (db 4 FAIL DP-222; visual `d-eur-t` flake). #813 wstrzymane.
+- **Krok:** testy status DP-222 — `vessel_positions.observed_at = now()` (± minuty), nie stałe 08:00Z (GPS_FRESH_MIN → `waits_for_ais`); bezpieczne `coalesce` przy pustym ETA1. Rejestr **DP-224** (#817 mapa 3,3 MB / `map_display_state`).
+- **Dalej:** push → CI (+`db`) → F7. Po #819: DP-224 albo dokończenie DP-222. Bez push na main.
+
+## 2026-11-05 14:15 — DP-222 F7 #819 B1 (0413 STATEMENT + throttle)
+
+- Skrzynka: #814 PILNE w toku (#819); #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne` poza #814.
+- Scalanie: brak F7 gotowe — F7 #819 @ `fb0a795f` **niegotowe** (B1). #813 nadal wstrzymane.
+- **Krok F7 B1:** `trg_vessel_positions_eta` → `FOR EACH STATEMENT` + `REFERENCING NEW TABLE AS new_rows` (`distinct vessel_id`); przeliczenie tylko gdy `eta_computed_at` null/<5 min; tylko `status=FERRY` i `actual_arrival_at is null`. Testy: wsad 20→1, po 1 min→0, po 6 min→1; A5/i2 z odsuniętym `eta_computed_at`. EXPECTED status **689**.
+- **Dalej:** push → CI (+`db`) → F7. Bez push na main.
+
+## 2026-11-05 14:00 — #818 SCALONE; DP-222 ETA FERRY z AIS (0413)
+
+- Skrzynka: #814 PILNE w toku (pkt 3 ETA); #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne` poza #814.
+- Scalanie: **#818 SCALONE** `5879a31e` (F7 gotowe @ `96721391`; unit+visual+db ✔). #813 nadal wstrzymane.
+- **Krok #814 pkt 3:** migracja **0413** — `trg_vessel_positions_eta` AFTER INSERT → `refresh_load_eta` dla `loads.status=FERRY` na tym `vessel_id` (AIS nie zostawia eta_site z pierwszego FERRY). Testy status +4 (A5/i2 bez ręcznego refresh); EXPECTED status **686**.
+- **Dalej:** push → CI (+`db`) → F7. Potem #813 B1/B2 (DP-221) → DP-220. Bez push na main.
 ## 2026-11-05 13:20 — DP-222 F7 #818 B2fix db (0412 CASE→v_max)
 
 - Skrzynka: #814 PILNE w toku (#818); #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne` poza #814.

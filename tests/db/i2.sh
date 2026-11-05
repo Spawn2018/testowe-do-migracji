@@ -88,8 +88,13 @@ echo; echo "[I-2d] przewoźnik zmienia status (strażnik nie blokuje przeliczeni
 val "SCX: status FERRY" $SCX "select load_status_set('$L2','FERRY',now(),null); select status from loads where id='$L2'" FERRY commit
 chk "FERRY bez AIS: ETA pusta, czeka na AIS, nie z rozkładu" "$(Q "select coalesce(eta_site::text,'∅')||'/'||(eta_basis->>'ferry_eta')||'/'||(eta_basis->>'segment') from loads where id='$L2'")" "∅/waits_for_ais/FERRY"
 
-$PSQL -c "insert into vessel_positions (vessel_id, lat, lon, sog_kn, observed_at, source) values ('55555555-0000-0000-0000-000000000001', 58.0, 18.2, 16, now(), 'DIGITRAFFIC')" >/dev/null
-$PSQL -c "select refresh_load_eta('$L2')" >/dev/null
+# DP-222 / #814: INSERT vessel_positions sam woła refresh_load_eta (trg_vessel_positions_eta).
+# F7 #819 B1: throttle 5 min — odsuń eta_computed_at sprzed AIS.
+$PSQL -c "set session_replication_role=replica;
+  update loads set eta_computed_at = now() - interval '6 minutes' where id='$L2';
+  set session_replication_role=origin;
+  insert into vessel_positions (vessel_id, lat, lon, sog_kn, observed_at, source) values
+   ('55555555-0000-0000-0000-000000000001', 58.0, 18.2, 16, now(), 'DIGITRAFFIC')" >/dev/null
 chk "FERRY z AIS: ETA z pozycji statku, nie z rozkładu" "$(Q "select (eta_site is not null)::text||'/'||(eta_basis->>'ferry_eta')||'/'||(eta_basis->>'plan_eta') from loads where id='$L2'")" "true/ais/false"
 $PSQL -c "delete from vessel_positions where vessel_id='55555555-0000-0000-0000-000000000001' and source='DIGITRAFFIC'" >/dev/null
 
