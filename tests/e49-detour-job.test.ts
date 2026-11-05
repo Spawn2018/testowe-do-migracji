@@ -176,6 +176,15 @@ describe('detourCaseJob helpers', () => {
     expect(riskPilotForCountry({ country: 'SE', pilotCountries: ['PL'] }).level).toBe('warn');
     expect(riskPilotForCountry({ country: 'SE', pilotCountries: null }).text).toMatch(/sprawdź/i);
 
+    // DP-210 / decyzja 105 (#809): EE/LV/LT/FI — ok „pilot niewymagany”, bez awizacji.
+    for (const c of ['EE', 'LV', 'LT', 'FI'] as const) {
+      const row = riskPilotForCountry({ country: c, pilotCountries: null });
+      expect(row.level).toBe('ok');
+      expect(row.text).toBe(`pilot niewymagany (${c})`);
+    }
+    expect(riskPilotForCountry({ country: 'EE', pilotCountries: ['SE'] }).text)
+      .toBe('pilot niewymagany (EE)');
+
     const wired = buildNineRisks({
       side: 'detour',
       country: 'SE',

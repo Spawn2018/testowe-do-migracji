@@ -749,11 +749,21 @@ export function etaPortForVariant(
   return new Date(Date.parse(basePortIso) + Math.max(0, addMin) * 60_000).toISOString();
 }
 
-/** F7 #791 r4 B8: PILOT — awizacja na kraj objazdu. */
+/** Kraje bez eskorty w awizacji (decyzja 105 / #809 — DP-210). */
+const PILOT_NOT_REQUIRED: ReadonlySet<DetourCountry> = new Set(['EE', 'LV', 'LT', 'FI']);
+
+/** F7 #791 r4 B8 + DP-210: PILOT — awizacja PL/SE; EE/LV/LT/FI = niewymagany. */
 export function riskPilotForCountry(args: {
   country: DetourCountry;
   pilotCountries: readonly string[] | null | undefined;
 }): DetourRiskRow {
+  if (PILOT_NOT_REQUIRED.has(args.country)) {
+    return {
+      kind: 'PILOT',
+      level: 'ok',
+      text: `pilot niewymagany (${args.country})`,
+    };
+  }
   const list = args.pilotCountries;
   if (!list || list.length === 0) {
     return { kind: 'PILOT', level: 'warn', text: 'sprawdź pilotów na objeździe' };
