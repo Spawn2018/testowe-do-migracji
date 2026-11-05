@@ -5,27 +5,36 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
+  CORRIDOR_FI,
   FI_ANNOUNCEMENTS_URL,
   FI_ATTRIBUTION,
   FI_BBOX_LIMIT,
   FI_ROADWORKS_URL,
   FI_WEIGHT_URL,
+  FI_WX_SEG_KM,
   applyFiCorridorRoadFilter,
   balticRoadRisk,
   balticSlowdownMult,
+  densifyCorridor,
   eventInFiBboxes,
   extractFiRoadRef,
   fiBboxInLimit,
   fiCorridorBboxes,
+  fiRoadConditionLabelPl,
   fiRoadOnCorridor,
   fiSeverity,
   fiTrafficUrl,
   fiTypeLabelPl,
+  fiWeatherToRiskEvents,
   filterInFiBboxes,
+  isSlipperySurface,
   nearFiPortTerminal,
   parseFiTrafficMessages,
+  parseFiWeatherStationsData,
+  parseFiWeatherStationsMeta,
   weightLimitRisk,
   type BalticRoadEvent,
+  type FiWeatherSensorReading,
 } from '../supabase/functions/_shared/integrations/roadBaltic.ts';
 import {
   runRoadFi,
@@ -123,15 +132,119 @@ function deps(
   return { d: { store, fetch: f, env: {}, now: () => NOW }, headerCalls };
 }
 
+const FI_WX_META = readFileSync(
+  resolve('tests/fixtures/fi-digitraffic-weather-stations-meta.json'), 'utf8',
+);
+const FI_WX_DATA = readFileSync(
+  resolve('tests/fixtures/fi-digitraffic-weather-stations-data.json'), 'utf8',
+);
+
 function allOkPages(body = EMPTY_FC): Record<string, string | number> {
   return {
     'traffic-message/v2/roadworks': body,
     'traffic-message/v2/traffic-announcements': body,
     'traffic-message/v2/weight-restrictions': body,
+    /* DP-216: stacje pogodowe — osobny odczyt (nie w expectedFetches bbox). */
+    'weather/v1/stations/data': FI_WX_DATA,
+    'weather/v1/stations': FI_WX_META,
   };
 }
 
 describe('BN6 road-fi — Digitraffic', () => {
+  it('F7 #802 B1: KELI po opisie EN/FI; value 1=Dry (nie wilgotna)', () => {
+    expect(fiRoadConditionLabelPl('Dry')).toBe('sucha');
+    expect(fiRoadConditionLabelPl('Kuiva')).toBe('sucha');
+    expect(fiRoadConditionLabelPl(1)).toBe('sucha'); /* żywe Digitraffic */
+    expect(fiRoadConditionLabelPl(2)).toBe('wilgotna');
+    expect(fiRoadConditionLabelPl(7)).toBe('lód');
+    expect(fiRoadConditionLabelPl('Ice')).toBe('lód');
+    expect(fiRoadConditionLabelPl('Frost')).toBe('szron');
+    expect(isSlipperySurface({ surfaceTempC: -1, moist: true })).toBe(true);
+    expect(isSlipperySurface({ surfaceTempC: 1, moist: true })).toBe(false);
+    const meta = parseFiWeatherStationsMeta(JSON.parse(FI_WX_META));
+    const readings = parseFiWeatherStationsData(JSON.parse(FI_WX_DATA), meta);
+    /* sucha zimna → brak ryzyka (nie zgadywać po kodzie 1=wilgotna) */
+    expect(readings.find((r) => r.id === '1205')).toMatchObject({
+      conditionPl: 'sucha', moist: false, icy: false, slippery: false,
+    });
+    expect(readings.find((r) => r.id === '1202')).toMatchObject({
+      conditionPl: 'wilgotna', moist: true, slippery: true,
+    });
+    expect(readings.find((r) => r.id === '1203')).toMatchObject({
+      conditionPl: 'lód', icy: true, slippery: true,
+    });
+    expect(readings.find((r) => r.id === '1204')).toMatchObject({
+      conditionPl: 'szron', icy: true, slippery: true,
+    });
+  });
+
+  it('F7 #802 B2/B3: klaster 25 km; tytuł gołoledzi; MEDIUM bez transportu', () => {
+    const meta = parseFiWeatherStationsMeta(JSON.parse(FI_WX_META));
+    const readings = parseFiWeatherStationsData(JSON.parse(FI_WX_DATA), meta);
+    const ev = fiWeatherToRiskEvents(readings);
+    expect(ev.every((e) => e.id.startsWith('fi-wx:seg:'))).toBe(true);
+    expect(ev.some((e) => e.id.includes('9999'))).toBe(false); /* >3 km */
+    expect(ev.every((e) => e.severity === 'MEDIUM')).toBe(true);
+    const icy = ev.find((e) => /Śliska nawierzchnia:/.test(e.title));
+    const coldWet = ev.find((e) => /Ryzyko gołoledzi:/.test(e.title));
+    expect(icy?.title).toMatch(/E75 \(FI\), .+, nawierzchnia /);
+    expect(coldWet?.title).toMatch(/Ryzyko gołoledzi: E75 \(FI\)/);
+    expect(ev.every((e) => !/Warunki pogodowe/.test(e.title))).toBe(true);
+    const withTransport = fiWeatherToRiskEvents(readings, undefined, {
+      hasTransportOnFiE75: true,
+    });
+    expect(withTransport.every((e) => e.severity === 'HIGH')).toBe(true);
+    const risk = balticRoadRisk('FI', icy!, 'https://tie.digitraffic.fi/api/weather/v1/stations/data', FI_ATTRIBUTION);
+    expect(risk.title).toMatch(/^Śliska nawierzchnia: E75 \(FI\)/);
+    expect(risk.severity).toBe('MEDIUM');
+  });
+
+  it('F7 #802 B2: 30 śliskich stacji → ≤ N odcinków; 0 HIGH bez transportu', () => {
+    const dens = densifyCorridor(CORRIDOR_FI);
+    const fake: FiWeatherSensorReading[] = [];
+    /* 30 punktów wzdłuż CORRIDOR_FI → klastry co FI_WX_SEG_KM, nie 30 ryzyk. */
+    for (let i = 0; i < 30; i++) {
+      const t = i / 29;
+      const idx = Math.min(CORRIDOR_FI.length - 1, Math.floor(t * (CORRIDOR_FI.length - 1)));
+      const a = CORRIDOR_FI[idx]!;
+      const b = CORRIDOR_FI[Math.min(CORRIDOR_FI.length - 1, idx + 1)]!;
+      const u = (t * (CORRIDOR_FI.length - 1)) % 1;
+      fake.push({
+        id: `s${i}`,
+        lat: a[0] + (b[0] - a[0]) * u,
+        lon: a[1] + (b[1] - a[1]) * u,
+        name: `stacja ${i}`,
+        airC: -5,
+        surfaceC: -3,
+        windMs: null,
+        gustMs: null,
+        conditionRaw: 'Moist',
+        conditionPl: 'wilgotna',
+        moist: true,
+        icy: false,
+        slippery: true,
+      });
+    }
+    let corridorLenKm = 0;
+    for (let i = 1; i < dens.length; i++) {
+      const a = dens[i - 1]!;
+      const b = dens[i]!;
+      const R = 6371;
+      const dLat = ((b[0] - a[0]) * Math.PI) / 180;
+      const dLon = ((b[1] - a[1]) * Math.PI) / 180;
+      const la1 = (a[0] * Math.PI) / 180;
+      const la2 = (b[0] * Math.PI) / 180;
+      const h = Math.sin(dLat / 2) ** 2
+        + Math.cos(la1) * Math.cos(la2) * Math.sin(dLon / 2) ** 2;
+      corridorLenKm += 2 * R * Math.asin(Math.min(1, Math.sqrt(h)));
+    }
+    const nSeg = Math.ceil(corridorLenKm / FI_WX_SEG_KM) + 1;
+    const ev = fiWeatherToRiskEvents(fake, dens);
+    expect(ev.length).toBeLessThanOrEqual(nSeg);
+    expect(ev.length).toBeLessThan(30);
+    expect(ev.every((e) => e.severity === 'MEDIUM')).toBe(true);
+  });
+
   it('wszystkie bboxy korytarza w limicie [20,59,32,71]', () => {
     for (const b of fiCorridorBboxes()) {
       expect(fiBboxInLimit(b)).toBe(true);
@@ -319,7 +432,7 @@ describe('BN6 runRoadFi — F7 #726', () => {
     const st = new MemStore();
     const { d, headerCalls } = deps(st, allOkPages());
     await runRoadFi(d);
-    expect(headerCalls.length).toBe(15); // 3 endpointy × 5 bboxów
+    expect(headerCalls.length).toBe(17); // 3×5 bbox + 2 weather (DP-216)
     for (const c of headerCalls) {
       expect(c.headers['Digitraffic-User']).toBeTruthy();
       expect(c.headers['Accept-Encoding']).toBe('gzip');

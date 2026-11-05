@@ -1,4 +1,25 @@
 
+## 2026-11-05 02:10 — DP-216 (#802): CI fix (visual NBSP + db okno śledzenia)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie; bez nowego `pilne`.
+- Scalanie: brak — brak „F7: gotowe”; CI @ `65c235c5`: unit ✔, visual zrzuty ✖ (`30 min` łamie linię na stan-systemu), db ✖ DP-205 korytarze (noc przed 03:00 PL).
+- **Krok:** `sysDemo` cadence/why `30\u00a0min`; status.sh DP-205 corridor → L205d + `plan_load_date=current_date-1` (okno już otwarte). Bez migracji.
+- **Dalej:** push → CI (+`db`) → F7. DP-210 nie zaczynać.
+
+## 2026-11-05 01:25 — DP-216 (#802): F7 r1 B1–B3 (FI wx)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 (#714/#716/#718/#720) w planie; bez nowego `pilne`.
+- Scalanie: brak — F7 #802 r1 **niegotowe** (B1–B3) @ `ea23be00`.
+- **Krok:** (B1) KELI po `sensorValueDescriptionEn/Fi` + `value` 1=Dry (żywe Digitraffic); sucha zimna ≠ śliskość; fixture z prawdziwej odpowiedzi. (B2) klaster `fi-wx:seg:{n}` co 25 km; HIGH tylko gdy `e49WindActiveCorridors` ma FI_E75/ROAD_FI; bez transportu MEDIUM. (B3) tytuł „Ryzyko gołoledzi” zamiast „Warunki pogodowe”. Vitest `bn6-road-fi` 23/23.
+- **Dalej:** push → CI (+`db`) → F7. DP-210 nie zaczynać.
+
+## 2026-11-05 00:55 — #800 SCALONE; start DP-216 (#801)
+
+- Skrzynka: #550 WSTRZYMANE; #798/DP-215 po merge; #801 DP-216 (bez etykiety `dla-cursora`, start z F7 #800); BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: **#800 SCALONE** `84021df9` (DP-215; F7 gotowe @ `a0b0d2bd`; unit+visual ✔). `deploy-main` robi resztę. Bez push na main.
+- **Krok DP-216** `pakiet/c2-dp-216-e49-dopisek`: (1) FI Digitraffic `/weather/v1/stations[+data]` → `fi-wx:` ROAD_FI ≤3 km; (2) tytuł wiatru „Silny wiatr na trasie: A1 (LV), …”; (3) cron **0408** route-hazards `17,47 * * * *` (HERE max 16/h); (4) Pomoc + „Wiatr — SMHI/FMI”; (5) Test 14 już w `e49-corridor-wind`. DP-210 nie zaczynać.
+- **Dalej:** testy → push → CI (+`db`) → F7. Po scaleniu DP-213 / DP-211…
+
 ## 2026-11-05 00:25 — DP-215 (#800): odświeżenie 11× stan-* Harmonogram (StageBar)
 
 - Skrzynka: #550 WSTRZYMANE; #798 DP-215; BN5–8 w planie. Bez nowego `pilne`.

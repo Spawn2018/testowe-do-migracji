@@ -22,10 +22,10 @@ describe('Stan systemu — dane', () => {
     expect(sourceThresholds()!.find((r) => r.key === 'SRC_WIND_H')?.value).toBe(2);
   });
 
-  it('wyglad/audyt-E (E-09): źródło „Wiatr — SMHI” z liczbą punktów; „Zagrożenia na trasie” bez „Próg 20 m/s nie jest sprawdzany”', () => {
+  it('wyglad/audyt-E (E-09) / DP-216 Z5: źródło „Wiatr — SMHI/FMI”; „Zagrożenia na trasie” bez „Próg 20 m/s nie jest sprawdzany”', () => {
     const rows = sourceHealth(NOW)!;
     const wind = rows.find((r) => r.id === 'wind')!;
-    expect(wind.name).toBe('Wiatr — SMHI');
+    expect(wind.name).toBe('Wiatr — SMHI/FMI');
     expect(wind.why).toMatch(/\d+ punktów/);
     expect(wind.why).toMatch(/2 h/);
     expect(rows.find((r) => r.id === 'hazards')!.why).not.toMatch(/Brak serii wiatru|nie jest sprawdzany/);

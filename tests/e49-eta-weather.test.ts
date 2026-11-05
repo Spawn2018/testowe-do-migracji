@@ -99,10 +99,15 @@ describe('E49-a etaWeather (DP-205 cz.3 / Z1 Z2)', () => {
       gustMs: 22,
       hold: false,
       atIso: '2026-11-04T12:00:00Z',
+      untilIso: '2026-11-04T16:00:00Z',
       side: 'CROSS',
+      addMin: 12,
     });
     expect(strong.severity).toBe('MEDIUM');
-    expect(strong.title).toMatch(/Silny wiatr/);
+    expect(strong.title).toMatch(/Silny wiatr na trasie:/);
+    expect(strong.title).toMatch(/E4 \(SE\)/);
+    expect(strong.title).toMatch(/22 m\/s z boku/);
+    expect(strong.title).toMatch(/\+12 min/);
     /* F7 #785 r1 pkt 5a: bez km w kluczu — nie sprawa na punkt co 25 km */
     expect(strong.dedup).toBe(`E49_WIND:${loadId}:SE_E4`);
     expect(strong.detail.audience).toBe('HHL_PRZEWOZNIK');
@@ -115,13 +120,31 @@ describe('E49-a etaWeather (DP-205 cz.3 / Z1 Z2)', () => {
       hold: true,
       atIso: '2026-11-04T12:00:00Z',
       untilIso: '2026-11-04T18:30:00Z',
+      addMin: 30,
     });
     expect(stop.severity).toBe('HIGH');
-    expect(stop.title).toMatch(/Postój przez wiatr/);
+    expect(stop.title).toMatch(/Postój przez wiatr:/);
     /* pkt 5c: eskalacja na TYM SAMYM kluczu (nie E49_WIND_HOLD:) */
     expect(stop.dedup).toBe(strong.dedup);
     expect(windCaseDedup(loadId, 'SE_E4')).toBe(strong.dedup);
     expect(stop.detail.audience).toBe('HHL_PRZEWOZNIK');
+  });
+
+  it('DP-216: tytuł LV A1 Saulkrasti–Ainaži (#783 pkt 7)', () => {
+    const r = windCaseRisk({
+      loadId: 'a0000000-0000-4000-8000-000000000216',
+      corridor: 'LV_A1',
+      km: 50,
+      gustMs: 21,
+      hold: false,
+      atIso: '2026-11-04T13:00:00Z',
+      untilIso: '2026-11-04T17:00:00Z',
+      side: 'CROSS',
+      addMin: 12,
+    });
+    expect(r.title).toBe(
+      'Silny wiatr na trasie: A1 (LV), Saulkrasti–Ainaži, 21 m/s z boku, 14:00–18:00, +12 min',
+    );
   });
 
   it('progi z ops_thresholds nadpisują domyślne (Z1 pkt 5)', () => {

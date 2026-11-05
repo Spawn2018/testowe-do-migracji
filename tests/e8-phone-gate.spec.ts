@@ -802,11 +802,11 @@ test.describe('wyglad/P10b-c Stan systemu (E23, E47, E19, E46)', () => {
     await boot(page, 'HHL');
     await openStatus(page);
     await expect(page.locator('[data-sys-tab]')).toHaveText(['Źródła danych', 'Błędy aplikacji', 'Bezpieczeństwo', 'Wydajność']);
-    /* wyglad/audyt-E (E-09; E49 Z5): + „Wiatr — SMHI”; „Zagrożenia na trasie” działa (wiatr liczy SMHI) */
+    /* wyglad/audyt-E (E-09; E49 Z5 / DP-216): + „Wiatr — SMHI/FMI”; „Zagrożenia na trasie” działa */
     await expect(page.locator('[data-sys-sum]')).toHaveText('1 nie działa · 2 częściowo albo bez pomiaru · 10 działa · 1 bez źródła');
     const states = await page.locator('[data-sys-source]').evaluateAll((e) => e.map((x) => (x as HTMLElement).dataset.state));
     expect(states.slice(0, 3)).toEqual(['down', 'partial', 'nomeasure']);
-    await expect(page.locator('[data-sys-source="wind"]')).toContainText('Wiatr — SMHI');
+    await expect(page.locator('[data-sys-source="wind"]')).toContainText('Wiatr — SMHI/FMI');
     expect(states.at(-1)).toBe('nosource');
     await expect(page.locator('[data-sys-source][data-state="ok"] [data-sys-check]')).toHaveCount(0);
     await page.locator('[data-sys-check="fuel"]').click();

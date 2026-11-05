@@ -103,6 +103,7 @@ import {
 import {
   EE_ATTRIBUTION, EE_DATEX_FEEDS, EE_DATEX_KEY_HEADER, EE_SOURCE_REF, EE_UA,
   FI_ANNOUNCEMENTS_URL, FI_ATTRIBUTION, FI_ROADWORKS_URL, FI_WEIGHT_URL,
+  FI_WEATHER_STATIONS_URL, FI_WEATHER_STATIONS_DATA_URL,
   LT_ATTRIBUTION, LT_RESTRICTIONS_URL, LT_UA, LT_WEATHER_URL,
   LV_ATTRIBUTION, LV_DOWNLOAD_FILE_URL, LV_FILE_INFO_URL,
   LV_NAP_BASE, LV_NAP_CODES, LV_NAP_KEY_HEADER, LV_SOURCE_REF, LV_UA,
@@ -118,10 +119,11 @@ import {
   eeDatexFeedUrl, fiCorridorBboxes, fiTrafficUrl, filterInEeBboxes, filterInFiBboxes,
   filterInLvBboxes, dimensionLimitRisk, filterInLtBboxes, getEeHeavyFeedCache, getEeSitesCache,
   isDimensionLimitEvent, isEeHeavyFeedCode,
-  isFiWeightLimitLike, ltWeatherToSlowdownEvents, lvFileInfoFirstId, lvIsFileIdMismatch,
+  isFiWeightLimitLike, fiWeatherToRiskEvents, ltWeatherToSlowdownEvents, lvFileInfoFirstId, lvIsFileIdMismatch,
   lvNapKeyAllowedForUrl, lvNapKeyEnv, lvNapUrlEnv,
   normalizeLvNapUrl,
-  lvWeatherToSlowdownEvents, parseEeFeedBody, parseFiTrafficMessages, parseLtRestrictions,
+  lvWeatherToSlowdownEvents, parseEeFeedBody, parseFiTrafficMessages, parseFiWeatherStationsData,
+  parseFiWeatherStationsMeta, parseLtRestrictions,
   parseLtWeather, parseLvFeedBody, probeBalticHost, probeEeDatexApi, readBalticFeedBody,
   setEeHeavyFeedCache, setEeSitesCache, weightLimitRisk,
   type BalticKeyMeta, type BalticRoadEvent, type EeSiteInfo, type LvNapCode,
@@ -3914,7 +3916,41 @@ export async function runRoadFi(deps: JobDeps): Promise<JobResult> {
   await fetchKind(FI_ANNOUNCEMENTS_URL);
   await fetchKind(FI_WEIGHT_URL);
 
-  if (fetchedOk === 0) {
+  /* DP-216 / F7 #802: Digitraffic weather ≤ 3 km → klaster 25 km; HIGH tylko z transportem FI_E75. */
+  let weatherFetched = 0;
+  let weatherEvents = 0;
+  {
+    const metaR = await readText(deps, FI_WEATHER_STATIONS_URL, { headers });
+    const dataR = await readText(deps, FI_WEATHER_STATIONS_DATA_URL, { headers });
+    if (metaR.ok && dataR.ok) {
+      weatherFetched = 2;
+      try {
+        const meta = parseFiWeatherStationsMeta(JSON.parse(metaR.text));
+        const readings = parseFiWeatherStationsData(JSON.parse(dataR.text), meta);
+        let hasTransportOnFiE75 = false;
+        if (deps.store.e49WindActiveCorridors) {
+          try {
+            const active = await deps.store.e49WindActiveCorridors();
+            hasTransportOnFiE75 = active.some((c) => /FI_E75|ROAD_FI/i.test(c));
+          } catch {
+            /* brak RPC → MEDIUM (bez zalewu powiadomień) */
+          }
+        }
+        const wx = fiWeatherToRiskEvents(readings, undefined, { hasTransportOnFiE75 });
+        weatherEvents = wx.length;
+        for (const e of wx) {
+          if (!byId.has(e.id)) byId.set(e.id, { event: e, sourceUrl: FI_WEATHER_STATIONS_DATA_URL });
+        }
+      } catch {
+        warnings.push('FI Digitraffic: nieczytelna odpowiedź (weather stations)');
+      }
+    } else {
+      if (!metaR.ok) warnings.push(metaR.warning);
+      if (!dataR.ok) warnings.push(dataR.warning);
+    }
+  }
+
+  if (fetchedOk === 0 && weatherFetched === 0) {
     const streak = await roadFiFailStreak(deps);
     if (streak >= 3) {
       await deps.store.raiseRisk(sourceDownRisk('ROAD_FI', warnings, now, FI_ROADWORKS_URL));
@@ -4004,6 +4040,8 @@ export async function runRoadFi(deps: JobDeps): Promise<JobResult> {
       events_raw: String(byId.size),
       events_near: String(near.length),
       fi_off_corridor: String(fiOffCorridor),
+      fi_weather_fetched: String(weatherFetched),
+      fi_weather_events: String(weatherEvents),
     },
   };
 }

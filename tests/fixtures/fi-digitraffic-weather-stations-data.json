@@ -1,0 +1,95 @@
+{
+  "dataUpdatedTime": "2026-11-05T00:10:00Z",
+  "stations": [
+    {
+      "id": 1201,
+      "dataUpdatedTime": "2026-11-05T00:10:00Z",
+      "sensorValues": [
+        { "name": "ILMA", "sensorValue": -4.0, "sensorUnit": "°C", "unit": "°C", "value": -4.0 },
+        { "name": "TIE_1", "sensorValue": -2.0, "sensorUnit": "°C", "unit": "°C", "value": -2.0 },
+        { "name": "KESKITUULI", "sensorValue": 4.0, "sensorUnit": "m/s", "unit": "m/s", "value": 4.0 },
+        { "name": "MAKSIMITUULI", "sensorValue": 7.0, "sensorUnit": "m/s", "unit": "m/s", "value": 7.0 },
+        {
+          "id": 27,
+          "stationId": 1201,
+          "name": "KELI_1",
+          "shortName": "Keli1",
+          "measuredTime": "2026-11-05T00:10:00Z",
+          "sensorValueDescriptionEn": "Wet",
+          "sensorValueDescriptionFi": "Märkä",
+          "unit": "***",
+          "value": 3.0
+        }
+      ]
+    },
+    {
+      "id": 1202,
+      "sensorValues": [
+        { "name": "ILMA", "sensorValue": -3.0, "unit": "°C", "value": -3.0 },
+        { "name": "TIE_1", "sensorValue": -1.0, "unit": "°C", "value": -1.0 },
+        {
+          "name": "KELI_1",
+          "sensorValueDescriptionEn": "Moist",
+          "sensorValueDescriptionFi": "Kostea",
+          "unit": "***",
+          "value": 2.0
+        }
+      ]
+    },
+    {
+      "id": 1203,
+      "sensorValues": [
+        { "name": "ILMA", "sensorValue": -8.0, "unit": "°C", "value": -8.0 },
+        { "name": "TIE_1", "sensorValue": -6.0, "unit": "°C", "value": -6.0 },
+        {
+          "name": "KELI_1",
+          "sensorValueDescriptionEn": "Ice",
+          "sensorValueDescriptionFi": "Jää",
+          "unit": "***",
+          "value": 7.0
+        }
+      ]
+    },
+    {
+      "id": 1204,
+      "sensorValues": [
+        { "name": "ILMA", "sensorValue": -7.0, "unit": "°C", "value": -7.0 },
+        { "name": "TIE_1", "sensorValue": -5.0, "unit": "°C", "value": -5.0 },
+        {
+          "name": "KELI_1",
+          "sensorValueDescriptionEn": "Frost",
+          "sensorValueDescriptionFi": "Kuura",
+          "unit": "***",
+          "value": 5.0
+        }
+      ]
+    },
+    {
+      "id": 1205,
+      "sensorValues": [
+        { "name": "ILMA", "sensorValue": -10.0, "unit": "°C", "value": -10.0 },
+        { "name": "TIE_1", "sensorValue": -8.0, "unit": "°C", "value": -8.0 },
+        {
+          "name": "KELI_1",
+          "sensorValueDescriptionEn": "Dry",
+          "sensorValueDescriptionFi": "Kuiva",
+          "unit": "***",
+          "value": 1.0
+        }
+      ]
+    },
+    {
+      "id": 9999,
+      "sensorValues": [
+        { "name": "TIE_1", "sensorValue": -3.0, "unit": "°C", "value": -3.0 },
+        {
+          "name": "KELI_1",
+          "sensorValueDescriptionEn": "Ice",
+          "sensorValueDescriptionFi": "Jää",
+          "unit": "***",
+          "value": 7.0
+        }
+      ]
+    }
+  ]
+}
