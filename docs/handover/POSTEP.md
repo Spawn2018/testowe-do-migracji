@@ -1,3 +1,10 @@
+## 2026-11-05 18:15 — #821 SCALONE; DP-224 C lazyRetry→pasek
+
+- Skrzynka: #817 PILNE W TOKU (cz. C); #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: **#821 SCALONE** `701a3114` (F7 gotowe @ `8d53a7a4`; unit+visual ✔). #813 wstrzymane.
+- **Krok DP-224 C** `pakiet/c2-dp-224-c-lazy-retry`: `lazyRetry` domyślnie `stale:'bar'` → `signalNewVersion` + NewVersionBar (bez cichego `reload`); AuthGate/powłoka/DriverPwa → `stale:'reload'`; `client_errors` `new_version_shown:chunk`. Testy lazy-retry + p10a. Dalej D/B1/B3/E (#817).
+- Bez push na main.
+
 ## 2026-11-05 17:40 — DP-224 B F7 #821 niegotowe (TTL + pokrycie)
 
 - Skrzynka: #817 PILNE W TOKU (cz. B→C/E); #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.

@@ -55,7 +55,17 @@ export function installErrorReporter(getSb: () => Promise<SupabaseClient>): () =
     send('error', d.message, d.stack ?? (e.filename ? `\n    at ${safePath(e.filename)}:${e.lineno}:${e.colno}` : null));
   };
   const onRejection = (e: PromiseRejectionEvent) => { const d = describe(e.reason); send('rejection', d.message, d.stack); };
+  /* DP-224 C / #817 C: skala cichych odświeżeń → licznik w client_errors (bez danych osobowych). */
+  const onNewVersion = (e: Event) => {
+    const reason = (e as CustomEvent<{ reason?: string }>).detail?.reason ?? 'chunk';
+    send('error', `new_version_shown:${reason}`, null);
+  };
   window.addEventListener('error', onError);
   window.addEventListener('unhandledrejection', onRejection);
-  return () => { window.removeEventListener('error', onError); window.removeEventListener('unhandledrejection', onRejection); };
+  window.addEventListener('wt-new-version', onNewVersion);
+  return () => {
+    window.removeEventListener('error', onError);
+    window.removeEventListener('unhandledrejection', onRejection);
+    window.removeEventListener('wt-new-version', onNewVersion);
+  };
 }

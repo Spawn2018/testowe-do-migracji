@@ -10,11 +10,13 @@ import { DemoFirstEntry } from './auth/DemoFirstEntry';
  * i aplikacja kierowcy w osobnych kawałkach — logowanie na telefonie nie pobiera ich przed pierwszym widokiem.
  */
 const loadShell = () => import('./TowerShell');
-const TowerShell = lazy(lazyRetry(loadShell));
-const DriverPwa = lazy(lazyRetry(() => import('./views/DriverPwa').then((m) => ({ default: m.DriverPwa }))));
+/* DP-224 C / #817 B2: start (powłoka / logowanie / PWA kierowcy) — twarde odświeżenie; reszta ekranów → pasek. */
+const bootRetry = { stale: 'reload' as const };
+const TowerShell = lazy(lazyRetry(loadShell, bootRetry));
+const DriverPwa = lazy(lazyRetry(() => import('./views/DriverPwa').then((m) => ({ default: m.DriverPwa })), bootRetry));
 
 // BK2: bramka logowania tylko w trybie Supabase (VITE_AUTH_MODE=supabase); demo bez zmian.
-const AuthGate = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('./auth/AuthGate'))) : null;
+const AuthGate = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED ? lazy(lazyRetry(() => import('./auth/AuthGate'), bootRetry)) : null;
 
 /* ekran startowy (logo, jak #wt-boot w index.html) na czas doczytania kawałka — zamiast pustego ekranu */
 function BootScreen() {

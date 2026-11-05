@@ -1,24 +1,29 @@
 /**
- * wyglad/P10a-a — skąd pasek nowej wersji i znacznik „na żywo” biorą dane (E22; PLAN P10a). Produkcja przed
- * podłączeniem: paska nie ma (`false`), znacznika nie ma (`null`). Wykonawca podłącza:
- * - nowa wersja — `version.json` z buildu, sprawdzany co 5 min i po powrocie do karty (E22 pkt 3);
+ * wyglad/P10a-a — skąd pasek nowej wersji i znacznik „na żywo” biorą dane (E22; PLAN P10a). Produkcja:
+ * - nowa wersja — sygnał z `lazyRetry` (stary chunk po wdrożeniu; DP-224 C / #817 B2) oraz docelowo `version.json`;
  * - „na żywo” — godzina ostatniego odświeżenia danych (Realtime albo zapas co 60 s) i brak połączenia (E22 pkt 2).
  * Demo: pasek przy `nowa-wersja=1` w adresie (dowody i testy), znacznik z godziny „teraz” i stanu sieci przeglądarki.
  * Warunek `import.meta.env.VITE_AUTH_MODE` wpisany wprost (strażnik I-0). Bez zapytań.
  */
 import { useEffect, useState } from 'react';
 import { getNowMs } from './frozenNow';
+import { isNewVersionSignaled, subscribeNewVersion } from './newVersionSignal';
 
 export function useNewVersion(): boolean {
   const demo = import.meta.env.VITE_AUTH_MODE !== 'supabase';
-  const read = () => demo && typeof window !== 'undefined' && /[?&]nowa-wersja=1\b/.test(window.location.hash);
+  const readDemo = () => demo && typeof window !== 'undefined' && /[?&]nowa-wersja=1\b/.test(window.location.hash);
+  const read = () => (demo ? readDemo() : isNewVersionSignaled());
   const [on, setOn] = useState(read);
   useEffect(() => {
-    if (!demo) return;
-    const f = () => setOn(read());
-    window.addEventListener('hashchange', f);
-    return () => window.removeEventListener('hashchange', f);
-  });
+    if (demo) {
+      const f = () => setOn(readDemo());
+      window.addEventListener('hashchange', f);
+      return () => window.removeEventListener('hashchange', f);
+    }
+    const f = () => setOn(isNewVersionSignaled());
+    setOn(isNewVersionSignaled());
+    return subscribeNewVersion(f);
+  }, [demo]);
   return on;
 }
 
