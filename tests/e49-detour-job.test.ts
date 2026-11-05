@@ -229,7 +229,7 @@ describe('detourCaseJob helpers', () => {
       .toMatch(/sprawdź/i);
     expect(riskBanForEta({ country: 'SE', etaIso: null }).text).toMatch(/sprawdź/i);
 
-    // F7 #805 B2: holidayHit null → warn (nigdy ok).
+    // F7 #805 B2 / N1: holidayHit null (brak danych lub błąd RPC) → warn (nigdy ok).
     expect(riskBanForEta({
       country: 'PL',
       etaIso: '2026-11-03T12:00:00Z',
@@ -239,6 +239,12 @@ describe('detourCaseJob helpers', () => {
       level: 'warn',
       text: expect.stringMatching(/święta nie sprawdzono/i),
     });
+    // N1: truckBanHolidayHit przy r.error → null → merge → holidayBan null → ten sam warn.
+    expect(riskBanForEta({
+      country: 'SE',
+      etaIso: '2026-11-03T12:00:00Z', // wtorek SE
+      holidayHit: null, // symulacja RPC error
+    }).level).toBe('warn');
 
     // F7 #805 B4(a): okno objazdu PL w niedzielę (zakaz), ETA placu we wtorek → BAN warn.
     // (F7 pisało „sobota”; PL zakaz H-12 = niedziela — to samo: punkt placu ≠ okno jazdy.)

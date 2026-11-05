@@ -6,6 +6,7 @@ import {
   seWeekendBanHit,
   plSundayBanHit,
   holidayBanHit,
+  mergeHolidayBanSamples,
 } from '../supabase/functions/_shared/here/windAndBans.ts';
 
 describe('H-7 mapImage', () => {
@@ -50,6 +51,15 @@ describe('H-12 święta', () => {
     expect(holidayBanHit(true)).toBe(true);
     expect(holidayBanHit(false)).toBe(false);
     expect(holidayBanHit(null)).toBe(false);
+  });
+
+  // F7 #805 N1: błąd RPC (null) bez true → null (BAN warn); true wygrywa.
+  it('mergeHolidayBanSamples — null przy błędzie RPC', () => {
+    expect(mergeHolidayBanSamples([false, false, false])).toBe(false);
+    expect(mergeHolidayBanSamples([false, null, false])).toBeNull();
+    expect(mergeHolidayBanSamples([null])).toBeNull();
+    expect(mergeHolidayBanSamples([false, true, null])).toBe(true);
+    expect(mergeHolidayBanSamples([null, true])).toBe(true);
   });
 });
 
