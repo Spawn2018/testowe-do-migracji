@@ -1,3 +1,11 @@
+## 2026-11-05 07:40 — DP-211 F7 r1 niegotowe B1–B4 (#805)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: brak F7 gotowe (niegotowe @ `f98ccde` / po rebase CI zielone @ `054ec471`).
+- **Krok F7 r1:** (B1) BAN w oknie jazdy wariantu (nie eta_site); (B2) holidayHit null → warn; (B3) WORKS bez bieżącego zamknięcia + geometria objazdu; (B4) testy. Bez migracji. DP-210 nie zaczynać.
+- **Dalej:** push → CI → F7. Potem DP-212…
+
+
 ## 2026-11-05 07:10 — #808 SCALONE; wznowienie DP-211 (#805)
 
 - Skrzynka: #807 zamknięte po merge; #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
