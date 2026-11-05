@@ -85,8 +85,8 @@ export type BasemapHealth = TileHealth & { via: TileVia; reported: boolean; caus
 export const DEFAULT_CENTER: L.LatLngTuple = [58.5, 18.5];
 export const DEFAULT_ZOOM = 4.2;
 
-/** Liczniki do testów i pomiaru (`window.__wtMapPool`). */
-export const poolStats = { created: 0, reused: 0, oneOff: 0, destroyed: 0 };
+/** Liczniki do testów i pomiaru (`window.__wtMapPool`). `roadsLoads` = wołania sieciowe legów (DP-224 B). */
+export const poolStats = { created: 0, reused: 0, oneOff: 0, destroyed: 0, roadsLoads: 0 };
 
 let entry: PoolEntry | null = null;
 let inUse = false;
@@ -320,6 +320,8 @@ export function drawCorridorLines(e: PoolEntry, spec: LinesSpec, load: boolean):
   paintHereFerries(e, pre);
   if (e.lines.legs) paintRoadLegs(route, linesInScope(e.lines.legs, pre).map((l) => l.line));
   if (!load) return Promise.resolve();
+  /* DP-224 B (#817): legi już w puli sesji — Kokpit↔Mapa↔karta tylko przerysowuje zakres, bez map_display_state */
+  if (e.lines.legs) return Promise.resolve();
   /* Bramka przez import.meta.env (nie PROD_BUILD), żeby Vite wyciął applyBasemap z paczki demo (I-2). */
   if (import.meta.env.VITE_AUTH_MODE !== 'supabase') {
     /* audyt D-07 (E45, E1): demo — odcinki lądowe; BN9-c5: legi przykładowe z kodem, ten sam filtr co PROD */
@@ -327,6 +329,7 @@ export function drawCorridorLines(e: PoolEntry, spec: LinesSpec, load: boolean):
     paintRoadLegs(route, linesInScope(e.lines.legs, pre).map((l) => l.line));
     return Promise.resolve();
   }
+  poolStats.roadsLoads += 1;
   return import('./applyBasemap').then(async ({ loadRoadLines, loadRoadLegs, loadFerryLines }) => {
     /* #667: `loadRoadLines` dociąga brakujące legi rdzenia (here-roads); legi z kodem z tego samego odczytu stanu */
     await loadRoadLines();
@@ -548,7 +551,7 @@ export function __resetMapPool(): void {
   entry = null;
   inUse = false;
   holder = null;
-  poolStats.created = 0; poolStats.reused = 0; poolStats.oneOff = 0; poolStats.destroyed = 0;
+  poolStats.created = 0; poolStats.reused = 0; poolStats.oneOff = 0; poolStats.destroyed = 0; poolStats.roadsLoads = 0;
 }
 
 /** Pomiar/testy: liczba słuchaczy `zoomend` i `moveend` na wspólnej mapie (wyciek słuchaczy = rośnie po przejściach). */
