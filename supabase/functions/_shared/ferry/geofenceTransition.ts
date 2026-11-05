@@ -1,8 +1,8 @@
 /**
- * DP-128 F7 r2 + DP-222 F7 #818 B1: ATD/ATA z AIS przy przejściu geofence (histereza 3/4 km).
- * ATA: luka ≤20 min. ATD: ≤20 min, albo ≤60 min gdy p_out ma SOG≥3 albo kolejne
- * pozycje oddalają się od portu (AISSTREAM co 10–25 min w Zatoce). ATD = ostatnia
- * w strefie z SOG≥1, inaczej ostatnia w strefie. Pas 3–4 km pomijany.
+ * DP-128 F7 r2 + DP-222 F7 #818 B1/B2: ATD/ATA z AIS przy przejściu geofence (histereza 3/4 km).
+ * ATD/ATA: luka ≤20 min, albo ≤60 min przy dowodzie ruchu (SOG≥3 / oddalanie ATD /
+ * zbliżanie ATA — AISSTREAM co 10–25 min). ATD = ostatnia w strefie z SOG≥1,
+ * inaczej ostatnia w strefie. Pas 3–4 km pomijany.
  */
 
 export type GeofencePos = {
@@ -20,8 +20,9 @@ export const GEOFENCE_IN_KM = 3;
 export const GEOFENCE_OUT_KM = 4;
 /** Maks. przerwa pary ATD/ATA bez dowodu ruchu (SOG / oddalanie). */
 export const GEOFENCE_PAIR_MAX_MS = 20 * 60_000;
-/** DP-222: AISSTREAM rzadki — para ATD do 60 min przy SOG≥3 albo oddalaniu. */
+/** DP-222: AISSTREAM rzadki — para ATD/ATA do 60 min przy SOG≥3 / oddalaniu / zbliżaniu. */
 export const GEOFENCE_ATD_SPARSE_MAX_MS = 60 * 60_000;
+export const GEOFENCE_ATA_SPARSE_MAX_MS = GEOFENCE_ATD_SPARSE_MAX_MS;
 /** ATD = ostatnia w strefie z SOG ≥ 1 kn (ruszanie z nabrzeża). */
 export const GEOFENCE_ATD_MOVING_SOG_KN = 1;
 export const GEOFENCE_CLEAR_SOG_KN = 3;
@@ -125,10 +126,30 @@ export function findAtdTransitionIso(
   return best;
 }
 
+/** DP-222 B2: para ATA do 60 min przy SOG≥3 na p_out albo zbliżaniu do hubu. */
+function ataAllowsSparseGap(
+  sorted: GeofencePos[],
+  clearIdx: number,
+  inIdx: number,
+  hub: { lat: number; lon: number },
+): boolean {
+  const pOut = sorted[clearIdx]!;
+  if (sogAtLeast(pOut.sog_kn, GEOFENCE_CLEAR_SOG_KN)) return true;
+  let dPrev = haversineKm(pOut.lat, pOut.lon, hub.lat, hub.lon);
+  for (let j = clearIdx + 1; j < inIdx; j++) {
+    const r = sorted[j]!;
+    const d = haversineKm(r.lat, r.lon, hub.lat, hub.lon);
+    if (d < dPrev - 0.05) return true;
+    dPrev = Math.min(dPrev, d);
+  }
+  return false;
+}
+
 /**
  * ATA: najwcześniejsza pozycja ciągłej serii w porcie (≤3 km), przed którą
  * ostatnia pozycja z SOG ≥3 albo >4 km (pas 3–4 bez SOG pomijany), bez ≤3 km
- * pomiędzy, w ≤20 min. Czas = p_in.t.
+ * pomiędzy. Luka ≤20 min, albo ≤60 min przy SOG≥3 / zbliżaniu (DP-222 B2).
+ * Czas = p_in.t.
  */
 export function findAtaTransitionIso(
   rows: GeofencePos[],
@@ -138,22 +159,27 @@ export function findAtaTransitionIso(
     .filter((r) => Number.isFinite(Date.parse(r.observed_at)))
     .slice()
     .sort((a, b) => a.observed_at.localeCompare(b.observed_at));
-  let lastClear: GeofencePos | null = null;
-  for (const row of sorted) {
+  let lastClearIdx: number | null = null;
+  for (let i = 0; i < sorted.length; i++) {
+    const row = sorted[i]!;
     const d = haversineKm(row.lat, row.lon, hub.lat, hub.lon);
     if (d <= GEOFENCE_IN_KM) {
-      if (lastClear) {
+      if (lastClearIdx != null) {
+        const lastClear = sorted[lastClearIdx]!;
         const gap = Date.parse(row.observed_at) - Date.parse(lastClear.observed_at);
-        if (gap >= 0 && gap <= GEOFENCE_PAIR_MAX_MS) {
+        const maxMs = ataAllowsSparseGap(sorted, lastClearIdx, i, hub)
+          ? GEOFENCE_ATA_SPARSE_MAX_MS
+          : GEOFENCE_PAIR_MAX_MS;
+        if (gap >= 0 && gap <= maxMs) {
           return new Date(row.observed_at).toISOString();
         }
       }
       /* W porcie bez ważnej pary — dalsze punkty serii nie są początkiem wejścia. */
-      lastClear = null;
+      lastClearIdx = null;
       continue;
     }
     if (isClearOutside(d, row.sog_kn)) {
-      lastClear = row;
+      lastClearIdx = i;
       continue;
     }
     /* Pas 3–4 km bez SOG≥3: pomijaj — lastClear zostaje. */

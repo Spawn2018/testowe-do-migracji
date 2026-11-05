@@ -1,3 +1,10 @@
+## 2026-11-05 12:55 — DP-222 F7 #818 B2 (ATA NYN + DOPLYNAL)
+
+- Skrzynka: #814 PILNE w toku (#818); #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne` poza #814.
+- Scalanie: brak F7 gotowe — F7 #818 r1 @ `1631229` **niegotowe** (B2). Rebase na `main` (#815 `e78368f5`). #813 nadal wstrzymane.
+- **Krok F7 B2:** (1) `findAtaTransitionIso` — luka ≤60 min przy SOG≥3 / zbliżaniu; (2) backfill **0412** — ATA NYN + status DOPLYNAL gdy ATA / późniejszy ATD / arrival+6h, inaczej W_REJSIE; (3) `statusAfterGdnNynAtd` + `closeStaleGdnNynWithoutAta` po UMG i w AIS. Testy: Wawel + późniejszy ATD → DOPLYNAL; BS-03 trwający → W_REJSIE; dp128+dp222+integrations **84/84**.
+- **Dalej:** push → CI (+`db`) → F7. Po nałożeniu 0412: lista ATD/ATA/status GDN-NYN 7 d. Bez push na main.
+
 ## 2026-11-05 12:25 — DP-222 F7 #818 B1 (geofence ≤60 min) + #815 SCALONE
 
 - Skrzynka: #814 PILNE w toku (#818); #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne` poza #814.

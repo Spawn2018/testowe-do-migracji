@@ -366,8 +366,8 @@ export interface SyncStore {
     sinceIso: string,
   ): Promise<string | null>;
   /**
-   * DP-128 F7 r1: ATA — pierwsze wejście ≤3 km po poprzedniej (>4 km lub SOG≥3) w ≤20 min,
-   * od `sinceIso` (depRef). Brak przejścia → null.
+   * DP-128 / DP-222 B2: ATA — pierwsze wejście ≤3 km po poprzedniej (>4 km lub SOG≥3);
+   * luka ≤20 min albo ≤60 min przy SOG≥3 / zbliżaniu; od `sinceIso` (depRef).
    */
   firstPortEntryAfter?(
     vesselId: string,
@@ -609,6 +609,51 @@ function sailingActualPatch(
   const patch: SailingPatch = { ...actual };
   if (s.source !== 'RECZNIE' && s.status !== 'ODWOLANY') patch.status = status;
   return patch;
+}
+
+/**
+ * DP-222 F7 #818 B2: po ATD GDN-NYN — nie zostawiaj W_REJSIE na zawsze.
+ * ATA → DOPLYNAL; bez ATA + (późniejszy rejs z ATD LUB arrival+6h < now) → DOPLYNAL;
+ * trwający (np. BS-03) → W_REJSIE.
+ */
+export function statusAfterGdnNynAtd(
+  s: Pick<DbSailing, 'id' | 'vessel_id' | 'route' | 'departure_at' | 'arrival_at'>,
+  peers: readonly Pick<DbSailing, 'id' | 'vessel_id' | 'departure_at' | 'actual_departure_at'>[],
+  nowMs: number,
+  ataIso: string | null = null,
+): 'W_REJSIE' | 'DOPLYNAL' {
+  if (ataIso) return 'DOPLYNAL';
+  if (s.route !== 'GDN-NYN') return 'W_REJSIE';
+  const depMs = Date.parse(s.departure_at);
+  const laterLeft = peers.some((x) =>
+    x.vessel_id === s.vessel_id
+    && x.id !== s.id
+    && x.actual_departure_at != null
+    && Date.parse(x.departure_at) > depMs);
+  if (laterLeft) return 'DOPLYNAL';
+  if (Date.parse(s.arrival_at) + 6 * 3600_000 < nowMs) return 'DOPLYNAL';
+  return 'W_REJSIE';
+}
+
+/** DP-222 B2: W_REJSIE GDN-NYN bez ATA → DOPLYNAL gdy późniejszy ATD albo arrival+6h. */
+async function closeStaleGdnNynWithoutAta(deps: JobDeps, _sinceIso?: string): Promise<number> {
+  const nowMs = deps.now().getTime();
+  /* Jak backfill 0412 — 7 d (portnet since=1 d za krótki na „stary” GDN-NYN). */
+  const lookback = new Date(nowMs - 7 * 864e5).toISOString();
+  const existing = await deps.store.sailingsSince(lookback);
+  let updated = 0;
+  for (const s of existing) {
+    if (s.route !== 'GDN-NYN') continue;
+    if (s.status !== 'W_REJSIE') continue;
+    if (s.actual_arrival_at != null) continue;
+    if (s.source === 'RECZNIE') continue;
+    if (statusAfterGdnNynAtd(s, existing, nowMs, null) !== 'DOPLYNAL') continue;
+    if (await deps.store.updateSailing(s.id, { status: 'DOPLYNAL' })) {
+      updated += 1;
+      s.status = 'DOPLYNAL';
+    }
+  }
+  return updated;
 }
 
 async function applySailings(
@@ -2115,11 +2160,15 @@ export async function runFerryPortnet(deps: JobDeps): Promise<JobResult> {
   warnings.push(...v2c.warnings);
   risks += v2c.risks;
 
-  /* BN3 pkt 7: Urząd Morski Gdynia — zapas ETA/ATA/ETD Stena GDY↔KAA. */
+  /* BN3 pkt 7: Urząd Morski Gdynia — zapas ETA/ATA/ETD Stena GDY↔KAA + DP-222 Polferries GDN. */
   const umg = await applyUmgdyStenaBackup(deps, since);
   warnings.push(...umg.warnings);
   updated += umg.updated;
   risks += umg.risks;
+
+  /* DP-222 F7 #818 B2: po UMG — domknij GDN-NYN W_REJSIE bez ATA (późniejszy ATD / arrival+6h). */
+  const closedGdn = await closeStaleGdnNynWithoutAta(deps);
+  updated += closedGdn;
 
   return {
     /* Winter-nav / v2 / UMG / cancel-suspect: awaria → ryzyko, bez wywracania ok Portnet. */
@@ -2127,6 +2176,7 @@ export async function runFerryPortnet(deps: JobDeps): Promise<JobResult> {
     updated, risks, warnings,
     observations: {
       ...(closed ? { closed_without_ata: String(closed) } : {}),
+      ...(closedGdn ? { dp222_closed_gdn: String(closedGdn) } : {}),
       ...(winter.hits ? { winter_hits: String(winter.hits) } : {}),
       ...(v2c.fihel ? { port_call_v2_fihel_cancelled: '1' } : {}),
       port_call_v2_fleet_n: String(v2c.fleet),
@@ -2516,11 +2566,13 @@ async function applyUmgdyStenaBackup(deps: JobDeps, sinceIso: string): Promise<{
       }
       if (pick.kind !== 'hit') continue;
       const hit = pick.item;
-      const patch = sailingActualPatch(hit, { actual_departure_at: c.atUtc }, 'W_REJSIE');
+      /* DP-222 B2: past ETD → ATD; status DOPLYNAL gdy późniejszy ATD / arrival+6h. */
+      const nextSt = statusAfterGdnNynAtd(hit, existing, nowMs, null);
+      const patch = sailingActualPatch(hit, { actual_departure_at: c.atUtc }, nextSt);
       if (await deps.store.updateSailing(hit.id, patch)) {
         updated += 1;
         hit.actual_departure_at = c.atUtc;
-        if (hit.source !== 'RECZNIE' && hit.status !== 'ODWOLANY') hit.status = 'W_REJSIE';
+        if (hit.source !== 'RECZNIE' && hit.status !== 'ODWOLANY') hit.status = nextSt;
       }
       continue;
     }
@@ -3555,14 +3607,15 @@ export async function runFerryAis(deps: JobDeps): Promise<JobResult> {
           }
         }
         if (depAt && acceptActualDepartureAt(depAt, s.departure_at, nowD.getTime(), prevArr)) {
-          // #446: status W_REJSIE przy actual_departure_at (ODWOLANY bez zmian — updateSailing / trigger).
+          // #446 + DP-222 B2: GDN-NYN → DOPLYNAL gdy późniejszy ATD / arrival+6h (nie W_REJSIE na zawsze).
+          const nextSt = statusAfterGdnNynAtd(s, sailings, nowD.getTime(), null);
           const ok = await deps.store.updateSailing(s.id, {
             actual_departure_at: depAt,
-            ...(s.status === 'ODWOLANY' ? {} : { status: 'W_REJSIE' }),
+            ...(s.status === 'ODWOLANY' ? {} : { status: nextSt }),
           });
           if (ok) {
             s.actual_departure_at = depAt;
-            if (s.status !== 'ODWOLANY') s.status = 'W_REJSIE';
+            if (s.status !== 'ODWOLANY') s.status = nextSt;
             departures++;
             observations[`${v.name}:DEP`] = `WYPŁYNĄŁ_${depAt}`;
           }
@@ -3668,6 +3721,12 @@ export async function runFerryAis(deps: JobDeps): Promise<JobResult> {
   }
 
   // Zawsze wpis w integration_runs — Stan systemu widzi ostatni przebieg (#421 F7 pkt 6).
+  /* DP-222 B2: domknięcie starych GDN-NYN W_REJSIE bez ATA (późniejszy ATD / arrival+6h). */
+  const closedGdn = await closeStaleGdnNynWithoutAta(
+    deps, new Date(nowD.getTime() - 2 * 864e5).toISOString(),
+  );
+  if (closedGdn) observations.dp222_closed_gdn = String(closedGdn);
+
   await deps.store.recordRun('ferry-departures', true, {
     job: 'ferry-departures', mode: 'LIVE', ok: true, departures, observations,
   });

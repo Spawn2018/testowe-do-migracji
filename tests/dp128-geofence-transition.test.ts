@@ -1,6 +1,6 @@
 /**
- * DP-128 F7 r2 + DP-222 F7 #818 B1 — geofence ATD/ATA (3/4 km; ATA ≤20 min;
- * ATD ≤20/60 min + SOG≥1; pas 3–4; stronicowanie). Etap: BN4 / C2.
+ * DP-128 F7 r2 + DP-222 F7 #818 B1/B2 — geofence ATD/ATA (3/4 km;
+ * ATD/ATA ≤20/60 min + SOG; pas 3–4; stronicowanie). Etap: BN4 / C2.
  */
 import { describe, expect, it } from 'vitest';
 import {
@@ -155,6 +155,18 @@ describe('DP-128 geofenceTransition — pure', () => {
       pos('2026-11-04T16:22:00.000Z', out.lat, out.lon, 0),
     ];
     expect(findAtdTransitionIso(rows, GDN)).toBeNull();
+  });
+
+  it('DP-222 B2: ATA NYN luka 40 min + SOG≥3 → wejście; bez SOG/zbliżania → bez', () => {
+    const out = northOf(NYN, 6);
+    expect(findAtaTransitionIso([
+      pos('2026-11-03T10:00:00.000Z', out.lat, out.lon, 8),
+      pos('2026-11-03T10:40:00.000Z', NYN.lat, NYN.lon, 0),
+    ], NYN)).toBe('2026-11-03T10:40:00.000Z');
+    expect(findAtaTransitionIso([
+      pos('2026-11-03T10:00:00.000Z', out.lat, out.lon, 0),
+      pos('2026-11-03T10:40:00.000Z', NYN.lat, NYN.lon, 0),
+    ], NYN)).toBeNull();
   });
 
   it('histereza HEL↔HELA (~3,27 km): w strefie martwej 3–4 km bez ATD/ATA', () => {
