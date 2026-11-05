@@ -1,3 +1,10 @@
+## 2026-11-05 20:35 — DP-222 BS-04 F7 #824 niegotowe → vessel_id
+
+- Skrzynka: #814 PILNE BS-04; #817 po BS-04; #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: brak F7 gotowe — F7 #824 @ `a2bf7e0d` **niegotowe** (brak przyczyny + brak ścieżki vessel_id). CI unit ✔; visual w toku na starym SHA.
+- **Krok F7:** `aisShipFixForFerryKey` / `ferryTrackInfo` — po `voyage` match po `vessel_id`/MMSI z `ferry_sailings_map` (indeks w aisDb); test „Wawel bez voyage + nazwa Nova → Hel”. Potem CI→F7, DP-224 B1/B3/E.
+- Bez push na main.
+
 ## 2026-11-05 20:10 — #823 SCALONE; start DP-222 BS-04 (zła pozycja)
 
 - Skrzynka: #814 PILNE BS-04 (przed DP-224 B1); #817 D SCALONE; #550 WSTRZYMANE; BN5–8 w planie.

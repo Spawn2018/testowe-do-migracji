@@ -160,11 +160,67 @@ function shipFixFromAis(
   };
 }
 
+/** F7 #824: `sailing_id` → `vessel_id` / MMSI z `ferry_sailings_map` (albo z testu). */
+export type SailingVesselRef = { vesselId: string; mmsi?: string };
+
+let sailVesselById = new Map<string, SailingVesselRef>();
+
+/** Indeks z ostatniego odczytu `ferry_sailings_map` (aisDb) — bez osobnego prop drill. */
+export function setSailingVesselIndex(
+  rows: readonly Pick<SailingMapRow, 'sailing_id' | 'vessel_id' | 'mmsi'>[],
+): void {
+  const next = new Map<string, SailingVesselRef>();
+  for (const r of rows) {
+    if (!r.sailing_id || !r.vessel_id) continue;
+    next.set(r.sailing_id, {
+      vesselId: r.vessel_id,
+      mmsi: r.mmsi != null ? String(r.mmsi) : undefined,
+    });
+  }
+  sailVesselById = next;
+}
+
+export function sailingVesselRef(sailingId: string): SailingVesselRef | null {
+  return sailVesselById.get(sailingId) ?? null;
+}
+
+export type FerryShipLookup = {
+  vesselId?: string | null;
+  mmsi?: string | null;
+  sailings?: readonly Pick<SailingMapRow, 'sailing_id' | 'vessel_id' | 'mmsi'>[];
+};
+
+function resolveVesselRef(ferryKey: string, opts?: FerryShipLookup): SailingVesselRef | null {
+  if (opts?.vesselId) {
+    return { vesselId: opts.vesselId, mmsi: opts.mmsi != null ? String(opts.mmsi) : undefined };
+  }
+  const row = opts?.sailings?.find((r) => r.sailing_id === ferryKey);
+  if (row?.vessel_id) {
+    return { vesselId: row.vessel_id, mmsi: row.mmsi != null ? String(row.mmsi) : undefined };
+  }
+  return sailingVesselRef(ferryKey);
+}
+
+function markerForVessel(
+  live: readonly AisPosition[],
+  ferryKey: string,
+  ref: SailingVesselRef,
+): AisPosition | undefined {
+  return live.find((x) => {
+    const idOk = x.vesselId === ref.vesselId;
+    const mmsiOk = !!ref.mmsi && !!x.mmsi && x.mmsi === ref.mmsi;
+    if (!idOk && !mmsiOk) return false;
+    if (x.voyage?.sailingId && x.voyage.sailingId !== ferryKey) return false;
+    return true;
+  });
+}
+
 /**
- * DP-222: pozycja statku dla auta na promie — najpierw `voyage.sailingId` (= `loads.sailing_id`),
- * potem nazwa (bez „M/F”). Dzięki temu działa, gdy rejsu nie ma w `useTowerStore.sailings`.
- * BS-04 (#814): przy dwóch statkach tej samej linii (GDN→NYN i NYN→GDN) nie bierz markera
- * już przypiętego do **innego** rejsu — nawet gdy nazwa z `ferry` / store jest nieaktualna.
+ * DP-222: pozycja statku dla auta na promie — kolejność:
+ * 1) `voyage.sailingId` (= `loads.sailing_id`),
+ * 2) F7 #824: `vessel_id` / MMSI rejsu (mapa / indeks / opts) — **nie** nazwa,
+ * 3) nazwa (bez „M/F”), z odrzuceniem markera z obcym rejsem.
+ * BS-04 (#814): przy dwóch statkach tej samej linii nie bierz obcego kursu.
  */
 export function aisShipFixForFerryKey(
   ferryKey: string,
@@ -172,6 +228,7 @@ export function aisShipFixForFerryKey(
   vesselName: string | null | undefined,
   nowIso: string,
   tone: (ts: string, nowIso: string) => 'fresh' | 'stale',
+  opts?: FerryShipLookup,
 ): {
   lat: number; lng: number; ts: string; stale: boolean; vessel: string;
   estimated?: { lastAisTs: string | null };
@@ -179,6 +236,11 @@ export function aisShipFixForFerryKey(
   const live = positions.filter((x) => x.source !== 'seed');
   const byVoyage = live.find((x) => x.voyage?.sailingId === ferryKey);
   if (byVoyage) return shipFixFromAis(byVoyage, nowIso, tone);
+  const ref = resolveVesselRef(ferryKey, opts);
+  if (ref) {
+    const byVessel = markerForVessel(live, ferryKey, ref);
+    if (byVessel) return shipFixFromAis(byVessel, nowIso, tone);
+  }
   const key = vesselKey(vesselName) || (ferryKey.startsWith('v:') ? ferryKey.slice(2) : '');
   if (!key) return null;
   const byName = live.find((x) => {
@@ -253,10 +315,18 @@ export function ferryTrackInfo(opts: {
   routeText: string | null;
   positions: readonly AisPosition[];
   locale: Locale;
+  /** F7 #824: `vessel_id` rejsu, gdy markera po `voyage` brak. */
+  vesselId?: string | null;
+  mmsi?: string | null;
+  sailings?: FerryShipLookup['sailings'];
 }): FerryTrackInfo {
   const live = opts.positions.filter((x) => x.source !== 'seed');
   const sid = opts.sailingId || null;
   const byVoyage = sid ? live.find((x) => x.voyage?.sailingId === sid) : undefined;
+  const ref = sid
+    ? resolveVesselRef(sid, { vesselId: opts.vesselId, mmsi: opts.mmsi, sailings: opts.sailings })
+    : null;
+  const byVessel = sid && ref ? markerForVessel(live, sid, ref) : undefined;
   const key = vesselKey(opts.vessel);
   const byName = key
     ? live.find((x) => {
@@ -266,7 +336,7 @@ export function ferryTrackInfo(opts: {
       return true;
     })
     : undefined;
-  const p = byVoyage ?? byName;
+  const p = byVoyage ?? byVessel ?? byName;
   const route = opts.routeText || (p?.voyage ? voyageRouteText(opts.locale, p.voyage) : null);
   const pos: FerryTrackInfo['pos'] = !p ? { kind: 'none' }
     : p.estimated ? { kind: 'est', lastAisTs: p.estimated.lastAisTs }
