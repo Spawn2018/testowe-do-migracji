@@ -1156,17 +1156,26 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
           }
         }
         const pilots = pilotsByLoad.get(leg.loadId) ?? [];
-        // DP-211: święto H-12 przy ETA (PL/SE); weekend liczy riskBanForEta z ETA wariantu.
+        // DP-211 F7 #805 B1: święto w oknie jazdy objazdu — nie eta_site (plac).
+        // Tu nie znamy jeszcze decideBy/duration; próbki: teraz, +6 h, +24 h (kraj nogi).
+        // Brak kraju PL/SE albo błąd RPC → null (riskBanForEta → warn, nigdy ok).
         let holidayBan: boolean | null = null;
         const banCountry = /^SE[_-]/i.test(leg.code) || leg.code === 'SE_E4' || leg.code === 'SE_E22'
           ? 'SE' as const
           : (/^PL[_-]|PL_ROAD|PL_EE/i.test(leg.code) ? 'PL' as const : null);
-        const banTs = row.eta_site
-          ? String(row.eta_site)
-          : (ferryDepIso && Number.isFinite(Date.parse(ferryDepIso)) ? ferryDepIso : null);
-        if (banCountry && banTs) {
+        if (banCountry) {
           try {
-            holidayBan = await this.truckBanHolidayHit(banCountry, banTs);
+            const nowMs = Date.now();
+            const samples = [0, 6, 24].map((h) => new Date(nowMs + h * 3600_000).toISOString());
+            let any: boolean | null = false;
+            for (const ts of samples) {
+              const hit = await this.truckBanHolidayHit(banCountry, ts);
+              if (hit === true) {
+                any = true;
+                break;
+              }
+            }
+            holidayBan = any;
           } catch {
             holidayBan = null;
           }

@@ -9,6 +9,8 @@ import {
   riskBanForEta,
   riskWorksOnCorridor,
   looksLikeRoadWorks,
+  banDriveWindow,
+  worksOnDetourGeometry,
   corridorFromRoadKind,
   corridorMatchesLeg,
   countryFromRoadKind,
@@ -216,7 +218,7 @@ describe('detourCaseJob helpers', () => {
     })).toEqual({
       kind: 'BAN',
       level: 'ok',
-      text: 'brak zakazu czasowego PL w ETA wariantu',
+      text: 'brak zakazu czasowego PL w czasie objazdu',
     });
     expect(riskBanForEta({
       country: 'PL',
@@ -227,6 +229,38 @@ describe('detourCaseJob helpers', () => {
       .toMatch(/sprawdź/i);
     expect(riskBanForEta({ country: 'SE', etaIso: null }).text).toMatch(/sprawdź/i);
 
+    // F7 #805 B2: holidayHit null → warn (nigdy ok).
+    expect(riskBanForEta({
+      country: 'PL',
+      etaIso: '2026-11-03T12:00:00Z',
+      holidayHit: null,
+    })).toMatchObject({
+      kind: 'BAN',
+      level: 'warn',
+      text: expect.stringMatching(/święta nie sprawdzono/i),
+    });
+
+    // F7 #805 B4(a): okno objazdu PL w niedzielę (zakaz), ETA placu we wtorek → BAN warn.
+    // (F7 pisało „sobota”; PL zakaz H-12 = niedziela — to samo: punkt placu ≠ okno jazdy.)
+    const win = banDriveWindow({
+      side: 'detour',
+      nowIso: '2026-11-08T18:00:00Z', // niedziela
+      decideByIso: '2026-11-08T19:00:00Z', // 20:00 PL
+      driveMin: 120,
+    })!;
+    expect(riskBanForEta({
+      country: 'PL',
+      fromIso: win.fromIso,
+      toIso: win.toIso,
+      holidayHit: false,
+    }).level).toBe('warn');
+    // Sam ETA placu we wtorek byłby ok — stąd B1.
+    expect(riskBanForEta({
+      country: 'PL',
+      etaIso: '2026-11-10T12:00:00Z',
+      holidayHit: false,
+    }).level).toBe('ok');
+
     // WORKS: null → sprawdź; true → warn z tytułem; false → ok.
     expect(riskWorksOnCorridor({ hit: null }).text).toMatch(/sprawdź/i);
     expect(riskWorksOnCorridor({ hit: true, title: 'Roboty E4 Sundsvall' }).text)
@@ -234,7 +268,7 @@ describe('detourCaseJob helpers', () => {
     expect(riskWorksOnCorridor({ hit: false })).toEqual({
       kind: 'WORKS',
       level: 'ok',
-      text: 'brak otwartych robót ROAD_* na korytarzu objazdu',
+      text: 'brak otwartych robót ROAD_* na trasie objazdu',
     });
     expect(looksLikeRoadWorks({
       title: 'Roboty drogowe E4',
@@ -247,19 +281,94 @@ describe('detourCaseJob helpers', () => {
       roadClosed: true,
     })).toBe(false);
 
+    // F7 #805 B3/B4(c)(d): bieżące zamknięcie WORKS wykluczone; poza linią → ok; brak linii → null.
+    const closureWorks = {
+      closureRef: 'ROAD_SE:bridge-1',
+      country: 'SE' as const,
+      place: 'Sundsvall',
+      title: 'Most zamknięty — roboty',
+      detailText: 'vägarbete bridge',
+      lat: 62.39,
+      lon: 17.31,
+      noticeIso: '2026-11-04T08:00:00Z',
+      untilIso: null,
+      corridor: 'SE_E4',
+      atKm: 100,
+      korytarzDroga: 'on',
+      roadClosed: false,
+    };
+    const otherFar = {
+      ...closureWorks,
+      closureRef: 'ROAD_SE:works-far',
+      title: 'Roboty boczna droga',
+      lat: 63.5,
+      lon: 18.5,
+    };
+    const otherNear = {
+      ...closureWorks,
+      closureRef: 'ROAD_SE:works-near',
+      title: 'Roboty na objazd',
+      lat: 62.40,
+      lon: 17.32,
+    };
+    const line: Array<[number, number]> = [
+      [62.38, 17.30],
+      [62.40, 17.32],
+      [62.42, 17.34],
+    ];
+    expect(worksOnDetourGeometry({
+      works: [closureWorks, otherFar],
+      lineLatLon: line,
+      excludeRef: 'ROAD_SE:bridge-1',
+    })).toEqual({ hit: false, title: null });
+    expect(worksOnDetourGeometry({
+      works: [closureWorks, otherNear],
+      lineLatLon: line,
+      excludeRef: 'ROAD_SE:bridge-1',
+    })).toEqual({ hit: true, title: 'Roboty na objazd' });
+    expect(worksOnDetourGeometry({
+      works: [closureWorks],
+      lineLatLon: null,
+      excludeRef: 'ROAD_SE:bridge-1',
+    }).hit).toBeNull();
+
     const wired = buildNineRisks({
       side: 'detour',
       country: 'SE',
       permitMode: 'TRASA',
       hereNotices: [],
-      etaIso: '2026-11-03T15:00:00Z', // wtorek
+      banFromIso: '2026-11-03T12:00:00Z', // wtorek
+      banToIso: '2026-11-03T14:00:00Z',
+      etaIso: '2026-11-03T15:00:00Z',
       riskCtx: {
         holidayBan: false,
         worksHit: false,
+        worksDetourHit: false,
       },
     });
     expect(wired.find((r) => r.kind === 'BAN')?.level).toBe('ok');
     expect(wired.find((r) => r.kind === 'WORKS')?.level).toBe('ok');
+
+    // Objazd: worksHit korytarza z tytułem zamknięcia nie może przebić worksDetourHit.
+    const detourWorks = buildNineRisks({
+      side: 'detour',
+      country: 'SE',
+      permitMode: 'TRASA',
+      banFromIso: '2026-11-03T12:00:00Z',
+      banToIso: '2026-11-03T14:00:00Z',
+      riskCtx: {
+        holidayBan: false,
+        worksHit: true,
+        worksTitle: 'Most zamknięty — roboty',
+        worksDetourHit: false,
+        worksDetourTitle: null,
+      },
+    });
+    expect(detourWorks.find((r) => r.kind === 'WORKS')).toEqual({
+      kind: 'WORKS',
+      level: 'ok',
+      text: 'brak otwartych robót ROAD_* na trasie objazdu',
+    });
   });
 
   it('payload: brak HERE → none; z trasą → nadwyżka km/min (B6)', () => {
