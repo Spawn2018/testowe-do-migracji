@@ -194,8 +194,55 @@ jobs:
             supabase functions deploy "$name" --project-ref "$PROJECT_REF" --use-api --yes
           done
 
-      - name: Produkcja Vercel
+      # DP-224 D (#817): front tylko gdy zmiana poza supabase/docs/tests — mniej hashów assetów.
+      - name: Czy wdrażać front
+        id: front
         if: steps.keys.outputs.skip != 'true'
+        env:
+          PUSH_BEFORE: ${{ github.event.before }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          set +x
+          # F7 #823: baza = Vercel success ALBO (decyzja front success + Vercel skipped).
+          # Samo „Produkcja Vercel=skipped” bywa też brakiem kluczy — wtedy nie baza.
+          before=""
+          if command -v gh >/dev/null 2>&1; then
+            while IFS=$'\t' read -r run_id sha; do
+              [ -z "${run_id:-}" ] && continue
+              [ "$sha" = "${GITHUB_SHA}" ] && continue
+              dec_concl="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/jobs" \
+                --jq '[.jobs[].steps[]? | select(.name == "Czy wdrażać front") | .conclusion][0] // empty' 2>/dev/null || true)"
+              ver_concl="$(gh api "repos/${GITHUB_REPOSITORY}/actions/runs/${run_id}/jobs" \
+                --jq '[.jobs[].steps[]? | select(.name == "Produkcja Vercel") | .conclusion][0] // empty' 2>/dev/null || true)"
+              if python3 scripts/ci/frontend-deploy-base-ok.py "$dec_concl" "$ver_concl" >/dev/null; then
+                before="$sha"
+                break
+              fi
+            done < <(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/deploy-main.yml/runs?branch=main&status=success&per_page=20" \
+              --jq '.workflow_runs[] | [.id, .head_sha] | @tsv' 2>/dev/null || true)
+          fi
+          if [ -z "$before" ]; then
+            before="${PUSH_BEFORE:-}"
+          fi
+          if [ -z "$before" ] || printf '%s' "$before" | grep -Eq '^0+$' || ! git cat-file -e "${before}^{commit}" 2>/dev/null; then
+            echo "Front: brak bazy porównania — wdrażam."
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          files="$(git diff --name-only "$before" "$GITHUB_SHA" || true)"
+          decision="$(printf '%s\n' "$files" | python3 scripts/ci/skip-frontend-deploy.py || true)"
+          # skrypt: exit 0 + skip → pomiń; exit 1 + build → wdrażaj
+          if [ "$decision" = "skip" ]; then
+            echo "Front: tylko supabase/docs/tests od $before — pomijam Vercel."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "Front: zmiany poza supabase/docs/tests od $before — wdrażam."
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Produkcja Vercel
+        if: steps.keys.outputs.skip != 'true' && steps.front.outputs.skip != 'true'
         run: |
           set -euo pipefail
           set +x
@@ -209,7 +256,7 @@ jobs:
       # Zapis: PostgREST (service_role z Management API) albo psql na puli — nie host db.* (IPv6).
       # Niezaliczony pomiar / błąd LH nie blokuje wdrożenia (continue-on-error).
       - name: Lighthouse p1–p3
-        if: steps.keys.outputs.skip != 'true'
+        if: steps.keys.outputs.skip != 'true' && steps.front.outputs.skip != 'true'
         continue-on-error: true
         timeout-minutes: 15
         env:
