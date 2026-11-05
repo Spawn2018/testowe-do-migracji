@@ -17,13 +17,18 @@ import {
   extractFiRoadRef,
   fiBboxInLimit,
   fiCorridorBboxes,
+  fiRoadConditionLabelPl,
   fiRoadOnCorridor,
   fiSeverity,
   fiTrafficUrl,
   fiTypeLabelPl,
+  fiWeatherToRiskEvents,
   filterInFiBboxes,
+  isSlipperySurface,
   nearFiPortTerminal,
   parseFiTrafficMessages,
+  parseFiWeatherStationsData,
+  parseFiWeatherStationsMeta,
   weightLimitRisk,
   type BalticRoadEvent,
 } from '../supabase/functions/_shared/integrations/roadBaltic.ts';
@@ -123,15 +128,39 @@ function deps(
   return { d: { store, fetch: f, env: {}, now: () => NOW }, headerCalls };
 }
 
+const FI_WX_META = readFileSync(
+  resolve('tests/fixtures/fi-digitraffic-weather-stations-meta.json'), 'utf8',
+);
+const FI_WX_DATA = readFileSync(
+  resolve('tests/fixtures/fi-digitraffic-weather-stations-data.json'), 'utf8',
+);
+
 function allOkPages(body = EMPTY_FC): Record<string, string | number> {
   return {
     'traffic-message/v2/roadworks': body,
     'traffic-message/v2/traffic-announcements': body,
     'traffic-message/v2/weight-restrictions': body,
+    /* DP-216: stacje pogodowe — osobny odczyt (nie w expectedFetches bbox). */
+    'weather/v1/stations/data': FI_WX_DATA,
+    'weather/v1/stations': FI_WX_META,
   };
 }
 
 describe('BN6 road-fi — Digitraffic', () => {
+  it('DP-216: stacje pogodowe ≤3 km + dedup fi-wx + śliskość ≤0°C', () => {
+    expect(isSlipperySurface({ surfaceTempC: -1, moist: true })).toBe(true);
+    expect(isSlipperySurface({ surfaceTempC: 1, moist: true })).toBe(false);
+    expect(fiRoadConditionLabelPl(7)).toBe('lód');
+    const meta = parseFiWeatherStationsMeta(JSON.parse(FI_WX_META));
+    const readings = parseFiWeatherStationsData(JSON.parse(FI_WX_DATA), meta);
+    expect(readings.find((r) => r.id === '1201')?.slippery).toBe(true);
+    expect(readings.find((r) => r.id === '1202')?.slippery).toBe(false);
+    const ev = fiWeatherToRiskEvents(readings);
+    expect(ev.every((e) => e.id.startsWith('fi-wx:'))).toBe(true);
+    expect(ev.some((e) => e.id === 'fi-wx:1201')).toBe(true);
+    expect(ev.some((e) => e.id === 'fi-wx:9999')).toBe(false); /* >3 km od CORRIDOR_FI */
+  });
+
   it('wszystkie bboxy korytarza w limicie [20,59,32,71]', () => {
     for (const b of fiCorridorBboxes()) {
       expect(fiBboxInLimit(b)).toBe(true);
@@ -319,7 +348,7 @@ describe('BN6 runRoadFi — F7 #726', () => {
     const st = new MemStore();
     const { d, headerCalls } = deps(st, allOkPages());
     await runRoadFi(d);
-    expect(headerCalls.length).toBe(15); // 3 endpointy × 5 bboxów
+    expect(headerCalls.length).toBe(17); // 3×5 bbox + 2 weather (DP-216)
     for (const c of headerCalls) {
       expect(c.headers['Digitraffic-User']).toBeTruthy();
       expect(c.headers['Accept-Encoding']).toBe('gzip');

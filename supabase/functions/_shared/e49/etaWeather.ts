@@ -42,9 +42,152 @@ function sideOf(b: WindBearing): 'CROSS' | 'HEAD' | null {
   return null;
 }
 
-function whereLabel(corridor: string, km: number): string {
+/** DP-216 / #783 pkt 7: droga + kraj + odcinek (miejscowości) zamiast „PL EE E67 · km 412”. */
+type CorridorPlace = {
+  road: string;
+  country: string;
+  towns: ReadonlyArray<{ km: number; name: string }>;
+};
+
+const CORRIDOR_WIND_PLACES: Record<string, CorridorPlace> = {
+  PL_EE_E67: {
+    road: 'E67', country: 'LV',
+    towns: [
+      { km: 0, name: 'Kaunas' }, { km: 80, name: 'Panevėžys' }, { km: 160, name: 'Bauska' },
+      { km: 220, name: 'Ķekava' }, { km: 250, name: 'Saulkrasti' }, { km: 280, name: 'Ainaži' },
+      { km: 320, name: 'Pärnu' }, { km: 400, name: 'Tallinn' },
+    ],
+  },
+  /* A1 LV (Saulkrasti–Ainaži) — przykład #783; km lokalne na odcinku LV. */
+  LV_A1: {
+    road: 'A1', country: 'LV',
+    towns: [
+      { km: 0, name: 'Baltezers' }, { km: 40, name: 'Saulkrasti' }, { km: 100, name: 'Ainaži' },
+    ],
+  },
+  FI_E75: {
+    road: 'E75', country: 'FI',
+    towns: [
+      { km: 0, name: 'Vuosaari' }, { km: 120, name: 'Jyväskylä' },
+      { km: 250, name: 'Oulu' }, { km: 320, name: 'Kemi' }, { km: 360, name: 'Tornio' },
+    ],
+  },
+  SE_E4: {
+    road: 'E4', country: 'SE',
+    towns: [
+      { km: 0, name: 'Nynäshamn' }, { km: 60, name: 'Södertälje' },
+      { km: 200, name: 'Gävle' }, { km: 400, name: 'Sundsvall' },
+      { km: 600, name: 'Umeå' }, { km: 750, name: 'Luleå' }, { km: 820, name: 'Boden' },
+    ],
+  },
+  SE_E4_STO: {
+    road: 'E4', country: 'SE',
+    towns: [
+      { km: 0, name: 'Kapellskär' }, { km: 80, name: 'Norrtälje' },
+      { km: 150, name: 'Uppsala' }, { km: 250, name: 'Gävle' },
+    ],
+  },
+  SE_E18_KPS: {
+    road: 'E18', country: 'SE',
+    towns: [
+      { km: 0, name: 'Kapellskär' }, { km: 40, name: 'Norrtälje' }, { km: 100, name: 'Stockholm' },
+    ],
+  },
+  SE_KAA_INLAND: {
+    road: 'E22', country: 'SE',
+    towns: [
+      { km: 0, name: 'Karlskrona' }, { km: 120, name: 'Kalmar' }, { km: 250, name: 'Norrköping' },
+    ],
+  },
+  PL_ROAD: {
+    road: 'S7', country: 'PL',
+    towns: [
+      { km: 0, name: 'Śrem' }, { km: 150, name: 'Toruń' }, { km: 280, name: 'Gdańsk' },
+    ],
+  },
+};
+
+function corridorPlaceOf(corridor: string): CorridorPlace {
+  if (CORRIDOR_WIND_PLACES[corridor]) return CORRIDOR_WIND_PLACES[corridor]!;
+  /* ROAD_LT/LV/EE z jobów → Via Baltica. */
+  if (/^ROAD_L[TV]$|^ROAD_EE$|E67|VIA.?BALT/i.test(corridor)) {
+    return CORRIDOR_WIND_PLACES.PL_EE_E67!;
+  }
+  if (/FI|E75/i.test(corridor)) return CORRIDOR_WIND_PLACES.FI_E75!;
+  if (/E22|KAA/i.test(corridor)) return CORRIDOR_WIND_PLACES.SE_KAA_INLAND!;
+  if (/E18|KPS/i.test(corridor)) return CORRIDOR_WIND_PLACES.SE_E18_KPS!;
+  if (/E4|SE_/i.test(corridor)) return CORRIDOR_WIND_PLACES.SE_E4!;
+  if (/^PL|A1\b/i.test(corridor) && /LV/i.test(corridor)) return CORRIDOR_WIND_PLACES.LV_A1!;
   const nice = corridor.replace(/_/g, ' ');
-  return `${nice} · km ${Math.round(km)}`;
+  return { road: nice, country: '—', towns: [] };
+}
+
+function segmentTowns(place: CorridorPlace, km: number): string | null {
+  const towns = place.towns;
+  if (towns.length < 2) return towns[0]?.name ?? null;
+  let lo = towns[0]!;
+  let hi = towns[towns.length - 1]!;
+  for (let i = 0; i < towns.length - 1; i++) {
+    if (km >= towns[i]!.km && km <= towns[i + 1]!.km) {
+      lo = towns[i]!;
+      hi = towns[i + 1]!;
+      break;
+    }
+    if (km < towns[i]!.km) {
+      lo = towns[Math.max(0, i - 1)]!;
+      hi = towns[i]!;
+      break;
+    }
+  }
+  if (lo.name === hi.name) return lo.name;
+  return `${lo.name}–${hi.name}`;
+}
+
+/** Godzina HH:MM w Europe/Warsaw (UI PL). */
+function hhmmWarsaw(iso: string | null | undefined): string | null {
+  if (!iso) return null;
+  const t = Date.parse(iso);
+  if (!Number.isFinite(t)) return null;
+  try {
+    return new Intl.DateTimeFormat('pl-PL', {
+      timeZone: 'Europe/Warsaw', hour: '2-digit', minute: '2-digit', hour12: false,
+    }).format(new Date(t));
+  } catch {
+    return new Date(t).toISOString().slice(11, 16);
+  }
+}
+
+/**
+ * DP-216: „A1 (LV), Saulkrasti–Ainaži” (+ opcjonalnie okno i +min w tytule sprawy).
+ * Stary format „PL EE E67 · km 412” — usunięty.
+ */
+export function whereLabel(corridor: string, km: number): string {
+  const place = corridorPlaceOf(corridor);
+  const road = `${place.road} (${place.country})`;
+  const seg = segmentTowns(place, km);
+  return seg ? `${road}, ${seg}` : road;
+}
+
+export function windCaseTitle(args: {
+  hold: boolean;
+  corridor: string;
+  km: number;
+  gustMs: number;
+  side?: 'CROSS' | 'HEAD' | null;
+  atIso?: string | null;
+  untilIso?: string | null;
+  addMin?: number | null;
+}): string {
+  const where = whereLabel(args.corridor, args.km);
+  const sidePl = args.side === 'CROSS' ? 'z boku' : args.side === 'HEAD' ? 'z przodu' : '';
+  const gust = `${Math.round(args.gustMs)} m/s`;
+  const from = hhmmWarsaw(args.atIso);
+  const until = hhmmWarsaw(args.untilIso);
+  const window = from && until ? `${from}–${until}` : from ? `od ${from}` : until ? `do ${until}` : '';
+  const add = args.addMin != null && args.addMin > 0 ? `+${Math.round(args.addMin)} min` : '';
+  const bits = [where, gust + (sidePl ? ` ${sidePl}` : ''), window, add].filter(Boolean);
+  const head = args.hold ? 'Postój przez wiatr' : 'Silny wiatr na trasie';
+  return `${head}: ${bits.join(', ')}`;
 }
 
 /**
@@ -180,6 +323,8 @@ export function windCaseRisk(args: {
   atIso: string;
   side?: 'CROSS' | 'HEAD' | null;
   untilIso?: string | null;
+  /** DP-216: dodatek ETA w tytule („+12 min”). */
+  addMin?: number | null;
 }): {
   kind: 'WEATHER';
   severity: 'MEDIUM' | 'HIGH';
@@ -193,7 +338,16 @@ export function windCaseRisk(args: {
   validUntil: string | null;
 } {
   const where = whereLabel(args.corridor, args.km);
-  const sidePl = args.side === 'CROSS' ? 'z boku' : args.side === 'HEAD' ? 'z przodu' : '';
+  const title = windCaseTitle({
+    hold: args.hold,
+    corridor: args.corridor,
+    km: args.km,
+    gustMs: args.gustMs,
+    side: args.side,
+    atIso: args.atIso,
+    untilIso: args.untilIso,
+    addMin: args.addMin,
+  });
   const base = {
     zrodlo: 'E49-a SMHI/FMI',
     /* Z2: odbiorcy HHL + SCX — risk_audience_for (0398) czyta detail.audience, nie WSZYSCY (KSH). */
@@ -207,7 +361,7 @@ export function windCaseRisk(args: {
     return {
       kind: 'WEATHER',
       severity: 'HIGH',
-      title: `Postój przez wiatr · ${where} · porywy ${Math.round(args.gustMs)} m/s`,
+      title,
       titleKey: 'rk_wind_hold',
       params: { where, gust: String(Math.round(args.gustMs)) },
       detail: {
@@ -215,6 +369,7 @@ export function windCaseRisk(args: {
         hold: true,
         fromIso: args.atIso,
         untilIso: args.untilIso ?? null,
+        addMin: args.addMin ?? null,
       },
       dedup: windCaseDedup(args.loadId, args.corridor),
       loadId: args.loadId,
@@ -225,7 +380,7 @@ export function windCaseRisk(args: {
   return {
     kind: 'WEATHER',
     severity: 'MEDIUM',
-    title: `Silny wiatr na trasie · ${where} · ${Math.round(args.gustMs)} m/s${sidePl ? ` ${sidePl}` : ''}`,
+    title,
     titleKey: 'rk_wind_strong',
     params: { where, gust: String(Math.round(args.gustMs)) },
     detail: {
@@ -233,6 +388,7 @@ export function windCaseRisk(args: {
       hold: false,
       atIso: args.atIso,
       side: args.side ?? null,
+      addMin: args.addMin ?? null,
     },
     dedup: windCaseDedup(args.loadId, args.corridor),
     loadId: args.loadId,
@@ -301,6 +457,14 @@ export function planWindCase(args: {
   if (peak == null) return { action: 'close', dedup };
   if (peak.gustMs >= args.thr.WIND_SLOW_MS) {
     const hold = peak.gustMs >= args.thr.WIND_HOLD_MS;
+    const atMs = Date.parse(peak.atIso);
+    /* DP-216: okno w tytule — postój do resume; silny wiatr ≈ 4 h wokół szczytu. */
+    const untilIso = hold
+      ? new Date(atMs + args.thr.WIND_RESUME_MIN * 60_000).toISOString()
+      : new Date(atMs + 4 * 3600_000).toISOString();
+    const addMin = hold
+      ? args.thr.WIND_RESUME_MIN
+      : Math.max(1, Math.round(args.thr.WIND_RESUME_MIN * 0.4)); /* ~12 min przy domyślnym 30 */
     return {
       action: 'raise',
       risk: windCaseRisk({
@@ -311,9 +475,8 @@ export function planWindCase(args: {
         hold,
         atIso: peak.atIso,
         side: peak.side,
-        untilIso: hold
-          ? new Date(Date.parse(peak.atIso) + args.thr.WIND_RESUME_MIN * 60_000).toISOString()
-          : null,
+        untilIso,
+        addMin,
       }),
     };
   }

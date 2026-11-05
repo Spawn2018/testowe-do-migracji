@@ -1,0 +1,23 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "id": 1201,
+      "geometry": { "type": "Point", "coordinates": [25.7, 61.5] },
+      "properties": { "id": 1201, "name": "Jyvaskyla E75" }
+    },
+    {
+      "type": "Feature",
+      "id": 9999,
+      "geometry": { "type": "Point", "coordinates": [22.0, 60.2] },
+      "properties": { "id": 9999, "name": "Daleko od korytarza" }
+    },
+    {
+      "type": "Feature",
+      "id": 1202,
+      "geometry": { "type": "Point", "coordinates": [25.47, 65.01] },
+      "properties": { "id": 1202, "name": "Oulu sucha" }
+    }
+  ]
+}

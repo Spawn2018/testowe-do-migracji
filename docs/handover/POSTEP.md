@@ -1,4 +1,11 @@
 
+## 2026-11-05 00:55 — #800 SCALONE; start DP-216 (#801)
+
+- Skrzynka: #550 WSTRZYMANE; #798/DP-215 po merge; #801 DP-216 (bez etykiety `dla-cursora`, start z F7 #800); BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: **#800 SCALONE** `84021df9` (DP-215; F7 gotowe @ `a0b0d2bd`; unit+visual ✔). `deploy-main` robi resztę. Bez push na main.
+- **Krok DP-216** `pakiet/c2-dp-216-e49-dopisek`: (1) FI Digitraffic `/weather/v1/stations[+data]` → `fi-wx:` ROAD_FI ≤3 km; (2) tytuł wiatru „Silny wiatr na trasie: A1 (LV), …”; (3) cron **0408** route-hazards `17,47 * * * *` (HERE max 16/h); (4) Pomoc + „Wiatr — SMHI/FMI”; (5) Test 14 już w `e49-corridor-wind`. DP-210 nie zaczynać.
+- **Dalej:** testy → push → CI (+`db`) → F7. Po scaleniu DP-213 / DP-211…
+
 ## 2026-11-05 00:25 — DP-215 (#800): odświeżenie 11× stan-* Harmonogram (StageBar)
 
 - Skrzynka: #550 WSTRZYMANE; #798 DP-215; BN5–8 w planie. Bez nowego `pilne`.

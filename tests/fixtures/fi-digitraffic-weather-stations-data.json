@@ -1,0 +1,31 @@
+{
+  "dataUpdatedTime": "2026-11-05T00:00:00Z",
+  "stations": [
+    {
+      "id": 1201,
+      "dataUpdatedTime": "2026-11-05T00:00:00Z",
+      "sensorValues": [
+        { "name": "ILMA", "sensorValue": -2.0, "sensorUnit": "°C" },
+        { "name": "TIE_1", "sensorValue": -1.0, "sensorUnit": "°C" },
+        { "name": "KESKITUULI", "sensorValue": 4.0, "sensorUnit": "m/s" },
+        { "name": "MAKSIMITUULI", "sensorValue": 7.0, "sensorUnit": "m/s" },
+        { "name": "KELI", "sensorValue": 7, "sensorUnit": "" }
+      ]
+    },
+    {
+      "id": 9999,
+      "sensorValues": [
+        { "name": "TIE_1", "sensorValue": -3.0 },
+        { "name": "KELI", "sensorValue": 6 }
+      ]
+    },
+    {
+      "id": 1202,
+      "sensorValues": [
+        { "name": "ILMA", "sensorValue": 5.0 },
+        { "name": "TIE_1", "sensorValue": 4.0 },
+        { "name": "KELI", "sensorValue": 0 }
+      ]
+    }
+  ]
+}
