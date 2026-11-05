@@ -3916,8 +3916,7 @@ export async function runRoadFi(deps: JobDeps): Promise<JobResult> {
   await fetchKind(FI_ANNOUNCEMENTS_URL);
   await fetchKind(FI_WEIGHT_URL);
 
-  /* DP-216: Digitraffic weather stations ≤ 3 km od FI_E75 → ROAD_FI (śliskość Z4).
-   * Osobny licznik — komplet komunikatów (bbox) bez stacji pogodowych. */
+  /* DP-216 / F7 #802: Digitraffic weather ≤ 3 km → klaster 25 km; HIGH tylko z transportem FI_E75. */
   let weatherFetched = 0;
   let weatherEvents = 0;
   {
@@ -3928,7 +3927,16 @@ export async function runRoadFi(deps: JobDeps): Promise<JobResult> {
       try {
         const meta = parseFiWeatherStationsMeta(JSON.parse(metaR.text));
         const readings = parseFiWeatherStationsData(JSON.parse(dataR.text), meta);
-        const wx = fiWeatherToRiskEvents(readings);
+        let hasTransportOnFiE75 = false;
+        if (deps.store.e49WindActiveCorridors) {
+          try {
+            const active = await deps.store.e49WindActiveCorridors();
+            hasTransportOnFiE75 = active.some((c) => /FI_E75|ROAD_FI/i.test(c));
+          } catch {
+            /* brak RPC → MEDIUM (bez zalewu powiadomień) */
+          }
+        }
+        const wx = fiWeatherToRiskEvents(readings, undefined, { hasTransportOnFiE75 });
         weatherEvents = wx.length;
         for (const e of wx) {
           if (!byId.has(e.id)) byId.set(e.id, { event: e, sourceUrl: FI_WEATHER_STATIONS_DATA_URL });

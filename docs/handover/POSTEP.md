@@ -1,4 +1,11 @@
 
+## 2026-11-05 01:25 — DP-216 (#802): F7 r1 B1–B3 (FI wx)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 (#714/#716/#718/#720) w planie; bez nowego `pilne`.
+- Scalanie: brak — F7 #802 r1 **niegotowe** (B1–B3) @ `ea23be00`.
+- **Krok:** (B1) KELI po `sensorValueDescriptionEn/Fi` + `value` 1=Dry (żywe Digitraffic); sucha zimna ≠ śliskość; fixture z prawdziwej odpowiedzi. (B2) klaster `fi-wx:seg:{n}` co 25 km; HIGH tylko gdy `e49WindActiveCorridors` ma FI_E75/ROAD_FI; bez transportu MEDIUM. (B3) tytuł „Ryzyko gołoledzi” zamiast „Warunki pogodowe”. Vitest `bn6-road-fi` 23/23.
+- **Dalej:** push → CI (+`db`) → F7. DP-210 nie zaczynać.
+
 ## 2026-11-05 00:55 — #800 SCALONE; start DP-216 (#801)
 
 - Skrzynka: #550 WSTRZYMANE; #798/DP-215 po merge; #801 DP-216 (bez etykiety `dla-cursora`, start z F7 #800); BN5–8 w planie. Bez nowego `pilne`.

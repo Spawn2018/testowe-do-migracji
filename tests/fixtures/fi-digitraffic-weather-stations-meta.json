@@ -5,19 +5,37 @@
       "type": "Feature",
       "id": 1201,
       "geometry": { "type": "Point", "coordinates": [25.7, 61.5] },
-      "properties": { "id": 1201, "name": "Jyvaskyla E75" }
+      "properties": { "id": 1201, "name": "vt4_Jyvaskyla_E75" }
+    },
+    {
+      "type": "Feature",
+      "id": 1202,
+      "geometry": { "type": "Point", "coordinates": [25.71, 61.52] },
+      "properties": { "id": 1202, "name": "vt4_Jyvaskyla_Moist" }
+    },
+    {
+      "type": "Feature",
+      "id": 1203,
+      "geometry": { "type": "Point", "coordinates": [25.47, 65.01] },
+      "properties": { "id": 1203, "name": "vt4_Oulu_Ice" }
+    },
+    {
+      "type": "Feature",
+      "id": 1204,
+      "geometry": { "type": "Point", "coordinates": [25.48, 65.02] },
+      "properties": { "id": 1204, "name": "vt4_Oulu_Frost" }
+    },
+    {
+      "type": "Feature",
+      "id": 1205,
+      "geometry": { "type": "Point", "coordinates": [25.69, 61.49] },
+      "properties": { "id": 1205, "name": "vt4_Jyvaskyla_DryCold" }
     },
     {
       "type": "Feature",
       "id": 9999,
       "geometry": { "type": "Point", "coordinates": [22.0, 60.2] },
       "properties": { "id": 9999, "name": "Daleko od korytarza" }
-    },
-    {
-      "type": "Feature",
-      "id": 1202,
-      "geometry": { "type": "Point", "coordinates": [25.47, 65.01] },
-      "properties": { "id": 1202, "name": "Oulu sucha" }
     }
   ]
 }

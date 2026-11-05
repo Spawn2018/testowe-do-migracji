@@ -55,27 +55,34 @@ export function isSlipperySurface(args: {
   return cold && (args.moist === true || args.icy === true);
 }
 
-/** Digitraffic KELI / roadSurfaceCondition → PL (słownik; reszta → pamięć/DeepL). */
+/**
+ * Digitraffic KELI → PL. F7 #802 B1: najpierw opis EN/FI (`sensorValueDescription*`);
+ * kody `value` tylko z żywej odpowiedzi 05.11.2026:
+ * 1 Dry, 2 Moist, 3 Wet, 4 Wet+salty, 5 Frost, 6 Snow, 7 Ice, 8 moist+salty; 0 = fault.
+ * (Stary słownik 1=wilgotna był błędny — 1 = sucha.)
+ */
 export function fiRoadConditionLabelPl(raw: string | number | null | undefined): string | null {
   if (raw == null || raw === '') return null;
   const s = String(raw).trim().toLowerCase();
   if (!s) return null;
+  if (/fault|vikaa|error|unknown|ei tietoa/.test(s)) return null;
+  if (/kuiva|\bdry\b/.test(s)) return 'sucha';
+  if (/kostea|\bmoist\b|damp|suolain|salty/.test(s) && !/m[aä]rk|wet/.test(s)) return 'wilgotna';
+  if (/m[aä]rk[aä]|\bwet\b/.test(s)) return 'mokra';
+  if (/kuura|\bfrost\b|hoarfrost/.test(s)) return 'szron';
+  if (/luminen|\bsnow\b|\blumi\b/.test(s)) return 'śnieg';
+  if (/j[aä]{1,2}|\bice\b|glatt|go[lł]oled|liukas|j[aä]inen/.test(s)) return 'lód';
   const n = Number(s);
-  /* Kody KELI (Fintraffic): 0 sucha … 7 lód / gołoledź. */
-  if (Number.isFinite(n)) {
-    if (n === 0) return 'sucha';
-    if (n === 1) return 'wilgotna';
-    if (n === 2 || n === 3) return 'mokra';
-    if (n === 4) return 'szron';
-    if (n === 5) return 'śnieg';
-    if (n === 6 || n === 7) return 'lód';
+  /* Potwierdzone na żywo Digitraffic KELI_1.value (05.11.2026). */
+  if (Number.isFinite(n) && Number.isInteger(n)) {
+    if (n === 0) return null; /* sensor fault */
+    if (n === 1) return 'sucha';
+    if (n === 2 || n === 8) return 'wilgotna';
+    if (n === 3 || n === 4) return 'mokra';
+    if (n === 5) return 'szron';
+    if (n === 6) return 'śnieg';
+    if (n === 7) return 'lód';
   }
-  if (/kuiva|dry/.test(s)) return 'sucha';
-  if (/kostea|moist|damp/.test(s)) return 'wilgotna';
-  if (/m[aä]rk[aä]|wet/.test(s)) return 'mokra';
-  if (/kuura|frost|hoarfrost/.test(s)) return 'szron';
-  if (/luminen|snow|lumi\b/.test(s)) return 'śnieg';
-  if (/j[aä]inen|ice|glatt|go[lł]oled|liukas/.test(s)) return 'lód';
   return null; /* nieznane → freeText / DeepL */
 }
 
@@ -136,8 +143,8 @@ function fiSensorNum(v: unknown): number | null {
 }
 
 /**
- * DP-216: `/weather/v1/stations/data` + meta → stacje ze śliskością (reguła wspólna).
- * Dedup id = `fi-wx:{stationId}` (bez czasu — lekcja #786).
+ * DP-216 / F7 #802 B1: `/weather/v1/stations/data` + meta → odczyty.
+ * Stan nawierzchni z `sensorValueDescriptionEn/Fi` (KELI_1/KELI_2); `value` zapasowo.
  */
 export function parseFiWeatherStationsData(
   dataJson: unknown,
@@ -169,33 +176,29 @@ export function parseFiWeatherStationsData(
       if (!sRaw || typeof sRaw !== 'object') continue;
       const s = sRaw as Record<string, unknown>;
       const name = String(s.name ?? s.sensorName ?? '').toUpperCase();
-      const val = s.sensorValue ?? s.value;
-      const num = fiSensorNum(val);
-      const text = val == null ? '' : String(val);
+      /* Digitraffic: sensorValue często null; wartość w `value`. */
+      const num = fiSensorNum(s.sensorValue ?? s.value);
+      const descEn = String(s.sensorValueDescriptionEn ?? '').trim();
+      const descFi = String(s.sensorValueDescriptionFi ?? '').trim();
+      const descBlob = [descEn, descFi].filter(Boolean).join(' ');
       if (/^ILMA$|AIR.?TEMP|TEMPERATURE_AIR/.test(name) && num != null) airC = num;
       else if (/^TIE(_|$)|ROAD.?SURFACE.?TEMP|SURFACE.?TEMP|PAALLYSTE/.test(name) && num != null) {
         surfaceC = num;
       } else if (/KESKITUULI|WIND.?SPEED|AVERAGE.?WIND/.test(name) && num != null) windMs = num;
       else if (/MAKSIMITUULI|GUST|MAX.?WIND|TUULEN.?NOPEUS/.test(name) && num != null) gustMs = num;
-      else if (/^KELI$|ROAD.?CONDITION|SURFACE.?CONDITION|KELIN.?KUVAUS/.test(name)) {
-        conditionRaw = text || (num != null ? String(num) : null);
-        const blob = `${name} ${text}`.toLowerCase();
-        if (/m[aä]rk|wet|kostea|moist|niisk|humidity|precip|sade|rain/.test(blob)
-          || (num != null && (num === 1 || num === 2 || num === 3))) {
-          moist = true;
-        }
-        if (/j[aä]inen|ice|kuura|frost|lumi|snow|glatt|liukas|go[lł]oled/
-          .test(blob)
-          || (num != null && num >= 4)) {
-          icy = true;
-          if (num != null && num >= 4) moist = true; /* szron/śnieg/lód = wilgoć w regule */
-        }
+      else if (/^KELI(_|$)|ROAD.?CONDITION|SURFACE.?CONDITION|KELIN.?KUVAUS/.test(name)) {
+        /* Opis tekstowy wygrywa; sam numer — tylko gdy brak opisu (żywe kody 1–8). */
+        conditionRaw = descBlob || (num != null ? String(num) : null);
+        const pl = fiRoadConditionLabelPl(conditionRaw);
+        if (pl && /wilgotna|mokra/.test(pl)) moist = true;
+        if (pl && /szron|śnieg|lód/.test(pl)) { icy = true; moist = true; }
       }
     }
     const conditionPl = fiRoadConditionLabelPl(conditionRaw);
     if (conditionPl && /wilgotna|mokra/.test(conditionPl)) moist = true;
     if (conditionPl && /szron|śnieg|lód/.test(conditionPl)) { icy = true; moist = true; }
-    const slippery = isSlipperySurface({ surfaceTempC: surfaceC, moist, icy }) || icy;
+    /* Sucha zimna ≠ śliskość (F7 #802 B1). Lód/szron/śnieg — tak. */
+    const slippery = icy || isSlipperySurface({ surfaceTempC: surfaceC, moist, icy });
     out.push({
       id,
       lat,
@@ -215,50 +218,139 @@ export function parseFiWeatherStationsData(
   return out;
 }
 
+/** F7 #802 B2: stały podział korytarza FI_E75 co 25 km (jak punkty wiatru Z1). */
+export const FI_WX_SEG_KM = 25;
+
+/** Miejscowości FI_E75 do tytułu odcinka (zgodne z e49/etaWeather CORRIDOR_WIND_PLACES). */
+const FI_E75_TOWNS: ReadonlyArray<{ km: number; name: string }> = [
+  { km: 0, name: 'Vuosaari' }, { km: 120, name: 'Jyväskylä' },
+  { km: 250, name: 'Oulu' }, { km: 320, name: 'Kemi' }, { km: 360, name: 'Tornio' },
+];
+
+/** Rzut na polilinię korytarza → km od startu (najbliższy punkt zagęszczony). */
+export function corridorKmOfPoint(
+  lat: number,
+  lon: number,
+  corridor: LatLon[],
+  densified?: LatLon[],
+): number {
+  const pts = densified ?? densifyCorridor(corridor);
+  if (!pts.length) return 0;
+  let cum = 0;
+  let bestD = Infinity;
+  let bestKm = 0;
+  for (let i = 0; i < pts.length; i++) {
+    if (i > 0) cum += haversineKm(pts[i - 1]!, pts[i]!);
+    const d = haversineKm([lat, lon], pts[i]!);
+    if (d < bestD) {
+      bestD = d;
+      bestKm = cum;
+    }
+  }
+  return bestKm;
+}
+
+function fiE75SegmentTowns(km: number): string {
+  const towns = FI_E75_TOWNS;
+  if (towns.length < 2) return towns[0]?.name ?? 'E75';
+  let lo = towns[0]!;
+  let hi = towns[towns.length - 1]!;
+  for (let i = 0; i < towns.length - 1; i++) {
+    if (km >= towns[i]!.km && km <= towns[i + 1]!.km) {
+      lo = towns[i]!;
+      hi = towns[i + 1]!;
+      break;
+    }
+    if (km < towns[i]!.km) {
+      lo = towns[Math.max(0, i - 1)]!;
+      hi = towns[i]!;
+      break;
+    }
+  }
+  return lo.name === hi.name ? lo.name : `${lo.name}–${hi.name}`;
+}
+
 /**
- * DP-216: stacje FI ≤ 3 km od CORRIDOR_FI / FI_E75 → ryzyka ROAD_FI pogodowe.
- * id `fi-wx:{id}` bez czasu (#786).
+ * DP-216 / F7 #802 B2–B3: stacje ≤ 3 km → **jedno ryzyko na odcinek 25 km**.
+ * Dedup `fi-wx:seg:{n}` (bez czasu). HIGH tylko gdy transport na FI_E75 w oknie śledzenia;
+ * bez transportu — MEDIUM (tylko Ryzyka, jak widoczność #784).
  */
 export function fiWeatherToRiskEvents(
   readings: FiWeatherSensorReading[],
   densified: LatLon[] = densifyCorridor(CORRIDOR_FI),
+  opts?: { hasTransportOnFiE75?: boolean },
 ): BalticRoadEvent[] {
-  return readings
-    .filter((s) => s.slippery)
-    .filter((s) => minDistToCorridorKm(s.lat, s.lon, CORRIDOR_FI, densified) <= 3)
-    .map((s) => {
-      const cond = s.conditionPl
-        ?? (s.conditionRaw ? String(s.conditionRaw) : null);
-      const detailParts = [
-        s.surfaceC != null ? `temperatura nawierzchni ${s.surfaceC} °C` : '',
-        s.airC != null ? `powietrze ${s.airC} °C` : '',
-        cond ? `nawierzchnia ${cond}` : '',
-        s.gustMs != null ? `poryw ${s.gustMs} m/s` : '',
-        s.windMs != null ? `wiatr ${s.windMs} m/s` : '',
-      ].filter(Boolean);
-      const title = s.icy || (cond && /lód|śnieg|szron/.test(cond))
-        ? 'Śliska nawierzchnia'
-        : 'Warunki pogodowe';
-      /* Nieznany stan FI → DeepL (freeText); znany PL zostaje w detail. */
-      const freeText = s.conditionPl == null && s.conditionRaw
-        ? String(s.conditionRaw)
-        : null;
-      return {
-        id: `fi-wx:${s.id}`,
-        title,
-        detail: detailParts.join(' · '),
-        severity: 'HIGH' as RiskSeverity,
-        lat: s.lat,
-        lon: s.lon,
-        kind: 'FI_WEATHER',
-        start: null,
-        end: null,
-        road: 'E75',
-        placeName: s.name ? `stacja ${s.name}` : `stacja ${s.id}`,
-        corridorMatch: 'on' as const,
-        freeText,
-      } satisfies BalticRoadEvent;
+  const hasTransport = opts?.hasTransportOnFiE75 === true;
+  type Cluster = {
+    seg: number;
+    stations: FiWeatherSensorReading[];
+    kmSum: number;
+    latSum: number;
+    lonSum: number;
+    minSurface: number | null;
+    icy: boolean;
+  };
+  const clusters = new Map<number, Cluster>();
+  for (const s of readings) {
+    if (!s.slippery) continue;
+    if (minDistToCorridorKm(s.lat, s.lon, CORRIDOR_FI, densified) > 3) continue;
+    const km = corridorKmOfPoint(s.lat, s.lon, CORRIDOR_FI, densified);
+    const seg = Math.max(0, Math.floor(km / FI_WX_SEG_KM));
+    let c = clusters.get(seg);
+    if (!c) {
+      c = {
+        seg, stations: [], kmSum: 0, latSum: 0, lonSum: 0, minSurface: null, icy: false,
+      };
+      clusters.set(seg, c);
+    }
+    c.stations.push(s);
+    c.kmSum += km;
+    c.latSum += s.lat;
+    c.lonSum += s.lon;
+    if (s.surfaceC != null && Number.isFinite(s.surfaceC)) {
+      c.minSurface = c.minSurface == null ? s.surfaceC : Math.min(c.minSurface, s.surfaceC);
+    }
+    if (s.icy) c.icy = true;
+  }
+  const out: BalticRoadEvent[] = [];
+  for (const c of [...clusters.values()].sort((a, b) => a.seg - b.seg)) {
+    const n = c.stations.length;
+    const kmAvg = c.kmSum / n;
+    const towns = fiE75SegmentTowns(kmAvg);
+    const tempBit = c.minSurface != null
+      ? `nawierzchnia ${c.minSurface} °C`
+      : '';
+    /* B3: zimno+wilgoć = ryzyko gołoledzi; lód/szron/śnieg = śliska nawierzchnia. */
+    const head = c.icy ? 'Śliska nawierzchnia' : 'Ryzyko gołoledzi';
+    const title = tempBit
+      ? `${head}: E75 (FI), ${towns}, ${tempBit}`
+      : `${head}: E75 (FI), ${towns}`;
+    const conds = [...new Set(
+      c.stations.map((s) => s.conditionPl).filter((x): x is string => !!x),
+    )];
+    const detailParts = [
+      tempBit,
+      conds.length ? `stan: ${conds.join(', ')}` : '',
+      `stacje: ${n}`,
+    ].filter(Boolean);
+    const unknown = c.stations.find((s) => !s.conditionPl && s.conditionRaw);
+    out.push({
+      id: `fi-wx:seg:${c.seg}`,
+      title,
+      detail: detailParts.join(' · '),
+      severity: (hasTransport ? 'HIGH' : 'MEDIUM') as RiskSeverity,
+      lat: c.latSum / n,
+      lon: c.lonSum / n,
+      kind: 'FI_WEATHER',
+      start: null,
+      end: null,
+      road: 'E75',
+      placeName: towns,
+      corridorMatch: 'on' as const,
+      freeText: unknown?.conditionRaw ? String(unknown.conditionRaw) : null,
     });
+  }
+  return out;
 }
 
 export interface FiBbox {
@@ -884,13 +976,25 @@ export function formatBalticRoadTitle(
     if (note) type = note;
     else if ((e.freeText ?? '').trim()) type = 'Tłumaczenie w toku';
   }
-  /* EE/FI pogoda: tytuł zdarzenia = ryzyko gołoledzi / śliskość (#781 pkt 11; DP-216). */
-  if (
-    (country === 'EE' && String(e.kind ?? '').startsWith('EE_WEATHER')
-      || country === 'FI' && String(e.kind ?? '').startsWith('FI_WEATHER'))
-    && e.title
-  ) {
+  /* EE pogoda: tytuł zdarzenia = ryzyko gołoledzi / śliskość (#781 pkt 11). */
+  if (country === 'EE' && String(e.kind ?? '').startsWith('EE_WEATHER') && e.title) {
     type = String(e.title).trim() || type;
+  }
+  /* F7 #802 B2: FI weather — pełny tytuł „Śliska…: E75 (FI), A–B, nawierzchnia…”. */
+  if (country === 'FI' && String(e.kind ?? '').startsWith('FI_WEATHER') && e.title) {
+    const full = String(e.title).trim();
+    if (/^Śliska nawierzchnia:|^Ryzyko gołoledzi:/i.test(full)) {
+      return {
+        title: full,
+        typePl: full.split(':')[0]!.trim() || full,
+        roadLabel: balticRoadLabel(country, e.road, {
+          placeName: e.placeName, severity: e.severity,
+        }),
+        off: (opts?.offRoute === true || e.corridorMatch === 'off') ? ' · obok trasy' : '',
+        eventBody: full.includes(':') ? full.slice(full.indexOf(':') + 1).trim() : full,
+      };
+    }
+    type = full || type;
   }
   const roadLabel = balticRoadLabel(country, e.road, {
     placeName: e.placeName, severity: e.severity,
