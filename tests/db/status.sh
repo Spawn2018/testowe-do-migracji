@@ -4193,11 +4193,12 @@ chk "DP-222: trigger STATEMENT + NEW TABLE" \
       and pg_get_triggerdef(oid) ilike '%new_rows%')::text
      from pg_trigger where tgname='trg_vessel_positions_eta' and not tgisinternal limit 1" true
 # Daleko od PORT_IN NYN — ETA ustawione samym INSERT AIS.
+# observed_at = now() (GPS_FRESH_MIN ~1,5 h): stałe 08:00Z przy CI po południu → waits_for_ais.
 q "set session_replication_role=replica;
     update loads set eta_site=null, eta_computed_at=null, eta_basis=null where id='$L222';
     set session_replication_role=origin;
     insert into vessel_positions (vessel_id, lat, lon, sog_kn, observed_at, source) values
- ('$V222', 55.0, 18.5, 16, '2026-11-05 08:00+00', 'AISSTREAM')" >/dev/null
+ ('$V222', 55.0, 18.5, 16, now() - interval '2 minutes', 'AISSTREAM')" >/dev/null
 chk "DP-222: AIS daleko → eta_site + ferry_eta=ais (bez ręcznego refresh)" \
   "select (eta_site is not null)::text||'/'||(eta_basis->>'ferry_eta') from loads where id='$L222'" "true/ais"
 ETA1=$(q "select extract(epoch from eta_site)::bigint from loads where id='$L222'")
@@ -4206,9 +4207,9 @@ q "set session_replication_role=replica;
     update loads set eta_computed_at = now() - interval '6 minutes' where id='$L222';
     set session_replication_role=origin;
     insert into vessel_positions (vessel_id, lat, lon, sog_kn, observed_at, source) values
- ('$V222', 58.5, 18.0, 16, '2026-11-05 10:00+00', 'AISSTREAM')" >/dev/null
+ ('$V222', 58.5, 18.0, 16, now() - interval '1 minute', 'AISSTREAM')" >/dev/null
 chk "DP-222: drugi AIS bliżej → eta_site wcześniejsze" \
-  "select (extract(epoch from eta_site)::bigint < $ETA1)::text from loads where id='$L222'" true
+  "select (coalesce(extract(epoch from eta_site)::bigint, 0) < coalesce(nullif('$ETA1','')::bigint, 1))::text from loads where id='$L222'" true
 # Obcy status nie dostaje refresh z AIS tego statku.
 L222b=55555555-0000-0000-0000-00000000222b
 mk $L222b T222b "'HHL/T222b'" "'SCX/T222b'" IN_TRANSIT_PL "'$S222'"
@@ -4217,7 +4218,7 @@ q "set session_replication_role=replica;
      where id='$L222b';
     set session_replication_role=origin" >/dev/null
 q "insert into vessel_positions (vessel_id, lat, lon, sog_kn, observed_at, source) values
- ('$V222', 58.6, 18.05, 15, '2026-11-05 10:05+00', 'AISSTREAM')" >/dev/null
+ ('$V222', 58.6, 18.05, 15, now(), 'AISSTREAM')" >/dev/null
 chk "DP-222: AIS nie rusza ETA poza FERRY" \
   "select (eta_site = '2026-11-06 12:00+00')::text from loads where id='$L222b'" true
 
@@ -4242,7 +4243,7 @@ q "insert into load_events (load_id,event_type,occurred_at) values
     set session_replication_role=origin;
     insert into vessel_positions (vessel_id, lat, lon, sog_kn, observed_at, source)
     select '$V222c', 55.0 + g.i * 0.01, 18.5, 16,
-           '2026-11-05 08:00+00'::timestamptz + (g.i || ' seconds')::interval, 'AISSTREAM'
+           now() - interval '3 minutes' + (g.i || ' seconds')::interval, 'AISSTREAM'
       from generate_series(0, 19) as g(i)" >/dev/null
 chk "DP-222 B1: wsad 20 → 1 przeliczenie (eta_computed_at)" \
   "select (eta_computed_at is not null and eta_site is not null)::text from loads where id='$L222c'" true
@@ -4252,16 +4253,16 @@ q "set session_replication_role=replica;
 ETA_1M=$(q "select extract(epoch from eta_computed_at)::bigint from loads where id='$L222c'")
 q "insert into vessel_positions (vessel_id, lat, lon, sog_kn, observed_at, source)
     select '$V222c', 56.0 + g.i * 0.01, 18.2, 16,
-           '2026-11-05 09:00+00'::timestamptz + (g.i || ' seconds')::interval, 'AISSTREAM'
+           now() - interval '2 minutes' + (g.i || ' seconds')::interval, 'AISSTREAM'
       from generate_series(0, 19) as g(i)" >/dev/null
 chk "DP-222 B1: drugi wsad po 1 min → 0" \
-  "select (extract(epoch from eta_computed_at)::bigint = $ETA_1M)::text from loads where id='$L222c'" true
+  "select (extract(epoch from eta_computed_at)::bigint = coalesce(nullif('$ETA_1M','')::bigint, -1))::text from loads where id='$L222c'" true
 q "set session_replication_role=replica;
     update loads set eta_computed_at = now() - interval '6 minutes' where id='$L222c';
     set session_replication_role=origin;
     insert into vessel_positions (vessel_id, lat, lon, sog_kn, observed_at, source)
     select '$V222c', 57.0 + g.i * 0.01, 18.0, 16,
-           '2026-11-05 10:00+00'::timestamptz + (g.i || ' seconds')::interval, 'AISSTREAM'
+           now() - interval '1 minute' + (g.i || ' seconds')::interval, 'AISSTREAM'
       from generate_series(0, 19) as g(i)" >/dev/null
 chk "DP-222 B1: wsad po 6 min → 1" \
   "select (eta_computed_at > now() - interval '1 minute')::text from loads where id='$L222c'" true

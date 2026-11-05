@@ -1,3 +1,10 @@
+## 2026-11-05 14:50 — DP-222 #819 CI fix (AIS freshness) + DP-224 w rejestrze
+
+- Skrzynka: #814 PILNE w toku (#819); **#817 PILNE DP-224** wpisane do rejestru; #550 WSTRZYMANE; BN5–8 w planie.
+- Scalanie: brak F7 gotowe — CI @ `461fab69` czerwone (db 4 FAIL DP-222; visual `d-eur-t` flake). #813 wstrzymane.
+- **Krok:** testy status DP-222 — `vessel_positions.observed_at = now()` (± minuty), nie stałe 08:00Z (GPS_FRESH_MIN → `waits_for_ais`); bezpieczne `coalesce` przy pustym ETA1. Rejestr **DP-224** (#817 mapa 3,3 MB / `map_display_state`).
+- **Dalej:** push → CI (+`db`) → F7. Po #819: DP-224 albo dokończenie DP-222. Bez push na main.
+
 ## 2026-11-05 14:15 — DP-222 F7 #819 B1 (0413 STATEMENT + throttle)
 
 - Skrzynka: #814 PILNE w toku (#819); #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne` poza #814.
