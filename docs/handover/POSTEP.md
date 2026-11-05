@@ -1,3 +1,10 @@
+## 2026-11-05 15:55 — DP-224 A F7 #820 niegotowe (tsc + refetch)
+
+- Skrzynka: #817 PILNE W TOKU (#820); #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: brak F7 gotowe — F7 #820 @ `92d8f121` **niegotowe** (unit tsc). #813 wstrzymane.
+- **Krok:** `DisplayStateRow` (TS18047); przy `roads_unchanged` bez LS → `fetchRow(null)`; `here_road_points_display_from_geom(geom, p_tol default 100)`. Grep: tylko klient/testy wołają RPC (stare migracje historyczne).
+- **Dalej:** push → CI (+`db`) → F7. Potem B–E. Bez push na main.
+
 ## 2026-11-05 15:35 — #819 SCALONE; DP-224 A (0414 map_display simplify)
 
 - Skrzynka: #817 PILNE DP-224 W TOKU; #814 drobne po DP-224; #550 WSTRZYMANE; BN5–8 w planie.

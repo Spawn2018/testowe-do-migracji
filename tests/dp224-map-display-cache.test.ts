@@ -17,18 +17,21 @@ describe('DP-224 map_display_state cache / simplify', () => {
     expect(sql).toMatch(/p_known_version/);
     expect(sql).toMatch(/tower-here-road-purge/);
     expect(sql).toMatch(/here_road_points_display_from_geom/);
+    expect(sql).toMatch(/p_tol double precision default 100/);
     const start = sql.indexOf('create or replace function public.map_display_state');
     const end = sql.indexOf("comment on function public.map_display_state", start);
     const fn = sql.slice(start, end > start ? end : start + 2500);
     expect(fn).not.toMatch(/purge_here_road_geometry/);
   });
 
-  it('klient: rpc z p_known_version + localStorage wt-map-roads-v1', () => {
+  it('klient: rpc z p_known_version + localStorage wt-map-roads-v1; refetch bez LS', () => {
     const src = applySrc();
     expect(src).toMatch(/p_known_version/);
     expect(src).toMatch(/roads_unchanged/);
     expect(src).toMatch(/wt-map-roads-v1/);
     expect(src).toMatch(/rpc\('map_display_state', args\)/);
     expect(src).toMatch(/__resetMapRoadsLocalCacheForTests/);
+    expect(src).toMatch(/fetchRow\(null\)/);
+    expect(src).toMatch(/DisplayStateRow/);
   });
 });

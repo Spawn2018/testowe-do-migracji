@@ -37,8 +37,9 @@ function tilesForcedOff(): boolean {
  * AUD-01 / DP-224: jeden odczyt `map_display_state` na stronę.
  * `roads_version` w localStorage — RPC z `p_known_version` pomija roads przy tej samej wersji
  * (`roads_unchanged`). TTL pamięci 60 s; force bez wersji (pełny payload).
+ * F7 #820: przy `roads_unchanged` bez LS — drugie wołanie bez wersji (nie pusta mapa).
  */
-type DisplayState = {
+type DisplayStateRow = {
   tiles_open?: boolean;
   month?: string;
   roads?: unknown;
@@ -46,7 +47,8 @@ type DisplayState = {
   roads_version?: string;
   roads_unchanged?: boolean;
   route_legs?: unknown;
-} | null;
+};
+type DisplayState = DisplayStateRow | null;
 const ROADS_CACHE_KEY = 'wt-map-roads-v1';
 type RoadsCache = { version: string; roads: unknown; route_legs?: unknown };
 let displayState: { at: number; p: Promise<DisplayState> } | null = null;
@@ -84,21 +86,30 @@ export function readMapDisplayState(force = false): Promise<DisplayState> {
     try {
       const { getSupabase } = await import('../../auth/client');
       const sb = await getSupabase();
+      const fetchRow = async (knownVersion: string | null): Promise<DisplayStateRow | null> => {
+        const args = knownVersion ? { p_known_version: knownVersion } : {};
+        const { data, error } = await sb.rpc('map_display_state', args);
+        if (error || !data || typeof data !== 'object') return null;
+        return data as DisplayStateRow;
+      };
       const cached = force ? null : readRoadsCache();
-      const args = cached?.version ? { p_known_version: cached.version } : {};
-      const { data, error } = await sb.rpc('map_display_state', args);
-      if (error || !data || typeof data !== 'object') return null;
-      const state = data as DisplayState;
+      let state = await fetchRow(cached?.version ?? null);
+      if (!state) return null;
       const version = typeof state.roads_version === 'string' ? state.roads_version : '';
-      if (state.roads_unchanged === true && cached && cached.version === version) {
-        return {
-          ...state,
-          roads: cached.roads,
-          route_legs: cached.route_legs ?? state.route_legs,
-        };
+      if (state.roads_unchanged === true) {
+        if (cached && cached.version === version) {
+          return {
+            ...state,
+            roads: cached.roads,
+            route_legs: cached.route_legs ?? state.route_legs,
+          };
+        }
+        /* F7 #820 pkt 4: LS wyczyszczony → pełny payload, nie roads=null */
+        state = (await fetchRow(null)) ?? state;
       }
-      if (version && Array.isArray(state.roads)) {
-        writeRoadsCache(version, state.roads, state.route_legs);
+      const verOut = typeof state.roads_version === 'string' ? state.roads_version : version;
+      if (verOut && Array.isArray(state.roads)) {
+        writeRoadsCache(verOut, state.roads, state.route_legs);
       }
       return state;
     } catch {

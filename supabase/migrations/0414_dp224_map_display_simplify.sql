@@ -6,7 +6,12 @@ begin;
 -- ---------------------------------------------------------------------------
 -- 1) Punkty do mapy z LineString (Douglas–Peucker ~50 m na 55–66°N)
 -- ---------------------------------------------------------------------------
-create or replace function public.here_road_points_display_from_geom(p_geom geometry)
+-- p_tol: jednostki EPSG:3857. Domyślnie 100 ≈ 50–58 m @ 54–60°N.
+-- Po decyzji właściciela 06.11 (rekomendacja koord. ~30 m ≈ tol 55) — migracja + backfill.
+create or replace function public.here_road_points_display_from_geom(
+  p_geom geometry,
+  p_tol double precision default 100
+)
 returns jsonb
 language plpgsql
 immutable
@@ -15,14 +20,18 @@ security invoker
 set search_path = public
 as $$
 declare
+  v_tol double precision;
   v_simple geometry;
   v_out jsonb;
 begin
   if (p_geom is not null and st_npoints(p_geom) >= 2) is not true then
     return null;
   end if;
-  -- 100 jednostek Web Mercator ≈ 40–55 m na 55–66°N (cel rysowania, nie ETA)
-  v_simple := st_transform(st_simplify(st_transform(p_geom, 3857), 100), 4326);
+  v_tol := coalesce(nullif(p_tol, 0), 100);
+  if (v_tol > 0) is not true then
+    v_tol := 100;
+  end if;
+  v_simple := st_transform(st_simplify(st_transform(p_geom, 3857), v_tol), 4326);
   if v_simple is null or st_npoints(v_simple) < 2 then
     v_simple := p_geom;
   end if;
@@ -45,12 +54,13 @@ begin
 end;
 $$;
 
-comment on function public.here_road_points_display_from_geom(geometry) is
-  'DP-224: [lat,lon] do mapy z geom (st_simplify 100 w 3857 ≈ 50 m); pełne points zostają do ETA/korytarza.';
+comment on function public.here_road_points_display_from_geom(geometry, double precision) is
+  'DP-224: [lat,lon] do mapy; p_tol w 3857 (domyślnie 100 ≈ 50 m); pełne points zostają do ETA/korytarza.';
 
-revoke all on function public.here_road_points_display_from_geom(geometry)
+revoke all on function public.here_road_points_display_from_geom(geometry, double precision)
   from public, anon, authenticated;
-grant execute on function public.here_road_points_display_from_geom(geometry) to service_role;
+grant execute on function public.here_road_points_display_from_geom(geometry, double precision)
+  to service_role;
 
 alter table public.here_road_geometry
   add column if not exists points_display jsonb;
