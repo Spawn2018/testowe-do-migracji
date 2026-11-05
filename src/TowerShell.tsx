@@ -17,6 +17,7 @@ import { PhoneMissingBar } from './components/shell/PhoneMissingBar';
 import { ImpersonationBanner } from './auth/ImpersonationBanner';
 import { PreviewBanner } from './auth/PreviewBanner';
 import { lazyRetry } from './lib/lazyRetry';
+import { loadLoadDrawerChunk, prefetchMainChunks } from './lib/prefetchMainChunks';
 import { DashboardView } from './views/DashboardView';
 import { MapViewLazy as MapView } from './views/mapLazy';
 /* wyglad/P7-c: Harmonogram (E38, E30) ładowany osobno (budżet pierwszego wczytania) */
@@ -41,16 +42,11 @@ import { ACCESS_OPEN_LOAD, accessNoteText, parseAccessNote } from './lib/accessN
 import { t } from './i18n/messages';
 import { usePhoneTableLabels } from './lib/phoneTableLabels';
 
-const loadDrawerChunk = () => import('./components/drawer/LoadDrawer').then((m) => ({ default: m.LoadDrawer }));
-const LoadDrawer = lazy(lazyRetry(loadDrawerChunk));
+const LoadDrawer = lazy(lazyRetry(loadLoadDrawerChunk));
 /* #594 B1: okno „Zmiany z pliku KSH” — osobny fragment, pobierany dopiero po kliknięciu powiadomienia (budżet D15) */
 const KshImportSummaryModal = lazy(lazyRetry(() => import('./components/shell/KshImportSummaryModal').then((m) => ({ default: m.KshImportSummaryModal }))));
-/* pobranie panelu transportu w tle, gdy przeglądarka jest wolna (pierwsze kliknięcie bez czekania) */
-if (typeof window !== 'undefined') {
-  const idle = (window as Window & { requestIdleCallback?: (f: () => void) => void }).requestIdleCallback;
-  const warm = () => { void loadDrawerChunk().catch(() => undefined); };
-  if (idle) idle(warm); else window.setTimeout(warm, 1500);
-}
+/* DP-224 B3 (#817): Mapa / Harmonogram / Ryzyka / Dokumenty / CorridorMap / karta — w tle po starcie */
+prefetchMainChunks();
 
 export default function TowerShell() {
   const view = useTowerStore((s) => s.view);

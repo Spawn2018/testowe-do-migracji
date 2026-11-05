@@ -1,3 +1,23 @@
+## 2026-11-05 23:45 — DP-224 B3 F7 #826: dokończenie testów + idle timeout
+
+- Skrzynka: #817 PILNE B3+E; #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: brak — #826 CI było zielone @ `81c4e6b0`, ale F7 r1 wymagało jeszcze: asercja startu bez błędu, osobny test B3 po prefetchu, `requestIdleCallback({ timeout: 5000 })`.
+- **Krok:** P10a + test B3 (prefetch OK → późniejszy abort nie psuje Ryzyk) + idle 5 s. Czekam CI → F7. Potem DP-225.
+
+## 2026-11-05 22:50 — DP-224 B3+E visual FAIL → abort RisksView przed boot
+
+- Skrzynka: #817 PILNE B3+E; #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: brak — #826 CI visual telefon FAIL (P10a chunk); #813 wstrzymane.
+- **Krok:** P10a — `page.route` abort `RisksView-*.js` **przed** `boot` (prefetch B3 wcześniej cache’ował chunk). Czekam CI → F7. Potem DP-225.
+- Bez push na main.
+
+## 2026-11-05 22:15 — #825 SCALONE; DP-224 B3 prefetch + E `_leaflet_pos`
+
+- Skrzynka: #817 PILNE B3+E; #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: **#825 SCALONE** `8b29630f` (F7 gotowe @ `8691de25`; unit+visual ✔). #813 wstrzymane.
+- **Krok B3+E** `pakiet/c2-dp-224-b3-prefetch-e`: `prefetchMainChunks` (Mapa/Harmonogram/Ryzyka/Dokumenty/CorridorMap/LoadDrawer) + `destroyLeafletMap`/`stopLeafletMap` w mapPool i ZonesMap. Dalej DP-225.
+- Bez push na main.
+
 ## 2026-11-05 21:05 — #824 SCALONE; DP-224 B1 keep-previous-assets + DP-225
 
 - Skrzynka: #817 PILNE B1; #814 BS-04 SCALONE; #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
