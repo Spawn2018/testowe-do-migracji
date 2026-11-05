@@ -37,6 +37,19 @@ export function holidayBanHit(fromDb: boolean | null | undefined): boolean {
   return fromDb === true;
 }
 
+/**
+ * DP-211 F7 #805 N1: agregacja próbek RPC świąt.
+ * true wygrywa; jeśli którakolwiek próbka = null i żadna nie = true → null (→ warn, nigdy ok).
+ */
+export function mergeHolidayBanSamples(hits: ReadonlyArray<boolean | null>): boolean | null {
+  let sawNull = false;
+  for (const hit of hits) {
+    if (hit === true) return true;
+    if (hit == null) sawNull = true;
+  }
+  return sawNull ? null : false;
+}
+
 export function banRiskTitle(where: 'PL' | 'SE', whenLocal: string): string {
   return `Zakaz czasowy ${where}: planowany przejazd ${whenLocal} koliduje z ograniczeniem dla ciężarówek`;
 }

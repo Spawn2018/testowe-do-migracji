@@ -37,6 +37,7 @@ import {
 import type { DbSailing, RiskInput, SailingInsert, SailingPatch, VesselRow } from './sync.ts';
 import { ROAD_LEGS } from '../here/refreshRoadLegs.ts';
 import { legDefFromRow } from '../here/legDefFromRow.ts';
+import { mergeHolidayBanSamples } from '../here/windAndBans.ts';
 import { windThresholdsFromOps } from '../e49/etaWeather.ts';
 import { hoursLeftFromH4Segments } from '../e49/detourCaseJob.ts';
 
@@ -1156,6 +1157,29 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
           }
         }
         const pilots = pilotsByLoad.get(leg.loadId) ?? [];
+        // DP-211 F7 #805 B1: święto w oknie jazdy objazdu — nie eta_site (plac).
+        // Tu nie znamy jeszcze decideBy/duration; próbki: teraz, +6 h, +24 h (kraj nogi).
+        // Brak kraju PL/SE albo błąd RPC → null (riskBanForEta → warn, nigdy ok).
+        let holidayBan: boolean | null = null;
+        const banCountry = /^SE[_-]/i.test(leg.code) || leg.code === 'SE_E4' || leg.code === 'SE_E22'
+          ? 'SE' as const
+          : (/^PL[_-]|PL_ROAD|PL_EE/i.test(leg.code) ? 'PL' as const : null);
+        if (banCountry) {
+          try {
+            const nowMs = Date.now();
+            const samples = [0, 6, 24].map((h) => new Date(nowMs + h * 3600_000).toISOString());
+            const hits: Array<boolean | null> = [];
+            for (const ts of samples) {
+              const hit = await this.truckBanHolidayHit(banCountry, ts);
+              hits.push(hit);
+              if (hit === true) break;
+            }
+            // N1: null przy błędzie RPC → holidayBan null → BAN warn (nigdy ok).
+            holidayBan = mergeHolidayBanSamples(hits);
+          } catch {
+            holidayBan = null;
+          }
+        }
         const riskCtx: import('../e49/detourCaseJob.ts').DetourRiskCtx = {
           windGustMs: windPeak.has(leg.code) ? windPeak.get(leg.code)! : null,
           hoursLeftMin: hoursLeft,
@@ -1165,6 +1189,7 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
           ferryPast,
           windowEndIso: row.plan_delivery_to ? String(row.plan_delivery_to) : null,
           pilotCountries: pilots.length ? pilots : null,
+          holidayBan,
         };
         out.push({
           loadId: leg.loadId,
@@ -1264,9 +1289,10 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
       if (r.error || !r.data) return null;
       return String((r.data as { ts: string }).ts);
     },
-    async truckBanHolidayHit(country: 'PL' | 'SE', isoUtc: string) {
+    /** F7 #805 N1: błąd RPC / brak danych → null (nie false → ok). */
+    async truckBanHolidayHit(country: 'PL' | 'SE', isoUtc: string): Promise<boolean | null> {
       const r = await sb.rpc('truck_ban_holiday_hit', { p_country: country, p_ts: isoUtc });
-      if (r.error) return false;
+      if (r.error || r.data == null) return null;
       return r.data === true;
     },
     async emtrackLoginState() {

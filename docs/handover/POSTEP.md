@@ -1,3 +1,27 @@
+## 2026-11-05 07:55 — DP-211 F7 r1 N1 (#805)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: brak F7 gotowe — F7 r1 @ `01cb57ab` **niegotowe** (N1).
+- **Krok N1:** `truckBanHolidayHit` przy `r.error` / `r.data == null` → `null` (nie false); `mergeHolidayBanSamples` — null bez true → `holidayBan null` → BAN warn. Testy h7-h10-h12 + e49-detour-job. Bez migracji. DP-210 nie zaczynać.
+- **Dalej:** push → CI → F7. Potem DP-212…
+
+
+## 2026-11-05 07:40 — DP-211 F7 r1 niegotowe B1–B4 (#805)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: brak F7 gotowe (niegotowe @ `f98ccde` / po rebase CI zielone @ `054ec471`).
+- **Krok F7 r1:** (B1) BAN w oknie jazdy wariantu (nie eta_site); (B2) holidayHit null → warn; (B3) WORKS bez bieżącego zamknięcia + geometria objazdu; (B4) testy. Bez migracji. DP-210 nie zaczynać.
+- **Dalej:** push → CI → F7. Potem DP-212…
+
+
+## 2026-11-05 07:10 — #808 SCALONE; wznowienie DP-211 (#805)
+
+- Skrzynka: #807 zamknięte po merge; #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: **#808 SCALONE** `5e7a1173` (DP-218 / **0410**; F7 gotowe @ `817f6e3a`; unit+visual+db ✔). `deploy-main` robi resztę. Bez push na main.
+- **Krok DP-211** `pakiet/c2-dp-211-ban-works-sources` (rebase na `main` po #808): BAN/WORKS źródła; bez migracji. DP-210 nie zaczynać.
+- **Dalej:** push → CI → F7. Potem DP-212…
+
+
 ## 2026-11-05 06:35 — DP-218 F7 r1: fixture eta_site (#808)
 
 - Skrzynka: #807 `pilne` otwarte; #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
@@ -14,6 +38,13 @@
 - **Dalej:** push → CI (+`db`) → F7. Po scaleniu powrót do DP-211 (#805) / DP-212…
 
 
+## 2026-11-05 04:30 — #806 SCALONE; wznowienie DP-211 (#805)
+
+- Skrzynka: #804 zamknięte po merge; #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: **#806 SCALONE** `2723af71` (DP-217 / **0409**; F7 gotowe @ `54cf9d8f`; unit+visual+db ✔). `deploy-main` robi resztę. Bez push na main.
+- **Krok DP-211** `pakiet/c2-dp-211-ban-works-sources` (rebase na `main` po #806): (1) `riskBanForEta` — weekend PL/SE + `truck_ban_holiday_hit`; (2) `riskWorksOnCorridor` — ROAD_* `korytarz_droga=on`; (3) brak źródła → „sprawdź …”; testy e49-detour-job 16/16. Bez migracji. DP-210 nie zaczynać.
+- **Dalej:** push → CI → F7. Potem DP-212…
+
 ## 2026-11-05 03:45 — PILNE #804 DP-217 (przerwane #805 DP-211)
 
 - Skrzynka: **#804 `pilne`** (Spawn2018) — FI gołoledź fala dzwonków + tytuły odcinków; #550 WSTRZYMANE; BN5–8 w planie.
@@ -21,6 +52,13 @@
 - **Krok DP-217** `pakiet/c2-dp-217-fi-wx-slip-flood` / **0409**: (1) `fi-wx:seg:*` zawsze MEDIUM (bez load_id); (2) 1× HIGH `fi-wx:load:{id}` przed autem w horyzoncie 6 h, `audience=HHL_PRZEWOZNIK`; (3) etykiety odcinków z gęstych miejscowości CORRIDOR_FI (nie „Vuosaari–Tornio”); (4) vitest bn6-road-fi 26/26. DP-210 nie zaczynać.
 - **Dalej:** push → CI (+`db`) → F7. Po scaleniu powrót do DP-211 (#805) / DP-212…
 
+
+## 2026-11-05 03:20 — #803 SCALONE; start DP-211 (BAN/WORKS)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie; #793 zamknięte po merge. Bez nowego `pilne`.
+- Scalanie: **#803 SCALONE** `96e6f20b` (DP-213; F7 gotowe @ `fc0b5de0`; unit+visual+db ✔). `deploy-main` robi resztę. Bez push na main.
+- **Krok DP-211** `pakiet/c2-dp-211-ban-works-sources`: (1) `riskBanForEta` — weekend PL/SE + `truck_ban_holiday_hit`; (2) `riskWorksOnCorridor` — ROAD_* `korytarz_droga=on` z `listOpenRoadClosures`; (3) brak źródła → „sprawdź …”; testy e49-detour-job. Bez migracji. DP-210 nie zaczynać.
+- **Dalej:** push → CI → F7. Potem DP-212…
 
 ## 2026-11-05 02:50 — #802 SCALONE; start DP-213 (#793)
 
