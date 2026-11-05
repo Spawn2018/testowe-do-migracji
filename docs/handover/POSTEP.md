@@ -1,3 +1,17 @@
+## 2026-11-05 15:55 — DP-224 A F7 #820 niegotowe (tsc + refetch)
+
+- Skrzynka: #817 PILNE W TOKU (#820); #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: brak F7 gotowe — F7 #820 @ `92d8f121` **niegotowe** (unit tsc). #813 wstrzymane.
+- **Krok:** `DisplayStateRow` (TS18047); przy `roads_unchanged` bez LS → `fetchRow(null)`; `here_road_points_display_from_geom(geom, p_tol default 100)`. Grep: tylko klient/testy wołają RPC (stare migracje historyczne).
+- **Dalej:** push → CI (+`db`) → F7. Potem B–E. Bez push na main.
+
+## 2026-11-05 15:35 — #819 SCALONE; DP-224 A (0414 map_display simplify)
+
+- Skrzynka: #817 PILNE DP-224 W TOKU; #814 drobne po DP-224; #550 WSTRZYMANE; BN5–8 w planie.
+- Scalanie: **#819 SCALONE** `fea386be` (F7 gotowe @ `448616ac`; unit+visual+db ✔). #813 nadal wstrzymane.
+- **Krok DP-224 A** `pakiet/c2-dp-224-map-display-perf` / **0414**: `points_display` (~50 m); `map_display_state(p_known_version)` bez `purge` w odczycie; `roads_version` / `roads_unchanged`; cron `tower-here-road-purge`; klient LS `wt-map-roads-v1`. EXPECTED bmapa **210**. Dalej B–E (#817).
+- Bez push na main.
+
 ## 2026-11-05 14:50 — DP-222 #819 CI fix (AIS freshness) + DP-224 w rejestrze
 
 - Skrzynka: #814 PILNE w toku (#819); **#817 PILNE DP-224** wpisane do rejestru; #550 WSTRZYMANE; BN5–8 w planie.

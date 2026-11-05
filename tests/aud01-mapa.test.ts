@@ -172,7 +172,8 @@ describe('AUD-01c kafelki: publiczne, /tiles/<styl HERE>, brzeg Vercel (fra1) �
     const b = read('src/components/map/applyBasemap.ts');
     const resolve = b.slice(b.indexOf('export async function resolveBasemap'), b.indexOf('export function tileTemplate'));
     expect(resolve).not.toMatch(/map_display_state|rpc\(/);
-    expect(b.match(/rpc\('map_display_state'\)/g)).toHaveLength(1);
+    /* DP-224: rpc('map_display_state', args) — wersja z cache */
+    expect(b.match(/rpc\('map_display_state'/g)).toHaveLength(1);
   });
   it('mapa: dane dopiero po podkładzie (albo 1,5 s)', () => {
     const c = read('src/components/map/CorridorMap.tsx');
