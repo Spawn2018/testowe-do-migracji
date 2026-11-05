@@ -1,3 +1,10 @@
+## 2026-11-05 22:50 — DP-224 B3+E visual FAIL → abort RisksView przed boot
+
+- Skrzynka: #817 PILNE B3+E; #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: brak — #826 CI visual telefon FAIL (P10a chunk); #813 wstrzymane.
+- **Krok:** P10a — `page.route` abort `RisksView-*.js` **przed** `boot` (prefetch B3 wcześniej cache’ował chunk). Czekam CI → F7. Potem DP-225.
+- Bez push na main.
+
 ## 2026-11-05 22:15 — #825 SCALONE; DP-224 B3 prefetch + E `_leaflet_pos`
 
 - Skrzynka: #817 PILNE B3+E; #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.

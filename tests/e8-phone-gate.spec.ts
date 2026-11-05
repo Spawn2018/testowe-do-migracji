@@ -1324,8 +1324,9 @@ test.describe('wyglad/P10a-a — nowa wersja, „na żywo”, zamiast pustej str
 
   test('część, która się nie wczyta (plik Ryzyk po wdrożeniu) → komunikat i „Odśwież”; pasek górny i menu zostają', async ({ page }) => {
     await page.setViewportSize({ width: 1440, height: 900 });
-    await boot(page, 'HHL');
+    /* DP-224 B3 (#817): prefetchMainChunks podgrzewa RisksView po starcie — abort przed boot, inaczej klik bierze cache */
     await page.route(/\/assets\/RisksView-[^/]+\.js$/, (r) => r.abort());
+    await boot(page, 'HHL');
     await page.evaluate(() => (document.querySelector('nav button[data-view="risk"]') as HTMLButtonElement).click());
     const fail = page.locator('[data-part-failed]');
     await expect(fail).toBeVisible({ timeout: 20_000 });
