@@ -4116,5 +4116,55 @@ chk "DP-218: FERRY_OVERDUE audience HHL" \
       and resolved_at is null
     limit 1" HHL
 
+# DP-219 / #809: Tallinn D HEL+STO na tej samej geometrii — emit tylko trasa ładunku.
+echo; echo "[DP-219] process_position: filtr trasy PRE_PORT/PORT_OUT/PORT_IN"
+V219=66666666-0000-0000-0000-00000000219a
+S219=77777777-0000-0000-0000-00000000219a
+L219=55555555-0000-0000-0000-00000000219a
+q "
+insert into vessels (id,name,operator) values
+ ('$V219','DP-219 Tallinn D','Tallink')
+ on conflict (id) do nothing;
+insert into sailings (id,project_id,vessel_id,route,departure_at,arrival_at,status,source) values
+ ('$S219','$P','$V219','TLL-HEL',
+  '2026-11-05 20:30+00','2026-11-05 22:30+00','ZAPLANOWANY','TALLINK')
+ on conflict (id) do nothing;
+" >/dev/null
+mk $L219 T219 "'HHL/T219'" "'SCX/T219'" IN_TRANSIT_PL "'$S219'"
+q "update loads set plan_load_date='2026-11-04',
+       tracking_opened_at=public.tracking_window_start('2026-11-04'::date)
+     where id='$L219';
+   insert into load_events (load_id,event_type,occurred_at) values
+    ('$L219','MILESTONE_LOADED','2026-11-04 08:00+00')" >/dev/null
+# Wjazd Tallinn D (debounce=2) → ENTER tylko HEL, nie bliźniak STO.
+pos $L219 59.44000 24.77500 "2026-11-05 16:00+00"
+pos $L219 59.44010 24.77510 "2026-11-05 16:05+00"
+chk "DP-219: ENTER Terminal Tallinn D HEL = 1" \
+  "select count(*)::text from load_events
+    where load_id='$L219' and event_type='GEOFENCE_ENTER'
+      and payload->>'geofence_name'='Terminal Tallinn D HEL'" 1
+chk "DP-219: ENTER Terminal Tallinn D (STO) = 0" \
+  "select count(*)::text from load_events
+    where load_id='$L219' and event_type='GEOFENCE_ENTER'
+      and payload->>'geofence_name'='Terminal Tallinn D'" 0
+# Wyjazd (PENDING_OUT + EXIT) — daleko od Tallinna.
+pos $L219 59.20000 24.50000 "2026-11-05 16:20+00"
+pos $L219 59.20010 24.50010 "2026-11-05 16:25+00"
+chk "DP-219: EXIT Terminal Tallinn D HEL = 1" \
+  "select count(*)::text from load_events
+    where load_id='$L219' and event_type='GEOFENCE_EXIT'
+      and payload->>'geofence_name'='Terminal Tallinn D HEL'" 1
+chk "DP-219: EXIT Terminal Tallinn D (STO) = 0" \
+  "select count(*)::text from load_events
+    where load_id='$L219' and event_type='GEOFENCE_EXIT'
+      and payload->>'geofence_name'='Terminal Tallinn D'" 0
+chk "DP-219: EXIT Bufor Tallinn D (STO) = 0" \
+  "select count(*)::text from load_events
+    where load_id='$L219' and event_type='GEOFENCE_EXIT'
+      and payload->>'geofence_name'='Bufor 20 km przed Tallinn D'" 0
+chk "DP-219: GEOFENCE_EXIT łącznie ≤ 3 (bez bliźniaków STO)" \
+  "select (count(*) <= 3)::text from load_events
+    where load_id='$L219' and event_type='GEOFENCE_EXIT'" true
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]
