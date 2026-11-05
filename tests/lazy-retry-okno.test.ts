@@ -1,9 +1,9 @@
 /**
- * #274 / F7 #511 — okno po odświeżeniu; DP-224 C / #817 B2 — na ekranie aplikacji pasek zamiast cichego reload.
+ * #274 / F7 #511 — okno po odświeżeniu; DP-224 C / #817 B2 / F7 #822 — pasek + PartBoundary zamiast cichego reload.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { lazyRetry } from '../src/lib/lazyRetry';
-import { clearNewVersionSignal, isNewVersionSignaled } from '../src/lib/newVersionSignal';
+import { lazyRetry, StaleChunkError } from '../src/lib/lazyRetry';
+import { clearNewVersionSignal, isNewVersionSignaled, signalNewVersion } from '../src/lib/newVersionSignal';
 
 const FAIL = () => Promise.reject(new Error('Failed to fetch dynamically imported module: /assets/RisksView-x.js'));
 const OK = () => Promise.resolve({ default: 'ok' });
@@ -29,9 +29,8 @@ describe('lazyRetry — okno po odświeżeniu', () => {
   });
   afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); clearNewVersionSignal(); });
 
-  it('DP-224 C: pierwszy błąd na ekranie → pasek (bez reload), znacznik z czasem', async () => {
-    void lazyRetry(FAIL)();
-    await Promise.resolve(); await Promise.resolve();
+  it('DP-224 C / F7: pierwszy błąd na ekranie → pasek + StaleChunkError (bez reload, bez wiszącego Promise)', async () => {
+    await expect(lazyRetry(FAIL)()).rejects.toBeInstanceOf(StaleChunkError);
     expect(reloads).toBe(0);
     expect(isNewVersionSignaled()).toBe(true);
     expect(Number(store.get('wt_chunk_reload'))).toBeGreaterThan(1e12);
@@ -42,6 +41,21 @@ describe('lazyRetry — okno po odświeżeniu', () => {
     await Promise.resolve(); await Promise.resolve();
     expect(reloads).toBe(1);
     expect(Number(store.get('wt_chunk_reload'))).toBeGreaterThan(1e12);
+  });
+
+  it('F7 #822 B1: udane wczytanie powłoki zdejmuje sygnał paska', async () => {
+    signalNewVersion('chunk');
+    expect(isNewVersionSignaled()).toBe(true);
+    await lazyRetry(OK, { stale: 'reload' })();
+    expect(isNewVersionSignaled()).toBe(false);
+  });
+
+  it('F7 #822 B1: clearNewVersionSignal przed reload — pasek nie wraca po Odśwież', () => {
+    signalNewVersion('chunk');
+    expect(isNewVersionSignaled()).toBe(true);
+    clearNewVersionSignal();
+    expect(isNewVersionSignaled()).toBe(false);
+    expect(store.has('wt_new_version')).toBe(false);
   });
 
   it('po odświeżeniu: udane wczytanie powłoki nie zdejmuje świeżego znacznika, brakująca część → błąd (komunikat), bez drugiego odświeżenia', async () => {

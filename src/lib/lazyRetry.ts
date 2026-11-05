@@ -1,5 +1,5 @@
 /** Lazy import z obsługą stale chunku po deployu (Failed to fetch dynamically imported module). */
-import { signalNewVersion } from './newVersionSignal';
+import { clearNewVersionSignal, signalNewVersion } from './newVersionSignal';
 
 const FLAG = 'wt_chunk_reload';
 /**
@@ -13,9 +13,18 @@ export type LazyRetryStale = 'reload' | 'bar';
 
 export type LazyRetryOpts = {
   retries?: number;
-  /** `reload` — start/logowanie (AuthGate, powłoka). `bar` — reszta: pasek NewVersionBar, bez cichego reload (#817 B2). */
+  /** `reload` — start/logowanie (AuthGate, powłoka). `bar` — reszta: pasek NewVersionBar + PartBoundary (#817 B2 / F7 #822). */
   stale?: LazyRetryStale;
 };
+
+/** F7 #822 B3: błąd do PartBoundary zamiast wiszącego Suspense (`new Promise(() => {})`). */
+export class StaleChunkError extends Error {
+  readonly code = 'STALE_CHUNK' as const;
+  constructor(message = 'Ta część jest już w nowej wersji — Odśwież') {
+    super(message);
+    this.name = 'StaleChunkError';
+  }
+}
 
 function flagFresh(): boolean {
   try {
@@ -51,7 +60,11 @@ export function lazyRetry<T>(
       const mod = await factory();
       /* audyt 17.10 (N4): udane wczytanie zdejmuje znacznik — przy następnym wdrożeniu znów jedno odświeżenie
          (poza oknem tuż po odświeżeniu, #274) */
-      try { if (typeof window !== 'undefined' && !flagFresh()) sessionStorage.removeItem('wt_chunk_reload'); } catch { /* brak sessionStorage */ }
+      try {
+        if (typeof window !== 'undefined' && !flagFresh()) sessionStorage.removeItem('wt_chunk_reload');
+      } catch { /* brak sessionStorage */ }
+      /* F7 #822 B1: po udanym wczytaniu powłoki/logowania zdejmij sygnał paska (sessionStorage przeżywa reload). */
+      if (stale === 'reload') clearNewVersionSignal();
       return mod;
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
@@ -64,9 +77,9 @@ export function lazyRetry<T>(
             window.location.reload();
             return new Promise(() => {});
           }
-          // DP-224 C / #817 B2: pasek „Jest nowa wersja” zamiast cichego reload na otwartej karcie.
+          // DP-224 C / #817 B2 / F7 #822 B3: pasek + PartBoundary (bez wiszącego Suspense).
           signalNewVersion('chunk');
-          return new Promise(() => {});
+          throw new StaleChunkError();
         }
         return factory();
       }

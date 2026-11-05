@@ -143,10 +143,12 @@ export function perfFromDb(raw: unknown): Perf {
 
 type DbErrGroup = {
   id?: unknown; message?: unknown; where?: unknown; people?: unknown; count?: unknown; builds?: unknown;
-  firstAt?: unknown; lastAt?: unknown; stack?: unknown;
+  firstAt?: unknown; lastAt?: unknown; stack?: unknown; state?: unknown; stateNote?: unknown;
 };
 const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : 0);
 const str = (v: unknown) => (typeof v === 'string' ? v : '');
+const errState = (v: unknown): ErrorState | null =>
+  v === 'new' || v === 'back' || v === 'watch' || v === 'fixed' || v === 'known' ? v : null;
 
 /** Wynik `app_errors_recent()` (tylko Administrator HHL) → `AppErrors`; zły kształt → `null` (ekran bez zakładki). */
 export function appErrorsFromDb(raw: unknown): AppErrors | null {
@@ -162,7 +164,9 @@ export function appErrorsFromDb(raw: unknown): AppErrors | null {
     builds: num(g.builds),
     firstAt: str(g.firstAt),
     lastAt: str(g.lastAt),
-    state: null,
+    /* DP-224 F7 #822: baza może oznaczyć new_version_shown jako known */
+    state: errState(g.state),
+    stateNote: typeof g.stateNote === 'string' && g.stateNote ? g.stateNote : null,
     stack: typeof g.stack === 'string' && g.stack ? g.stack : null,
   }));
   return {

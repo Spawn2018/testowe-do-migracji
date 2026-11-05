@@ -6,8 +6,14 @@
  */
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { a10 } from '../../i18n/p10a';
+import { clearNewVersionSignal } from '../../lib/newVersionSignal';
 
 interface State { failed: boolean }
+
+function reloadFresh(): void {
+  clearNewVersionSignal();
+  window.location.reload();
+}
 
 /** `onError` — część bez własnego miejsca na komunikat (okno): zamiast bloku z „Odśwież” rodzic zamyka ją sam (#594). */
 export class PartBoundary extends Component<{ children: ReactNode; name?: string; onError?: () => void }, State> {
@@ -30,7 +36,7 @@ export class PartBoundary extends Component<{ children: ReactNode; name?: string
       <div className="part-fail" role="alert" data-part-failed={this.props.name ?? ''}>
         <h2>{a10('a10_part_h')}</h2>
         <p>{a10('a10_part_tx')}</p>
-        <button type="button" className="btn" data-part-reload onClick={() => window.location.reload()}>{a10('a10_part_btn')}</button>
+        <button type="button" className="btn" data-part-reload onClick={reloadFresh}>{a10('a10_part_btn')}</button>
       </div>
     );
   }

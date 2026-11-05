@@ -510,6 +510,13 @@ sys "insert into client_errors (fingerprint, kind, message, path, first_seen_at,
      values ('508-same','error','#508 stary blad przed deploy','/login', now() - interval '2 hours', now() - interval '5 minutes', 2)" >/dev/null
 val "#508: newCount bez grupy istniejącej przed wdrożeniem" $HHL \
   "select (app_errors_recent(7)->>'newCount')" 1
+# DP-224 F7 #822 B2: info / new_version_shown nie zwiększa newCount; state=known
+sys "insert into client_errors (fingerprint, kind, message, path, first_seen_at, last_seen_at, hits)
+     values ('224-nv','info','new_version_shown:chunk','/', now() - interval '5 minutes', now(), 2)" >/dev/null
+val "#DP-224: newCount bez new_version_shown info" $HHL \
+  "select (app_errors_recent(7)->>'newCount')" 1
+val "#DP-224: new_version_shown → state known" $HHL \
+  "select (app_errors_recent(7)->'groups' @> '[{\"message\":\"new_version_shown:chunk\",\"state\":\"known\"}]')::text" true
 
 echo; echo "[#412] E40 terminy płatności i adresy księgowości"
 OPS412=11111111-0000-0000-0000-0000000000a2

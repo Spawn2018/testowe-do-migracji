@@ -4,7 +4,14 @@
  * okna zostają do kliknięcia. Kiedy pasek się pokazuje — `p10aSource` (produkcja: wykonawca, `version.json`).
  */
 import { a10 } from '../../i18n/p10a';
+import { clearNewVersionSignal } from '../../lib/newVersionSignal';
 import { useNewVersion } from '../../lib/p10aSource';
+
+function reloadFresh(): void {
+  /* F7 #822 B1: sessionStorage przeżywa reload — bez clear pasek wraca na nowej wersji. */
+  clearNewVersionSignal();
+  window.location.reload();
+}
 
 export function NewVersionBar() {
   const on = useNewVersion();
@@ -12,7 +19,7 @@ export function NewVersionBar() {
   return (
     <div className="subbar subbar-update" data-banner="new-version" role="status">
       <p className="subbar-tx"><b>{a10('a10_new_h')}</b><span className="subbar-body">{a10('a10_new_tx')}</span></p>
-      <button type="button" className="subbar-btn" data-new-version-reload onClick={() => window.location.reload()}>{a10('a10_new_btn')}</button>
+      <button type="button" className="subbar-btn" data-new-version-reload onClick={reloadFresh}>{a10('a10_new_btn')}</button>
     </div>
   );
 }

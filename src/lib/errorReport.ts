@@ -41,7 +41,7 @@ function describe(reason: unknown): { message: string; stack: string | null } {
 export function installErrorReporter(getSb: () => Promise<SupabaseClient>): () => void {
   const gate = makeGate();
   const build = buildId();
-  const send = (kind: 'error' | 'rejection', message: string, stack: string | null) => {
+  const send = (kind: 'error' | 'rejection' | 'info', message: string, stack: string | null) => {
     const msg = message.trim().slice(0, 1000);
     if (!msg || !gate(msg)) return;
     void getSb().then((sb) => sb.rpc('report_client_error', {
@@ -55,10 +55,10 @@ export function installErrorReporter(getSb: () => Promise<SupabaseClient>): () =
     send('error', d.message, d.stack ?? (e.filename ? `\n    at ${safePath(e.filename)}:${e.lineno}:${e.colno}` : null));
   };
   const onRejection = (e: PromiseRejectionEvent) => { const d = describe(e.reason); send('rejection', d.message, d.stack); };
-  /* DP-224 C / #817 C: skala cichych odświeżeń → licznik w client_errors (bez danych osobowych). */
+  /* DP-224 C / #817 C / F7 #822 B2: kind=info — bez alarmu HHL (client_error_watch / newCount). */
   const onNewVersion = (e: Event) => {
     const reason = (e as CustomEvent<{ reason?: string }>).detail?.reason ?? 'chunk';
-    send('error', `new_version_shown:${reason}`, null);
+    send('info', `new_version_shown:${reason}`, null);
   };
   window.addEventListener('error', onError);
   window.addEventListener('unhandledrejection', onRejection);

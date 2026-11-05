@@ -76,6 +76,23 @@ describe('Błędy aplikacji z bazy (#422/#508)', () => {
     expect(e).toMatchObject({ newSince: '2026-10-24T02:36:30Z', newCount: 0 });
   });
 
+  it('DP-224 F7: state=known + stateNote z bazy (new_version_shown)', () => {
+    const e = appErrorsFromDb({
+      groups: [{
+        id: 'nv', message: 'new_version_shown:chunk', where: '—', people: 0, count: 3, builds: 1,
+        firstAt: '2026-11-05T17:00:00Z', lastAt: '2026-11-05T17:10:00Z',
+        state: 'known', stateNote: 'znane / informacja — pasek „Jest nowa wersja”',
+      }],
+      total7d: 3, newSince: '2026-11-05T16:00:00Z', newCount: 0,
+    })!;
+    expect(e.groups[0]).toMatchObject({
+      state: 'known',
+      stateNote: 'znane / informacja — pasek „Jest nowa wersja”',
+      message: 'new_version_shown:chunk',
+    });
+    expect(e.newCount).toBe(0);
+  });
+
   it('zły kształt → null (zakładka ukryta, bez zmyślonych danych)', () => {
     expect(appErrorsFromDb(null)).toBeNull();
     expect(appErrorsFromDb({ total7d: 3 })).toBeNull();

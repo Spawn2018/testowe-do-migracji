@@ -357,6 +357,8 @@ chk "alarm drugi raz: bez nowego ryzyka (jeden na incydent)" "$(Q "select client
 val "ryzyko alarmu niewidoczne dla KSH" $KSH "select count(*) from risk_signals where detail->>'job'='client-errors'" 0
 $PSQL -c "update client_errors set last_seen_at = now() - interval '25 hours', first_seen_at = now() - interval '25 hours'" >/dev/null
 chk "24 h bez błędów → alarm zamknięty" "$(Q "select client_error_watch()->>'stan'")/$(Q "select count(*) from risk_signals where detail->>'job'='client-errors' and resolved_at is null")" "OK/0"
+val "DP-224: kind=info new_version_shown przyjęte" $HHL "select report_client_error('info', 'new_version_shown:chunk')" t commit
+chk "DP-224: samo info → watch OK (bez alarmu HHL)" "$(Q "select client_error_watch()->>'stan'")/$(Q "select count(*) from risk_signals where detail->>'job'='client-errors' and resolved_at is null")" "OK/0"
 $PSQL -c "insert into client_errors (fingerprint, kind, message) select 'f'||g, 'error', 'zalew '||g from generate_series(1,60) g" >/dev/null
 chk "zalew: 60 nowych / min → kolejny nowy błąd odrzucony cicho" "$(AN "select report_client_error('error', 'nowy po zalewie')")/$(Q "select count(*) from client_errors where message='nowy po zalewie'")" "f/0"
 
