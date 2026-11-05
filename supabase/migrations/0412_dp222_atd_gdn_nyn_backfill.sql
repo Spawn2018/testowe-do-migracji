@@ -122,6 +122,7 @@ declare
   r record;
   v_km double precision;
   v_gap interval;
+  v_max interval;
   v_allow_sparse boolean;
   v_prev_km double precision;
   v_mid record;
@@ -172,9 +173,9 @@ begin
             end if;
           end loop;
         end if;
-        if v_gap >= interval '0'
-           and v_gap <= case when v_allow_sparse then interval '60 minutes' else interval '20 minutes' end
-        then
+        -- CASE w IF powodowal "syntax error at end of input" w bramie (0412 B2).
+        v_max := case when v_allow_sparse then interval '60 minutes' else interval '20 minutes' end;
+        if v_gap >= interval '0' and v_gap <= v_max then
           return r.observed_at;
         end if;
       end if;
@@ -188,7 +189,7 @@ begin
       v_last_clear_sog := r.sog_kn;
       v_last_clear_km := v_km;
     end if;
-    /* Pas 3–4 km bez SOG≥3: pomijaj — last_clear zostaje. */
+    /* Pas 3-4 km bez SOG>=3: pomijaj — last_clear zostaje. */
   end loop;
   return null;
 end;

@@ -1,3 +1,10 @@
+## 2026-11-05 13:20 — DP-222 F7 #818 B2fix db (0412 CASE→v_max)
+
+- Skrzynka: #814 PILNE w toku (#818); #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne` poza #814.
+- Scalanie: brak F7 gotowe. #818 @ `e793d9da`: unit+visual ✔, **db FAIL** — `0412` ATA: `CASE` w warunku `IF` → `syntax error at end of input`. #813 wstrzymane.
+- **Krok:** `dp222_ata_from_ais_nyn` — jak ATD: `v_max := case …`; `if v_gap … <= v_max`. Logika bez zmian.
+- **Dalej:** push → CI (+`db`) → F7. Bez push na main.
+
 ## 2026-11-05 12:55 — DP-222 F7 #818 B2 (ATA NYN + DOPLYNAL)
 
 - Skrzynka: #814 PILNE w toku (#818); #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne` poza #814.
