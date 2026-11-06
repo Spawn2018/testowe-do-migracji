@@ -1188,17 +1188,17 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP | Właściciel | Co | Źródło | Etap | Stan |
 |---|---|---|---|---|---|
 | DP-1 | Cursor | Trasy na sztywno (CASE) w `apply_ferry_se_from_position` / `a10_try_ferry_backup` / `detect_ferry_overdue` → `ferry_routes` | F7 #649 | BN3/BN8 | DONE (BN1 0339/0344) |
-| DP-2 | Cursor | 15× `pg_get_functiondef like` w `status.sh` → testy zachowania | F7 #649 | po #667 | w kolejce |
+| DP-2 | Cursor | 15× `pg_get_functiondef like` w `status.sh` → testy zachowania | F7 #649 | po #667 | W TOKU (`pakiet/c3-dp-2-12-behavior-safefleet`) |
 | DP-3 | koordynator | `routeUnknown` w UI — „nieznana trasa” w wierszu rejsu | F7 #649 | wyglad | SCALONE (#672 `8ec16105`) |
 | DP-4 | koordynator | `p9cMap.ts` / `p9eGroups.ts` — porty ze słownika | F7 #649 | wyglad | SCALONE (#672) |
 | DP-5 | koordynator | `SailingsPanel` — nieznany kod ≠ GDN-NYN | F7 #649 | wyglad | SCALONE (#672) |
 | DP-6 | koordynator | jedna funkcja skrótu trasy po #668 | F7 #670 | wyglad | SCALONE (#675 `6660b3c8`) |
 | DP-7 | koordynator | tory promów rysowane dwa razy → jedno | F7 #670 | wyglad | SCALONE (#672) |
 | DP-8 | koordynator | „Dodaj rejs”: statki z `vessels` | F7 #670 | wyglad | SCALONE (#672) |
-| DP-9 | Cursor (#668) | `routeLabelPl` — nazwy tras z bazy (BN9-b pkt 12) | #670 | #668 / BN8 | w PR #668 |
-| DP-10 | Cursor | test: PoT nie nadpisuje RECZNIE / nie dubluje Viking/Eckerö | F7 #661 | DFDS/#666 | w PR #668 (schedule + job) |
+| DP-9 | Cursor (#668) | `routeLabelPl` — nazwy tras z bazy (BN9-b pkt 12) | #670 | #668 / BN8 | SCALONE (#668) |
+| DP-10 | Cursor | test: PoT nie nadpisuje RECZNIE / nie dubluje Viking/Eckerö | F7 #661 | DFDS/#666 | SCALONE (#668 `bn2-ferry-jobs` / schedule) |
 | DP-11 | Cursor | `operatorsForRoute` — baza przed seedem (TLL-HEL Tallink) | F7 #649 | BN3/BN8 | DONE w bn3-winter-nav-mmsi (RPC przed seedem) |
-| DP-12 | Cursor | SafeFleet: wszystkie punkty `presences` bez duplikatów | F7 #663 | po #667 | w kolejce |
+| DP-12 | Cursor | SafeFleet: wszystkie punkty `presences` bez duplikatów | F7 #663 | po #667 | W TOKU (`pakiet/c3-dp-2-12-behavior-safefleet`) |
 | DP-13 | koordynator | ZonesMap: tory promów z `ferryLaneLines` (PL–SE + bałtyckie); tryb „one” bez torów | F7 #676 | wyglad | SCALONE (#676 `4ec47bd2`) |
 | DP-14 | koordynator | jawna trasa Polferries/Stena w `routeOfVessel` | F7 #672 | wyglad | SCALONE (#674 `8f916302`) |
 | DP-15 | koordynator | test U4 z inną kolejnością wejścia | F7 #672 | wyglad | SCALONE (#674) |
@@ -1292,7 +1292,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-194 | Cursor | SE_E4/`SE-NYN`: do #770 alarm OSM + `corridor_geom=here` obserwacja; alarm HERE → DP-197 | #762 odbiór 0387; F7 #770 | C2 / BN8b | SCALONE (#770 / **0389**; alarm HERE → DP-197) |
 | DP-197 | Cursor | SE-NYN: via węzłów E4 + odchyłka `SE_E4`; OFF_CORRIDOR po HERE gdy świeży; stara geom → 22 d (F7 #771) | F7 #770 decyzja 97; F7 #771 | C2 / BN8b | SCALONE (#771 `18c05217` / **0390**) |
 | DP-198 | Cursor | rozjazd crona here-roads (21 d) vs świeżość alarmu (7 d) — źródło alarmu cyklicznie HERE/OSM; cron co 6 d | F7 #771 r1 | C2 / HERE | SCALONE (#772 `ee54ad20`) |
-| DP-195 | Cursor | `WATER_GDY_KAA`: ujednolicić punkty serwerowe (`_shared/map/draw.ts`) z frontem `WATER_GDY_KAA_LANE` (DP-78 / #764); test wspólnych punktów | #762 po DP-A | C3 / mapa | W TOKU (`pakiet/c3-dp-195-water-gdy-kaa`) |
+| DP-195 | Cursor | `WATER_GDY_KAA`: ujednolicić punkty serwerowe (`_shared/map/draw.ts`) z frontem `WATER_GDY_KAA_LANE` (DP-78 / #764); test wspólnych punktów | #762 po DP-A | C3 / mapa | SCALONE (#831 `eb1d775c`) |
 | DP-189 | Cursor | Ryzyka › Drogi LT/LV/EE/FI zawsze widoczne (jak SE); `onRoute` = oznaczenie + kolejność, nie filtr; kolejność makiety LT→LV→EE→FI | #757 / właściciel 03.11 08:43 | BN9-c4 / front | SCALONE (#761 `a9665811`) |
 | DP-190 | Cursor | Jednorazowe pobranie HERE FI-HEL / FI-VUO / SE-STO (zamiast crona 04.11 04:15Z); bez migracji | #757 / właściciel 03.11 | BN7 / HERE | DONE (PROD 03.11 ~08:09Z; 11151/10878/12423 pkt; routing 7→10; spend 0) |
 | DP-191 | koordynator | Usunięty dopisek „Trasa orientacyjna (HERE…)” z map (Mapa/Kokpit/karta) | właściciel 03.11 08:46 / #758 | mapa / front | SCALONE (#758 `d3db3e49`) |
@@ -1476,7 +1476,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 Źródło: #762 (Spawn2018; 03.11). Po #760 → #756 (DP-187/188) → C1…. Koordynator: pakiety DP-A/B/C (front) — nie brać.
 1. **C1 — Korytarz bałtycki:** ~~DP-179~~ DONE; ~~143/144~~ DONE; ~~DP-146~~ SCALONE (#769 `1a523a5f`); ~~152~~ SCALONE (#768 `0abe9a8f`); ~~155/156~~ SCALONE (#766 `272e0afc` / **0388**); ~~157/158~~ DONE (LT/LV/EE/FI etykiety, szum FI; przed BN10).
 2. **C2 — telematyka / ETA:** ~~**DP-193+194**~~ SCALONE (#770 / **0389**); ~~**DP-197**~~ SCALONE (#771 `18c05217` / **0390**); ~~**DP-198**~~ SCALONE (#772 `ee54ad20`); ~~**DP-119**~~ SCALONE (#774 `5f0c4bce`; rej. koord. DP-116 cz. 2); ~~**DP-200**~~ SCALONE (#776 `e023c2ba`); ~~**DP-196**~~ SCALONE (#775 `b4a8dab9`); ~~**DP-120**~~ SCALONE (#777 `2a99a8e6` / **0391**); ~~**DP-202+203**~~ SCALONE (#780 `642a9b21` / **0392**+**0393**); ~~**DP-121**~~ SCALONE (#782 `4b9e0d9a` / **0394**); ~~**DP-204**~~ SCALONE (#784 `34263f4d`); ~~**DP-786**~~/**DP-207** SCALONE (#787 `31a1c0bb` / **0395**); ~~**DP-205**~~ SCALONE (#785 `7ef4bc3c` / **0396**+**0397**+**0398**); ~~**DP-206**~~ SCALONE (#791 `4e5ffc99` / **0399**–**0405**, `DETOUR_E49=true`); ~~**DP-123**~~ SCALONE (#792 `ba31c223`); ~~**DP-208**~~ SCALONE (#794 `21a92c37` / **0406**; otwarte: gęsta E4 OSM); ~~**DP-209**~~ SCALONE (#795 `9ab5b2cb`); ~~**DP-124**~~ SCALONE (#796 `9a5d7e35`); ~~**#797 PILNE**~~ SCALONE (#799 `181b70b2` / **0407**); ~~**DP-215**~~ SCALONE (#800 `84021df9`); ~~**DP-216**~~ SCALONE (#802 `4e74d3cf` / **0408**); ~~**DP-213**~~ SCALONE (#803 `96e6f20b`); ~~**DP-217**~~ SCALONE (#806 `2723af71` / **0409**); ~~**DP-218**~~ SCALONE (#808 `5e7a1173` / **0410**); ~~**DP-211**~~ SCALONE (#805 `4cbcb472`); ~~**DP-210**~~ SCALONE (#810 `18ab51c6`); ~~**DP-212**~~ SCALONE (#811 `12621eea`); ~~**DP-219**~~ SCALONE (#812 `e396a758` / **0411**); ~~**DP-221**~~ SCALONE (#813 `d6be6012`); ~~**DP-223**~~ SCALONE (#828 `dd7d637a`); ~~**DP-224**~~ SCALONE (#826); ~~**DP-225**~~ SCALONE (#827); ~~**DP-220**~~ SCALONE (#829 `c1cc27a0` / **0416**); ~~**DP-222**~~ SCALONE (#830 `2bc91a32` / **0417**+**0418**).
-3. **C3 — stare pozycje backendu:** DP-2, 10, 12, 22, 24, 29–32, 38–40, 43, 46, 47, 53–58 (+ **DP-195** tor KAA). **Bieżące:** **DP-195** (`pakiet/c3-dp-195-water-gdy-kaa`).
+3. **C3 — stare pozycje backendu:** DP-2, ~~10~~, DP-12, 22, 24, 29–32, 38–40, 43, 46, 47, 53–58 (+ ~~**DP-195**~~ `#831`). **Bieżące:** **DP-2+12** (`pakiet/c3-dp-2-12-behavior-safefleet`).
 4. **C4 — reszta:** DP-69, 70, 81–83, 90–93, 97, 99–103, 105–109, 111, 112.
 5. **C5 — warunkowe:** DP-186 (decyzja 04.11 ~07:00 po 24 h odbioru #753).
 Cel: C1–C4 przed bramą #588 i wydaniem 1.0 (≈ 20–21.11). Pozycja >~50 linii / nowa tabela → osobne zgłoszenie.
@@ -2674,6 +2674,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 03.11.2026 21:35 | #777 F7 r1 niegotowe → seed Portnet/Deltamarin, I=IC, dzień przypłynięcia, złożone IBNet | pętla / C2 F7 |
 | 03.11.2026 22:00 | #777 SCALONE `2a99a8e6` (DP-120 / **0391**; F7 gotowe @ `fecc5f7a`); start DP-202+203 (#778+#779) | pętla / C2 |
 | 03.11.2026 23:50 | #780 F7 r3: auto DeepL na luki TV/bałtyk (bez RESOURCE_MISSING:TV_CODE); **0393** memory_auto_24h | pętla / C2 F7 |
+| 06.11.2026 05:05 | #831 SCALONE `eb1d775c` (DP-195 F7 @ `5e9a7680`); start C3 **DP-2+12** (status behawioralne + SafeFleet trajectory) | pętla / C3 |
 | 06.11.2026 04:20 | #830 SCALONE `2bc91a32` (DP-222 drobne F7 @ `7391afbc` / **0417**+**0418**); start C3 **DP-195** tor GDY-KAA | pętla / C3 |
 | 06.11.2026 03:55 | DP-222 #830 **0418**: Nova 02.11 ATD + `previousActualArrivalBefore` (regresja since/prevArr); CI→F7 | pętla / C2 |
 | 06.11.2026 03:20 | #829 SCALONE `c1cc27a0` (DP-220 F7 @ `ba7564eb`); start DP-222 drobne closeStale bez ATD **0417** | pętla / C2 |

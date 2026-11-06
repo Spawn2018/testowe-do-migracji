@@ -2385,21 +2385,31 @@ chk "BN1: outbound TLLA-HEL" \
   "select public.ferry_route_is_outbound('TLLA-HEL')" t
 chk "BN1: brak outbound HEL-TLL" \
   "select public.ferry_route_is_outbound('HEL-TLL')" f
-chk "BN1: ferry_sailings_map z ferry_ports" \
-  "select pg_get_functiondef('public.ferry_sailings_map()'::regprocedure) like '%ferry_ports%'" t
-# BN4 pkt 8 / 0366: bez coalesce do GDN/NYN — tylko join ferry_routes
-chk "BN4: ferry_sailings_map bez domyslnego GDN" \
-  "select pg_get_functiondef('public.ferry_sailings_map()'::regprocedure) not like '%coalesce(fr.port_from%'" t
-# DP-134/135 (F7 #706 r1): mapa bez fr.active + test behawioralny (nie sam grep)
-# F7 #711 r1: bez ::text — psql zwraca t/f dla boolean (nie true/false)
-chk "DP-134: ferry_sailings_map join bez fr.active" \
-  "select (pg_get_functiondef('public.ferry_sailings_map()'::regprocedure) like '%join ferry_routes fr on fr.code = s.route%'
-     and pg_get_functiondef('public.ferry_sailings_map()'::regprocedure) not like '%join ferry_routes fr on fr.code = s.route and fr.active%')" t
+# DP-2 (F7 #649): zachowanie zamiast pg_get_functiondef like — mapa z ferry_ports, bez coalesce GDN/NYN,
+# join bez fr.active (DP-134), REMOVED bez zmiany statusu; promote outbound = chk ferry_route_is_outbound + e2e #461.
+HHL=11111111-0000-0000-0000-000000000001
 S134=77777777-0000-0000-0000-00000000134a
 # departure_at unikalne vs inne rejsy Wawel w oknie ±6 h (unique vessel+departure)
 q "insert into sailings (id,project_id,vessel_id,route,departure_at,arrival_at,status,source) values
     ('$S134','$P','66666666-0000-0000-0000-000000000001','GDN-NYN',
      now() - interval '73 minutes', now() + interval '5 hours 17 minutes','W_REJSIE','POLFERRIES');" >/dev/null
+chk "DP-2: mapa dep/arr = ferry_ports (trasa PL)" \
+  "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+   select (m.dep_port = fr.port_from and m.arr_port = fr.port_to
+       and m.dep_lat is not distinct from pd.lat and m.dep_lon is not distinct from pd.lon
+       and m.arr_lat is not distinct from pa.lat and m.arr_lon is not distinct from pa.lon)::text
+     from ferry_sailings_map() m
+     join ferry_routes fr on fr.code = m.route
+     join ferry_ports pd on pd.code = fr.port_from
+     join ferry_ports pa on pa.code = fr.port_to
+    where m.sailing_id='$S134'; commit" t
+chk "DP-2/BN4: mapa bez domyslnego GDN (porty ze słownika)" \
+  "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+   select (m.dep_port = 'GDN' and m.arr_port = 'NYN'
+       and m.dep_port = fr.port_from)::text
+     from ferry_sailings_map() m
+     join ferry_routes fr on fr.code = 'GDN-NYN'
+    where m.sailing_id='$S134'; commit" t
 chk "DP-135: mapa widzi rejs przy active=true" \
   "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
    select count(*)::text from ferry_sailings_map() where sailing_id='$S134'; commit" 1
@@ -2411,10 +2421,19 @@ q "update ferry_routes set active=true where code='GDN-NYN';
    delete from sailings where id='$S134'" >/dev/null
 chk "DP-134: GDN-NYN przywrócone active" \
   "select active from ferry_routes where code='GDN-NYN'" t
-chk "BN1: promote outbound ze słownika" \
-  "select pg_get_functiondef('public.promote_ferry_departures(timestamptz)'::regprocedure) like '%ferry_route_is_outbound%'" t
-chk "BN1: apply_geofence_status pomija REMOVED" \
-  "select pg_get_functiondef('public.apply_geofence_status()'::regprocedure) ilike '%REMOVED%'" t
+# DP-2 REMOVED: wjazd w Port Gdańsk nie rusza statusu (0339 / #648).
+L002=aaaaaaaa-0000-0000-0000-000000000002
+mk $L002 DP2 "'HHL/DP2'" "'SCX/DP2'" IN_TRANSIT_PL "'$S1'"
+q "set session_replication_role=replica;
+   update loads
+      set status='REMOVED', removed_at=now(), removed_prev_status='IN_TRANSIT_PL'
+    where id='$L002';
+   set session_replication_role=origin;" >/dev/null
+pos $L002 54.4030 18.6800 "2026-10-01 10:00+00"
+pos $L002 54.4031 18.6801 "2026-10-01 10:05+00"
+chk "DP-2: REMOVED + wjazd Port Gdańsk → status bez zmian" "$(st $L002)" REMOVED
+chk "DP-2: REMOVED — pozycje i tak zapisane" "select count(*) from positions where load_id='$L002'" 2
+q "delete from positions where load_id='$L002'; delete from loads where id='$L002'" >/dev/null
 
 # BN8a (#720 / 0382): kraje ze słownika, ferry_route, OFF_CORRIDOR bez PL_ROAD na sztywno.
 chk "BN8a: departure_country GDN-NYN = PL" \
@@ -2552,8 +2571,7 @@ chk "BN8a W5 po teście brak risk_signals/loads L820*" \
              where id in ('$L820b','$L820c','$L820d','$L820e','$L820f','$L820g'))" 0
 chk "BN8a W5e: assign grant authenticated" \
   "select has_function_privilege('authenticated','sailing_mismatch_assign(uuid,uuid)','execute')" t
-chk "BN8a W5f: ferry_sailings_map bez coalesce GDN" \
-  "select pg_get_functiondef('public.ferry_sailings_map()'::regprocedure) not like '%coalesce(fr.port_from%'" t
+# BN8a W5f (coalesce GDN) → DP-2 behawioralny powyżej (F7 #649 / C3).
 
 # BN8b (#720 §7 / 0385 F7 #749): OFF_CORRIDOR z HERE po LEGU; bez sync do corridor_polylines.
 # UUID 821* / 822* / 823* — nie koliduje z L820* BN8a. Każdy chk w begin/rollback; sprzątanie chk=0.

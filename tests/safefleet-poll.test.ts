@@ -221,4 +221,83 @@ describe('#662 runSafefleetPoll', () => {
     expect(bad.ok).toBe(false);
     expect(bad.observations?.invalid).toBe('1');
   });
+
+  /* DP-12 (F7 #663): wszystkie presences w oknie, bez duplikatów po ts; API od najnowszego. */
+  it('DP-12: trajectory — wszystkie punkty presences, bez duplikatów', async () => {
+    const load = baseLoad({ safefleet_trajectory_done: false });
+    const positions: { ts: string; lat: number; lon: number; raw?: { trajectory?: boolean } }[] = [];
+    let lastFix: { lat: number; lon: number; ts: string } | null = null;
+    const store: Partial<SyncStore> = {
+      telmSafefleetPollEnabled: async () => true,
+      listSafefleetLoadsForPoll: async () => [load],
+      updateSafefleetLoadState: async (_id, patch) => {
+        Object.assign(load, patch);
+      },
+      processPosition: async (row) => {
+        positions.push({
+          ts: row.ts,
+          lat: row.lat,
+          lon: row.lon,
+          raw: row.raw as { trajectory?: boolean },
+        });
+        lastFix = { lat: row.lat, lon: row.lon, ts: row.ts };
+      },
+      lastPositionFix: async () => lastFix,
+      raiseRisk: async () => false,
+      resolveRisks: async () => 0,
+      inferPhaseFromPosition: async () => null,
+    };
+    const now = Date.parse('2026-10-30T12:00:00Z');
+    const trajBody = {
+      journey: null,
+      // API: najpierw świeższy — parser sortuje od najstarszego
+      presences: [
+        { lat: 52.3, lng: 17.3, timestampAgo: 60 },
+        { lat: 52.2, lng: 17.2, timestampAgo: 180 },
+        { lat: 52.1, lng: 17.1, timestampAgo: 300 },
+        { lat: 52.1, lng: 17.1, timestampAgo: 300 }, // duplikat tego samego ts
+      ],
+    };
+    const fetchImpl: typeof fetch = async (input) => {
+      const url = String(input);
+      if (url.includes('trajectory=true')) {
+        return new Response(JSON.stringify(trajBody), {
+          status: 200, headers: { 'Content-Type': 'application/json' },
+        });
+      }
+      return new Response(JSON.stringify(SAMPLE), {
+        status: 200, headers: { 'Content-Type': 'application/json' },
+      });
+    };
+    const r = await runSafefleetPoll({
+      store: store as SyncStore,
+      fetch: fetchImpl,
+      env: {},
+      now: () => new Date(now),
+    });
+    expect(r.ok).toBe(true);
+    expect(load.safefleet_trajectory_done).toBe(true);
+    expect(r.observations?.trajectory).toBe('3');
+    const traj = positions.filter((p) => p.raw?.trajectory === true);
+    expect(traj).toHaveLength(3);
+    expect(traj.map((p) => p.ts)).toEqual([
+      '2026-10-30T11:55:00.000Z',
+      '2026-10-30T11:57:00.000Z',
+      '2026-10-30T11:59:00.000Z',
+    ]);
+    // Live SAMPLE 10:51 starsze od ostatniego toru → skipped_dup, bez 4. zapisu.
+    expect(r.observations?.skipped_dup).toBe('1');
+    expect(positions).toHaveLength(3);
+
+    // Drugi przebieg: trajectory_done — bez ponownego toru; live nadal dup.
+    const before = positions.length;
+    const r2 = await runSafefleetPoll({
+      store: store as SyncStore,
+      fetch: fetchImpl,
+      env: {},
+      now: () => new Date('2026-10-30T12:02:00Z'),
+    });
+    expect(r2.observations?.trajectory).toBe('0');
+    expect(positions).toHaveLength(before);
+  });
 });
