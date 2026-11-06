@@ -23,7 +23,8 @@ export const HERE_RAW_DAYS = 30;
 const RECHECK_MS = HERE_RAW_DAYS * 24 * 60 * 60 * 1000;
 const ALTERNATIVES = 3;
 
-export type CorridorLegName = 'PL-GDN' | 'PL-GDY' | 'SE-NYN' | 'SE-KAA';
+/** DP-24: SE-KAA-INLAND — wariant śródlądowy Karlskrona→Boden (te same końce co SE-KAA). */
+export type CorridorLegName = 'PL-GDN' | 'PL-GDY' | 'SE-NYN' | 'SE-KAA' | 'SE-KAA-INLAND';
 
 export interface CorridorLeg {
   leg: CorridorLegName;
@@ -36,6 +37,7 @@ export const CORRIDOR_LEGS: CorridorLeg[] = [
   { leg: 'PL-GDY', origin: CORRIDOR.srem, destination: CORRIDOR.gdynia },
   { leg: 'SE-NYN', origin: CORRIDOR.nynashamn, destination: CORRIDOR.boden },
   { leg: 'SE-KAA', origin: CORRIDOR.karlskrona, destination: CORRIDOR.boden },
+  { leg: 'SE-KAA-INLAND', origin: CORRIDOR.karlskrona, destination: CORRIDOR.boden },
 ];
 
 export type ObstacleKind = 'wiadukt' | 'most' | 'tunel' | 'ograniczenie';

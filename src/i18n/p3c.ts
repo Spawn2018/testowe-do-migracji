@@ -530,6 +530,10 @@ const pl: Dict = {
   ol2_src_road_pl: 'Drogi w Polsce',
   ol2_src_road_pl_cad: 'co 15 min',
   ol2_src_road_pl_feeds: 'utrudnienia na trasie w Polsce',
+  /* DP-22 / #667 D: geometria tras HERE w Stanie systemu */
+  ol2_src_here_roads: 'Geometria tras drogowych (HERE)',
+  ol2_src_here_roads_cad: 'cron · codziennie 04:15 UTC',
+  ol2_src_here_roads_feeds: 'pomarańczowe linie tras na mapach',
   ol2_src_hazards: 'Zagrożenia na trasie',
   ol2_src_hazards_cad: 'co godzinę',
   ol2_src_hazards_feeds: 'zamknięte mosty i drogi, przejazdy, śliskość przy aucie',

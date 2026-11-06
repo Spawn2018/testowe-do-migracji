@@ -359,7 +359,7 @@ function roadLineWhy(
  * #667 F7 r1 N5/N7: przyjęte linie + powody odrzuceń (jak checkFerries).
  * #667 F7 r2 / DP-22: przy braku punktów — `summary` z bazy (odchyłka / HTTP / oczekuje).
  * #667 E / DP-23: spec z wiersza (słownik), nie SPEC w kodzie.
- * Pełne ostrzeżenie w Stanie systemu → DP-22 (UI).
+ * Ostrzeżenie w Stanie systemu: DP-22 (`withHereRoadsRejects` / LiveStatus).
  */
 export function checkRoads(rows: unknown): {
   accepted: LatLng[][];
@@ -413,7 +413,7 @@ export function acceptedRoads(rows: unknown): LatLng[][] {
   return checkRoads(rows).accepted;
 }
 
-/** Skrót odrzuceń do `data-roads` (TEST) — pełny Stan systemu = DP-22. */
+/** Skrót odrzuceń do `data-roads` (TEST) i wiersza here-roads w Stanie systemu (DP-22). */
 export function roadsRejectSummary(rejected: { leg: string; why: string }[]): string {
   if (rejected.length === 0) return '';
   return rejected.map((r) => `${r.leg}: ${r.why}`).join(' · ');

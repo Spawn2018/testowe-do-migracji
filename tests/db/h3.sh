@@ -43,6 +43,10 @@ val "katalog pusty to brak danych" "select h3_highlighted('$L')->>'status'" "bra
 ITEMS='[{"linkId":"m1","kind":"most","place":"Most na Warcie","lat":52.1,"lng":17.0,"maxHeightCm":400,"maxWeightKg":80000},{"linkId":"w1","kind":"wiadukt","place":"Wiadukt S5","lat":52.4,"lng":17.2,"maxHeightCm":500},{"linkId":"t1","kind":"tunel","place":"Tunel","lat":54.3,"lng":18.5,"maxHeightCm":460},{"linkId":"o1","kind":"ograniczenie","place":"DK11","lat":52.2,"lng":17.1,"maxWeightKg":40000}]'
 sys "select h3_replace_leg('PL-GDN', now(), 'ok', 'Przeszkody wzdłuż korytarza: 4.', true, '$ITEMS'::jsonb, '{\"zrodlo\":\"test\"}'::jsonb)" >/dev/null
 sys "select h3_replace_leg('SE-NYN', now(), 'ok', 'Brak danych', true, '[]'::jsonb, null)" >/dev/null
+# DP-24: SE-KAA-INLAND w CHECK + h3_replace_leg
+sys "select h3_replace_leg('SE-KAA-INLAND', now(), 'ok', 'DP-24 inland', true, '[]'::jsonb, null)" >/dev/null
+val "DP-24 SE-KAA-INLAND w corridor_fetches" "select count(*)::text from corridor_fetches where leg='SE-KAA-INLAND'" "1"
+err "DP-24 zły leg nadal odrzucony" "select h3_replace_leg('SE-BAD', now(), 'ok', 'x', true, '[]'::jsonb, null)" "Zła noga"
 
 val "podświetlone są tylko przekroczone limity" "select h3_highlighted('$L')->>'status'" "podswietlone"
 val "most 400 cm i limit 40 t, bez wiaduktu 500 cm" "select (select string_agg(x->>'place', ',' order by x->>'place') from jsonb_array_elements(h3_highlighted('$L')->'items') x)" "DK11,Most na Warcie"

@@ -13,8 +13,11 @@ import { t, tp } from '../i18n/messages';
 import { getNowIso } from '../lib/frozenNow';
 import { lazyRetry } from '../lib/lazyRetry';
 import { StatusScreen } from '../components/options/StatusScreen';
+import { withHereRoadsRejects } from '../lib/hereRoadsStatus';
 import { appErrorsFromDb, perfFromDb, type AppErrors, type OtherJob, type Perf, type SourceRow, type SourceState } from '../lib/sysSource';
 import type { Locale } from '../types';
+
+export { withHereRoadsRejects } from '../lib/hereRoadsStatus';
 
 const SystemStatusPanel = lazy(lazyRetry(() => import('./SystemStatusPanel')));
 
@@ -39,6 +42,8 @@ export const LIVE_SOURCES: readonly SourceDef[] = [
   { id: 'ferry-departures', jobs: ['ferry-departures'], maxMin: 26 * 60, check: false },
   { id: 'road-se', jobs: ['road-se'], maxMin: 45, check: false },
   { id: 'road-pl', jobs: ['road-pl'], maxMin: 45, check: false },
+  /* DP-22 / #667 D: geometria tras HERE — cron tower-here-roads; odrzucenia z summary w withHereRoadsRejects */
+  { id: 'here-roads', jobs: ['here-roads'], maxMin: 26 * 60, check: false },
   { id: 'hazards', jobs: ['route-hazards'], maxMin: 3 * 60, check: false },
   { id: 'weather', jobs: ['ferry-weather'], maxMin: 3 * 60, check: false },
   { id: 'fuel', jobs: ['fuel-prices', 'fuel-wob'], maxMin: 26 * 60, check: false },
@@ -163,7 +168,12 @@ export default function LiveStatus({ admin }: { admin: boolean }) {
   const locale = useTowerStore((s) => s.locale);
   /* „?kopia=1” (link z powiadomienia o kopii): dzisiejszy panel z listą kopii od razu rozwinięty */
   const watchBackup = new URLSearchParams(useLocation().search).get('kopia') === '1';
-  const [data, setData] = useState<{ runs: RunRow[]; devices: DeviceRow[]; backups: BackupRow[] } | null>(null);
+  const [data, setData] = useState<{
+    runs: RunRow[];
+    devices: DeviceRow[];
+    backups: BackupRow[];
+    roadRejected: { leg: string; why: string }[];
+  } | null>(null);
   /* #422/#508: Wydajność (HHL) i Błędy aplikacji (tylko Administrator HHL) — błąd odczytu nie blokuje Źródeł danych */
   /* `null` — odczyt pomiarów nie powiódł się (ekran: „nie udało się odczytać”, nie „jeszcze nie ma pomiaru”) */
   const [perf, setPerf] = useState<Perf | null>(() => perfFromDb(null));
@@ -175,20 +185,28 @@ export default function LiveStatus({ admin }: { admin: boolean }) {
       const sb = await getSupabase();
       /* ostatnie 20 przebiegów każdego zadania — seria błędów i ostatni udany */
       const per = await Promise.all(RUN_JOBS.map((job) => sb.from('integration_runs').select('job,ok,ran_at,disabled:result->disabled').eq('job', job).order('ran_at', { ascending: false }).limit(RUN_LIMIT)));
-      const [d, b, pr, er] = await Promise.all([
+      const [d, b, pr, er, md] = await Promise.all([
         sb.from('sms_devices').select('label,last_seen_at,revoked_at,paused'),
         sb.from('backup_runs').select('status,started_at').order('started_at', { ascending: false }).limit(1),
         sb.rpc('perf_results_latest'),
         admin ? sb.rpc('app_errors_recent', { p_days: 7 }) : Promise.resolve({ data: null, error: null }),
+        /* DP-22: summary odrzuconych legów z map_display_state (nie tylko points not null) */
+        sb.rpc('map_display_state'),
       ]);
       setPerf(pr.error ? null : perfFromDb(pr.data));
       setErrors(er.error ? null : appErrorsFromDb(er.data));
       const err = per.find((r) => r.error)?.error ?? d.error ?? b.error ?? null;
       setMsg(err ? err.message : null);
+      const roads = md.error || !md.data || typeof md.data !== 'object'
+        ? null
+        : (md.data as { roads?: unknown }).roads;
+      /* dynamiczny import — applyBasemap ciągnie Leaflet (nie w node/unit bez jsdom) */
+      const { checkRoads } = await import('../components/map/applyBasemap');
       setData({
         runs: per.flatMap((r) => (r.data ?? []) as RunRow[]),
         devices: (d.data ?? []) as DeviceRow[],
         backups: (b.data ?? []) as BackupRow[],
+        roadRejected: checkRoads(roads).rejected,
       });
     } catch (e) {
       /* F7 #415: wyjątek przy odczycie — komunikat zamiast stałego „Wczytywanie…” */
@@ -196,7 +214,7 @@ export default function LiveStatus({ admin }: { admin: boolean }) {
       /* F7 #509 r2: wyjątek — Wydajność „nie udało się odczytać”, bez zakładki Błędów */
       setPerf(null);
       setErrors(null);
-      setData((x) => x ?? { runs: [], devices: [], backups: [] });
+      setData((x) => x ?? { runs: [], devices: [], backups: [], roadRejected: [] });
     }
   }, [locale, admin]);
   useEffect(() => { void refresh(); }, [refresh]);
@@ -210,7 +228,15 @@ export default function LiveStatus({ admin }: { admin: boolean }) {
           locale={locale}
           nowIso={nowIso}
           admin={admin}
-          live={{ rows: liveSourceRows(locale, data.runs, data.devices, data.backups, nowIso), jobs: liveOtherJobs(locale, data.runs, nowIso), perf, errors }}
+          live={{
+            rows: withHereRoadsRejects(
+              liveSourceRows(locale, data.runs, data.devices, data.backups, nowIso),
+              data.roadRejected,
+            ),
+            jobs: liveOtherJobs(locale, data.runs, nowIso),
+            perf,
+            errors,
+          }}
         />
       ) : <p className="note" role="status">{t(locale, 'ol2_loading')}</p>}
       <details className="ol2-more" data-live-status-more open={watchBackup || undefined}>
