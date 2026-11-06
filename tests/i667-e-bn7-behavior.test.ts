@@ -14,6 +14,7 @@ vi.mock('../src/auth/config', () => ({
 
 const {
   browserFetchLegCount,
+  acceptedBrowserFetchCount,
   checkRoads,
   roadSpecFromRow,
 } = await import('../src/components/map/applyBasemap');
@@ -101,6 +102,47 @@ describe('#677 F7 B2 browserFetchLegCount', () => {
       { leg: 'PL-TLL', browser_fetch: true, map_group: 'bn7' },
     ];
     expect(browserFetchLegCount(rows)).toBe(1);
+  });
+});
+
+describe('DP-43 acceptedBrowserFetchCount', () => {
+  it('BN7 z punktami nie liczy się do przyjętych browser_fetch', () => {
+    const line = denseVia(
+      [[54.0, 18.0], [54.4, 18.5], [54.8, 19.2]],
+      0.4,
+    );
+    const rows = [
+      {
+        leg: 'PL-GDN',
+        spec: 'loose',
+        corridor_code: null,
+        points: line,
+        browser_fetch: true,
+        map_group: 'core',
+        summary: '',
+      },
+      {
+        leg: 'PL-TLL',
+        spec: 'loose',
+        corridor_code: null,
+        points: line,
+        browser_fetch: true,
+        map_group: 'bn7',
+        summary: '',
+      },
+      {
+        leg: 'SE-NYN',
+        spec: 'loose',
+        corridor_code: null,
+        points: null,
+        browser_fetch: true,
+        map_group: 'core',
+        summary: 'brak',
+      },
+    ];
+    expect(checkRoads(rows).accepted.length).toBe(2);
+    expect(acceptedBrowserFetchCount(rows)).toBe(1);
+    expect(browserFetchLegCount(rows)).toBe(2);
   });
 });
 
