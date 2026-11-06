@@ -1,3 +1,9 @@
+## 2026-11-06 13:05 — #843 SCALONE; start DP-39 (sesja here-roads 5 min)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`. Rejestr **DP-226** (F7 #843: via_points INLAND z SQL).
+- Scalanie: **#843 SCALONE** `2e764905` (DP-38, F7 gotowe @ `eb095d09`; CI unit+visual ✔; bez migracji).
+- **Krok** `pakiet/c3-dp-39-here-roads-session`: przywrócony test okna sesji 5 min — 2. `loadRoadLines` bez POST (niekomplet legów, żeby próg nie maskował sesji). Bez migracji. Dalej DP-40…. Bez push na main.
+
 ## 2026-11-06 12:35 — #842 SCALONE; start DP-38 (INLAND via SQL)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.

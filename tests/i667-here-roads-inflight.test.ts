@@ -2,6 +2,7 @@
  * #667 F7 r3–r6 — dwa równoległe loadRoadLines → jeden POST here-roads.
  * F7 r6 B6: `vi.mock('@supabase/supabase-js')` + okno sesji 0;
  * po `Promise.all` → 1× POST; usunięcie strażnika in-flight → „got 2 times”.
+ * DP-39 / F7 #673 r7: osobny opis z sesją 5 min — 2. wołanie bez POST.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -101,5 +102,41 @@ describe('#667 F7 r6 B6 hereRoadsInFlight — mock supabase-js + sesja 0', () =>
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(a.length).toBeGreaterThanOrEqual(0);
     expect(b.length).toBe(a.length);
+  });
+});
+
+/** DP-39: przywrócony test z F7 r5 — okno 5 min blokuje 2. POST (nie próg legów). */
+describe('DP-39 — okno sesji here-roads 5 min', () => {
+  beforeEach(() => {
+    __resetRoadLinesCacheForTests();
+    __setHereRoadsSessionMsForTests(5 * 60_000);
+    rpc.mockReset();
+    getSession.mockReset();
+    fetchMock.mockClear();
+    resetFetchGate();
+    vi.stubGlobal('fetch', fetchMock);
+    // Zawsze niekomplet — próg browser_fetch nie maskuje sesji.
+    rpc.mockResolvedValue({
+      data: { roads: [roadRow('PL-GDN'), roadRow('SE-NYN')] },
+      error: null,
+    });
+    getSession.mockResolvedValue({ data: { session: { access_token: 'tok' } } });
+  });
+
+  afterEach(() => {
+    __setHereRoadsSessionMsForTests(5 * 60_000);
+  });
+
+  it('kolejne wołanie w oknie sesji 5 min nie powtarza POST', async () => {
+    const p = loadRoadLines();
+    await waitUntil(() => fetchMock.mock.calls.length >= 1);
+    resolveFetch({ ok: true });
+    await p;
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    fetchMock.mockClear();
+    getSession.mockClear();
+    await loadRoadLines();
+    expect(fetchMock).toHaveBeenCalledTimes(0);
+    expect(getSession).toHaveBeenCalledTimes(0);
   });
 });
