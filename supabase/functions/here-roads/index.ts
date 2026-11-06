@@ -14,6 +14,7 @@ import {
   type RoadRefreshStore,
 } from '../_shared/here/refreshRoadLegs.ts';
 import { listHereRoadLegsFromSb } from '../_shared/here/listHereRoadLegsFromSb.ts';
+import { edgeErrorResponse } from '../_shared/here/edgeErrorResponse.ts';
 import { type LatLng } from '../_shared/map/draw.ts';
 import { corsHeaders, corsPreflight } from '../_shared/cors.ts';
 import { isServiceRequest } from '../_shared/serviceAuth.ts';
@@ -111,7 +112,7 @@ Deno.serve(async (req) => {
   const key = Deno.env.get('HERE_API_KEY') ?? '';
   if (!key) return Response.json({ ok: false, reason: 'brak' }, { headers: corsHeaders() });
   // browserOnly: BN7 bez browser_fetch — nie pali HERE z każdej sesji mapy (#667 E).
-  // DP-57: wyjątek z listLegs/refresh → {ok:false,reason} + CORS (nie 500 bez nagłówków).
+  // DP-57 / F7 #849: wyjątek → {ok:false,reason:'blad'|'slownik'} + CORS; bez e.message (apiKey).
   try {
     const result = await refreshRoadLegs(roadStore(sb), {
       fetch, hereApiKey: key, browserOnly: true,
@@ -121,7 +122,6 @@ Deno.serve(async (req) => {
     }
     return Response.json({ ok: true, stored: result.stored }, { headers: corsHeaders() });
   } catch (e) {
-    const reason = e instanceof Error ? e.message : 'blad';
-    return Response.json({ ok: false, reason }, { status: 502, headers: corsHeaders() });
+    return edgeErrorResponse(e);
   }
 });

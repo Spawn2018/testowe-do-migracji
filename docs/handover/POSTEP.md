@@ -1,3 +1,9 @@
+## 2026-11-06 16:10 — #849 F7 r1: DP-57 bez wycieku apiKey
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: #849 otwarte — F7 r1 blokada (bezpieczeństwo): `e.message` z URL HERE → przeglądarka.
+- **Krok** poprawka DP-57: `edgeErrorResponse` — `reason` tylko `blad`/`slownik`; log z `maskHereApiKey`; test `apiKey=SEKRET` poza JSON. Czekam CI→F7. Bez push na main.
+
 ## 2026-11-06 15:55 — #848 SCALONE; start DP-56+57 (listLegs error + CORS)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.

@@ -191,11 +191,31 @@ describe('DP-56 / DP-57 — listLegs error + CORS', () => {
     expect(legs).toEqual([...ROAD_LEGS]);
   });
 
-  it('DP-56/57: Edge używa listHereRoadLegsFromSb; try/catch + corsHeaders przy wyjątku', () => {
+  it('DP-56/57: Edge używa listHereRoadLegsFromSb; try/catch + edgeErrorResponse', () => {
     const edge = readFileSync('supabase/functions/here-roads/index.ts', 'utf8');
     expect(edge).toMatch(/listHereRoadLegsFromSb/);
     expect(edge).toMatch(/try\s*\{[\s\S]*refreshRoadLegs[\s\S]*\}\s*catch/);
-    expect(edge).toMatch(/ok:\s*false,\s*reason/);
-    expect(edge).toMatch(/corsHeaders\(\)/);
+    expect(edge).toMatch(/edgeErrorResponse/);
+    expect(edge).not.toMatch(/reason:\s*e\.message|e\.message\s*:\s*'blad'/);
+  });
+
+  it('DP-57 / F7 #849: wyjątek z apiKey=SEKRET → odpowiedź bez SEKRET', async () => {
+    const { edgeErrorPayload, edgeErrorResponse, publicReasonFromCatch } = await import(
+      '../supabase/functions/_shared/here/edgeErrorResponse.ts'
+    );
+    const leak = new Error(
+      'error sending request for url (https://router.hereapi.com/v8/routes?apiKey=SEKRET&transportMode=truck)',
+    );
+    expect(publicReasonFromCatch(leak)).toBe('blad');
+    expect(publicReasonFromCatch(new Error('here_road_legs: db-down'))).toBe('slownik');
+    const body = edgeErrorPayload(leak);
+    expect(body).toEqual({ ok: false, reason: 'blad' });
+    expect(JSON.stringify(body)).not.toContain('SEKRET');
+    const res = edgeErrorResponse(leak);
+    const json = await res.json();
+    expect(res.status).toBe(502);
+    expect(json).toEqual({ ok: false, reason: 'blad' });
+    expect(JSON.stringify(json)).not.toContain('SEKRET');
+    expect(String(res.headers.get('access-control-allow-origin') ?? '')).toMatch(/tower\.log-mar\.pl/);
   });
 });

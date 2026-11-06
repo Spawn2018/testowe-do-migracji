@@ -2693,6 +2693,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 06.11.2026 14:45 | #846 SCALONE `1ca9d874` (DP-43 F7 @ `ac061123`); start **DP-53** (bramka dist demo bez vesselsServer); DP-46/47 odnotowane | pętla / C3 |
 | 06.11.2026 15:20 | #847 SCALONE `c35cdd9b` (DP-53 F7 @ `d1992733`); start **DP-54** (core browserFetch:false / M1b) | pętla / C3 |
 | 06.11.2026 15:55 | #848 SCALONE `c7f5423c` (DP-54 F7 @ `d748c412`); start **DP-56+57** (listLegs `{error}` rejects + CORS) | pętla / C3 |
+| 06.11.2026 16:10 | #849 F7 r1: DP-57 bez `e.message` (apiKey) — `edgeErrorResponse` `blad`/`slownik` + mask log | pętla / C3 F7 |
 | 06.11.2026 14:10 | #845 SCALONE `6697ee90` (DP-40 / **0423** F7 @ `c8d412de`); start **DP-43** (próg loadRoadLines = accepted browser_fetch) | pętla / C3 |
 | 06.11.2026 13:45 | #844 SCALONE `66877eeb` (DP-39 F7 @ `5d25a7c7`); start **DP-40** / **0423** (INLAND wierzchołki vs HERE) | pętla / C3 |
 | 06.11.2026 13:05 | #843 SCALONE `2e764905` (DP-38 F7 @ `eb095d09`); rejestr **DP-226**; start **DP-39** (sesja here-roads 5 min) | pętla / C3 |
