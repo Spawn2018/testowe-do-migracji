@@ -338,9 +338,23 @@ function roadLineWhy(
   leg: string,
   spec: RoadSpec | 'loose' | 'dict',
   line: LatLng[],
-  row?: { via_points?: unknown; min_km?: unknown; max_km?: unknown },
+  row?: {
+    via_points?: unknown;
+    min_km?: unknown;
+    max_km?: unknown;
+    geom_ok?: unknown;
+    geom_reject?: unknown;
+    summary?: unknown;
+  },
 ): string | null {
   if (line.length < 2) return 'brak punktów';
+  // DP-227 / #840: serwer walidował pełne points; points_display (~50 m) nie przechodzi maxSegKm ≤ 3.
+  if (row?.geom_ok === true) return null;
+  if (row?.geom_ok === false) {
+    const reject = String(row.geom_reject ?? '').trim();
+    const summary = String(row.summary ?? '').trim();
+    return reject || summary || 'geometria odrzucona';
+  }
   if (spec === 'loose') return looseRoadOk(line) ? null : 'geometria (luźna)';
   if (spec === 'dict') {
     const minKm = Number(row?.min_km);
@@ -381,14 +395,21 @@ export function checkRoads(rows: unknown): {
       via_points?: unknown;
       min_km?: unknown;
       max_km?: unknown;
+      geom_ok?: unknown;
+      geom_reject?: unknown;
     };
     const leg = String(r.leg ?? '');
     const spec = roadSpecFromRow(r);
     const points = r.points;
     const summary = String(r.summary ?? '').trim();
+    const geomReject = String(r.geom_reject ?? '').trim();
     if (!spec) continue;
     if (!Array.isArray(points) || points.length < 2) {
-      rejected.push({ leg, why: summary || 'brak punktów' });
+      // DP-227: geom_ok=false → geom_reject; inaczej summary z bazy (DP-22) albo „brak punktów”.
+      rejected.push({
+        leg,
+        why: (r.geom_ok === false && geomReject) || summary || 'brak punktów',
+      });
       continue;
     }
     const line: LatLng[] = [];
@@ -399,12 +420,21 @@ export function checkRoads(rows: unknown): {
       if (Number.isFinite(lat) && Number.isFinite(lng)) line.push([lat, lng]);
     }
     if (line.length < 2) {
-      rejected.push({ leg, why: summary || 'brak punktów' });
+      rejected.push({
+        leg,
+        why: (r.geom_ok === false && geomReject) || summary || 'brak punktów',
+      });
       continue;
     }
     const why = roadLineWhy(leg, spec, line, r);
-    if (why) rejected.push({ leg, why: summary && /odchyłka|odrzucon|HTTP/i.test(summary) ? summary : why });
-    else out.push(line);
+    if (why) {
+      rejected.push({
+        leg,
+        why:
+          (r.geom_ok === false && geomReject)
+          || (summary && /odchyłka|odrzucon|HTTP/i.test(summary) ? summary : why),
+      });
+    } else out.push(line);
   }
   return { accepted: out, rejected };
 }
@@ -484,6 +514,8 @@ export async function loadRoadLegs(): Promise<{
       min_km?: unknown;
       max_km?: unknown;
       summary?: string;
+      geom_ok?: unknown;
+      geom_reject?: unknown;
     };
     const leg = String(r.leg ?? '');
     if (leg && !roadLegCodes.includes(leg)) roadLegCodes.push(leg);
