@@ -1,3 +1,9 @@
+## 2026-11-06 12:00 — #841 SCALONE; start DP-31 (SOURCE_DOWN sev)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`. Rejestr **DP-228** (F7 #841).
+- Scalanie: **#841 SCALONE** `05ce20b5` (DP-227 / **0421**, F7 gotowe @ `fba33bd7`; CI unit+visual+db ✔).
+- **Krok** `pakiet/c3-dp-31-source-down-sev` / **0422**: `raise_integration_risk` aktualizuje otwarte `SOURCE_DOWN:*` (HIGH→MEDIUM + opis); money **205**. Czekam CI→F7. Bez push na main.
+
 ## 2026-11-06 11:25 — #840 DP-227 F7 r1: bmapa asu map_display_state
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
