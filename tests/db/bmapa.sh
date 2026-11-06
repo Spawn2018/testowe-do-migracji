@@ -258,6 +258,13 @@ if [ "$legs5" = "12" ]; then ok=$((ok+1)); echo "  OK    map_display_state().roa
 kaa_in=$(asu "$HHL_465" "select exists(select 1 from jsonb_array_elements(map_display_state()->'roads') e where e->>'leg'='SE-KAA-INLAND' and jsonb_array_length(e->'points')>=2)::text")
 [ "$kaa_in" = "true" ] && { ok=$((ok+1)); echo "  OK    roads zawiera SE-KAA-INLAND"; } || { fail=$((fail+1)); echo "  FAIL  SE-KAA-INLAND w roads → $kaa_in"; }
 
+# DP-226 / F7 #843: via_points SE-KAA-INLAND = here_corridor_via_points (nie puste [])
+via_eq=$(sys "select (via_points = here_corridor_via_points('SE_KAA_INLAND', 14)
+  and jsonb_array_length(via_points) >= 5)::text
+  from here_road_legs where leg='SE-KAA-INLAND'")
+[ "$via_eq" = "true" ] && { ok=$((ok+1)); echo "  OK    DP-226 SE-KAA-INLAND via_points = corridor RPC (≥5)"; } \
+  || { fail=$((fail+1)); echo "  FAIL  DP-226 via_points → $via_eq"; }
+
 # #667 E / DP-23: słownik + BN7
 echo; echo "[#667] E słownik here_road_legs + BN7"
 val "słownik = 12 legów" "select count(*)::text from here_road_legs where active" "12"

@@ -1,3 +1,9 @@
+## 2026-11-06 18:00 — #850 SCALONE; start DP-226 (INLAND via_points)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`. Rejestr **DP-229** (F7 #850: local.spec raz lokalnie albo w CI).
+- Scalanie: **#850 SCALONE** `50baa0b0` (DP-58, F7 gotowe @ `f5fc4495`; CI unit+visual ✔; bez migracji).
+- **Krok** `pakiet/c3-dp-226-inland-via-points` / **0424**: `here_road_legs.SE-KAA-INLAND.via_points` ← `here_corridor_via_points('SE_KAA_INLAND',14)`; bmapa 214. Czekam CI→F7. Bez push na main.
+
 ## 2026-11-06 17:40 — #850 F7 r1: local.spec selektory E8 / Przebieg
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.

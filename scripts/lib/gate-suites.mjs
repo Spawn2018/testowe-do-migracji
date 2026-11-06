@@ -45,7 +45,7 @@ export const EXPECTED_LOCAL = {
   h3: 27,
   smsksh: 16,
   'ferry-status': 18, // BN3 #683 F7 B5 / 0358: +4 (AUTO null, CHECK, apply RECZNIE, łańcuch AUTO); było 14
-  bmapa: 213, // DP-227: +3 geom_ok/store/map_display; DP-224: 210
+  bmapa: 214, // DP-226: +1 SE-KAA-INLAND via_points; DP-227: 213
   h4: 26, // DP-193 F7 #770: +3 (null, pusta, +N); było 23 (+4 collapse)
   p4k: 111, // #630 F7 r1: +rola PORT_CHECKIN; CROSSING mismatch w medianie; undo 7d
   aud03: 32, // D-0005 F7: +OPS, by=HHL_ADMIN, P2 bez sprawy, ASK_FIX/DECISION_HOLD
