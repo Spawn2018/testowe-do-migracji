@@ -37,7 +37,7 @@ export const EXPECTED_LOCAL = {
   hist11: 13, // #484: +2 (OPS + KSH zakres/redakcja zamiast odmowy); było 11
   workflows: 90, // #505 F7: +route null/OPS set_enabled|soft_delete/po/_reason/re-apply (było 86)
   insurance: 44, // A7 F7 P2: visible_to polisy SCX po document_id (+2)
-  'dec-auto': 83, // #384 pkt 2–3: +5 lead past/far + empty file + column_map
+  'dec-auto': 85, // DP-220 F7 #829: +1 fixture count …d220 (hhl/carrier); wcześniej 84
   dwell: 17,
   l13: 34, // 0218: DIGEST przez l13_queue_email + e-mail DECISION w teście (było 21 OK / 13 FAIL)
   l12: 12,
