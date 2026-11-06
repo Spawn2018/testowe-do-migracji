@@ -2,6 +2,8 @@
  * #667 F — e2e pomarańczowych linii na BUILDZIE PRODUKCYJNYM (VITE_AUTH_MODE=supabase)
  * z lokalnym / testowym Supabase (nigdy produkcja).
  * Każda mapa ≥ 1 polilinia #E5A544; leg SE-KAA obecny w map_display_state.
+ * DP-58 (F7 #677 r3 / #850 r1): bez `if (count())` / `.catch` z zapasowym data-view;
+ * + mapa telefonu (E8: Mapa spod „Więcej”) + TrackReplay (warstwa „Przebieg wybranego”).
  * Uruchamia: SPEC=tests/i667-f-orange-maps.local.spec.ts scripts/i2/local-ui.sh
  */
 import { test, expect, type Page } from '@playwright/test';
@@ -30,6 +32,16 @@ async function login(page: Page, email: string) {
   await page.waitForSelector('[data-auth="session"]', { timeout: 30_000 });
 }
 
+/** E8: na telefonie Mapa/Strefy są poza pinami — najpierw „Więcej”. */
+async function openNavView(page: Page, view: string) {
+  const btn = page.locator(`nav button[data-view="${view}"]`).first();
+  if (!(await btn.isVisible())) {
+    await page.locator('nav .nav-more-btn').click();
+    await expect(btn).toBeVisible({ timeout: 5_000 });
+  }
+  await btn.click();
+}
+
 async function orangePathCount(page: Page, root: string): Promise<number> {
   return page.locator(root).locator('.leaflet-overlay-pane path').evaluateAll((els) =>
     els.filter((p) => {
@@ -52,37 +64,47 @@ test('#667 F: Kokpit / Mapa / Strefy / geofence — ≥1 pomarańczowa; SE-KAA w
   await page.setViewportSize({ width: 1440, height: 900 });
   await login(page, 'hhl@bk5.local');
 
-  // Kokpit (CorridorMap embedded)
-  await page.locator('nav [data-view="dash"]').first().click().catch(() =>
-    page.locator('nav [data-view="home"]').first().click());
+  // Kokpit (CorridorMap embedded) — DP-58: bez .catch na zapasowy data-view
+  await openNavView(page, 'dash');
   await page.waitForSelector('.corridor-map-el .leaflet-overlay-pane', { timeout: 30_000 });
   await page.waitForTimeout(1200);
   expect(await orangePathCount(page, '.corridor-map-el'), 'Kokpit').toBeGreaterThanOrEqual(1);
 
   // Mapa
-  await page.locator('nav [data-view="map"]').first().click();
+  await openNavView(page, 'map');
   await page.waitForSelector('[data-page="map"] .leaflet-overlay-pane', { timeout: 30_000 });
   await page.waitForTimeout(1200);
   expect(await orangePathCount(page, '[data-page="map"]'), 'Mapa').toBeGreaterThanOrEqual(1);
 
+  // DP-58 / F7 #850 r1: warstwa p9c_l_trail = „Przebieg wybranego” (nie „Ślad”); tabela [data-map-table]
+  await page.locator('.maplayers label', { hasText: /przebieg/i }).locator('input').check();
+  await page.locator('[data-map-table] tr[data-load]').first().click();
+  await page.keyboard.press('Escape');
+  await expect(page.locator('[data-track-replay]').first()).toBeVisible({ timeout: 30_000 });
+  expect(await orangePathCount(page, '[data-page="map"]'), 'Mapa + TrackReplay').toBeGreaterThanOrEqual(1);
+
   // Karta / szuflada (mini-mapa z puli)
-  await page.locator('nav [data-view="sched"]').first().click();
+  await openNavView(page, 'sched');
   await page.locator('tr[data-load]').first().click();
   await page.waitForSelector('aside.drawer .corridor-map-el .leaflet-overlay-pane', { timeout: 30_000 });
   await page.waitForTimeout(1200);
   expect(await orangePathCount(page, 'aside.drawer .corridor-map-el'), 'szuflada').toBeGreaterThanOrEqual(1);
 
-  // Strefy (ZonesMap)
-  await page.locator('nav [data-view="zones"]').first().click().catch(async () => {
-    await page.locator('nav [data-view="geo"]').first().click();
-  });
-  const zonesRoot = page.locator('[data-zones-map]').first();
-  if (await zonesRoot.count()) {
-    await page.waitForTimeout(1200);
-    expect(await orangePathCount(page, '[data-zones-map]'), 'Strefy').toBeGreaterThanOrEqual(1);
-  }
+  // Strefy (ZonesMap) — DP-58: data-view="geo", bez if (count())
+  await openNavView(page, 'geo');
+  await page.waitForSelector('[data-zones-map]', { timeout: 30_000 });
+  await page.waitForTimeout(1200);
+  expect(await orangePathCount(page, '[data-zones-map]'), 'Strefy').toBeGreaterThanOrEqual(1);
 
   // DP-80: edytor geofence (osobny L.map) usunięty — formularz strefy rysuje `ZonesMap` mode="one"
+
+  // DP-58 / F7 #850 r1: mapa telefonu (E8 390) — Mapa spod „Więcej”, ≥1 pomarańczowa
+  await page.setViewportSize({ width: 390, height: 844 });
+  await openNavView(page, 'map');
+  await page.waitForSelector('[data-page="map"] .leaflet-overlay-pane', { timeout: 30_000 });
+  await page.waitForTimeout(1200);
+  expect(await orangePathCount(page, '[data-page="map"]'), 'Mapa telefon 390').toBeGreaterThanOrEqual(1);
+  expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 
   const legs = psql(`
     select string_agg(leg, ',' order by leg)

@@ -1,3 +1,15 @@
+## 2026-11-06 17:40 — #850 F7 r1: local.spec selektory E8 / Przebieg
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: brak F7 „gotowe” — F7 r1 prosi o lokalny przebieg + poprawki selektorów.
+- **Krok** F7 #850 r1: `i667-f-orange-maps.local.spec.ts` — warstwa `/przebieg/i` (nie „Ślad”); `[data-map-table] tr[data-load]`; `openNavView` (telefon: Mapa spod „Więcej”). Lokalny SB niedostępny na Windows (bez Dockera) — nie uruchomiono `local-ui.sh`; selektory zgodne z `MapView` / `Nav` / e8-phone-gate. Czekam CI→F7. Bez push na main.
+
+## 2026-11-06 16:35 — #849 SCALONE; start DP-58 (local.spec maps)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: **#849 SCALONE** `448faf5b` (DP-56+57, F7 gotowe @ `8f527a5f`; CI unit+db+visual ✔; bez migracji).
+- **Krok** `pakiet/c3-dp-58-local-spec-maps`: DP-58 — `i667-f-orange-maps.local.spec.ts`: bez `.catch` na zapasowy `data-view` i bez `if (count())`; Strefy = `geo`; + TrackReplay (Ślad) + mapa telefon 390. Bez migracji. Czekam CI→F7. Bez push na main.
+
 ## 2026-11-06 16:10 — #849 F7 r1: DP-57 bez wycieku apiKey
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
