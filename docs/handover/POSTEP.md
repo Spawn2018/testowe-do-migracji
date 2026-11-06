@@ -1,3 +1,10 @@
+## 2026-11-06 22:45 — #855 SCALONE; DP-63…68 rejestr; start DP-69 (C4)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne` do wykonania.
+- Scalanie: **#855 SCALONE** `c8d5819f` (F7: gotowe do scalenia @ `7602d6b5`; CI i667-f + unit + visual zielone). Bez push na main.
+- Rejestr: **DP-229** SCALONE; **DP-63/64/65/66/68** SCALONE (#763 `6c053f6c` / `8380388c` + DP-66 `3dce7530`) — kod już na main, stan w PLAN był „w kolejce”.
+- **Krok** C4 **DP-69**: test `i667-f-e2e-orange-roads` — spy `paintRoadLegs` + rpc 0→≥1 po montażu CorridorMap; poprawka nieprawdziwego komentarza M6. Gałąź `pakiet/c4-dp-69-corridor-refresh`. Bez migracji. Czekam CI→F7.
+
 ## 2026-11-06 22:10 — #855 DP-229 F7 r8: ostatnia linia psql (set_config)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne` do wykonania.

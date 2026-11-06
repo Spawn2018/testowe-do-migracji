@@ -355,7 +355,8 @@ describe('#667 F e2e — paintOrangeRoads + mapy (jsdom)', () => {
     await act(async () => { await new Promise((r) => setTimeout(r, 2200)); });
     expect(host.querySelector('.corridor-map-el')).toBeTruthy();
     expect(rpc).toHaveBeenCalled();
-    // M6: usunięcie paintOrangeRoads w CorridorMap → 0 polilinii.
+    /* DP-69 / F7 #677 r5: komentarz „M6 → 0 polilinii” był nieprawdziwy — mapPool.drawCorridorLines
+       → paintRoadLegs i tak rysuje linie. Ten expect pilnuje wyniku; osobny it DP-69 — spy + rpc 0→≥1. */
     expect(orangeRoadPolylineCount(host)).toBe(1);
 
     const { acquireMap, releaseMap, __resetMapPool } = await import('../src/components/map/mapPool');
@@ -395,6 +396,55 @@ describe('#667 F e2e — paintOrangeRoads + mapy (jsdom)', () => {
     expect(orangeRoadPolylineCount(host)).toBe(roadsBefore);
 
     releaseMap(entry, 'map');
+    __resetMapPool();
+  });
+
+  it('DP-69: CorridorMap po montażu odświeża pomarańczowe — rpc 0→≥1 i spy paintRoadLegs', async () => {
+    /* F7 #677 r5: (a) rpc najpierw 0, potem ≥1 z cache reset; (b) spy na paint* po basemapReady.
+       CorridorMap woła drawCorridorLines (nie bezpośrednie paintOrangeRoads) → paintRoadLegs. */
+    vi.stubEnv('VITE_AUTH_MODE', 'supabase');
+    __resetRoadLinesCacheForTests();
+    __setHereRoadsSessionMsForTests(5 * 60_000);
+    const orange = await import('../src/components/map/orangeRoads');
+    const paintSpy = vi.spyOn(orange, 'paintRoadLegs');
+    rpc.mockReset();
+    getSession.mockReset();
+    const roads = [
+      {
+        leg: 'PL-GDY',
+        spec: 'loose',
+        corridor_code: null,
+        points: LOOSE_OK,
+        browser_fetch: true,
+        map_group: 'core',
+        summary: '',
+      },
+    ];
+    rpc.mockResolvedValue({ data: { roads }, error: null });
+    getSession.mockResolvedValue({ data: { session: null } });
+
+    const { __resetMapPool } = await import('../src/components/map/mapPool');
+    __resetMapPool();
+    useTowerStore.setState({ theme: 'day' });
+    host = document.createElement('div');
+    host.style.cssText = 'width:640px;height:480px;position:relative';
+    document.body.appendChild(host);
+    root = createRoot(host);
+
+    expect(rpc).toHaveBeenCalledTimes(0);
+    expect(paintSpy).not.toHaveBeenCalled();
+
+    await act(async () => {
+      root!.render(createElement(CorridorMap, { loads: [], embedded: true, slot: 'kokpit' }));
+    });
+    /* basemapReady: ensureBasemap albo timeout 1,5 s — potem drawCorridorLines(load) w CorridorMap */
+    await act(async () => { await new Promise((r) => setTimeout(r, 2200)); });
+
+    expect(rpc.mock.calls.length).toBeGreaterThanOrEqual(1);
+    expect(paintSpy).toHaveBeenCalled();
+    expect(orangeRoadPolylineCount(host)).toBe(1);
+
+    paintSpy.mockRestore();
     __resetMapPool();
   });
 });
