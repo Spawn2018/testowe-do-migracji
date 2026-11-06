@@ -2456,13 +2456,41 @@ chk "BN8a: corridor_code PL-GDN = PL_ROAD" \
   "select corridor_code from here_road_legs where leg='PL-GDN'" PL_ROAD
 # DP-2: zamiast pg_get_functiondef like —
 # refresh/road_corridor_pre + assign bez PL → W5a/W5b/W5d + DP-136 (FI propose/assign);
-# 11 process_position×finland_land_geom → DP-218 process_position FI (60.173/24.827) → IN_TRANSIT_SE;
-# 12 eta_record×v_route → TLL-STO vs alias TALLINK→TLL-HEL (stary v_op bierze HEL).
+# 11 process_position×FI → e2e pos (FERRY TLL-HEL po ATA, ląd 60.173/24.827) → IN_TRANSIT_SE;
+# 12 eta_record×v_route → eta_record_segment_observations (PORT_CHECKIN from=14:00 TLL-STO).
 L2e1=55555555-0000-0000-0000-0000000002e1
+L2fi=55555555-0000-0000-0000-0000000002e2
 S2e1=77777777-0000-0000-0000-0000000002e1
+S2fi=77777777-0000-0000-0000-0000000002e2
 V2e1=66666666-0000-0000-0000-0000000002e1
+V2fi=66666666-0000-0000-0000-0000000002e2
 GID_HEL_OUT=$(q "select id from geofences where project_id='$P' and name='Terminal Tallinn D HEL' and kind='PORT_OUT' limit 1")
 GID_STO_OUT=$(q "select id from geofences where project_id='$P' and name='Terminal Tallinn D' and kind='PORT_OUT' and route='TLL-STO' limit 1")
+chk "DP-2: geofence PORT_OUT HEL/STO niepuste i różne" \
+  "select (coalesce('$GID_HEL_OUT','') <> '' and coalesce('$GID_STO_OUT','') <> ''
+           and '$GID_HEL_OUT' <> '$GID_STO_OUT')::text" true
+# 11: e2e process_position (nie sam apply_ferry_ais_arrival_backup) — F7 #834 r1.
+q "insert into vessels (id, name, operator) values
+    ('$V2fi', 'DP-2 FI land', 'TALLINK')
+   on conflict (id) do nothing;
+   insert into sailings (id, project_id, vessel_id, route, departure_at, arrival_at,
+     actual_departure_at, actual_arrival_at, status, source)
+   values ('$S2fi', '$P', '$V2fi', 'TLL-HEL',
+           '2026-11-04 20:00+00', '2026-11-04 22:30+00',
+           '2026-11-04 20:00+00', '2026-11-04 22:21+00', 'DOPLYNAL', 'TALLINK')
+   on conflict (id) do nothing" >/dev/null
+mk $L2fi A2fi "'HHL/A2fi'" "'SCX/A2fi'" FERRY "'$S2fi'"
+q "insert into load_events (load_id, event_type, occurred_at) values
+    ('$L2fi', 'MILESTONE_LOADED', '2026-11-04 08:00+00')" >/dev/null
+chk "DP-2: fixture L2fi FERRY" "select count(*)::text from loads where id='$L2fi' and status='FERRY'" 1
+pos $L2fi 60.173 24.827 "2026-11-05 04:20+00"
+chk "DP-2: process_position FI ląd → IN_TRANSIT_SE" "$(st $L2fi)" IN_TRANSIT_SE
+q "delete from load_events where load_id='$L2fi';
+   delete from positions where load_id='$L2fi';
+   delete from loads where id='$L2fi';
+   delete from sailings where id='$S2fi';
+   delete from vessels where id='$V2fi'" >/dev/null
+# 12: eta_record_segment_observations po trasie (nie v_op TALLINK→HEL).
 q "insert into vessels (id, name, operator) values
     ('$V2e1', 'DP-2 eta v_route', 'Tallink')
    on conflict (id) do nothing;
@@ -2480,15 +2508,18 @@ q "insert into load_events (load_id, event_type, occurred_at, payload) values
                         'geofence_name', 'Terminal Tallinn D', 'route', 'TLL-STO'))" >/dev/null
 chk "DP-2: eta_obs_route_key L2e1 = TLL-STO" \
   "select public.eta_obs_route_key('$L2e1')" TLL-STO
-chk "DP-2: eta_seg PORT_OUT × v_route = STO 14:00" \
-  "select (public.eta_seg_event_at('$L2e1','GEOFENCE_ENTER','PORT_OUT',null,null,
-            public.eta_obs_route_key('$L2e1'))
-           = timestamptz '2026-11-01 14:00+00')::text" true
 chk "DP-2: eta_seg PORT_OUT × v_op TALLINK = HEL 10:00 (stary)" \
   "select (public.eta_seg_event_at('$L2e1','GEOFENCE_ENTER','PORT_OUT',null,null,
             public.eta_record_v_op('TLL-STO'))
            = timestamptz '2026-11-01 10:00+00')::text" true
-q "delete from load_events where load_id='$L2e1';
+chk "DP-2: eta_record PORT_CHECKIN from = STO 14:00" \
+  "select public.eta_record_segment_observations('$L2e1');
+   select ((features->>'from')::timestamptz = timestamptz '2026-11-01 14:00+00')::text
+     from eta_segment_observations
+    where load_id='$L2e1' and corridor='PORT_CHECKIN_TLL' and (features->>'p4k')='true'
+    order by observed_at desc limit 1" true
+q "delete from eta_segment_observations where load_id='$L2e1';
+   delete from load_events where load_id='$L2e1';
    delete from loads where id='$L2e1';
    delete from sailings where id='$S2e1';
    delete from vessels where id='$V2e1'" >/dev/null
