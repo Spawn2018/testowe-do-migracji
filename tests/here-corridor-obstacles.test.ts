@@ -2,11 +2,14 @@ import { readFileSync } from 'node:fs';
 import { describe, expect, it, vi } from 'vitest';
 import {
   buildCorridorRouteUrl,
+  corridorLegs,
   corridorSummary,
   CORRIDOR_LEGS,
   needsCorridorRefresh,
   obstaclesFromRouting,
+  parseCorridorViaPoints,
   runCorridorObstacles,
+  SE_KAA_INLAND_VIA_FALLBACK,
   type CorridorDb,
   type CorridorSave,
 } from '../supabase/functions/_shared/here/corridorObstacles';
@@ -103,16 +106,49 @@ describe('H-3 przeszkody wzdłuż korytarza (Routing v8)', () => {
     expect(url).not.toContain('smap.hereapi');
   });
 
-  it('DP-24 F7 #836: SE-KAA-INLAND ma via passThrough (Norrköping/Västerås), nie gołe origin→destination', () => {
+  it('DP-24 F7 #836 + DP-226 cz.2: SE-KAA-INLAND via passThrough; słownik > FALLBACK', () => {
+    const src = readFileSync('supabase/functions/_shared/here/corridorObstacles.ts', 'utf8');
+    expect(src).toMatch(/SE_KAA_INLAND_VIA_FALLBACK/);
+    expect(src).toMatch(/inlandVia/);
+    expect(src).not.toMatch(/\bSE_KAA_INLAND_VIA\b/);
+    const edge = readFileSync('supabase/functions/corridor-obstacles/index.ts', 'utf8');
+    expect(edge).toMatch(/here_road_legs/);
+    expect(edge).toMatch(/here_corridor_via_points/);
+
     const inland = CORRIDOR_LEGS.find((l) => l.leg === 'SE-KAA-INLAND');
-    expect(inland?.via?.length).toBeGreaterThanOrEqual(2);
-    expect(inland?.via?.[0]).toEqual([58.59, 16.18]);
+    expect(inland?.via).toEqual([...SE_KAA_INLAND_VIA_FALLBACK]);
     const url = buildCorridorRouteUrl('K', inland!, DIMS);
-    expect(url).toContain('via=');
     expect(decodeURIComponent(url)).toContain('58.59,16.18!passThrough=true');
     expect(decodeURIComponent(url)).toContain('59.61,16.54!passThrough=true');
-    const kaa = CORRIDOR_LEGS.find((l) => l.leg === 'SE-KAA')!;
-    expect(kaa.via ?? []).toHaveLength(0);
+    expect(CORRIDOR_LEGS.find((l) => l.leg === 'SE-KAA')!.via ?? []).toHaveLength(0);
+
+    const dict = parseCorridorViaPoints([[60.1, 17.2], [62.0, 17.5], [63.5, 20.0]]);
+    const fromDict = corridorLegs(dict).find((l) => l.leg === 'SE-KAA-INLAND')!;
+    expect(fromDict.via).toEqual(dict);
+    expect(decodeURIComponent(buildCorridorRouteUrl('K', fromDict, DIMS))).toContain(
+      '60.1,17.2!passThrough=true',
+    );
+  });
+
+  it('DP-226 cz.2: runCorridorObstacles bierze inlandVia ze słownika do URL', async () => {
+    const dictVia = [[58.11, 16.01], [59.22, 16.66]] as const;
+    const fetch = vi.fn(async () => new Response(JSON.stringify({
+      routes: [{ sections: [{ notices: [], spans: [], polyline: 'BFoz5xJ67i1B1B7PzIhaxL7Y' }] }],
+    }), { status: 200 }));
+    const box = db({ inlandVia: async () => dictVia });
+    await runCorridorObstacles({
+      db: box.db,
+      fetch: fetch as unknown as typeof globalThis.fetch,
+      apiKey: 'klucz',
+      now: () => new Date('2026-10-04T18:00:00Z'),
+    });
+    const inlandCall = fetch.mock.calls
+      .map((c) => decodeURIComponent(String(c[0])))
+      .find((u) => u.includes('58.11,16.01') && u.includes('via='));
+    expect(inlandCall).toBeTruthy();
+    expect(inlandCall).toContain('58.11,16.01!passThrough=true');
+    expect(inlandCall).toContain('59.22,16.66!passThrough=true');
+    expect(inlandCall).not.toContain('58.59,16.18!passThrough=true');
   });
 
   it('przepis administracyjny nie trafia do przeszkód (jak H-1)', () => {

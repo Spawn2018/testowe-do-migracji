@@ -5,7 +5,12 @@
  */
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { isServiceRequest } from '../_shared/serviceAuth.ts';
-import { runCorridorObstacles, type CorridorLegName, type CorridorSave } from '../_shared/here/corridorObstacles.ts';
+import {
+  parseCorridorViaPoints,
+  runCorridorObstacles,
+  type CorridorLegName,
+  type CorridorSave,
+} from '../_shared/here/corridorObstacles.ts';
 
 Deno.serve(async (req: Request) => {
   const service = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
@@ -63,6 +68,22 @@ Deno.serve(async (req: Request) => {
           axleCount: Number(row.combo_axle_count),
           axleLoadT: Number(row.combo_axle_load_t),
         };
+      },
+      /** DP-226 cz.2 / F7 #851: via ze słownika; RPC gdy kolumna pusta. */
+      async inlandVia() {
+        const { data: row } = await sb
+          .from('here_road_legs')
+          .select('via_points')
+          .eq('leg', 'SE-KAA-INLAND')
+          .maybeSingle();
+        const fromDict = parseCorridorViaPoints(row?.via_points);
+        if (fromDict.length >= 2) return fromDict;
+        const { data: rpc } = await sb.rpc('here_corridor_via_points', {
+          p_code: 'SE_KAA_INLAND',
+          p_max: 14,
+        });
+        const fromRpc = parseCorridorViaPoints(rpc);
+        return fromRpc.length >= 2 ? fromRpc : null;
       },
       async save(row: CorridorSave) {
         const { error } = await sb.rpc('h3_replace_leg', {
