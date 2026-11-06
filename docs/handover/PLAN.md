@@ -1338,17 +1338,17 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-109 | Cursor | `RESUME_RE` `returns? to` może wyciszyć prawdziwe odwołanie („passengers return to Tallinn by bus”) — zawęzić do statku/trasy; redundantny warunek w `classify` | F7 #683 r2 | BN3 | w kolejce |
 | DP-111 | Cursor | rozpoznawanie częstych form dat Tallink Alert („November 2”, „2nd November”, „2–4 November”, „from 2 to 4 November”, „tomorrow”, dni tygodnia) | F7 #683 r3 | BN3 | w kolejce |
 | DP-112 | Cursor | godziny w nawiasie z „UTC/local/Finnish/Swedish time” odfiltrować przed liczeniem multiTime (zakres „HH:MM–HH:MM” zostaje ambiguous) | F7 #683 r3 | BN3 | w kolejce |
-| DP-22 | Cursor | Stan systemu: ostrzeżenie z `summary` odrzuconego legu z bazy (nie tylko `points not null`); fundament 0354 + `checkRoads`; UI: wiersz `here-roads` + `withHereRoadsRejects` | F7 #673 r1 N5 / r2 | #667 D | W TOKU (`pakiet/c3-dp-22-24-here-roads-sys`) |
+| DP-22 | Cursor | Stan systemu: ostrzeżenie z `summary` odrzuconego legu z bazy (nie tylko `points not null`); fundament 0354 + `checkRoads`; UI: wiersz `here-roads` + `withHereRoadsRejects` | F7 #673 r1 N5 / r2 | #667 D | SCALONE (#836 `b577c010` / **0419**) |
 | DP-23 | Cursor | Słownik legów drogowych w bazie zamiast `IN (…)` / `ROAD_LEGS` w kodzie | F7 #673 r1 N2 | #667 E / BN7 | SCALONE (#677 `675bb299` / 0355) |
-| DP-24 | Cursor | `corridor_fetches.leg` / `corridor_obstacles.leg` + SE-KAA-INLAND gdy przeszkody H3 obejmą inland; **0419** + CORRIDOR_LEGS via ROAD_KAA + h3_highlighted GDY-KAA + dedup link_id (F7 #836 r1) | F7 #673 r1 N3 / #836 r1 | po #667 | W TOKU (`pakiet/c3-dp-22-24-here-roads-sys` / **0419**) |
+| DP-24 | Cursor | `corridor_fetches.leg` / `corridor_obstacles.leg` + SE-KAA-INLAND gdy przeszkody H3 obejmą inland; **0419** + CORRIDOR_LEGS via ROAD_KAA + h3_highlighted GDY-KAA + dedup link_id (F7 #836 r1) | F7 #673 r1 N3 / #836 r1 | po #667 | SCALONE (#836 `b577c010` / **0419**) |
 | DP-25 | koordynator | JSDoc `vesselGroupsVersion` zgodny z użyciem (albo bez eksportu) | F7 #674 | wyglad | SCALONE (#675) |
 | DP-26 | koordynator | SailingsPanel przez `useVesselGroups()` zamiast własnego stanu | F7 #674 | wyglad | SCALONE (#675) |
 | DP-27 | koordynator | jedno ostrzeżenie po błędzie pobrania listy statków na sesję | F7 #674 | wyglad | SCALONE (#675) |
 | DP-28 | koordynator | testy źródłowe (regex) DP-17/N4–N6 → testy zachowania | F7 #674 | wyglad | SCALONE (#675) |
-| DP-29 | Cursor | `apiStructureFail`/`structureFail` w DFDS bez wpływu na wynik — usunąć albo użyć w opisie ryzyka z asercją (łapać „nieczytelny rejs”) | F7 #668 r8 | po #673 | w kolejce |
-| DP-30 | Cursor | usunąć nieosiągalne ostrzeżenie zastępcze `jobs.ts` (DFDS) | F7 #668 r8 | po #673 | w kolejce |
+| DP-29 | Cursor | `apiStructureFail`/`structureFail` w DFDS bez wpływu na wynik — usunąć albo użyć w opisie ryzyka z asercją (łapać „nieczytelny rejs”) | F7 #668 r8 | po #673 | W TOKU (#838 — F7 po #837) |
+| DP-30 | Cursor | usunąć nieosiągalne ostrzeżenie zastępcze `jobs.ts` (DFDS) | F7 #668 r8 | po #673 | W TOKU (#838 — F7 po #837) |
 | DP-31 | Cursor | istotność ryzyka źródła aktualizowana w ciągu doby (HIGH → MEDIUM) w `raise_integration_risk` | F7 #668 r8 | po #673 | w kolejce |
-| DP-32 | Cursor | klucz ryzyka DFDS bez daty (jak EMTRACK), żeby wielodniowa praca z PDF nie mnożyła ryzyk | F7 #668 r8 | po #673 | w kolejce |
+| DP-32 | Cursor | klucz ryzyka DFDS bez daty (jak EMTRACK), żeby wielodniowa praca z PDF nie mnożyła ryzyk | F7 #668 r8 | po #673 | W TOKU (#838 — F7 po #837) |
 | DP-33 | koordynator | testy DP-3/5/7/8 oparte na regexach → testy zachowania (jsdom) | F7 #676 | wyglad | SCALONE (#676) |
 | DP-34 | koordynator | test podłączenia panelu Rejsów (`key={vesselSelectKey(`, `setLineSel(plan.lineSel)` — mutacje M7/M8 przeżywają) | F7 #676 | wyglad | SCALONE (#676) |
 | DP-35 | koordynator | test DP-27: po `reset()` kolejny błąd → drugie ostrzeżenie | F7 #676 | wyglad | SCALONE (#676) |
@@ -1476,10 +1476,16 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 Źródło: #762 (Spawn2018; 03.11). Po #760 → #756 (DP-187/188) → C1…. Koordynator: pakiety DP-A/B/C (front) — nie brać.
 1. **C1 — Korytarz bałtycki:** ~~DP-179~~ DONE; ~~143/144~~ DONE; ~~DP-146~~ SCALONE (#769 `1a523a5f`); ~~152~~ SCALONE (#768 `0abe9a8f`); ~~155/156~~ SCALONE (#766 `272e0afc` / **0388**); ~~157/158~~ DONE (LT/LV/EE/FI etykiety, szum FI; przed BN10).
 2. **C2 — telematyka / ETA:** ~~**DP-193+194**~~ SCALONE (#770 / **0389**); ~~**DP-197**~~ SCALONE (#771 `18c05217` / **0390**); ~~**DP-198**~~ SCALONE (#772 `ee54ad20`); ~~**DP-119**~~ SCALONE (#774 `5f0c4bce`; rej. koord. DP-116 cz. 2); ~~**DP-200**~~ SCALONE (#776 `e023c2ba`); ~~**DP-196**~~ SCALONE (#775 `b4a8dab9`); ~~**DP-120**~~ SCALONE (#777 `2a99a8e6` / **0391**); ~~**DP-202+203**~~ SCALONE (#780 `642a9b21` / **0392**+**0393**); ~~**DP-121**~~ SCALONE (#782 `4b9e0d9a` / **0394**); ~~**DP-204**~~ SCALONE (#784 `34263f4d`); ~~**DP-786**~~/**DP-207** SCALONE (#787 `31a1c0bb` / **0395**); ~~**DP-205**~~ SCALONE (#785 `7ef4bc3c` / **0396**+**0397**+**0398**); ~~**DP-206**~~ SCALONE (#791 `4e5ffc99` / **0399**–**0405**, `DETOUR_E49=true`); ~~**DP-123**~~ SCALONE (#792 `ba31c223`); ~~**DP-208**~~ SCALONE (#794 `21a92c37` / **0406**; otwarte: gęsta E4 OSM); ~~**DP-209**~~ SCALONE (#795 `9ab5b2cb`); ~~**DP-124**~~ SCALONE (#796 `9a5d7e35`); ~~**#797 PILNE**~~ SCALONE (#799 `181b70b2` / **0407**); ~~**DP-215**~~ SCALONE (#800 `84021df9`); ~~**DP-216**~~ SCALONE (#802 `4e74d3cf` / **0408**); ~~**DP-213**~~ SCALONE (#803 `96e6f20b`); ~~**DP-217**~~ SCALONE (#806 `2723af71` / **0409**); ~~**DP-218**~~ SCALONE (#808 `5e7a1173` / **0410**); ~~**DP-211**~~ SCALONE (#805 `4cbcb472`); ~~**DP-210**~~ SCALONE (#810 `18ab51c6`); ~~**DP-212**~~ SCALONE (#811 `12621eea`); ~~**DP-219**~~ SCALONE (#812 `e396a758` / **0411**); ~~**DP-221**~~ SCALONE (#813 `d6be6012`); ~~**DP-223**~~ SCALONE (#828 `dd7d637a`); ~~**DP-224**~~ SCALONE (#826); ~~**DP-225**~~ SCALONE (#827); ~~**DP-220**~~ SCALONE (#829 `c1cc27a0` / **0416**); ~~**DP-222**~~ SCALONE (#830 `2bc91a32` / **0417**+**0418**).
-3. **C3 — stare pozycje backendu:** ~~DP-2~~ (#834), ~~10~~, ~~DP-12~~ (#832), 22, 24, 29–32, 38–40, 43, 46, 47, 53–58 (+ ~~**DP-195**~~ `#831`). **Bieżące:** **DP-22+24** (`pakiet/c3-dp-22-24-here-roads-sys` / **0419** — Stan systemu HERE summary + SE-KAA-INLAND H3).
+3. **C3 — stare pozycje backendu:** ~~DP-2~~ (#834), ~~10~~, ~~DP-12~~ (#832), ~~22~~, ~~24~~ (#836 / **0419**), 29–32, 38–40, 43, 46, 47, 53–58 (+ ~~**DP-195**~~ `#831`). **#838 DP-29+30+32** otwarte (CI/F7) — **scalanie po #837**. **Bieżące (PILNE):** **#837 monitorujpojazd** (`pakiet/837-monitorujpojazd-ts08` / **0420**).
 4. **C4 — reszta:** DP-69, 70, 81–83, 90–93, 97, 99–103, 105–109, 111, 112.
 5. **C5 — warunkowe:** DP-186 (decyzja 04.11 ~07:00 po 24 h odbioru #753).
 Cel: C1–C4 przed bramą #588 i wydaniem 1.0 (≈ 20–21.11). Pozycja >~50 linii / nowa tabela → osobne zgłoszenie.
+
+### #837 · PILNE monitorujpojazd — link śledzenia (TS-08) — W TOKU (`pakiet/837-monitorujpojazd-ts08` / **0420**)
+Źródło: #837 (Spawn2018; właściciel 06.11 09:06). Przed dalszym C3 / scaleniem #838. Termin: dziś ~20:00 (prom MyStar TLL–HEL 07.11 09:30).
+1. **Ukrycie tokenu + poll (ten PR):** kolumna `monitorujpojazd_token` bez SELECT; wyzwalacz → `mp:<6>`; maska audit; `position_source=MONITORUJPOJAZD`; job `monitorujpojazd-poll` co 2 min; API `GET …/websatadmin/share/data/<uuid>/` (stany OK/EXPIRED/NOT_STARTED); **bez historii trasy** (strona tylko bieżąca pozycja).
+2. Front: rozpoznanie linku, chip, Stan systemu, i18n.
+3. Odbiór: TS-08 pozycje przed wyjazdem PL; token niewidoczny; Stan systemu.
 
 ### #766 · C1 cz.1 — DP-155 + DP-156 — SCALONE (`272e0afc` / **0388**)
 Źródło: #762 C1. Gałąź `pakiet/c1-dp-155-road-fi-eta`. Migracja **0388** (F7 r2: 0389 scalona; e2e + zamknięcie po obniżeniu).
@@ -2674,6 +2680,8 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 03.11.2026 21:35 | #777 F7 r1 niegotowe → seed Portnet/Deltamarin, I=IC, dzień przypłynięcia, złożone IBNet | pętla / C2 F7 |
 | 03.11.2026 22:00 | #777 SCALONE `2a99a8e6` (DP-120 / **0391**; F7 gotowe @ `fecc5f7a`); start DP-202+203 (#778+#779) | pętla / C2 |
 | 03.11.2026 23:50 | #780 F7 r3: auto DeepL na luki TV/bałtyk (bez RESOURCE_MISSING:TV_CODE); **0393** memory_auto_24h | pętla / C2 F7 |
+| 06.11.2026 09:20 | #837 PILNE monitorujpojazd (TS-08): start **0420** — ukrycie tokenu + poll; #838 DP-29+30+32 zostaje otwarte | pętla / PILNE |
+| 06.11.2026 09:00 | #836 SCALONE `b577c010` (DP-22+24 F7 @ `d5c927c0` / **0419**); start DP-29+30+32 (#838) | pętla / C3 |
 | 06.11.2026 08:15 | #836 F7 r1: SE-KAA-INLAND via + h3 dedup link_id + testy GDY-KAA; h3 27 | pętla / C3 |
 | 06.11.2026 08:00 | #834 SCALONE `91168c54`; start **DP-22+24** #836 / **0419** | pętla / C3 |
 | 06.11.2026 07:15 | #834 F7 r1 niegotowe → process_position FI e2e + eta_record obs + GID; status 688 | pętla / C3 |

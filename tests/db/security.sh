@@ -298,6 +298,29 @@ out=$(sys "select new_value->>'telematics_vehicle_id' || '|' || coalesce(new_val
 echo "$out" | grep -qx 'safefleet:b1c2d3|••••' && { ok=$((ok+1)); echo "  OK    #662-b: audit_log maskuje URL i token"; } || { fail=$((fail+1)); echo "  FAIL  #662-b maska audit: $out"; }
 sys "delete from audit_log where entity_id='662b-mask'" >/dev/null
 
+echo; echo "[#837] monitorujpojazd_token bez SELECT; sanitizer + maska audit"
+# Token zmyślony (nie z TS-08). Kolumna bez SELECT/INSERT/UPDATE dla authenticated.
+val "#837: authenticated bez SELECT monitorujpojazd_token" $HHL "select has_column_privilege('authenticated','loads','monitorujpojazd_token','select')::text" false
+val "#837: authenticated bez UPDATE monitorujpojazd_token" $HHL "select has_column_privilege('authenticated','loads','monitorujpojazd_token','update')::text" false
+val "#837: authenticated bez INSERT monitorujpojazd_token" $HHL "select has_column_privilege('authenticated','loads','monitorujpojazd_token','insert')::text" false
+err "#837: SCX nie zapisze monitorujpojazd_token wprost" $SCX "update loads set monitorujpojazd_token='aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeee1234' where id='$L2'" "permission denied"
+err "#837: KSH nie odczyta monitorujpojazd_token" $KSH "select monitorujpojazd_token from loads where id='$L1'" "permission denied"
+err "#837: SCX nie odczyta monitorujpojazd_token" $SCX "select monitorujpojazd_token from loads where id='$L2'" "permission denied"
+sys "update loads set telematics_vehicle_id='https://sledz.monitorujpojazd.pl/share/aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeee1234/' where id='$L1'" >/dev/null
+out=$(sys "select telematics_provider || '|' || telematics_vehicle_id || '|' || coalesce(monitorujpojazd_token,'') from loads where id='$L1'")
+echo "$out" | grep -qx "MONITORUJPOJAZD|mp:ee1234|aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeee1234" && { ok=$((ok+1)); echo "  OK    #837: sanitizer zapisuje token i znacznik"; } || { fail=$((fail+1)); echo "  FAIL  #837 sanitizer: $out"; }
+# Przywróć RIO z B6 — dalsze #392/#442 zakładają ten stan startowy.
+sys "update loads set telematics_vehicle_id='https://position-sharing.rio.cloud/x?id=aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee&secret=klucz-b6' where id='$L1'" >/dev/null
+out=$(sys "select (monitorujpojazd_token is null and telematics_vehicle_id = 'rio:aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee' and rio_secret='klucz-b6')::text from loads where id='$L1'")
+[ "$out" = "true" ] && { ok=$((ok+1)); echo "  OK    #837: po RIO monitorujpojazd_token puste"; } || { fail=$((fail+1)); echo "  FAIL  #837 clear po RIO: $out"; }
+sys "insert into audit_log (action, entity, entity_id, old_value, new_value) values
+  ('ROW_UPDATE','loads','837-mask',
+   '{\"telematics_vehicle_id\":\"https://sledz.monitorujpojazd.pl/share/aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeee1234/\"}'::jsonb,
+   '{\"telematics_vehicle_id\":\"https://sledz.monitorujpojazd.pl/share/aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeee1234/\",\"monitorujpojazd_token\":\"aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeee1234\"}'::jsonb)" >/dev/null
+out=$(sys "select new_value->>'telematics_vehicle_id' || '|' || coalesce(new_value->>'monitorujpojazd_token','') from audit_log where entity_id='837-mask' order by created_at desc limit 1")
+echo "$out" | grep -qx 'mp:ee1234|••••' && { ok=$((ok+1)); echo "  OK    #837: audit_log maskuje URL i token"; } || { fail=$((fail+1)); echo "  FAIL  #837 maska audit: $out"; }
+sys "delete from audit_log where entity_id='837-mask'" >/dev/null
+
 echo; echo "[#442] listRioLoadsForPoll — kolumny selectu istnieją w loads (bez shipment_code)"
 # Edge store.ts listRioLoadsForPoll: te same nazwy co w select — MemStore tego nie łapie.
 # Sprawdzenie przez sys (postgres): authenticated nie widzi rio_secret (revoke 0214) ani

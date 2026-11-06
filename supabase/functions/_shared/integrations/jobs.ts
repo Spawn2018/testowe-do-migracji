@@ -147,6 +147,9 @@ import {
   fetchSafefleetPosition, fetchSafefleetTrajectory, safefleetUrlSafe, scrubSafefleetToken,
 } from '../telematics/safefleetTemporaryLink.ts';
 import {
+  fetchMonitorujPojazdPosition, monitorujpojazdUrlSafe, scrubMonitorujPojazdToken,
+} from '../telematics/monitorujpojazdShareLink.ts';
+import {
   WIND_GUST_MS_THRESHOLD, gustExceedsThreshold, windRiskTitle,
   seWeekendBanHit, plSundayBanHit, banRiskTitle,
 } from '../here/windAndBans.ts';
@@ -280,6 +283,27 @@ export interface SafefleetLoadPatch {
   safefleet_last_fix_at?: string;
   safefleet_error_streak?: number;
   safefleet_trajectory_done?: boolean;
+}
+
+/** #837 — wiersz do odpytania monitorujpojazd (token tylko w Edge / service_role). */
+export interface MonitorujPojazdLoadRow {
+  id: string;
+  monitorujpojazd_token: string;
+  monitorujpojazd_check_state: string | null;
+  monitorujpojazd_check_at: string | null;
+  monitorujpojazd_last_fix_at: string | null;
+  monitorujpojazd_error_streak: number;
+  telematics_vehicle_id: string | null;
+  status: string | null;
+  plannedLoadDate: string | null;
+  trackingOpenedAt: string | null;
+}
+
+export interface MonitorujPojazdLoadPatch {
+  monitorujpojazd_check_state?: 'ok' | 'pending' | 'invalid' | 'down';
+  monitorujpojazd_check_at?: string;
+  monitorujpojazd_last_fix_at?: string;
+  monitorujpojazd_error_streak?: number;
 }
 
 export interface SyncStore {
@@ -460,7 +484,7 @@ export interface SyncStore {
   /** TELM: zapis pozycji (process_position). */
   processPosition?(row: {
     loadId: string; lat: number; lon: number; ts: string;
-    source: 'EMTRACK_WEB' | 'TELEMATICS_API' | 'SUBCONTRACTOR_LINK' | 'SAFEFLEET';
+    source: 'EMTRACK_WEB' | 'TELEMATICS_API' | 'SUBCONTRACTOR_LINK' | 'SAFEFLEET' | 'MONITORUJPOJAZD';
     speed?: number | null; heading?: number | null; ignition?: boolean | null; raw?: unknown;
   }): Promise<void>;
   lastPositionAt?(loadId: string, source: string): Promise<string | null>;
@@ -469,12 +493,17 @@ export interface SyncStore {
   telmRioLinksEnabled?(): Promise<boolean>;
   /** #662: flaga TELM_SAFEFLEET_POLL. */
   telmSafefleetPollEnabled?(): Promise<boolean>;
+  /** #837: flaga TELM_MONITORUJPOJAZD_POLL. */
+  telmMonitorujPojazdPollEnabled?(): Promise<boolean>;
   /** E44: blokada nakładania się przebiegów rio-links (TTL + token właściciela). */
   rioLinksLockTry?(ttlSec?: number, token?: string): Promise<boolean>;
   rioLinksLockRelease?(token?: string): Promise<void>;
   /** #662: blokada safefleet-poll. */
   safefleetPollLockTry?(ttlSec?: number, token?: string): Promise<boolean>;
   safefleetPollLockRelease?(token?: string): Promise<void>;
+  /** #837: blokada monitorujpojazd-poll. */
+  monitorujpojazdPollLockTry?(ttlSec?: number, token?: string): Promise<boolean>;
+  monitorujpojazdPollLockRelease?(token?: string): Promise<void>;
   /** TELM: pozycja naczepy bez awizacji — bez alarmów. */
   saveOrphanPosition?(row: {
     plate: string; trackingObjectId?: string | null;
@@ -496,6 +525,8 @@ export interface SyncStore {
   /** #662: transporty SAFEFLEET (token tylko service_role). */
   listSafefleetLoadsForPoll?(): Promise<SafefleetLoadRow[]>;
   updateSafefleetLoadState?(loadId: string, patch: SafefleetLoadPatch): Promise<void>;
+  listMonitorujPojazdLoadsForPoll?(): Promise<MonitorujPojazdLoadRow[]>;
+  updateMonitorujPojazdLoadState?(loadId: string, patch: MonitorujPojazdLoadPatch): Promise<void>;
   /** Ostatnia pozycja z lat/lon (do prędkości RIO). */
   lastPositionFix?(loadId: string, source: string): Promise<{ lat: number; lon: number; ts: string } | null>;
   /** II-8: zapis bieżącej pogody morskiej */
@@ -6888,6 +6919,198 @@ export async function runSafefleetPoll(deps: JobDeps): Promise<JobResult> {
 }
 
 /**
+ * #837 — odczyt pozycji z linku sledz.monitorujpojazd.pl/share/<uuid>/.
+ * Cron `tower-monitorujpojazd-poll` co 2 min. Job: `monitorujpojazd-poll`.
+ * Token nigdy w logach (tylko 6 hex). Brak historii trasy w API — tylko bieżąca pozycja.
+ */
+export async function runMonitorujPojazdPoll(deps: JobDeps): Promise<JobResult> {
+  const started = deps.now().getTime();
+  const nowIso = new Date(started).toISOString();
+
+  const enabled = deps.store.telmMonitorujPojazdPollEnabled
+    ? await deps.store.telmMonitorujPojazdPollEnabled()
+    : true;
+  if (!enabled) {
+    return {
+      job: 'monitorujpojazd-poll', mode: 'LIVE', ok: true,
+      disabled: true,
+      reason: 'Flaga TELM_MONITORUJPOJAZD_POLL wyłączona — bez zapisu pozycji',
+      observations: { flag: 'false', links: '0', disabled: 'true' },
+    };
+  }
+
+  const lockToken = crypto.randomUUID();
+  if (deps.store.monitorujpojazdPollLockTry) {
+    const got = await deps.store.monitorujpojazdPollLockTry(90, lockToken);
+    if (!got) {
+      return {
+        job: 'monitorujpojazd-poll', mode: 'LIVE', ok: true,
+        reason: 'Nakładający się przebieg monitorujpojazd-poll — pominięto',
+        observations: { links: '0', overlap: '1' },
+      };
+    }
+  }
+
+  try {
+    const loads = deps.store.listMonitorujPojazdLoadsForPoll
+      ? await deps.store.listMonitorujPojazdLoadsForPoll()
+      : [];
+    let queried = 0;
+    let written = 0;
+    let skippedWindow = 0;
+    let skippedDup = 0;
+    let invalid = 0;
+    let down = 0;
+    let noPosition = 0;
+    const warnings: string[] = [];
+    let risks = 0;
+
+    for (const load of loads) {
+      if (deps.now().getTime() - started > 40_000) break;
+
+      const tip = load.monitorujpojazd_token.replace(/-/g, '').slice(-6);
+      const matchRow = {
+        id: load.id,
+        trailer_plate: null as string | null,
+        telematics_vehicle_id: load.telematics_vehicle_id ?? `mp:${tip}`,
+        status: load.status,
+        plannedLoadDate: load.plannedLoadDate,
+        trackingOpenedAt: load.trackingOpenedAt,
+      };
+      const inWindow = loadInTrackingWindow(matchRow, nowIso);
+      if (!inWindow) {
+        skippedWindow++;
+        continue;
+      }
+
+      queried++;
+      const safeUrl = monitorujpojazdUrlSafe(load.monitorujpojazd_token);
+      const res = await fetchMonitorujPojazdPosition({
+        token: load.monitorujpojazd_token,
+        fetchImpl: deps.fetch,
+        nowMs: started,
+      });
+
+      const apply = async (patch: MonitorujPojazdLoadPatch) => {
+        if (!deps.store.updateMonitorujPojazdLoadState) return;
+        await deps.store.updateMonitorujPojazdLoadState(load.id, patch);
+        Object.assign(load, patch);
+      };
+
+      if (!res.ok) {
+        const streak = (load.monitorujpojazd_error_streak ?? 0) + 1;
+        const kind = res.kind;
+        if (kind === 'invalid') {
+          invalid++;
+          await apply({
+            monitorujpojazd_check_state: 'invalid',
+            monitorujpojazd_check_at: nowIso,
+            monitorujpojazd_error_streak: streak,
+          });
+        } else if (kind === 'no_position') {
+          noPosition++;
+          down++;
+          await apply({
+            monitorujpojazd_check_state: 'down',
+            monitorujpojazd_check_at: nowIso,
+            monitorujpojazd_error_streak: streak,
+          });
+        } else {
+          down++;
+          await apply({
+            monitorujpojazd_check_state: 'down',
+            monitorujpojazd_check_at: nowIso,
+            monitorujpojazd_error_streak: streak,
+          });
+        }
+        warnings.push(scrubMonitorujPojazdToken(res.warning));
+        if (streak >= 3) {
+          if (await deps.store.raiseRisk({
+            kind: 'RESOURCE_MISSING',
+            severity: 'HIGH',
+            title: 'Link śledzenia monitorujpojazd nie działa',
+            titleKey: 'rk_monitorujpojazd_dead',
+            params: {},
+            detail: {
+              zrodlo: 'MONITORUJPOJAZD', loadId: load.id, status: res.status,
+              url: safeUrl, warning: scrubMonitorujPojazdToken(res.warning), streak,
+            },
+            dedup: `MONITORUJPOJAZD_DEAD:${load.id}`,
+            sourceUrl: safeUrl,
+            loadId: load.id,
+          })) risks++;
+        }
+        continue;
+      }
+
+      const wasBad = load.monitorujpojazd_check_state === 'invalid'
+        || load.monitorujpojazd_check_state === 'down';
+      await apply({
+        monitorujpojazd_check_state: 'ok',
+        monitorujpojazd_check_at: nowIso,
+        monitorujpojazd_last_fix_at: res.observedAt,
+        monitorujpojazd_error_streak: 0,
+      });
+      if (wasBad) await deps.store.resolveRisks(`MONITORUJPOJAZD_DEAD:${load.id}`);
+
+      const prevFix = deps.store.lastPositionFix
+        ? await deps.store.lastPositionFix(load.id, 'MONITORUJPOJAZD')
+        : null;
+      if (prevFix && Date.parse(prevFix.ts) >= Date.parse(res.observedAt)) {
+        skippedDup++;
+        continue;
+      }
+
+      if (deps.store.processPosition) {
+        await deps.store.processPosition({
+          loadId: load.id,
+          lat: res.lat,
+          lon: res.lon,
+          ts: res.observedAt,
+          source: 'MONITORUJPOJAZD',
+          speed: res.speedKmh,
+          heading: res.heading,
+          ignition: res.ignition,
+          raw: {
+            provider: 'MONITORUJPOJAZD',
+            url: safeUrl,
+            vehicleName: res.vehicleName,
+          },
+        });
+        written++;
+      }
+      if (deps.store.inferPhaseFromPosition) {
+        await deps.store.inferPhaseFromPosition(load.id, res.lat, res.lon, res.observedAt);
+      }
+    }
+
+    const hadFault = invalid > 0 || down > 0;
+    return {
+      job: 'monitorujpojazd-poll',
+      mode: 'LIVE',
+      ok: !hadFault,
+      risks,
+      warnings: warnings.slice(0, 20),
+      observations: {
+        candidates: String(loads.length),
+        links: String(loads.length),
+        queried: String(queried),
+        written: String(written),
+        invalid: String(invalid),
+        down: String(down),
+        no_position: String(noPosition),
+        skipped_window: String(skippedWindow),
+        skipped_dup: String(skippedDup),
+      },
+    };
+  } finally {
+    if (deps.store.monitorujpojazdPollLockRelease) {
+      await deps.store.monitorujpojazdPollLockRelease(lockToken);
+    }
+  }
+}
+
+/**
  * B9 — ponowienie translation_queue (blad/brak; limit: nowy miesiąc = nowy wiersz deepl_usage).
  * Po sukcesie: pamięć + opis ryzyka + usunięcie z kolejki + zamknięcie TRANSLATE_WAIT.
  * Wpisy >15 min (poza odrzucone) → ryzyko ROAD_SE / rk_translate_wait (per hash).
@@ -6984,6 +7207,7 @@ export const JOBS = {
   'emtrack-web': runEmtrackWeb,
   'rio-links': runRioLinks,
   'safefleet-poll': runSafefleetPoll,
+  'monitorujpojazd-poll': runMonitorujPojazdPoll,
   'route-hazards': runRouteHazards,
   'corridor-wind': runCorridorWind,
   'translate-retry': runTranslateRetry,
@@ -6999,7 +7223,7 @@ export const MIN_INTERVAL_MIN: Record<JobName, number> = {
   'traffic-flow': 15, 'here-roads': 1380,
   'emtrack-web': 2, 'rio-links': 2,
   // DP-223 (#816): cron `17,47 * * * *` — limit 30 min (było 60 → :47 skipped).
-  'safefleet-poll': 2, 'route-hazards': 30,
+  'safefleet-poll': 2, 'monitorujpojazd-poll': 2, 'route-hazards': 30,
   'corridor-wind': 60,
   'translate-retry': 5,
 };

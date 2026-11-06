@@ -87,6 +87,7 @@ const pl: Dict = {
   b6_job_ferry_portnet: 'Godziny rejsów — porty FI, Sztokholm, Tallinn (co 15 min)',
   b6_job_ferry_departures: 'Wypłynięcia promów (statusy transportów)',
   b6_job_safefleet_poll: 'Lokalizacja SafeFleet (link tymczasowy)',
+  b6_job_monitorujpojazd_poll: 'Lokalizacja monitorujpojazd (link udostępnienia)',
   b6_job_rio_links: 'Lokalizacja RIO (link)',
   b6_job_emtrack_web: 'Lokalizacja emtrack',
   b6_job_ksh_sharepoint_sync: 'Plik KSH na SharePoint (import i zapis)',

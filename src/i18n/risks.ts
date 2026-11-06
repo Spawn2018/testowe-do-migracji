@@ -187,6 +187,7 @@ const pl: Dict = {
   rk_rio_unknown_asset: 'Link RIO dotyczy pojazdu {asset}, którego nie ma w awizacji',
   rk_rio_no_position: 'Link RIO nie zwraca pozycji — sprawdź udostępnianie w RIO / czy pojazd nadaje',
   rk_safefleet_dead: 'Link SafeFleet nie działa / wygasł',
+  rk_monitorujpojazd_dead: 'Link śledzenia monitorujpojazd nie działa',
   rk_wind_gust: 'Wiatr: porywy {gust} m/s (próg {thr} m/s)',
   /** E49-a Z2 (DP-205): silny wiatr 20–24 m/s na trasie */
   rk_wind_strong: 'Silny wiatr na trasie · {where} · {gust} m/s',

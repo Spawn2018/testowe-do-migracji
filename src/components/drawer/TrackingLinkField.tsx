@@ -11,7 +11,9 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import type { Load, Locale, TrackingLinkInfo } from '../../types';
 import { t, tp } from '../../i18n/messages';
-import { isSafefleetTrackingRef, trackerKind } from '../../lib/trackerLink';
+import {
+  isMonitorujPojazdTrackingRef, isSafefleetTrackingRef, trackerKind,
+} from '../../lib/trackerLink';
 import { trackingLinkNotes } from '../../lib/p4c';
 import { isoMs } from '../../lib/statusAxis';
 
@@ -20,6 +22,10 @@ const rioWithKey = (v: string) => trackerKind(v) === 'rio' && /[?&]secret=[^&\s]
 /** #662: pełny link SafeFleet z tokenem (do ukrycia jak RIO) */
 const safefleetWithToken = (v: string) =>
   trackerKind(v) === 'safefleet' && /^https:\/\/portal\.safefleet\.pl\//i.test(v.trim());
+/** #837: pełny link monitorujpojazd z UUID (do ukrycia jak SafeFleet) */
+const monitorujpojazdWithToken = (v: string) =>
+  trackerKind(v) === 'monitorujpojazd' && /^https?:\/\/sledz\.monitorujpojazd\.pl\//i.test(v.trim());
+const secretLikePaste = (v: string) => rioWithKey(v) || safefleetWithToken(v) || monitorujpojazdWithToken(v);
 
 
 export function TrackingLinkField({
@@ -51,7 +57,9 @@ export function TrackingLinkField({
   const savedIsRio = info?.provider === 'RIO' || trackerKind(saved) === 'rio';
   const savedIsSafefleet = info?.provider === 'SAFEFLEET' || trackerKind(saved) === 'safefleet'
     || isSafefleetTrackingRef(saved);
-  const savedSecret = savedIsRio || savedIsSafefleet;
+  const savedIsMonitoruj = info?.provider === 'MONITORUJPOJAZD' || trackerKind(saved) === 'monitorujpojazd'
+    || isMonitorujPojazdTrackingRef(saved);
+  const savedSecret = savedIsRio || savedIsSafefleet || savedIsMonitoruj;
   const [editing, setEditing] = useState(false);
   /* to, co jest w polu (dla podpowiedzi); przy zapisanym RIO/SafeFleet pole startuje puste */
   const [typed, setTyped] = useState(() => (savedSecret ? '' : value));
@@ -102,6 +110,10 @@ export function TrackingLinkField({
       ? (isSafefleetTrackingRef(typed) || !typed.trim()
         ? t(locale, 'p4c_tl_typed_safefleet')
         : t(locale, 'p4c_tl_typed_safefleet_bad'))
+      : kind === 'monitorujpojazd'
+        ? (isMonitorujPojazdTrackingRef(typed) || !typed.trim()
+          ? t(locale, 'p4c_tl_typed_monitorujpojazd')
+          : t(locale, 'p4c_tl_typed_monitorujpojazd_bad'))
       : kind === 'emtrack'
         ? t(locale, 'p4c_tl_typed_emtrack')
         : kind === 'other'
@@ -116,6 +128,8 @@ export function TrackingLinkField({
           <span className="tlf-chip" aria-describedby={id} data-tl-chip>
             {savedIsSafefleet
               ? t(locale, 'p4c_tl_safefleet_chip')
+              : savedIsMonitoruj
+                ? t(locale, 'p4c_tl_monitorujpojazd_chip')
               : asset
                 ? tp(locale, 'p4c_tl_rio_chip', { asset })
                 : t(locale, 'p4c_tl_rio_chip_noasset')}
@@ -158,11 +172,11 @@ export function TrackingLinkField({
               const v = e.target.value;
               setTyped(v);
               push(v);
-              if (pasted.current && (rioWithKey(v) || safefleetWithToken(v))) setMasked(true);
+              if (pasted.current && secretLikePaste(v)) setMasked(true);
               pasted.current = false;
             }}
             onBlur={(e) => {
-              if (rioWithKey(e.target.value) || safefleetWithToken(e.target.value)) setMasked(true);
+              if (secretLikePaste(e.target.value)) setMasked(true);
             }}
             placeholder={t(locale, 'awiz_tracking_ph')}
             autoComplete="off"
