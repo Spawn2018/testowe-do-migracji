@@ -1,3 +1,9 @@
+## 2026-11-06 19:45 — #854 SCALONE; start DP-229 (local.spec → CI)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: **#854 SCALONE** `4f79c0fd` (DP-228 / **0425**, F7 gotowe @ `6ef49bbd`; CI unit+db+visual ✔).
+- **Krok** `pakiet/c3-dp-229-local-spec-ci`: workflow `local-orange-maps.yml` + `scripts/i667/ci-orange-maps.sh` — `supabase start`, seed SE-KAA + 1 transport, `SPEC=…i667-f-orange-maps.local.spec.ts scripts/i2/local-ui.sh`. Windows bez Dockera → przebieg tylko w GHA. Bez migracji. Czekam CI→F7. Bez push na main.
+
 ## 2026-11-06 19:05 — #853 SCALONE; start DP-228 (odrzut HERE → Stan systemu)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.

@@ -1,0 +1,41 @@
+name: local-orange-maps
+
+# DP-229: Playwright i667-f-orange-maps.local.spec.ts na buildzie VITE_AUTH_MODE=supabase
+# + lokalnym Supabase (Docker). Windows wykonawcy bez Dockera — przebieg tylko tutaj.
+
+on:
+  pull_request:
+    paths:
+      - 'tests/i667-f-orange-maps.local.spec.ts'
+      - 'scripts/i2/local-ui.sh'
+      - 'scripts/i667/ci-orange-maps.sh'
+      - 'src/components/map/**'
+      - 'src/components/zones/**'
+      - 'src/lib/map/**'
+      - '.github/workflows/local-orange-maps.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: local-orange-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  i667-f-orange:
+    name: i667-f orange maps (local SB)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - name: PostgreSQL client
+        run: sudo apt-get update -q && sudo apt-get install -y -q postgresql-client
+      - name: DP-229 — local-ui i667 F
+        run: bash scripts/i667/ci-orange-maps.sh
