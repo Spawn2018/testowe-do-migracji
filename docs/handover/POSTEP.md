@@ -1,3 +1,9 @@
+## 2026-11-06 09:00 — #836 SCALONE; start DP-29+30+32 DFDS
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: **#836 SCALONE** `b577c010` (DP-22+24 F7 gotowe @ `d5c927c0`, CI unit+visual+db ✔ / **0419**).
+- **Krok C3** `pakiet/c3-dp-29-30-32-dfds-structure`: DP-29 — `structureFail` łapie „nieczytelny rejs”, opis w SOURCE_DOWN; DP-30 — bez martwego „bez rozpoznanych”; DP-32 — `DFDS_SCHEDULE` sticky jak EMTRACK. Unit DFDS ✔. Czekam CI→F7.
+
 ## 2026-11-06 08:15 — #836 F7 r1: DP-24 via + dedup + h3 zachowanie
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.

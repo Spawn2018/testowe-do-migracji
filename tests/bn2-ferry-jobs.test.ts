@@ -26,6 +26,9 @@ const NOW = new Date('2026-10-30T12:00:00Z');
 const MEGA = 'v-mega';
 const MYST = 'v-myst';
 const SIRENA = 'v-sirena';
+/** DP-32: sticky `SOURCE_DOWN:DFDS_SCHEDULE` (bez daty); stary klucz z datą też łapie. */
+const isDfdsSchedDown = (d: unknown) =>
+  String(d) === 'SOURCE_DOWN:DFDS_SCHEDULE' || String(d).startsWith('SOURCE_DOWN:DFDS_SCHEDULE:');
 
 class MemStore implements SyncStore {
   sailings: DbSailing[] = [];
@@ -604,6 +607,9 @@ describe('F7 #660 ferry-portnet', () => {
     expect(sourceDownRisk('STENA_SCHEDULE', ['x'], '2026-10-31T12:00:00.000Z').severity).toBe('HIGH');
     expect(sourceDownRisk('DFDS_STATUS', ['x'], '2026-10-31T12:00:00.000Z').severity).toBe('MEDIUM');
     expect(sourceDownRisk('TALLINK_SCHEDULE', ['x'], '2026-10-31T12:00:00.000Z').severity).toBe('MEDIUM');
+    /* DP-32: DFDS_SCHEDULE sticky jak EMTRACK — bez daty w dedup. */
+    expect(sourceDownRisk('DFDS_SCHEDULE', ['x'], '2026-10-31T12:00:00.000Z').dedup).toBe('SOURCE_DOWN:DFDS_SCHEDULE');
+    expect(sourceDownRisk('DFDS_SCHEDULE', ['x'], '2026-11-01T12:00:00.000Z').dedup).toBe('SOURCE_DOWN:DFDS_SCHEDULE');
     const both = JSON.parse(DFDS_API) as { pld_kps_week44: unknown[]; kps_pld_week44: unknown[] };
     const st = new MemStore();
     st.sailings.push({
@@ -704,7 +710,7 @@ describe('F7 #661 B1/B2 DFDS bez stałej HTML; PoT tylko dziś', () => {
     };
     await runFerrySchedule(deps(st, pages));
     expect(st.sailings.every((s) => s.source !== 'DFDS')).toBe(true);
-    expect(st.risks.some((x) => String(x.dedup).startsWith('SOURCE_DOWN:DFDS_SCHEDULE:'))).toBe(true);
+    expect(st.risks.some((x) => isDfdsSchedDown(x.dedup))).toBe(true);
   });
 
   it('B1: prawdziwa tabela HTML DFDS → rejsy + SOURCE_DOWN MEDIUM (API bez rejsów, F7 #668 r7)', async () => {
@@ -716,7 +722,7 @@ describe('F7 #661 B1/B2 DFDS bez stałej HTML; PoT tylko dziś', () => {
     };
     await runFerrySchedule(deps(st, pages));
     expect(st.sailings.some((s) => s.source === 'DFDS' && s.route === 'PLD-KPS')).toBe(true);
-    const risk = st.risks.find((x) => String(x.dedup).startsWith('SOURCE_DOWN:DFDS_SCHEDULE:'));
+    const risk = st.risks.find((x) => isDfdsSchedDown(x.dedup));
     expect(risk).toMatchObject({ severity: 'MEDIUM', kind: 'FERRY' });
     expect(JSON.stringify(risk?.detail)).toMatch(/zapasu PDF/i);
   });
@@ -748,7 +754,7 @@ describe('F7 #661 B1/B2 DFDS bez stałej HTML; PoT tylko dziś', () => {
     await runFerrySchedule({ store: st, fetch: f, env: {}, now: () => NOW });
     expect(st.sailings.some((s) => s.source === 'DFDS' && s.route === 'PLD-KPS')).toBe(true);
     expect(st.sailings.some((s) => s.source === 'DFDS' && s.route === 'KPS-PLD')).toBe(true);
-    expect(st.risks.some((x) => String(x.dedup).startsWith('SOURCE_DOWN:DFDS_SCHEDULE:'))).toBe(false);
+    expect(st.risks.some((x) => isDfdsSchedDown(x.dedup))).toBe(false);
     /* F7 #668 r3 N2: przy pełnym API zero zapytań do strony/PDF */
     expect(pageHits).toBe(0);
     expect(pdfHits).toBe(0);
@@ -809,7 +815,7 @@ describe('F7 #661 B1/B2 DFDS bez stałej HTML; PoT tylko dziś', () => {
     /* Kolejne tygodnie 503 → uzupełnione z HTML (np. pon. 02.11 22:00 EET = 20:00Z). */
     expect(dfds.some((s) => s.route === 'PLD-KPS' && s.departure_at.startsWith('2026-11-02T20:00'))).toBe(true);
     expect(pageHits + pdfHits).toBeGreaterThan(0);
-    expect(st.risks.some((x) => String(x.dedup).startsWith('SOURCE_DOWN:DFDS_SCHEDULE:'))).toBe(false);
+    expect(st.risks.some((x) => isDfdsSchedDown(x.dedup))).toBe(false);
   });
 
   it('F7 #668 r6: jeden pusty tydzień [] + reszta OK → ostrzeżenie, bez PDF', async () => {
@@ -855,7 +861,7 @@ describe('F7 #661 B1/B2 DFDS bez stałej HTML; PoT tylko dziś', () => {
     expect(pageHits).toBe(0);
     expect(out.warnings.some((w) => /API pusty tydzień/i.test(w))).toBe(true);
     expect(st.sailings.every((s) => !s.departure_at.startsWith('2026-10-26T20:00'))).toBe(true);
-    expect(st.risks.some((x) => String(x.dedup).startsWith('SOURCE_DOWN:DFDS_SCHEDULE:'))).toBe(false);
+    expect(st.risks.some((x) => isDfdsSchedDown(x.dedup))).toBe(false);
   });
 
   it('F7 #668 r7: wszystkie []/{} → PDF + SOURCE_DOWN MEDIUM; API OK → zamknięte', async () => {
@@ -897,17 +903,19 @@ describe('F7 #661 B1/B2 DFDS bez stałej HTML; PoT tylko dziś', () => {
     const empty = await runWith('[]');
     expect(empty.pdfHits).toBeGreaterThan(0);
     expect(empty.st.sailings.some((s) => s.source === 'DFDS')).toBe(true);
-    const emptyRisk = empty.st.risks.find((x) => String(x.dedup).startsWith('SOURCE_DOWN:DFDS_SCHEDULE:'));
-    expect(emptyRisk).toMatchObject({ severity: 'MEDIUM', kind: 'FERRY' });
+    const emptyRisk = empty.st.risks.find((x) => isDfdsSchedDown(x.dedup));
+    expect(emptyRisk).toMatchObject({ severity: 'MEDIUM', kind: 'FERRY', dedup: 'SOURCE_DOWN:DFDS_SCHEDULE' });
     expect(JSON.stringify(emptyRisk?.detail)).toMatch(/zapasu PDF/i);
 
     const bad = await runWith('{}');
     expect(bad.pdfHits).toBeGreaterThan(0);
     expect(bad.st.sailings.some((s) => s.source === 'DFDS')).toBe(true);
     expect(bad.out.warnings.some((w) => /oczekiwano tablicy/i.test(w))).toBe(true);
-    const badRisk = bad.st.risks.find((x) => String(x.dedup).startsWith('SOURCE_DOWN:DFDS_SCHEDULE:'));
-    expect(badRisk).toMatchObject({ severity: 'MEDIUM', kind: 'FERRY' });
+    const badRisk = bad.st.risks.find((x) => isDfdsSchedDown(x.dedup));
+    expect(badRisk).toMatchObject({ severity: 'MEDIUM', kind: 'FERRY', dedup: 'SOURCE_DOWN:DFDS_SCHEDULE' });
     expect(JSON.stringify(badRisk?.detail)).toMatch(/zapasu PDF/i);
+    /* DP-29: structureFail → opis ryzyka z nieczytelnym rozkładem. */
+    expect(JSON.stringify(badRisk?.detail)).toMatch(/nieczytelny rozkład API/i);
 
     /* PDF bez rejsów (strona pusta) → SOURCE_DOWN + „oczekiwano tablicy”. */
     {
@@ -934,17 +942,29 @@ describe('F7 #661 B1/B2 DFDS bez stałej HTML; PoT tylko dziś', () => {
       const out = await runFerrySchedule({ store: st, fetch: f, env: {}, now: () => NOW });
       expect(st.sailings.every((s) => s.source !== 'DFDS')).toBe(true);
       expect(out.warnings.some((w) => /oczekiwano tablicy/i.test(w))).toBe(true);
-      expect(st.risks.some((x) => String(x.dedup).startsWith('SOURCE_DOWN:DFDS_SCHEDULE:'))).toBe(true);
+      expect(st.risks.some((x) => isDfdsSchedDown(x.dedup))).toBe(true);
     }
 
     /* Niepusta tablica bez rozpoznanych tras → jak struktura (failedWindow + PDF). */
     const junk = await runWith(JSON.stringify([{ portOfLoading: 'XX', portOfDischarge: 'YY', vehicleName: 'X' }]));
     expect(junk.pdfHits).toBeGreaterThan(0);
     expect(junk.out.warnings.some((w) => /nieznana trasa|Struktura/i.test(w))).toBe(true);
-    expect(junk.st.risks.some((x) => String(x.dedup).startsWith('SOURCE_DOWN:DFDS_SCHEDULE:'))).toBe(true);
+    expect(junk.st.risks.some((x) => isDfdsSchedDown(x.dedup))).toBe(true);
+    expect(JSON.stringify(junk.st.risks.find((x) => isDfdsSchedDown(x.dedup))?.detail)).toMatch(/nieczytelny rozkład API/i);
 
-    /* Potem API OK → SOURCE_DOWN zamknięte. */
+    /* DP-29: same null → „nieczytelny rejs” łapie structureFail (wcześniej bez wpływu). */
+    const unread = await runWith(JSON.stringify([null, null]));
+    expect(unread.out.warnings.some((w) => /nieczytelny rejs/i.test(w))).toBe(true);
+    const unreadRisk = unread.st.risks.find((x) => isDfdsSchedDown(x.dedup));
+    expect(unreadRisk?.dedup).toBe('SOURCE_DOWN:DFDS_SCHEDULE');
+    expect(JSON.stringify(unreadRisk?.detail)).toMatch(/nieczytelny rozkład API|nieczytelny rejs/i);
+
+    /* Potem API OK → SOURCE_DOWN zamknięte (także stary klucz z datą — DP-32 resolve bez `:`). */
     const stOk = new MemStore();
+    stOk.risks.push({
+      kind: 'FERRY', severity: 'MEDIUM', title: 'x', titleKey: 'rk_source_down', params: {},
+      detail: {}, dedup: 'SOURCE_DOWN:DFDS_SCHEDULE', sourceUrl: null,
+    });
     stOk.risks.push({
       kind: 'FERRY', severity: 'MEDIUM', title: 'x', titleKey: 'rk_source_down', params: {},
       detail: {}, dedup: `SOURCE_DOWN:DFDS_SCHEDULE:${NOW.toISOString().slice(0, 10)}`, sourceUrl: null,
@@ -974,7 +994,7 @@ describe('F7 #661 B1/B2 DFDS bez stałej HTML; PoT tylko dziś', () => {
       throw new Error(`nieoczekiwane: ${url}`);
     }) as typeof fetch;
     await runFerrySchedule({ store: stOk, fetch: fOk, env: {}, now: () => NOW });
-    expect(stOk.risks.some((x) => String(x.dedup).startsWith('SOURCE_DOWN:DFDS_SCHEDULE:'))).toBe(false);
+    expect(stOk.risks.some((x) => isDfdsSchedDown(x.dedup))).toBe(false);
     expect(stOk.sailings.some((s) => s.source === 'DFDS')).toBe(true);
   });
 
@@ -1035,7 +1055,7 @@ describe('F7 #661 B1/B2 DFDS bez stałej HTML; PoT tylko dziś', () => {
       expect(r.out.warnings.some((w) => /częściowa awaria API \(19\/20\)/i.test(w))).toBe(true);
       /* Okno padnięte: PLD tydzień 1 — rejs z PDF w tym zakresie (po filtrze). */
       expect(r.st.sailings.some((s) => s.source === 'DFDS' && s.departure_at >= '2026-10-26' && s.departure_at < '2026-11-02')).toBe(true);
-      expect(r.st.risks.some((x) => String(x.dedup).startsWith('SOURCE_DOWN:DFDS_SCHEDULE:'))).toBe(false);
+      expect(r.st.risks.some((x) => isDfdsSchedDown(x.dedup))).toBe(false);
       if (badBody === junkHours) {
         expect(r.out.warnings.some((w) => /nieczytelne godziny/i.test(w))).toBe(true);
       }

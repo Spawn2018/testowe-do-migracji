@@ -992,8 +992,8 @@ async function fetchDfdsDays(
         dateToIso: part.job.dateToIso,
         route: routeOfDir(part.job.portOfLoading),
       });
-      /* F7 #668 r7: także junk z samym „nieczytelne godziny”. */
-      if (part.warn.some((w) => /Struktura|nie-JSON|nieznan|nieczytelne godziny|oczekiwano tablicy/i.test(w))) {
+      /* F7 #668 r7 + DP-29: junk z „nieczytelne godziny” / „nieczytelny rejs”. */
+      if (part.warn.some((w) => /Struktura|nie-JSON|nieznan|nieczytelny rejs|nieczytelne godziny|oczekiwano tablicy/i.test(w))) {
         apiStructureFail = true;
       }
     }
@@ -1048,25 +1048,28 @@ async function fetchDfdsDays(
           : `DFDS: częściowa awaria API (${apiOk}/${jobs.length}) — brak zapasu PDF/HTML dla brakujących tygodni.`,
       );
     }
+    /* DP-29: structureFail zostaje, gdy API było nieczytelne — ryzyko SOURCE_DOWN ma opis struktury. */
     return {
       sailings,
       warnings,
       fetchedOk: apiSailings.length > 0 ? apiOk : (fallback.length > 0 ? 1 : 0),
-      structureFail: false,
+      structureFail: apiStructureFail,
       apiSailingsCount: apiSailings.length,
     };
   }
   if (apiOk === 0 && !page.ok && !pdf.ok) {
-    return { sailings: [], warnings, fetchedOk: 0, structureFail: false, apiSailingsCount: 0 };
+    return { sailings: [], warnings, fetchedOk: 0, structureFail: apiStructureFail, apiSailingsCount: 0 };
   }
-  if (!warnings.some((w) => /Struktura|brak tabeli|Dynamic/i.test(w))) {
+  /* DP-30: bez martwego „struktura bez rozpoznanych rejsów” — parser HTML/PDF już dodaje
+     „brak tabeli…”, a API „oczekiwano tablicy” / „nieczytelny rejs”. Tu tylko gdy warnings puste. */
+  if (!warnings.some((w) => /Struktura|brak tabeli|Dynamic|nieczytelny/i.test(w))) {
     warnings.push('Struktura rozkładu DFDS zmieniona: brak tabeli Paldiski/Kapellskär.');
   }
   return {
     sailings: [],
     warnings,
     fetchedOk: 0,
-    structureFail: apiStructureFail,
+    structureFail: apiStructureFail || warnings.some((w) => /Struktura|nieczytelny/i.test(w)),
     apiSailingsCount: apiSailings.length,
   };
 }
@@ -2056,10 +2059,10 @@ export async function runFerrySchedule(deps: JobDeps): Promise<JobResult> {
   }
 
   /* #666 decyzja 54 + E: DFDS Dynamic schedule — osobny krok; tu rozszerzenie tygodniówki.
-     F7 #668 r7 (decyzja 50): resolveRisks tylko gdy API dało rejsy; sam PDF/HTML → SOURCE_DOWN MEDIUM. */
+     F7 #668 r7 (decyzja 50): resolveRisks tylko gdy API dało rejsy; sam PDF/HTML → SOURCE_DOWN MEDIUM.
+     DP-29: structureFail → opis ryzyka z „nieczytelny…”; DP-32: klucz bez daty. */
   const dfds = await fetchDfdsDays(deps, 60);
   warnings.push(...dfds.warnings);
-  const dfFail = dfds.sailings.length === 0;
   if (dfds.sailings.length > 0) {
     const incomingD: IncomingSailing[] = dfds.sailings.map((s) => ({
       route: s.route, vessel: s.vessel, departureUtc: s.departureUtc, arrivalUtc: s.arrivalUtc,
@@ -2069,15 +2072,21 @@ export async function runFerrySchedule(deps: JobDeps): Promise<JobResult> {
     warnings.push(...r.plan.unknownVessels.map((v) => `Statek spoza rejestru: ${v}`));
   }
   if (dfds.apiSailingsCount > 0) {
-    await deps.store.resolveRisks('SOURCE_DOWN:DFDS_SCHEDULE:');
+    await deps.store.resolveRisks('SOURCE_DOWN:DFDS_SCHEDULE');
   } else {
     const fromPdfOnly = dfds.sailings.length > 0;
+    const structHint = dfds.structureFail
+      ? ['DFDS: nieczytelny rozkład API (struktura / nieczytelny rejs) — HHL weryfikuje']
+      : [];
     const msgs = fromPdfOnly
       ? [
+        ...structHint,
         'główne źródło DFDS niedostępne lub zmienione — rozkład z zapasu PDF',
-        ...dfds.warnings.slice(0, 9),
+        ...dfds.warnings.slice(0, 8),
       ]
-      : (dfds.warnings.length ? dfds.warnings : ['Brak odpowiedzi DFDS']);
+      : (structHint.length
+        ? [...structHint, ...dfds.warnings.slice(0, 9)]
+        : (dfds.warnings.length ? dfds.warnings : ['Brak odpowiedzi DFDS']));
     const risk = sourceDownRisk('DFDS_SCHEDULE', msgs, now, DFDS_SCHEDULE_PAGE);
     if (fromPdfOnly) risk.severity = 'MEDIUM';
     await deps.store.raiseRisk(risk);
