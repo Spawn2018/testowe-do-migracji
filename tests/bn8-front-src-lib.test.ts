@@ -80,9 +80,10 @@ describe('BN8 — altProposal jedna ścieżka (CrossingMap)', () => {
   });
 
   it('Tallink odwołany → Eckerö w FI', () => {
-    const ek = S({ id: 'ek1', route: 'TLL-HEL', departureAt: '2026-11-03T15:00:00Z', source: 'ECKERO', operator: 'Eckerö Line' });
+    // DP-83: Eckerö na TLLA-HEL (Terminal A), nie na TLL-HEL (Tallink D).
+    const ek = S({ id: 'ek1', route: 'TLLA-HEL', departureAt: '2026-11-03T15:00:00Z', source: 'ECKERO', operator: 'Eckerö Line' });
     const alt = altProposal(
-      [row({ line: 'TALLINK', status: 'ODWOLANY', route: 'TLL-HEL' }), row({ line: 'ECKERO', route: 'TLL-HEL' })],
+      [row({ line: 'TALLINK', status: 'ODWOLANY', route: 'TLL-HEL' }), row({ line: 'ECKERO', route: 'TLLA-HEL' })],
       [ek],
       NOW,
     );

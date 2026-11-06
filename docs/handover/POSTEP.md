@@ -1,3 +1,9 @@
+## 2026-11-06 23:25 — #856 SCALONE; start DP-83 (C4)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne` do wykonania.
+- Scalanie: **#856 SCALONE** `6bb78876` (F7: gotowe do scalenia @ `76c3f10d`; CI unit+visual zielone). Bez push na main.
+- **Krok** C4 **DP-83**: seed `FERRY_ROUTES` TLL-HEL/HEL-TLL = tylko `TALLINK` (jak `ferry_route_operators`); Viking/Eckerö na TLLA-HEL/HELA-TLL; `primaryRouteOf` czyta aliasy. DP-81/82 nie ma w rejestrze — pominięte. Gałąź `pakiet/c4-dp-83-tll-hel-operators`. Bez migracji. Czekam CI→F7.
+
 ## 2026-11-06 22:45 — #855 SCALONE; DP-63…68 rejestr; start DP-69 (C4)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne` do wykonania.
