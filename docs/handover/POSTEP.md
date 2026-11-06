@@ -1,3 +1,9 @@
+## 2026-11-06 01:05 — #827 SCALONE; start DP-223 route-hazards 30 min
+
+- Skrzynka: #550 WSTRZYMANE; #816 DP-223 (bez etykiety — F7 #827 wskazuje kolejność); BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: **#827 SCALONE** `e692d308` (F7 gotowe @ `086001eb`, CI unit+visual ✔).
+- **Krok DP-223** `pakiet/c2-dp-223-route-hazards-30`: `MIN_INTERVAL_MIN['route-hazards']` 60→30; test early 20 / later 30. Dalej CI→F7. Potem #813 / DP-221.
+
 ## 2026-11-06 00:30 — DP-225 #827: visual LFS 502 → skip smudge w fresh-smoke
 
 - Skrzynka: #817 zamknięte (DP-224 SCALONE); #550 WSTRZYMANE; #814 drobne W TOKU; BN5–8 w planie. Bez nowego `pilne`.

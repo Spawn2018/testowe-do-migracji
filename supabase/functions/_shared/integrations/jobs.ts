@@ -6952,7 +6952,8 @@ export const MIN_INTERVAL_MIN: Record<JobName, number> = {
   'road-se': 15, 'road-pl': 10, 'road-fi': 15, 'road-lt': 15, 'road-lv': 15, 'road-ee': 15,
   'traffic-flow': 15, 'here-roads': 1380,
   'emtrack-web': 2, 'rio-links': 2,
-  'safefleet-poll': 2, 'route-hazards': 60,
+  // DP-223 (#816): cron `17,47 * * * *` — limit 30 min (było 60 → :47 skipped).
+  'safefleet-poll': 2, 'route-hazards': 30,
   'corridor-wind': 60,
   'translate-retry': 5,
 };
