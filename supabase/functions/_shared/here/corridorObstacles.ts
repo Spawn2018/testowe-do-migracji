@@ -26,16 +26,21 @@ const ALTERNATIVES = 3;
 /** DP-24: SE-KAA-INLAND — wariant śródlądowy Karlskrona→Boden (via jak ROAD_KAA / SE_KAA_INLAND). */
 export type CorridorLegName = 'PL-GDN' | 'PL-GDY' | 'SE-NYN' | 'SE-KAA' | 'SE-KAA-INLAND';
 
+export type ViaLatLng = readonly [number, number];
+
 export interface CorridorLeg {
   leg: CorridorLegName;
   origin: readonly [number, number];
   destination: readonly [number, number];
   /** passThrough — różnicuje inland (Norrköping/Västerås) od E22/wybrzeża. */
-  via?: ReadonlyArray<readonly [number, number]>;
+  via?: ReadonlyArray<ViaLatLng>;
 }
 
-/** Via śródlądowe jak ROAD_KAA (F7 #836 r1) — bez origin/destination. */
-const SE_KAA_INLAND_VIA: ReadonlyArray<readonly [number, number]> = [
+/**
+ * DP-226 cz.2 / F7 #851: zapas gdy brak `here_road_legs.via_points` (testy / awaria odczytu).
+ * Produkcja bierze słownik — `CorridorDb.inlandVia` / `here_corridor_via_points`.
+ */
+export const SE_KAA_INLAND_VIA_FALLBACK: ReadonlyArray<ViaLatLng> = [
   [58.59, 16.18], // Norrköping
   [59.61, 16.54], // Västerås
   [60.7, 17.1],
@@ -44,18 +49,38 @@ const SE_KAA_INLAND_VIA: ReadonlyArray<readonly [number, number]> = [
   [65.3, 21.5],
 ];
 
-export const CORRIDOR_LEGS: CorridorLeg[] = [
-  { leg: 'PL-GDN', origin: CORRIDOR.srem, destination: CORRIDOR.gdansk },
-  { leg: 'PL-GDY', origin: CORRIDOR.srem, destination: CORRIDOR.gdynia },
-  { leg: 'SE-NYN', origin: CORRIDOR.nynashamn, destination: CORRIDOR.boden },
-  { leg: 'SE-KAA', origin: CORRIDOR.karlskrona, destination: CORRIDOR.boden },
-  {
-    leg: 'SE-KAA-INLAND',
-    origin: CORRIDOR.karlskrona,
-    destination: CORRIDOR.boden,
-    via: SE_KAA_INLAND_VIA,
-  },
-];
+export function parseCorridorViaPoints(raw: unknown): ViaLatLng[] {
+  if (!Array.isArray(raw)) return [];
+  const out: ViaLatLng[] = [];
+  for (const p of raw) {
+    if (!Array.isArray(p) || p.length < 2) continue;
+    const lat = Number(p[0]);
+    const lng = Number(p[1]);
+    if (Number.isFinite(lat) && Number.isFinite(lng)) out.push([lat, lng]);
+  }
+  return out;
+}
+
+/** Buduje listę nóg H3; inland via ze słownika (≥2 pkt) albo FALLBACK (DP-23 / DP-226). */
+export function corridorLegs(inlandVia?: ReadonlyArray<ViaLatLng> | null): CorridorLeg[] {
+  const via =
+    inlandVia && inlandVia.length >= 2 ? inlandVia : SE_KAA_INLAND_VIA_FALLBACK;
+  return [
+    { leg: 'PL-GDN', origin: CORRIDOR.srem, destination: CORRIDOR.gdansk },
+    { leg: 'PL-GDY', origin: CORRIDOR.srem, destination: CORRIDOR.gdynia },
+    { leg: 'SE-NYN', origin: CORRIDOR.nynashamn, destination: CORRIDOR.boden },
+    { leg: 'SE-KAA', origin: CORRIDOR.karlskrona, destination: CORRIDOR.boden },
+    {
+      leg: 'SE-KAA-INLAND',
+      origin: CORRIDOR.karlskrona,
+      destination: CORRIDOR.boden,
+      via,
+    },
+  ];
+}
+
+/** Statyczna lista z FALLBACK — route-profile / testy bez DB. */
+export const CORRIDOR_LEGS: CorridorLeg[] = corridorLegs();
 
 export type ObstacleKind = 'wiadukt' | 'most' | 'tunel' | 'ograniczenie';
 
@@ -178,6 +203,11 @@ export interface CorridorDb {
   monthRoutingRequests(): Promise<number>;
   /** Pierwszy komplet wymiarów zestawu (D-83). Bez uzupełnień. */
   probeDims(): Promise<SetDims | null>;
+  /**
+   * DP-226 cz.2: via SE-KAA-INLAND ze słownika (`here_road_legs.via_points`
+   * albo RPC `here_corridor_via_points`). Brak / mniej niż 2 pkt → FALLBACK w `corridorLegs`.
+   */
+  inlandVia?(): Promise<ReadonlyArray<ViaLatLng> | null>;
   save(row: CorridorSave): Promise<void>;
   noteUsage(service: 'routing', requests: number): Promise<void>;
   purgeRaw(): Promise<void>;
@@ -217,13 +247,15 @@ export async function runCorridorObstacles(deps: {
   const billing = deps.billing ?? HERE_BILLING_DEFAULTS;
   const dimsRaw = await deps.db.probeDims();
   const dims = dimsRaw ? completeDims(dimsRaw) : null;
+  const dictVia = deps.db.inlandVia ? await deps.db.inlandVia() : null;
+  const legs = corridorLegs(dictVia);
   let spent = await deps.db.monthSpendUsd();
   let routeReq = await deps.db.monthRoutingRequests();
   let queried = 0;
   let skipped = 0;
 
   if (!dims) {
-    for (const leg of CORRIDOR_LEGS) {
+    for (const leg of legs) {
       const prev = await deps.db.latest(leg.leg);
       if (!needsCorridorRefresh(prev, now)) {
         skipped += 1;
@@ -242,7 +274,7 @@ export async function runCorridorObstacles(deps: {
     return { ok: true, mode: 'BEZ_HERE', reason: 'brak_wymiarow', queried: 0, skipped };
   }
 
-  for (const leg of CORRIDOR_LEGS) {
+  for (const leg of legs) {
     const prev = await deps.db.latest(leg.leg);
     if (!needsCorridorRefresh(prev, now)) {
       skipped += 1;

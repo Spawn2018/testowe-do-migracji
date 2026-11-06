@@ -1,3 +1,9 @@
+## 2026-11-06 18:35 — #851 SCALONE; start DP-226 cz.2 (H3 via ze słownika)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: **#851 SCALONE** `62d1cc1d` (DP-226 / **0424**, F7 gotowe @ `d608592b`; CI unit+db+visual ✔).
+- **Krok** `pakiet/c3-dp-226-h3-via-dict` (F7 #851): H3 `corridorObstacles` — `CorridorDb.inlandVia` z `here_road_legs.via_points` (RPC zapas); `SE_KAA_INLAND_VIA_FALLBACK` tylko awaryjnie. Bez migracji. Czekam CI→F7. Bez push na main.
+
 ## 2026-11-06 18:00 — #850 SCALONE; start DP-226 (INLAND via_points)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`. Rejestr **DP-229** (F7 #850: local.spec raz lokalnie albo w CI).
