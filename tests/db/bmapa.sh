@@ -228,9 +228,18 @@ fetched_after=$(sys "select fetched_at::text from here_road_geometry where leg='
 [ "$fetched_before" = "$fetched_after" ] && { ok=$((ok+1)); echo "  OK    odrzut nie cofa fetched_at (NOWE-1/2)"; } || { fail=$((fail+1)); echo "  FAIL  fetched_at zmienione"; }
 retry_set=$(sys "select (retry_after is not null and retry_after > now())::text from here_road_geometry where leg='SE-KAA'")
 [ "$retry_set" = "true" ] && { ok=$((ok+1)); echo "  OK    retry_after ustawione po odrzuceniu"; } || { fail=$((fail+1)); echo "  FAIL  retry_after → $retry_set"; }
+# DP-228: odrzut przy zachowanej starej linii — geom_ok zostaje, geom_reject widać w Stanie systemu.
+ok_keep=$(sys "select (geom_ok is true)::text from here_road_geometry where leg='SE-KAA'")
+[ "$ok_keep" = "true" ] && { ok=$((ok+1)); echo "  OK    DP-228 geom_ok po odrzucie (stara linia)"; } || { fail=$((fail+1)); echo "  FAIL  DP-228 geom_ok → $ok_keep"; }
+rej_set=$(sys "select (geom_reject is not null and length(btrim(geom_reject)) > 0)::text from here_road_geometry where leg='SE-KAA'")
+[ "$rej_set" = "true" ] && { ok=$((ok+1)); echo "  OK    DP-228 geom_reject po odrzucie"; } || { fail=$((fail+1)); echo "  FAIL  DP-228 geom_reject → $rej_set"; }
+md_rej=$(asu "$HHL_465" "select coalesce((select e->>'geom_reject' from jsonb_array_elements(map_display_state()->'roads') e where e->>'leg'='SE-KAA' limit 1),'')")
+[ -n "$md_rej" ] && [ "$md_rej" != "null" ] && { ok=$((ok+1)); echo "  OK    DP-228 map_display geom_reject"; } || { fail=$((fail+1)); echo "  FAIL  DP-228 map_display geom_reject → $md_rej"; }
 sys "select here_store_road('SE-KAA', here_corridor_points('SE_KAA_TRACK'), 'trasa Karlskrona–Boden (test #572)', now())" >/dev/null
 retry_clr=$(sys "select (retry_after is null)::text from here_road_geometry where leg='SE-KAA'")
 [ "$retry_clr" = "true" ] && { ok=$((ok+1)); echo "  OK    sukces czyści retry_after"; } || { fail=$((fail+1)); echo "  FAIL  retry_after po sukcesie → $retry_clr"; }
+rej_clr=$(sys "select (geom_reject is null)::text from here_road_geometry where leg='SE-KAA'")
+[ "$rej_clr" = "true" ] && { ok=$((ok+1)); echo "  OK    DP-228 sukces czyści geom_reject"; } || { fail=$((fail+1)); echo "  FAIL  DP-228 geom_reject po sukcesie → $rej_clr"; }
 # #667 E / DP-23: po 0355 roads = core(5)+BN7(7) = 12 (także points=null).
 legs=$(asu "$HHL_465" "select jsonb_array_length(map_display_state()->'roads')")
 if [ "$legs" = "12" ]; then ok=$((ok+1)); echo "  OK    map_display_state().roads = 12 (core+BN7, także bez punktów)"; else fail=$((fail+1)); echo "  FAIL  roads length → $legs"; fi

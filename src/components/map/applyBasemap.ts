@@ -434,7 +434,13 @@ export function checkRoads(rows: unknown): {
           (r.geom_ok === false && geomReject)
           || (summary && /odchyłka|odrzucon|HTTP/i.test(summary) ? summary : why),
       });
-    } else out.push(line);
+    } else {
+      out.push(line);
+      // DP-228: stara linia OK (geom_ok), ale ostatnie pobranie odrzucone → Stan systemu.
+      if (r.geom_ok === true && geomReject) {
+        rejected.push({ leg, why: geomReject });
+      }
+    }
   }
   return { accepted: out, rejected };
 }
