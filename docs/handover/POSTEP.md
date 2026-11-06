@@ -1,3 +1,9 @@
+## 2026-11-06 10:50 — #838 SCALONE; start #840 DP-227 (geom_ok)
+
+- Skrzynka: #550 WSTRZYMANE; **#840 PILNE** (właściciel 10:40) wpisane jako DP-227. BN5–8 w planie.
+- Scalanie: **#838 SCALONE** `5fe13b72` (DP-29+30+32 F7 @ `38a1f441`); wcześniej **#839** `a83743fa` / **0420**.
+- **Krok** `pakiet/840-dp-227-here-geom-ok` / **0421**: `geom_ok`/`geom_reject` + `map_display_state`; `checkRoads` ufa serwerowi (bez maxSegKm na `points_display`). bmapa 213. Czekam CI→F7. Bez push na main.
+
 ## 2026-11-06 10:15 — #839 SCALONE; #838 merge main po #837
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.

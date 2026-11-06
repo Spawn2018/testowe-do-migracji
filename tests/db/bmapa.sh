@@ -317,6 +317,13 @@ else
   ok=$((ok+1)); echo "  OK    cron tower-here-road-purge (0=brak pg_cron w CI)"
 fi
 
+# DP-227 (#840): geom_ok / geom_reject w map_display_state
+echo; echo "[#840] DP-227 geom_ok z serwera"
+sys "select here_store_road('PL-GDN', (select jsonb_agg(jsonb_build_array(52.07 + i*0.01, 17.02 + i*0.005) order by i) from generate_series(0, 199) i), 'DP-227 geom_ok PL-GDN', now())" >/dev/null
+val "DP-227 geom_ok po store" "select (geom_ok is true and geom_reject is null)::text from here_road_geometry where leg='PL-GDN'" "true"
+val "DP-227 map_display geom_ok" "select (select e->>'geom_ok' from jsonb_array_elements(map_display_state()->'roads') e where e->>'leg'='PL-GDN' limit 1)" "true"
+val "DP-227 map_display ma klucz geom_reject" "select (select (e ? 'geom_reject')::text from jsonb_array_elements(map_display_state()->'roads') e where e->>'leg'='PL-GDN' limit 1)" "true"
+
 val "ETA TLL-HEL PL_ROAD → PL_ROAD_EE" "select eta_obs_segment_code('TLL-HEL','PL_ROAD')" "PL_ROAD_EE"
 val "ETA TLL-HEL SE_ROAD → FI_ROAD" "select eta_obs_segment_code('TLL-HEL','SE_ROAD')" "FI_ROAD"
 val "ETA TLL-STO SE_ROAD → SE_ROAD_STO" "select eta_obs_segment_code('TLL-STO','SE_ROAD')" "SE_ROAD_STO"
