@@ -1,3 +1,9 @@
+## 2026-11-06 12:35 — #842 SCALONE; start DP-38 (INLAND via SQL)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: **#842 SCALONE** `c0a22031` (DP-31 / **0422**, F7 gotowe @ `920bcbc0`; CI unit+visual+db ✔).
+- **Krok** `pakiet/c3-dp-38-inland-via-sql`: `viaAlongCorridor` na geodezji WGS84 (jak `here_corridor_via_points`); test INLAND z listą via jak SQL (9. via → Umeå E4, nie Örnsköldsvik). Bez migracji. Dalej DP-39…. Bez push na main.
+
 ## 2026-11-06 12:00 — #841 SCALONE; start DP-31 (SOURCE_DOWN sev)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`. Rejestr **DP-228** (F7 #841).
