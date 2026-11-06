@@ -1,3 +1,57 @@
+## 2026-11-06 22:10 — #855 DP-229 F7 r8: ostatnia linia psql (set_config)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne` do wykonania.
+- Scalanie: brak F7 „gotowe” — CI fail @ `000c459b`: UI ✔, SE-KAA exists=true, ale `expect` dostał `uuid\\ntrue` (wynik `set_config` + exists); unit+visual części ✔.
+- **Krok** F7 #855 r8: `.split(\\n).pop()` — tylko linia `exists`. Bez migracji. Czekam CI→F7. Bez push na main.
+
+## 2026-11-06 21:50 — #855 DP-229 F7 r7: SE-KAA exists + bezpieczny array_length
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne` do wykonania.
+- Scalanie: brak F7 „gotowe” — CI fail @ `dda4d4d2`: UI ✔; JWT ✔; `jsonb_array_length` na skalarze (`points`) → „cannot get array length of a scalar”; unit ✔.
+- **Krok** F7 #855 r7: `exists(… SE-KAA …)` z `case typeof=array then length else 0` (jak bmapa). Bez migracji. Czekam CI→F7. Bez push na main.
+
+## 2026-11-06 21:35 — #855 DP-229 F7 r6: map_display_state jako HHL
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne` do wykonania.
+- Scalanie: brak F7 „gotowe” — CI `local-orange-maps` fail @ `2abf368f`: UI (Kokpit→telefon) ✔ po r5; końcowe `psql map_display_state()` → „Brak aktywnego konta” (bez JWT); unit ✔.
+- **Krok** F7 #855 r6: asercja SE-KAA przez `set_config` + `role authenticated` (uid `hhl@bk5.local`), jak bmapa `asu`. Bez migracji. Czekam CI→F7. Bez push na main.
+
+## 2026-11-06 21:15 — #855 DP-229 F7 r5: zamknij szufladę przed nav
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 (#714–#720) w planie. Bez nowego `pilne` do wykonania.
+- Scalanie: brak F7 „gotowe” — CI `local-orange-maps` fail @ `53f37f45`: Kokpit/Mapa/szuflada ✔, potem Timeout klik `data-view="geo"` — `[data-drawer-scrim]` intercepts pointer events; unit+visual ✔.
+- **Krok** F7 #855 r5: `openNavView` → `closeDrawerIfOpen` (klik scrim) przed nawigacją. Bez migracji. Czekam CI→F7. Bez push na main.
+
+## 2026-11-06 20:55 — #855 DP-229 F7 r4: waitOrangeIn (nie parked overlay)
+
+- Skrzynka: #550 WSTRZYMANE (etykieta `pilne`, właściciel 25.10: nic nie budować). BN5–8 w planie. Bez nowego `pilne` do wykonania.
+- Scalanie: brak F7 „gotowe” — CI `local-orange-maps` fail @ `7824f691`: login ✔, Playwright → Timeout `.corridor-map-el .leaflet-overlay-pane` „resolved to hidden” (mapa w schowku puli `visibility:hidden` vs globalny selektor); unit ✔.
+- **Krok** F7 #855 r4: spec — `waitOrangeIn` w kontenerze widoku + bez zbędnego kliknięcia bieżącego `data-view`; seed PL-GDN/SE-NYN/PL-GDY; artifact report przy fail. Bez migracji. Czekam CI→F7. Bez push na main.
+
+## 2026-11-06 20:40 — #855 DP-229 F7 r3: login hasłem (nie magic link)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: brak F7 „gotowe” — CI `local-orange-maps` fail @ `84f813f4`: Playwright wystartował, ale login magic link → Timeout `[data-auth="session"]` (AuthGate: `link-pending` / `must_set_password`); unit ✔.
+- **Krok** F7 #855 r3: `ci-orange-maps.sh` ustawia hasło Auth + `must_set_password=false`; spec loguje hasłem (`#auth-pw`); `local-ui.sh` status przez `SB_CLI` (nie `@latest`). Bez migracji. Czekam CI→F7. Bez push na main.
+
+## 2026-11-06 20:20 — #855 DP-229 F7 r2: seed SE_KAA_TRACK + CLI pin
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: brak F7 „gotowe” — CI `local-orange-maps` fail @ `177486b4` (`here_store_road` → „Zła geometria”: brak `SE_KAA_TRACK` po stegra); unit ✔, visual w toku na poprzednim SHA.
+- **Krok** F7 #855 r2: fixture `SE_KAA_TRACK` (jak bmapa #572) przed `here_store_road`; CLI `supabase@3.0.0` (nie `@latest`). Bez migracji. Czekam CI→F7. Bez push na main.
+
+## 2026-11-06 20:05 — #855 DP-229 F7 r1: workdir + src/lib/pl
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: brak F7 „gotowe” — CI `local-orange-maps` fail @ `7dc35e17` (`open src/lib/pl/deepl.ts`); unit+visual ✔.
+- **Krok** F7 #855 r1: `ci-orange-maps.sh` — kopia `src/lib/pl` + `src/lib/time.ts` do workdir (Edge importy przy `supabase start`). Bez migracji. Czekam CI→F7. Bez push na main.
+
+## 2026-11-06 19:45 — #854 SCALONE; start DP-229 (local.spec → CI)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: **#854 SCALONE** `4f79c0fd` (DP-228 / **0425**, F7 gotowe @ `6ef49bbd`; CI unit+db+visual ✔).
+- **Krok** `pakiet/c3-dp-229-local-spec-ci`: workflow `local-orange-maps.yml` + `scripts/i667/ci-orange-maps.sh` — `supabase start`, seed SE-KAA + 1 transport, `SPEC=…i667-f-orange-maps.local.spec.ts scripts/i2/local-ui.sh`. Windows bez Dockera → przebieg tylko w GHA. Bez migracji. Czekam CI→F7. Bez push na main.
+
 ## 2026-11-06 19:05 — #853 SCALONE; start DP-228 (odrzut HERE → Stan systemu)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.

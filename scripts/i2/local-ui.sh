@@ -4,7 +4,9 @@
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 WD=${SB_WORKDIR:-/tmp/sblocal}
-eval "$(npx -y supabase@latest status --workdir "$WD" -o env 2>/dev/null | grep -E '^(API_URL|ANON_KEY|SERVICE_ROLE_KEY|DB_URL)=')"
+# DP-229: ta sama wersja CLI co przy `supabase start` (SB_CLI), żeby status nie dryfował.
+SB_CLI=${SB_CLI:-supabase@3.0.0}
+eval "$(npx -y "$SB_CLI" status --workdir "$WD" -o env 2>/dev/null | grep -E '^(API_URL|ANON_KEY|SERVICE_ROLE_KEY|DB_URL)=')"
 case "$API_URL" in http://127.0.0.1:*|http://localhost:*) ;; *) echo "I-2 STOP: API_URL nie jest lokalny" >&2; exit 2 ;; esac
 export VITE_SUPABASE_URL="$API_URL" VITE_SUPABASE_ANON_KEY="$ANON_KEY" SUPABASE_SERVICE_ROLE_KEY="$SERVICE_ROLE_KEY" SUPABASE_DB_URL="$DB_URL"
 OUT=/tmp/wt-i2-ui
