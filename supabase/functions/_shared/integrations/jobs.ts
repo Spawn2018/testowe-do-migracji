@@ -635,7 +635,27 @@ export function statusAfterGdnNynAtd(
   return 'W_REJSIE';
 }
 
-/** DP-222 B2: W_REJSIE GDN-NYN bez ATA → DOPLYNAL gdy późniejszy ATD albo arrival+6h. */
+/**
+ * DP-222 drobne #814: GDN-NYN ZAPLANOWANY/OPOZNIONY bez ATD i bez ATA —
+ * gdy ten sam statek ma późniejszy rejs z ATD → DOPLYNAL (Wawel 03.11).
+ * Bez arrival+6h: 61b — sam upływ czasu nie domyka bez potwierdzenia.
+ */
+export function shouldCloseGdnNynWithoutAtd(
+  s: Pick<DbSailing, 'id' | 'vessel_id' | 'route' | 'status' | 'departure_at' | 'actual_departure_at' | 'actual_arrival_at'>,
+  peers: readonly Pick<DbSailing, 'id' | 'vessel_id' | 'departure_at' | 'actual_departure_at'>[],
+): boolean {
+  if (s.route !== 'GDN-NYN') return false;
+  if (s.status !== 'ZAPLANOWANY' && s.status !== 'OPOZNIONY') return false;
+  if (s.actual_departure_at != null || s.actual_arrival_at != null) return false;
+  const depMs = Date.parse(s.departure_at);
+  return peers.some((x) =>
+    x.vessel_id === s.vessel_id
+    && x.id !== s.id
+    && x.actual_departure_at != null
+    && Date.parse(x.departure_at) > depMs);
+}
+
+/** DP-222 B2 + drobne: W_REJSIE bez ATA / ZAPLANOWANY bez ATD+ATA → DOPLYNAL. */
 async function closeStaleGdnNynWithoutAta(deps: JobDeps, _sinceIso?: string): Promise<number> {
   const nowMs = deps.now().getTime();
   /* Jak backfill 0412 — 7 d (portnet since=1 d za krótki na „stary” GDN-NYN). */
@@ -644,10 +664,12 @@ async function closeStaleGdnNynWithoutAta(deps: JobDeps, _sinceIso?: string): Pr
   let updated = 0;
   for (const s of existing) {
     if (s.route !== 'GDN-NYN') continue;
-    if (s.status !== 'W_REJSIE') continue;
     if (s.actual_arrival_at != null) continue;
     if (s.source === 'RECZNIE') continue;
-    if (statusAfterGdnNynAtd(s, existing, nowMs, null) !== 'DOPLYNAL') continue;
+    const close = s.status === 'W_REJSIE'
+      ? statusAfterGdnNynAtd(s, existing, nowMs, null) === 'DOPLYNAL'
+      : shouldCloseGdnNynWithoutAtd(s, existing);
+    if (!close) continue;
     if (await deps.store.updateSailing(s.id, { status: 'DOPLYNAL' })) {
       updated += 1;
       s.status = 'DOPLYNAL';
@@ -3415,6 +3437,32 @@ export function acceptActualDepartureAt(
   return true;
 }
 
+/**
+ * DP-222 (#814 Nova 02.11): poprzednie `actual_arrival_at` tylko z rejsów
+ * o wcześniejszym `departure_at` (i ATA ≤ plan tego odejścia). Max ATA
+ * spośród *wszystkich* rejsów (w tym późniejszych) psuje since/accept —
+ * backfill 0412 i cron na historii dostawały since z przyszłości.
+ */
+export function previousActualArrivalBefore(
+  sailings: ReadonlyArray<Pick<DbSailing, 'id' | 'vessel_id' | 'departure_at' | 'actual_arrival_at'>>,
+  vesselId: string,
+  sailingId: string,
+  beforeDepartureIso: string,
+): string | null {
+  const before = Date.parse(beforeDepartureIso);
+  if (!Number.isFinite(before)) return null;
+  const times = sailings
+    .filter((x) => {
+      if (x.vessel_id !== vesselId || x.id === sailingId || x.actual_arrival_at == null) return false;
+      const dep = Date.parse(x.departure_at);
+      const ata = Date.parse(x.actual_arrival_at);
+      return Number.isFinite(dep) && Number.isFinite(ata) && dep < before && ata <= before;
+    })
+    .map((x) => x.actual_arrival_at!)
+    .sort();
+  return times.at(-1) ?? null;
+}
+
 /** BN4: etykiety portów docelowych dla ryzyka INFO `AIS_<port>` (jak NYN/KAA + HEL/STO/KPS/VUO). */
 export const AIS_ARRIVAL_PORT_LABEL: Readonly<Record<string, string>> = {
   NYN: 'Nynäshamn',
@@ -3591,11 +3639,9 @@ export async function runFerryAis(deps: JobDeps): Promise<JobResult> {
       if (ageMin <= 15 && depHub) {
         const dist = distanceKm(fix.lat, fix.lon, depHub.lat, depHub.lon);
         const moving = (fix.sogKn ?? 0) >= 3;
-        const prevArr = sailings
-          .filter((x) => x.vessel_id === s.vessel_id && x.id !== s.id && x.actual_arrival_at)
-          .map((x) => x.actual_arrival_at!)
-          .sort()
-          .at(-1) ?? null;
+        const prevArr = previousActualArrivalBefore(
+          sailings, s.vessel_id, s.id, s.departure_at,
+        );
         const plan2h = new Date(Date.parse(s.departure_at) - 2 * 3600_000).toISOString();
         const sinceIso = prevArr != null && prevArr > plan2h ? prevArr : plan2h;
         let depAt: string | null = null;

@@ -10,7 +10,7 @@ import {
   parseUmgdyGdanskNowyHtml, polferriesUmgCandidates,
 } from '../supabase/functions/_shared/ferry/umgdyShipMovements';
 import {
-  runFerryPortnet, statusAfterGdnNynAtd,
+  runFerryPortnet, shouldCloseGdnNynWithoutAtd, statusAfterGdnNynAtd,
   type JobDeps, type JobResult, type SyncStore,
 } from '../supabase/functions/_shared/integrations/jobs';
 import type { DbSailing, RiskInput, SailingInsert, SailingPatch } from '../supabase/functions/_shared/integrations/sync';
@@ -235,6 +235,41 @@ describe('DP-222 UMG × ferry-portnet — ATD GDN-NYN', () => {
       status: 'DOPLYNAL',
       actual_arrival_at: null,
       actual_departure_at: '2026-11-03T17:05:00.000Z',
+    });
+  });
+
+  it('DP-222 drobne: ZAPLANOWANY bez ATD+ATA + późniejszy ATD → DOPLYNAL (Wawel 03.11)', async () => {
+    const st = new MemStore();
+    const old: DbSailing = {
+      id: 'gdn-waw-03', vessel_id: WAW, route: 'GDN-NYN',
+      departure_at: '2026-11-03T17:00:00.000Z', arrival_at: '2026-11-04T07:00:00.000Z',
+      delayed_departure_at: null, delayed_arrival_at: null,
+      actual_departure_at: null, actual_arrival_at: null,
+      status: 'ZAPLANOWANY', source: 'POLFERRIES',
+    };
+    const next: DbSailing = {
+      id: 'nyn-waw-04', vessel_id: WAW, route: 'NYN-GDN',
+      departure_at: '2026-11-04T17:14:00.000Z', arrival_at: '2026-11-05T07:00:00.000Z',
+      delayed_departure_at: null, delayed_arrival_at: null,
+      actual_departure_at: '2026-11-04T17:20:00.000Z', actual_arrival_at: null,
+      status: 'W_REJSIE', source: 'POLFERRIES',
+    };
+    st.sailings.push(old, next);
+    expect(shouldCloseGdnNynWithoutAtd(old, [old, next])).toBe(true);
+    expect(shouldCloseGdnNynWithoutAtd({ ...old, actual_departure_at: '2026-11-03T17:05:00.000Z' }, [old, next]))
+      .toBe(false);
+    const r = await runFerryPortnet(deps(st, {
+      'port-calls': PORTNET,
+      'statki-spodziewane': UMG_ETA,
+      'statki-wychodzace': UMG_OUT,
+      'statki-w-porcie': UMG_IN,
+    }, new Date('2026-11-05T12:00:00Z')));
+    expect(r.ok).toBe(true);
+    expect(r.observations?.dp222_closed_gdn).toBe('1');
+    expect(st.sailings.find((s) => s.id === 'gdn-waw-03')).toMatchObject({
+      status: 'DOPLYNAL',
+      actual_departure_at: null,
+      actual_arrival_at: null,
     });
   });
 });

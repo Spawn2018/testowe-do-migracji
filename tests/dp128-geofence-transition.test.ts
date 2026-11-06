@@ -139,6 +139,23 @@ describe('DP-128 geofenceTransition — pure', () => {
     expect(findAtdTransitionIso(rows, GDN)).toBe('2026-11-04T17:09:44.000Z');
   });
 
+  it('DP-222: Nova Star 02.11 (prod) luka 35 min + SOG≥3 → ATD 17:19', () => {
+    /* SELECT vessel_positions 02.11 16:50–18:00Z; hub Westerplatte. */
+    const rows = [
+      pos('2026-11-02T17:04:10.000Z', 54.4040, 18.6781, 0),
+      pos('2026-11-02T17:08:47.000Z', 54.4037, 18.6774, 1.3),
+      pos('2026-11-02T17:11:46.000Z', 54.4044, 18.6713, 4.8),
+      pos('2026-11-02T17:13:46.000Z', 54.4052, 18.6668, 5.1),
+      pos('2026-11-02T17:19:06.000Z', 54.4117, 18.6597, 5.8),
+      pos('2026-11-02T17:28:16.000Z', 54.4275, 18.6499, 7),
+      pos('2026-11-02T17:31:36.000Z', 54.4348, 18.6556, 9.1),
+      pos('2026-11-02T17:54:26.000Z', 54.4917, 18.7493, 16.1),
+    ];
+    expect(haversineKm(54.4117, 18.6597, GDN.lat, GDN.lon)).toBeLessThanOrEqual(GEOFENCE_IN_KM);
+    expect(haversineKm(54.4917, 18.7493, GDN.lat, GDN.lon)).toBeGreaterThan(GEOFENCE_OUT_KM);
+    expect(findAtdTransitionIso(rows, GDN)).toBe('2026-11-02T17:19:06.000Z');
+  });
+
   it('DP-222 B1: statek stoi w porcie 2 h po ETD → bez ATD', () => {
     const t0 = Date.parse('2026-11-04T16:00:00.000Z');
     const rows: GeofencePos[] = [];

@@ -1319,9 +1319,9 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-217 | Cursor | **PILNE** FI gołoledź: fala MEDIUM→HIGH przy wjeździe + tytuły odcinków ≠ „Vuosaari–Tornio”; HIGH 1×/transport (HHL+SCX), odcinki MEDIUM | #804; F7 #803; #806 | BN6 / ROAD_FI | SCALONE (#806 `2723af71` / **0409**) |
 | DP-218 | Cursor | **PILNE** FERRY zostaje „Prom” gdy pierwsza pozycja po ATA jest poza PORT_IN (≥1 km / ląd) — awaryjne Port→Droga + backfill + HHL ATA+2h | #807; #805 | BN8 / prom | SCALONE (#808 `5e7a1173` / **0410**) |
 | DP-219 | Cursor | wyjazd SG 0040 ze strefy portu zapisany 6× (uwaga po DP-218) — filtr trasy w `process_position` + EXIT dedup wizyty / **0411** | #809 lista poranna 05.11 | BN8 / geofence | SCALONE (#812 `e396a758` / **0411**) |
-| DP-220 | Cursor | ostrzeżenie o opóźnieniu wobec planu nie przelicza się po nowym ETA (pokazuje stare minuty) | #809 lista poranna 05.11; F7 #813 B2 | C2 / ETA | W TOKU (`pakiet/c2-dp-220-eta-breach-recalc` / **0416**) |
+| DP-220 | Cursor | ostrzeżenie o opóźnieniu wobec planu nie przelicza się po nowym ETA (pokazuje stare minuty) | #809 lista poranna 05.11; F7 #813 B2 | C2 / ETA | SCALONE (#829 `c1cc27a0` / **0416**) |
 | DP-221 | Cursor | 2 nazwy odcinków FI = kody stacji (`vt`/`kt`/`st`/`mt` + numer) zamiast tytułów PL | #809; F7 #813 B1/B2 (PR #813 = ten DP) | BN6 / ROAD_FI | SCALONE (#813 `d6be6012`) |
-| DP-222 | Cursor | **PILNE** BS-03 mapa AIS (**#815 SCALONE**); ATD/ATA GDN-NYN (**#818 SCALONE** `5879a31e` / **0412**); **ETA FERRY z AIS** (**#819 SCALONE** `fea386be` / **0413**); ~~**BS-04 zła pozycja**~~ SCALONE (#824 `e70fe81c`). Dokończenie drobne: rejsy bez ATD+ATA→DOPLYNAL; regresja ATD od 02.11; Nova 02.11 para AIS | #814 | C2 / BN9-c2 | W TOKU (drobne) |
+| DP-222 | Cursor | **PILNE** BS-03 mapa AIS (**#815 SCALONE**); ATD/ATA GDN-NYN (**#818 SCALONE** `5879a31e` / **0412**); **ETA FERRY z AIS** (**#819 SCALONE** `fea386be` / **0413**); ~~**BS-04 zła pozycja**~~ SCALONE (#824 `e70fe81c`). Dokończenie drobne: ~~rejsy bez ATD+ATA→DOPLYNAL~~ (**0417**); ~~regresja ATD od 02.11 / Nova 02.11 para AIS~~ (**0418** — since/prevArr bez przyszłych ATA; backfill ATD) | #814 | C2 / BN9-c2 | W TOKU (drobne / **0417**+**0418** #830) |
 | DP-224 | Cursor | **PILNE** mapa 3,3 MB/`map_display_state` 749 ms: ~~**A**~~ SCALONE (#820 `a7c0bfb2` / **0414**); ~~**B**~~ SCALONE (#821 `701a3114`); ~~**C**~~ SCALONE (#822 `98e723d1` / **0415**); ~~**D**~~ SCALONE (#823 `e9986f72`); ~~**B1**~~ SCALONE (#825 `8b29630f`); ~~**B3+E**~~ SCALONE (#826 `2ae9b68c`) | #817 | C2 / mapa | SCALONE (#826) |
 | DP-225 | Cursor | po zmianie `sailing_id` store/`load.ferry.vessel` zostaje stara nazwa promu (karta/PDF/AIS byName) — odśwież `ferry` z bieżącego rejsu | F7 #824 | C2 / BN9-c2 | SCALONE (#827 `e692d308`) |
 | DP-223 | Cursor | E49-b: `MIN_INTERVAL_MIN['route-hazards']` 60→30 (cron `17,47` — :47 nie skipped); test 30 min | #816; F7 #828 | E49 / objazdy | SCALONE (#828 `dd7d637a`) |
@@ -2674,6 +2674,8 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 03.11.2026 21:35 | #777 F7 r1 niegotowe → seed Portnet/Deltamarin, I=IC, dzień przypłynięcia, złożone IBNet | pętla / C2 F7 |
 | 03.11.2026 22:00 | #777 SCALONE `2a99a8e6` (DP-120 / **0391**; F7 gotowe @ `fecc5f7a`); start DP-202+203 (#778+#779) | pętla / C2 |
 | 03.11.2026 23:50 | #780 F7 r3: auto DeepL na luki TV/bałtyk (bez RESOURCE_MISSING:TV_CODE); **0393** memory_auto_24h | pętla / C2 F7 |
+| 06.11.2026 03:55 | DP-222 #830 **0418**: Nova 02.11 ATD + `previousActualArrivalBefore` (regresja since/prevArr); CI→F7 | pętla / C2 |
+| 06.11.2026 03:20 | #829 SCALONE `c1cc27a0` (DP-220 F7 @ `ba7564eb`); start DP-222 drobne closeStale bez ATD **0417** | pętla / C2 |
 | 06.11.2026 02:10 | #813 SCALONE `d6be6012` (DP-221 F7 @ `a805f4ca`); start DP-220 **0416** (ETA_BREACH title/params) | pętla / C2 |
 | 06.11.2026 01:30 | #828 SCALONE `dd7d637a` (DP-223 F7 @ `0d6db86a`); powrót #813 DP-221 F7 B1+B2 (vt/kt/st/mt) | pętla / C2 |
 | 06.11.2026 01:05 | #827 SCALONE `e692d308` (DP-225 F7 @ `086001eb`); rejestr **DP-223** (#816); start `route-hazards` 30 min | pętla / C2 |

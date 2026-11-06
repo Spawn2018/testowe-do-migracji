@@ -1,3 +1,16 @@
+## 2026-11-06 03:55 — DP-222: Nova 02.11 ATD + fix prevArr (**0418**)
+
+- Skrzynka: #550 WSTRZYMANE; #814 drobne W TOKU; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: brak F7 na #830 (CI unit+visual+db ✔ @ `a2e9c4ee` przed tym krokiem).
+- **Przyczyna regresji ATD od 02.11:** (1) AISSTREAM luka pary >20 min (Nova 02.11: 35 min — naprawione ≤60 min w #818); (2) backfill **0412**/cron brał `max(actual_arrival_at)` także z *późniejszych* rejsów → `since` po wypłynięciu / `acceptActualDepartureAt` odrzucał ATD.
+- **Krok** `pakiet/c2-dp-222-close-stale-no-atd` / **0418**: `previousActualArrivalBefore` (tylko wcześniejsze rejsy); backfill ATD GDN-NYN 14 d; test Nova 02.11 → ATD 17:19:06. Dalej CI→F7. DP-222 drobne domknięte w #830.
+
+## 2026-11-06 03:20 — #829 SCALONE; DP-222 drobne: ZAPLANOWANY bez ATD→DOPLYNAL
+
+- Skrzynka: #550 WSTRZYMANE; #814 drobne W TOKU; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: **#829 SCALONE** `c1cc27a0` (DP-220 F7 gotowe @ `ba7564eb`, CI unit+visual+db ✔).
+- **Krok DP-222 drobne** `pakiet/c2-dp-222-close-stale-no-atd` / **0417**: `shouldCloseGdnNynWithoutAtd` + closeStale — ZAPLANOWANY/OPOZNIONY bez ATD+ATA + późniejszy ATD → DOPLYNAL (Wawel 03.11); backfill SQL. Bez arrival+6h (61b). Testy dp222-atd-gdn-umg **7/7**. Dalej CI→F7. Zostaje: regresja ATD 02.11 + Nova 02.11 para AIS.
+
 ## 2026-11-06 02:45 — DP-220 F7 #829 niegotowe → fixture hhl/carrier
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
