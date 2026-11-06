@@ -1,3 +1,9 @@
+## 2026-11-06 08:15 — #836 F7 r1: DP-24 via + dedup + h3 zachowanie
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: brak — F7 #836 r1 **niegotowe** (CI @ `b5127d89` unit+visual+db ✔).
+- **Krok F7:** SE-KAA-INLAND via ROAD_KAA (passThrough); `h3_highlighted` dedup `link_id`; h3.sh GDY-KAA inland-only + total=1; h3 EXPECTED 27; `profileLegs` = H3 zamierzone, route-profile bez inland. Czekam CI→F7. Dalej DP-29….
+
 ## 2026-11-06 08:00 — #834 SCALONE; start DP-22+24
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.

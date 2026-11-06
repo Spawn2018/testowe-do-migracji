@@ -1340,7 +1340,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-112 | Cursor | godziny w nawiasie z „UTC/local/Finnish/Swedish time” odfiltrować przed liczeniem multiTime (zakres „HH:MM–HH:MM” zostaje ambiguous) | F7 #683 r3 | BN3 | w kolejce |
 | DP-22 | Cursor | Stan systemu: ostrzeżenie z `summary` odrzuconego legu z bazy (nie tylko `points not null`); fundament 0354 + `checkRoads`; UI: wiersz `here-roads` + `withHereRoadsRejects` | F7 #673 r1 N5 / r2 | #667 D | W TOKU (`pakiet/c3-dp-22-24-here-roads-sys`) |
 | DP-23 | Cursor | Słownik legów drogowych w bazie zamiast `IN (…)` / `ROAD_LEGS` w kodzie | F7 #673 r1 N2 | #667 E / BN7 | SCALONE (#677 `675bb299` / 0355) |
-| DP-24 | Cursor | `corridor_fetches.leg` / `corridor_obstacles.leg` + SE-KAA-INLAND gdy przeszkody H3 obejmą inland; **0419** + CORRIDOR_LEGS + h3_highlighted GDY-KAA | F7 #673 r1 N3 | po #667 | W TOKU (`pakiet/c3-dp-22-24-here-roads-sys` / **0419**) |
+| DP-24 | Cursor | `corridor_fetches.leg` / `corridor_obstacles.leg` + SE-KAA-INLAND gdy przeszkody H3 obejmą inland; **0419** + CORRIDOR_LEGS via ROAD_KAA + h3_highlighted GDY-KAA + dedup link_id (F7 #836 r1) | F7 #673 r1 N3 / #836 r1 | po #667 | W TOKU (`pakiet/c3-dp-22-24-here-roads-sys` / **0419**) |
 | DP-25 | koordynator | JSDoc `vesselGroupsVersion` zgodny z użyciem (albo bez eksportu) | F7 #674 | wyglad | SCALONE (#675) |
 | DP-26 | koordynator | SailingsPanel przez `useVesselGroups()` zamiast własnego stanu | F7 #674 | wyglad | SCALONE (#675) |
 | DP-27 | koordynator | jedno ostrzeżenie po błędzie pobrania listy statków na sesję | F7 #674 | wyglad | SCALONE (#675) |
@@ -2674,6 +2674,8 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 03.11.2026 21:35 | #777 F7 r1 niegotowe → seed Portnet/Deltamarin, I=IC, dzień przypłynięcia, złożone IBNet | pętla / C2 F7 |
 | 03.11.2026 22:00 | #777 SCALONE `2a99a8e6` (DP-120 / **0391**; F7 gotowe @ `fecc5f7a`); start DP-202+203 (#778+#779) | pętla / C2 |
 | 03.11.2026 23:50 | #780 F7 r3: auto DeepL na luki TV/bałtyk (bez RESOURCE_MISSING:TV_CODE); **0393** memory_auto_24h | pętla / C2 F7 |
+| 06.11.2026 08:15 | #836 F7 r1: SE-KAA-INLAND via + h3 dedup link_id + testy GDY-KAA; h3 27 | pętla / C3 |
+| 06.11.2026 08:00 | #834 SCALONE `91168c54`; start **DP-22+24** #836 / **0419** | pętla / C3 |
 | 06.11.2026 07:15 | #834 F7 r1 niegotowe → process_position FI e2e + eta_record obs + GID; status 688 | pętla / C3 |
 | 06.11.2026 06:50 | #833 SCALONE `6b609059` (DP-2 F7 r1 @ `bac46469`); start **DP-2 11–15** (eta_seg v_route + skan) | pętla / C3 |
 | 06.11.2026 06:15 | #832 SCALONE `20e490b8` (DP-2 cz.1+DP-12 F7 @ `6597881e`); start **DP-2 reszta** (inwentarz 1–15, −5 grepy → 682) | pętla / C3 |

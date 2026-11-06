@@ -176,8 +176,9 @@ begin
   v_mass_kg := round(v_mass * 1000)::int;
   v_axle_kg := round(v_axle * 1000)::int;
 
-  with hit as (
-    select o.kind, o.place, o.lat, o.lng,
+  -- F7 #836 r1: dedup po link_id (albo place+lat/lng) — SE-KAA ∩ SE-KAA-INLAND bez podwójnego total.
+  with raw_hit as (
+    select o.link_id, o.kind, o.place, o.lat, o.lng,
       concat_ws('; ',
         case when o.max_height_cm is not null and v_h_cm > o.max_height_cm then o.max_height_cm::text || ' cm wysokości' end,
         case when o.max_width_cm is not null and v_w_cm > o.max_width_cm then o.max_width_cm::text || ' cm szerokości' end,
@@ -205,6 +206,22 @@ begin
         or (o.max_weight_kg is not null and v_mass_kg > o.max_weight_kg)
         or (o.max_axle_kg is not null and v_axle_kg > o.max_axle_kg)
       )
+  ),
+  hit as (
+    select distinct on (
+      coalesce(
+        nullif(link_id, ''),
+        place || '|' || coalesce(lat::text, '') || '|' || coalesce(lng::text, '')
+      )
+    )
+      kind, place, lat, lng, limit_text, set_text
+    from raw_hit
+    order by
+      coalesce(
+        nullif(link_id, ''),
+        place || '|' || coalesce(lat::text, '') || '|' || coalesce(lng::text, '')
+      ),
+      place
   )
   select count(*)::int,
          coalesce((

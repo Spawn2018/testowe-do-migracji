@@ -23,21 +23,38 @@ export const HERE_RAW_DAYS = 30;
 const RECHECK_MS = HERE_RAW_DAYS * 24 * 60 * 60 * 1000;
 const ALTERNATIVES = 3;
 
-/** DP-24: SE-KAA-INLAND — wariant śródlądowy Karlskrona→Boden (te same końce co SE-KAA). */
+/** DP-24: SE-KAA-INLAND — wariant śródlądowy Karlskrona→Boden (via jak ROAD_KAA / SE_KAA_INLAND). */
 export type CorridorLegName = 'PL-GDN' | 'PL-GDY' | 'SE-NYN' | 'SE-KAA' | 'SE-KAA-INLAND';
 
 export interface CorridorLeg {
   leg: CorridorLegName;
   origin: readonly [number, number];
   destination: readonly [number, number];
+  /** passThrough — różnicuje inland (Norrköping/Västerås) od E22/wybrzeża. */
+  via?: ReadonlyArray<readonly [number, number]>;
 }
+
+/** Via śródlądowe jak ROAD_KAA (F7 #836 r1) — bez origin/destination. */
+const SE_KAA_INLAND_VIA: ReadonlyArray<readonly [number, number]> = [
+  [58.59, 16.18], // Norrköping
+  [59.61, 16.54], // Västerås
+  [60.7, 17.1],
+  [62.4, 17.4],
+  [63.8, 20.2],
+  [65.3, 21.5],
+];
 
 export const CORRIDOR_LEGS: CorridorLeg[] = [
   { leg: 'PL-GDN', origin: CORRIDOR.srem, destination: CORRIDOR.gdansk },
   { leg: 'PL-GDY', origin: CORRIDOR.srem, destination: CORRIDOR.gdynia },
   { leg: 'SE-NYN', origin: CORRIDOR.nynashamn, destination: CORRIDOR.boden },
   { leg: 'SE-KAA', origin: CORRIDOR.karlskrona, destination: CORRIDOR.boden },
-  { leg: 'SE-KAA-INLAND', origin: CORRIDOR.karlskrona, destination: CORRIDOR.boden },
+  {
+    leg: 'SE-KAA-INLAND',
+    origin: CORRIDOR.karlskrona,
+    destination: CORRIDOR.boden,
+    via: SE_KAA_INLAND_VIA,
+  },
 ];
 
 export type ObstacleKind = 'wiadukt' | 'most' | 'tunel' | 'ograniczenie';
@@ -72,6 +89,9 @@ export function buildCorridorRouteUrl(apiKey: string, leg: CorridorLeg, dims: Co
   q.set('transportMode', 'truck');
   q.set('origin', `${leg.origin[0]},${leg.origin[1]}`);
   q.set('destination', `${leg.destination[0]},${leg.destination[1]}`);
+  for (const v of leg.via ?? []) {
+    q.append('via', `${v[0]},${v[1]}!passThrough=true`);
+  }
   q.set('return', 'polyline,summary,actions');
   q.set('spans', 'notices,names,length,streetAttributes,countryCode,stateCode,truckAttributes');
   q.set('alternatives', String(ALTERNATIVES));
