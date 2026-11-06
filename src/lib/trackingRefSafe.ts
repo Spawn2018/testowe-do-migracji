@@ -37,6 +37,10 @@ export function redactTrackingRef(ref: string | null | undefined): string | null
   const sf = /^https:\/\/portal\.safefleet\.pl\/safefleet\/temporary_link\/view\/([0-9a-f]{32})\/?$/i.exec(s);
   if (sf) return `safefleet:${sf[1].slice(-6).toLowerCase()}`;
   if (/^safefleet:[0-9a-f]{6}$/i.test(s)) return s.toLowerCase();
+  /* #837: pełny URL monitorujpojazd → mp:<6> */
+  const mp = /^https?:\/\/sledz\.monitorujpojazd\.pl\/share\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})\/?$/i.exec(s);
+  if (mp) return `mp:${mp[1].replace(/-/g, '').slice(-6).toLowerCase()}`;
+  if (/^mp:[0-9a-f]{6}$/i.test(s)) return s.toLowerCase();
   if (trackingRefHasSecret(s)) return null;
   return s;
 }

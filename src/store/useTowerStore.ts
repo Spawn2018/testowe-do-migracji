@@ -918,6 +918,8 @@ export const useTowerStore = create<TowerState>()(
               const trackingLink = kind === 'none' ? undefined
                 : kind === 'emtrack' ? { provider: 'EMTRACK' as const, check: { state: 'ok' as const } }
                   : kind === 'safefleet' ? { provider: 'SAFEFLEET' as const, check: { state: 'pending' as const } }
+                    : kind === 'monitorujpojazd'
+                      ? { provider: 'MONITORUJPOJAZD' as const, check: { state: 'pending' as const } }
                     : kind === 'other' ? { provider: 'OTHER' as const, check: { state: 'ok' as const } }
                     /* RIO: zostaje dotychczasowy opis lokalizatora (rejestracja, sprawdzenie) do odświeżenia z serwera;
                        bez wcześniejszego RIO — „do sprawdzenia” */

@@ -99,6 +99,10 @@ portnet
 Ports
 SafeFleet
 safefleet
+monitorujpojazd
+MonitorujPojazd
+sledz
+uuid
 # BN6 (#716): nazwy źródeł LT/EE w rk_src_ROAD_*
 eismoinfo
 Tark

@@ -108,11 +108,14 @@ export interface LoadRow {
   /** A7 (0237): symbol z tabeli właściciela i rodzaj zezwolenia */
   symbol?: string | null; permit_kind?: string | null;
   telematics_vehicle_id?: string | null;
-  /** #662 — bez `safefleet_token` (kolumna bez SELECT dla authenticated). */
+  /** #662 / #837 — bez tokenów (kolumny bez SELECT dla authenticated). */
   telematics_provider?: string | null;
   safefleet_check_state?: string | null;
   safefleet_check_at?: string | null;
   safefleet_last_fix_at?: string | null;
+  monitorujpojazd_check_state?: string | null;
+  monitorujpojazd_check_at?: string | null;
+  monitorujpojazd_last_fix_at?: string | null;
   /** E44 / H4 — bez `rio_secret` (kolumna bez SELECT dla authenticated). */
   rio_tracking_id?: string | null;
   rio_asset_name?: string | null;
@@ -204,6 +207,20 @@ export function trackingLinkFromRow(row: LoadRow): TrackingLinkInfo | null | und
         state: checkState,
         at: row.safefleet_check_at ?? null,
         lastFixAt: row.safefleet_last_fix_at ?? null,
+      },
+    };
+  }
+  /* #837: monitorujpojazd — bez pełnego linku (token tylko na serwerze). */
+  if (!hasRio && (kind === 'monitorujpojazd' || row.telematics_provider === 'MONITORUJPOJAZD')) {
+    const st = row.monitorujpojazd_check_state;
+    const checkState =
+      st === 'ok' || st === 'pending' || st === 'invalid' || st === 'down' ? st : 'pending';
+    return {
+      provider: 'MONITORUJPOJAZD',
+      check: {
+        state: checkState,
+        at: row.monitorujpojazd_check_at ?? null,
+        lastFixAt: row.monitorujpojazd_last_fix_at ?? null,
       },
     };
   }
