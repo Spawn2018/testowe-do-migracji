@@ -1,3 +1,9 @@
+## 2026-11-06 15:55 — #848 SCALONE; start DP-56+57 (listLegs error + CORS)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: **#848 SCALONE** `c7f5423c` (DP-54, F7 gotowe @ `d748c412`; CI unit+visual ✔; bez migracji).
+- **Krok** `pakiet/c3-dp-56-listlegs-error-rejects`: DP-56 — wspólne `listHereRoadLegsFromSb` + test fake `sb` `{error}` → rejects (store + Edge); DP-57 — try/catch przeglądarki `{ok:false,reason}` + `corsHeaders()`. Bez migracji. Dalej DP-58…. Bez push na main.
+
 ## 2026-11-06 15:20 — #847 SCALONE; start DP-54 (core browserFetch:false / M1b)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.

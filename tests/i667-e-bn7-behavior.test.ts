@@ -146,11 +146,56 @@ describe('DP-43 acceptedBrowserFetchCount', () => {
   });
 });
 
-describe('#677 F7 B1 Edge listLegs — brak cichego fail-open', () => {
-  it('here-roads listLegs: if (r.error) throw + zapas ROAD_LEGS', () => {
+describe('DP-56 / DP-57 — listLegs error + CORS', () => {
+  function fakeSb(result: { data: unknown; error: { message: string } | null }) {
+    const chain = {
+      select() {
+        return chain;
+      },
+      eq() {
+        return chain;
+      },
+      order() {
+        return Promise.resolve(result);
+      },
+    };
+    return { from: () => chain };
+  }
+
+  it('DP-56: listHereRoadLegsFromSb — {error} → rejects (Edge listLegs)', async () => {
+    const { listHereRoadLegsFromSb } = await import(
+      '../supabase/functions/_shared/here/listHereRoadLegsFromSb.ts'
+    );
+    await expect(
+      listHereRoadLegsFromSb(fakeSb({ data: null, error: { message: 'db-down' } })),
+    ).rejects.toThrow(/here_road_legs: db-down/);
+  });
+
+  it('DP-56: store listHereRoadLegs — {error} → rejects', async () => {
+    const { supabaseStore } = await import(
+      '../supabase/functions/_shared/integrations/store.ts'
+    );
+    await expect(
+      supabaseStore(fakeSb({ data: null, error: { message: 'rpc-fail' } }) as never).listHereRoadLegs!(),
+    ).rejects.toThrow(/here_road_legs: rpc-fail/);
+  });
+
+  it('DP-56: pusty słownik → zapas ROAD_LEGS (nie ciche [])', async () => {
+    const { listHereRoadLegsFromSb } = await import(
+      '../supabase/functions/_shared/here/listHereRoadLegsFromSb.ts'
+    );
+    const { ROAD_LEGS } = await import(
+      '../supabase/functions/_shared/here/refreshRoadLegs.ts'
+    );
+    const legs = await listHereRoadLegsFromSb(fakeSb({ data: [], error: null }));
+    expect(legs).toEqual([...ROAD_LEGS]);
+  });
+
+  it('DP-56/57: Edge używa listHereRoadLegsFromSb; try/catch + corsHeaders przy wyjątku', () => {
     const edge = readFileSync('supabase/functions/here-roads/index.ts', 'utf8');
-    expect(edge).toMatch(/if \(r\.error\) throw/);
-    expect(edge).toMatch(/rows\.length === 0\) return \[\.\.\.ROAD_LEGS\]/);
-    expect(edge).toMatch(/legDefFromRow/);
+    expect(edge).toMatch(/listHereRoadLegsFromSb/);
+    expect(edge).toMatch(/try\s*\{[\s\S]*refreshRoadLegs[\s\S]*\}\s*catch/);
+    expect(edge).toMatch(/ok:\s*false,\s*reason/);
+    expect(edge).toMatch(/corsHeaders\(\)/);
   });
 });
