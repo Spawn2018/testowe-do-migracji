@@ -136,6 +136,7 @@ test('#667 F: Kokpit / Mapa / Strefy / geofence — ≥1 pomarańczowa; SE-KAA w
    * F7 r7: jsonb_array_length tylko gdy typeof=array — inaczej „cannot get array length of a scalar”. */
   const hhlId = psql(`select id::text from auth.users where email = 'hhl@bk5.local' limit 1`);
   expect(hhlId, 'auth.users hhl@bk5.local').toMatch(/^[0-9a-f-]{36}$/i);
+  /* F7 r8: -Atq wypisuje też wynik set_config (uuid) — bierzemy ostatnią linię (= exists). */
   const kaa = psql(`
     begin;
     select set_config('request.jwt.claim.sub', '${hhlId}', true);
@@ -150,6 +151,10 @@ test('#667 F: Kokpit / Mapa / Strefy / geofence — ≥1 pomarańczowa; SE-KAA w
         end >= 2
     )::text;
     commit
-  `);
+  `)
+    .trim()
+    .split(/\r?\n/)
+    .filter(Boolean)
+    .pop();
   expect(kaa, 'SE-KAA w map_display_state').toBe('true');
 });

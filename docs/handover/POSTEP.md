@@ -1,3 +1,9 @@
+## 2026-11-06 22:10 — #855 DP-229 F7 r8: ostatnia linia psql (set_config)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne` do wykonania.
+- Scalanie: brak F7 „gotowe” — CI fail @ `000c459b`: UI ✔, SE-KAA exists=true, ale `expect` dostał `uuid\\ntrue` (wynik `set_config` + exists); unit+visual części ✔.
+- **Krok** F7 #855 r8: `.split(\\n).pop()` — tylko linia `exists`. Bez migracji. Czekam CI→F7. Bez push na main.
+
 ## 2026-11-06 21:50 — #855 DP-229 F7 r7: SE-KAA exists + bezpieczny array_length
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne` do wykonania.
