@@ -1,3 +1,15 @@
+## 2026-11-06 08:15 — #836 F7 r1: DP-24 via + dedup + h3 zachowanie
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: brak — F7 #836 r1 **niegotowe** (CI @ `b5127d89` unit+visual+db ✔).
+- **Krok F7:** SE-KAA-INLAND via ROAD_KAA (passThrough); `h3_highlighted` dedup `link_id`; h3.sh GDY-KAA inland-only + total=1; h3 EXPECTED 27; `profileLegs` = H3 zamierzone, route-profile bez inland. Czekam CI→F7. Dalej DP-29….
+
+## 2026-11-06 08:00 — #834 SCALONE; start DP-22+24
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: **#834 SCALONE** `91168c54` (DP-2 F7 gotowe @ `03b1f3c1`, CI unit+visual+db ✔).
+- **Krok C3** `pakiet/c3-dp-22-24-here-roads-sys` / **0419**: DP-22 — wiersz `here-roads` w Stanie systemu + `withHereRoadsRejects` (summary z `checkRoads`); DP-24 — SE-KAA-INLAND w `corridor_fetches`/`corridor_obstacles`/`h3_replace_leg`/`h3_highlighted` + CORRIDOR_LEGS. h3 EXPECTED 20→22. Unit fokus dp22 ✔. Czekam CI→F7.
+
 ## 2026-11-06 07:15 — #834 F7 r1: process_position e2e + eta_record obs
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.

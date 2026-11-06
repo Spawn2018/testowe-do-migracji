@@ -37,7 +37,10 @@ export function buildRouteProfileUrl(args: {
   return `https://router.hereapi.com/v8/routes?${q.toString()}`;
 }
 
-/** Wybór odcinków jak w H-3 — pełny korytarz PL+SE (4 nogi). */
+/**
+ * Słownik nóg H-3 (z SE-KAA-INLAND — zamierzone, F7 #836 r1 pkt 4).
+ * route-profile woła `pickLegsForRoute` (PL + jedna noga SE, bez inland) → bez dodatkowego kosztu HERE w profilu.
+ */
 export function profileLegs(): typeof CORRIDOR_LEGS {
   return CORRIDOR_LEGS;
 }

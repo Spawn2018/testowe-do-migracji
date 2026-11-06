@@ -42,7 +42,7 @@ export const EXPECTED_LOCAL = {
   l13: 34, // 0218: DIGEST przez l13_queue_email + e-mail DECISION w teście (było 21 OK / 13 FAIL)
   l12: 12,
   h1: 14,
-  h3: 20,
+  h3: 27,
   smsksh: 16,
   'ferry-status': 18, // BN3 #683 F7 B5 / 0358: +4 (AUTO null, CHECK, apply RECZNIE, łańcuch AUTO); było 14
   bmapa: 210, // DP-224: +8 points_display/version/cache/purge-cron; było 202

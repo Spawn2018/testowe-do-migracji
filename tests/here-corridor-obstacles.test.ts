@@ -103,6 +103,18 @@ describe('H-3 przeszkody wzdłuż korytarza (Routing v8)', () => {
     expect(url).not.toContain('smap.hereapi');
   });
 
+  it('DP-24 F7 #836: SE-KAA-INLAND ma via passThrough (Norrköping/Västerås), nie gołe origin→destination', () => {
+    const inland = CORRIDOR_LEGS.find((l) => l.leg === 'SE-KAA-INLAND');
+    expect(inland?.via?.length).toBeGreaterThanOrEqual(2);
+    expect(inland?.via?.[0]).toEqual([58.59, 16.18]);
+    const url = buildCorridorRouteUrl('K', inland!, DIMS);
+    expect(url).toContain('via=');
+    expect(decodeURIComponent(url)).toContain('58.59,16.18!passThrough=true');
+    expect(decodeURIComponent(url)).toContain('59.61,16.54!passThrough=true');
+    const kaa = CORRIDOR_LEGS.find((l) => l.leg === 'SE-KAA')!;
+    expect(kaa.via ?? []).toHaveLength(0);
+  });
+
   it('przepis administracyjny nie trafia do przeszkód (jak H-1)', () => {
     const body = {
       routes: [{
