@@ -132,21 +132,24 @@ test('#667 F: Kokpit / Mapa / Strefy / geofence — ≥1 pomarańczowa; SE-KAA w
   await waitOrangeIn(page, '[data-page="map"]', 'Mapa telefon 390');
   expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
 
-  /* DP-229 F7 r6: map_display_state wymaga current_app_user_id (jak bmapa asu) —
-   * goły psql jako postgres → „Brak aktywnego konta”. */
+  /* DP-229 F7 r6/r7: map_display_state wymaga current_app_user_id (jak bmapa asu).
+   * F7 r7: jsonb_array_length tylko gdy typeof=array — inaczej „cannot get array length of a scalar”. */
   const hhlId = psql(`select id::text from auth.users where email = 'hhl@bk5.local' limit 1`);
   expect(hhlId, 'auth.users hhl@bk5.local').toMatch(/^[0-9a-f-]{36}$/i);
-  const legs = psql(`
+  const kaa = psql(`
     begin;
     select set_config('request.jwt.claim.sub', '${hhlId}', true);
     set local role authenticated;
-    select string_agg(leg, ',' order by leg)
-    from (
-      select e->>'leg' as leg
-      from jsonb_array_elements((select map_display_state()->'roads')) e
-      where jsonb_typeof(e->'points') = 'array' and jsonb_array_length(e->'points') >= 2
-    ) x;
+    select exists(
+      select 1
+      from jsonb_array_elements(coalesce(map_display_state()->'roads', '[]'::jsonb)) e
+      where e->>'leg' = 'SE-KAA'
+        and case
+          when jsonb_typeof(e->'points') = 'array' then jsonb_array_length(e->'points')
+          else 0
+        end >= 2
+    )::text;
     commit
   `);
-  expect(legs, 'SE-KAA w map_display_state').toMatch(/SE-KAA/);
+  expect(kaa, 'SE-KAA w map_display_state').toBe('true');
 });

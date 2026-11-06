@@ -2698,6 +2698,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 06.11.2026 18:35 | #851 SCALONE `62d1cc1d` (DP-226 / **0424** F7 @ `d608592b`); start **DP-226 cz.2** H3 via ze słownika | pętla / C3 |
 | 06.11.2026 19:05 | #853 SCALONE `c6dcc0da` (DP-226 cz.2 F7 @ `69ccd6df`); start **DP-228** / **0425** (odrzut HERE przy starej linii → Stan systemu) | pętla / C3 |
 | 06.11.2026 19:45 | #854 SCALONE `4f79c0fd` (DP-228 / **0425** F7 @ `6ef49bbd`); start **DP-229** — CI `local-orange-maps` (local.spec + lokalny SB) | pętla / C3 |
+| 06.11.2026 21:50 | #855 DP-229 F7 r7: SE-KAA exists + case typeof=array (fail array_length scalar) | pętla / C3 F7 |
 | 06.11.2026 21:35 | #855 DP-229 F7 r6: map_display_state jako HHL (fail „Brak aktywnego konta”) | pętla / C3 F7 |
 | 06.11.2026 21:15 | #855 DP-229 F7 r5: closeDrawerIfOpen przed nav (fail geo — drawer-scrim intercepts) | pętla / C3 F7 |
 | 06.11.2026 20:55 | #855 DP-229 F7 r4: waitOrangeIn w kontenerze widoku (fail overlay-pane „hidden” = mapa w schowku) | pętla / C3 F7 |

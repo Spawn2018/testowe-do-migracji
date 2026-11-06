@@ -1,3 +1,9 @@
+## 2026-11-06 21:50 — #855 DP-229 F7 r7: SE-KAA exists + bezpieczny array_length
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne` do wykonania.
+- Scalanie: brak F7 „gotowe” — CI fail @ `dda4d4d2`: UI ✔; JWT ✔; `jsonb_array_length` na skalarze (`points`) → „cannot get array length of a scalar”; unit ✔.
+- **Krok** F7 #855 r7: `exists(… SE-KAA …)` z `case typeof=array then length else 0` (jak bmapa). Bez migracji. Czekam CI→F7. Bez push na main.
+
 ## 2026-11-06 21:35 — #855 DP-229 F7 r6: map_display_state jako HHL
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne` do wykonania.
