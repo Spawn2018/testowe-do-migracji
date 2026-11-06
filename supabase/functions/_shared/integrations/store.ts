@@ -35,8 +35,7 @@ import {
   sailingCancelledRiskLike,
 } from '../ferry/tallinkRestore.ts';
 import type { DbSailing, RiskInput, SailingInsert, SailingPatch, VesselRow } from './sync.ts';
-import { ROAD_LEGS } from '../here/refreshRoadLegs.ts';
-import { legDefFromRow } from '../here/legDefFromRow.ts';
+import { listHereRoadLegsFromSb } from '../here/listHereRoadLegsFromSb.ts';
 import { mergeHolidayBanSamples } from '../here/windAndBans.ts';
 import { windThresholdsFromOps } from '../e49/etaWeather.ts';
 import { hoursLeftFromH4Segments } from '../e49/detourCaseJob.ts';
@@ -823,18 +822,9 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
         retry_after: row.retry_after != null ? String(row.retry_after) : null,
       }));
     },
-    /** #667 E / DP-23 — słownik legów; DP-44 legDefFromRow; F7 #677 B1 pusty → ROAD_LEGS. */
+    /** #667 E / DP-23 / DP-56 — słownik legów; wspólne listHereRoadLegsFromSb. */
     async listHereRoadLegs() {
-      const r = await sb
-        .from('here_road_legs')
-        .select('leg,origin_lat,origin_lng,dest_lat,dest_lng,spec,summary,corridor_code,browser_fetch,map_group,via_points,min_km,max_km,cron_fetch')
-        .eq('active', true)
-        .order('sort_order');
-      if (r.error) throw new Error(`here_road_legs: ${r.error.message}`);
-      const rows = r.data ?? [];
-      // Kolejność wdrożenia: 0355 → Edge; przed 0355 / pusty słownik = zapas core.
-      if (rows.length === 0) return [...ROAD_LEGS];
-      return rows.map((row) => legDefFromRow(row));
+      return listHereRoadLegsFromSb(sb);
     },
     async storeHereRoad(
       leg: string,

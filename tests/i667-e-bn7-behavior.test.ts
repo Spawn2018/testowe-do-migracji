@@ -146,11 +146,76 @@ describe('DP-43 acceptedBrowserFetchCount', () => {
   });
 });
 
-describe('#677 F7 B1 Edge listLegs — brak cichego fail-open', () => {
-  it('here-roads listLegs: if (r.error) throw + zapas ROAD_LEGS', () => {
+describe('DP-56 / DP-57 — listLegs error + CORS', () => {
+  function fakeSb(result: { data: unknown; error: { message: string } | null }) {
+    const chain = {
+      select() {
+        return chain;
+      },
+      eq() {
+        return chain;
+      },
+      order() {
+        return Promise.resolve(result);
+      },
+    };
+    return { from: () => chain };
+  }
+
+  it('DP-56: listHereRoadLegsFromSb — {error} → rejects (Edge listLegs)', async () => {
+    const { listHereRoadLegsFromSb } = await import(
+      '../supabase/functions/_shared/here/listHereRoadLegsFromSb.ts'
+    );
+    await expect(
+      listHereRoadLegsFromSb(fakeSb({ data: null, error: { message: 'db-down' } })),
+    ).rejects.toThrow(/here_road_legs: db-down/);
+  });
+
+  it('DP-56: store listHereRoadLegs — {error} → rejects', async () => {
+    const { supabaseStore } = await import(
+      '../supabase/functions/_shared/integrations/store.ts'
+    );
+    await expect(
+      supabaseStore(fakeSb({ data: null, error: { message: 'rpc-fail' } }) as never).listHereRoadLegs!(),
+    ).rejects.toThrow(/here_road_legs: rpc-fail/);
+  });
+
+  it('DP-56: pusty słownik → zapas ROAD_LEGS (nie ciche [])', async () => {
+    const { listHereRoadLegsFromSb } = await import(
+      '../supabase/functions/_shared/here/listHereRoadLegsFromSb.ts'
+    );
+    const { ROAD_LEGS } = await import(
+      '../supabase/functions/_shared/here/refreshRoadLegs.ts'
+    );
+    const legs = await listHereRoadLegsFromSb(fakeSb({ data: [], error: null }));
+    expect(legs).toEqual([...ROAD_LEGS]);
+  });
+
+  it('DP-56/57: Edge używa listHereRoadLegsFromSb; try/catch + edgeErrorResponse', () => {
     const edge = readFileSync('supabase/functions/here-roads/index.ts', 'utf8');
-    expect(edge).toMatch(/if \(r\.error\) throw/);
-    expect(edge).toMatch(/rows\.length === 0\) return \[\.\.\.ROAD_LEGS\]/);
-    expect(edge).toMatch(/legDefFromRow/);
+    expect(edge).toMatch(/listHereRoadLegsFromSb/);
+    expect(edge).toMatch(/try\s*\{[\s\S]*refreshRoadLegs[\s\S]*\}\s*catch/);
+    expect(edge).toMatch(/edgeErrorResponse/);
+    expect(edge).not.toMatch(/reason:\s*e\.message|e\.message\s*:\s*'blad'/);
+  });
+
+  it('DP-57 / F7 #849: wyjątek z apiKey=SEKRET → odpowiedź bez SEKRET', async () => {
+    const { edgeErrorPayload, edgeErrorResponse, publicReasonFromCatch } = await import(
+      '../supabase/functions/_shared/here/edgeErrorResponse.ts'
+    );
+    const leak = new Error(
+      'error sending request for url (https://router.hereapi.com/v8/routes?apiKey=SEKRET&transportMode=truck)',
+    );
+    expect(publicReasonFromCatch(leak)).toBe('blad');
+    expect(publicReasonFromCatch(new Error('here_road_legs: db-down'))).toBe('slownik');
+    const body = edgeErrorPayload(leak);
+    expect(body).toEqual({ ok: false, reason: 'blad' });
+    expect(JSON.stringify(body)).not.toContain('SEKRET');
+    const res = edgeErrorResponse(leak);
+    const json = await res.json();
+    expect(res.status).toBe(502);
+    expect(json).toEqual({ ok: false, reason: 'blad' });
+    expect(JSON.stringify(json)).not.toContain('SEKRET');
+    expect(String(res.headers.get('access-control-allow-origin') ?? '')).toMatch(/tower\.log-mar\.pl/);
   });
 });
