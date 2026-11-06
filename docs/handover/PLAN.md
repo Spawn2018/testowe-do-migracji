@@ -1188,7 +1188,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP | Właściciel | Co | Źródło | Etap | Stan |
 |---|---|---|---|---|---|
 | DP-1 | Cursor | Trasy na sztywno (CASE) w `apply_ferry_se_from_position` / `a10_try_ferry_backup` / `detect_ferry_overdue` → `ferry_routes` | F7 #649 | BN3/BN8 | DONE (BN1 0339/0344) |
-| DP-2 | Cursor | 15× `pg_get_functiondef like` w `status.sh` → testy zachowania | F7 #649 | po #667 | W TOKU (`pakiet/c3-dp-2-12-behavior-safefleet`) |
+| DP-2 | Cursor | 15× `pg_get_functiondef like` → testy zachowania. **Inwentarz (F7 #832):** ~~1 mapa `ferry_ports`~~ ~~2 bez coalesce GDN~~ ~~3 join bez `fr.active`~~ ~~4 `promote` outbound~~ ~~5 REMOVED geofence~~ (#832); ~~6 `refresh_load_eta`/`road_corridor_pre`~~ ~~7 assign bez PL~~ ~~8–9 DP-136 FI assign/propose~~ ~~10 DP-137 `v_on_se`~~ (reszta PR); **zostają:** 11 `process_position`×`finland_land_geom`, 12 `eta_record`×`v_route` (status); 13–15 skan `dec-auto`/`dec-fx`/`dec2`/`dec6`/`bmapa` (poza status — domknięcie). | F7 #649 / #832 | C3 | W TOKU (`pakiet/c3-dp-2-reszta-behavior`) |
 | DP-3 | koordynator | `routeUnknown` w UI — „nieznana trasa” w wierszu rejsu | F7 #649 | wyglad | SCALONE (#672 `8ec16105`) |
 | DP-4 | koordynator | `p9cMap.ts` / `p9eGroups.ts` — porty ze słownika | F7 #649 | wyglad | SCALONE (#672) |
 | DP-5 | koordynator | `SailingsPanel` — nieznany kod ≠ GDN-NYN | F7 #649 | wyglad | SCALONE (#672) |
@@ -1198,7 +1198,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-9 | Cursor (#668) | `routeLabelPl` — nazwy tras z bazy (BN9-b pkt 12) | #670 | #668 / BN8 | SCALONE (#668) |
 | DP-10 | Cursor | test: PoT nie nadpisuje RECZNIE / nie dubluje Viking/Eckerö | F7 #661 | DFDS/#666 | SCALONE (#668 `bn2-ferry-jobs` / schedule) |
 | DP-11 | Cursor | `operatorsForRoute` — baza przed seedem (TLL-HEL Tallink) | F7 #649 | BN3/BN8 | DONE w bn3-winter-nav-mmsi (RPC przed seedem) |
-| DP-12 | Cursor | SafeFleet: wszystkie punkty `presences` bez duplikatów | F7 #663 | po #667 | W TOKU (`pakiet/c3-dp-2-12-behavior-safefleet`) |
+| DP-12 | Cursor | SafeFleet: wszystkie punkty `presences` bez duplikatów | F7 #663 | po #667 | SCALONE (#832 `20e490b8`) |
 | DP-13 | koordynator | ZonesMap: tory promów z `ferryLaneLines` (PL–SE + bałtyckie); tryb „one” bez torów | F7 #676 | wyglad | SCALONE (#676 `4ec47bd2`) |
 | DP-14 | koordynator | jawna trasa Polferries/Stena w `routeOfVessel` | F7 #672 | wyglad | SCALONE (#674 `8f916302`) |
 | DP-15 | koordynator | test U4 z inną kolejnością wejścia | F7 #672 | wyglad | SCALONE (#674) |
@@ -1476,7 +1476,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 Źródło: #762 (Spawn2018; 03.11). Po #760 → #756 (DP-187/188) → C1…. Koordynator: pakiety DP-A/B/C (front) — nie brać.
 1. **C1 — Korytarz bałtycki:** ~~DP-179~~ DONE; ~~143/144~~ DONE; ~~DP-146~~ SCALONE (#769 `1a523a5f`); ~~152~~ SCALONE (#768 `0abe9a8f`); ~~155/156~~ SCALONE (#766 `272e0afc` / **0388**); ~~157/158~~ DONE (LT/LV/EE/FI etykiety, szum FI; przed BN10).
 2. **C2 — telematyka / ETA:** ~~**DP-193+194**~~ SCALONE (#770 / **0389**); ~~**DP-197**~~ SCALONE (#771 `18c05217` / **0390**); ~~**DP-198**~~ SCALONE (#772 `ee54ad20`); ~~**DP-119**~~ SCALONE (#774 `5f0c4bce`; rej. koord. DP-116 cz. 2); ~~**DP-200**~~ SCALONE (#776 `e023c2ba`); ~~**DP-196**~~ SCALONE (#775 `b4a8dab9`); ~~**DP-120**~~ SCALONE (#777 `2a99a8e6` / **0391**); ~~**DP-202+203**~~ SCALONE (#780 `642a9b21` / **0392**+**0393**); ~~**DP-121**~~ SCALONE (#782 `4b9e0d9a` / **0394**); ~~**DP-204**~~ SCALONE (#784 `34263f4d`); ~~**DP-786**~~/**DP-207** SCALONE (#787 `31a1c0bb` / **0395**); ~~**DP-205**~~ SCALONE (#785 `7ef4bc3c` / **0396**+**0397**+**0398**); ~~**DP-206**~~ SCALONE (#791 `4e5ffc99` / **0399**–**0405**, `DETOUR_E49=true`); ~~**DP-123**~~ SCALONE (#792 `ba31c223`); ~~**DP-208**~~ SCALONE (#794 `21a92c37` / **0406**; otwarte: gęsta E4 OSM); ~~**DP-209**~~ SCALONE (#795 `9ab5b2cb`); ~~**DP-124**~~ SCALONE (#796 `9a5d7e35`); ~~**#797 PILNE**~~ SCALONE (#799 `181b70b2` / **0407**); ~~**DP-215**~~ SCALONE (#800 `84021df9`); ~~**DP-216**~~ SCALONE (#802 `4e74d3cf` / **0408**); ~~**DP-213**~~ SCALONE (#803 `96e6f20b`); ~~**DP-217**~~ SCALONE (#806 `2723af71` / **0409**); ~~**DP-218**~~ SCALONE (#808 `5e7a1173` / **0410**); ~~**DP-211**~~ SCALONE (#805 `4cbcb472`); ~~**DP-210**~~ SCALONE (#810 `18ab51c6`); ~~**DP-212**~~ SCALONE (#811 `12621eea`); ~~**DP-219**~~ SCALONE (#812 `e396a758` / **0411**); ~~**DP-221**~~ SCALONE (#813 `d6be6012`); ~~**DP-223**~~ SCALONE (#828 `dd7d637a`); ~~**DP-224**~~ SCALONE (#826); ~~**DP-225**~~ SCALONE (#827); ~~**DP-220**~~ SCALONE (#829 `c1cc27a0` / **0416**); ~~**DP-222**~~ SCALONE (#830 `2bc91a32` / **0417**+**0418**).
-3. **C3 — stare pozycje backendu:** DP-2, ~~10~~, DP-12, 22, 24, 29–32, 38–40, 43, 46, 47, 53–58 (+ ~~**DP-195**~~ `#831`). **Bieżące:** **DP-2+12** (`pakiet/c3-dp-2-12-behavior-safefleet`).
+3. **C3 — stare pozycje backendu:** DP-2, ~~10~~, ~~DP-12~~ (#832), 22, 24, 29–32, 38–40, 43, 46, 47, 53–58 (+ ~~**DP-195**~~ `#831`). **Bieżące:** **DP-2 reszta** (`pakiet/c3-dp-2-reszta-behavior` — inwentarz 1–15; −5 grepy; zostają 11–12 status + 13–15 inne zestawy).
 4. **C4 — reszta:** DP-69, 70, 81–83, 90–93, 97, 99–103, 105–109, 111, 112.
 5. **C5 — warunkowe:** DP-186 (decyzja 04.11 ~07:00 po 24 h odbioru #753).
 Cel: C1–C4 przed bramą #588 i wydaniem 1.0 (≈ 20–21.11). Pozycja >~50 linii / nowa tabela → osobne zgłoszenie.
@@ -2674,6 +2674,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 03.11.2026 21:35 | #777 F7 r1 niegotowe → seed Portnet/Deltamarin, I=IC, dzień przypłynięcia, złożone IBNet | pętla / C2 F7 |
 | 03.11.2026 22:00 | #777 SCALONE `2a99a8e6` (DP-120 / **0391**; F7 gotowe @ `fecc5f7a`); start DP-202+203 (#778+#779) | pętla / C2 |
 | 03.11.2026 23:50 | #780 F7 r3: auto DeepL na luki TV/bałtyk (bez RESOURCE_MISSING:TV_CODE); **0393** memory_auto_24h | pętla / C2 F7 |
+| 06.11.2026 06:15 | #832 SCALONE `20e490b8` (DP-2 cz.1+DP-12 F7 @ `6597881e`); start **DP-2 reszta** (inwentarz 1–15, −5 grepy → 682) | pętla / C3 |
 | 06.11.2026 05:05 | #831 SCALONE `eb1d775c` (DP-195 F7 @ `5e9a7680`); start C3 **DP-2+12** (status behawioralne + SafeFleet trajectory) | pętla / C3 |
 | 06.11.2026 04:20 | #830 SCALONE `2bc91a32` (DP-222 drobne F7 @ `7391afbc` / **0417**+**0418**); start C3 **DP-195** tor GDY-KAA | pętla / C3 |
 | 06.11.2026 03:55 | DP-222 #830 **0418**: Nova 02.11 ATD + `previousActualArrivalBefore` (regresja since/prevArr); CI→F7 | pętla / C2 |

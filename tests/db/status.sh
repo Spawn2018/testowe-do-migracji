@@ -2454,15 +2454,14 @@ chk "BN8a: assume_dep GDN-NYN = 60" \
   "select assume_dep_min::text from ferry_routes where code='GDN-NYN'" 60
 chk "BN8a: corridor_code PL-GDN = PL_ROAD" \
   "select corridor_code from here_road_legs where leg='PL-GDN'" PL_ROAD
-chk "BN8a: refresh_load_eta bez sztywnego PL_ROAD" \
-  "select pg_get_functiondef('public.refresh_load_eta(uuid)'::regprocedure) like '%road_corridor_pre%'" t
+# DP-2: zamiast pg_get_functiondef like —
+# refresh/road_corridor_pre + assign bez PL → W5a/W5b/W5d + DP-136 (FI propose);
+# process_position finland_land_geom + eta_record v_route → zostają poniżej (brak e2e 1:1).
 chk "BN8a: process_position ląd FI" \
   "select pg_get_functiondef('public.process_position(uuid,double precision,double precision,timestamptz,position_source,numeric,numeric,boolean,jsonb)'::regprocedure) like '%finland_land_geom%'" t
 chk "BN8a: eta_record filtr po v_route" \
   "select (pg_get_functiondef('public.eta_record_segment_observations(uuid)'::regprocedure) like '%PORT_OUT%, v_route)%'
      and pg_get_functiondef('public.eta_record_segment_observations(uuid)'::regprocedure) not like '%PORT_OUT%, v_op)%')" t
-chk "BN8a: assign bez ograniczenia do PL" \
-  "select pg_get_functiondef('public.sailing_mismatch_assign(uuid,uuid)'::regprocedure) not like '%pf.country = ''PL''%'" t
 L820=aaaaaaaa-0000-0000-0000-00000000820a
 q "insert into loads (id, project_id, carrier_org_id, hhl_order_no, carrier_order_no, status, plan_load_date, plan_delivery_date, ferry_route)
     values ('$L820','$P','$SCXO','HHL/BN8A-820','SCX/BN8A-820','PLANNED', current_date, current_date + 3, 'TLL-HEL')" >/dev/null
@@ -3621,12 +3620,9 @@ else
 fi
 
 # DP-136 (F7 #708 r1 / F7 #712 r1): przepięcie — ląd SE|FI.
+# DP-2: bez pg_get_functiondef like — propose + assign rollback (FI).
 # Osobny vessel — …0001+2026-10-12 12:00 już zajęte przez S649o (unique vessel+departure).
 # nie L f0 — zajęte przez L640g (BN1 0344); d0/d1 wolne
-chk "DP-136: assign widzi finland_land_geom" \
-  "select pg_get_functiondef('public.sailing_mismatch_assign(uuid,uuid)'::regprocedure) like '%finland_land_geom%'" t
-chk "DP-136: propose widzi finland_land_geom" \
-  "select pg_get_functiondef('public.sailing_mismatch_propose_id(uuid)'::regprocedure) like '%finland_land_geom%'" t
 S136a=77777777-0000-0000-0000-00000000136a
 S136b=77777777-0000-0000-0000-00000000136b
 L136=$(L d0)
@@ -3655,6 +3651,16 @@ chk "DP-136: fixture positions L136" \
   "select count(*) from positions where load_id='$L136'" 2
 chk "DP-136: propose z samym lądem FI (bez SE)" \
   "select (public.sailing_mismatch_propose_id('$L136') = '$S136a')" t
+# F7 #833: assign przy samym lądzie FI (zastępuje grep finland_land_geom + v_on_se).
+chk "DP-136: assign przy samym lądzie FI → sailing (rollback)" \
+  "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+   select sailing_mismatch_assign('$L136','$S136a');
+   select (sailing_id = '$S136a') from loads where id='$L136'; rollback" t
+chk "DP-137: assign ląd FI — bez STATUS_AUTO trasie SE (rollback)" \
+  "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
+   select sailing_mismatch_assign('$L136','$S136a');
+   select count(*) from load_events where load_id='$L136' and event_type='STATUS_AUTO'
+     and coalesce(payload->>'powod','') like '%trasie SE%'; rollback" 0
 mk $L136w W136 "'HHL/W136'" "'SCX/W136'" AT_PORT_GDANSK "'$S136b'"
 q "insert into load_events (load_id, event_type, occurred_at) values
     ('$L136w','MILESTONE_LOADED','2026-10-11 08:00+00');
@@ -3664,9 +3670,7 @@ q "insert into load_events (load_id, event_type, occurred_at) values
 chk "DP-136: zatoka FI nie liczy się jako ląd (propose null)" \
   "select (public.sailing_mismatch_propose_id('$L136w') is null)" t
 
-# DP-137: assign — se_from_position tylko przy lądzie SE; FI → AIS backup (powód z „FI”).
-chk "DP-137: assign se_from_position tylko po sweden_land" \
-  "select pg_get_functiondef('public.sailing_mismatch_assign(uuid,uuid)'::regprocedure) ~ 'v_on_se is true'" t
+# DP-137 / BN4: STATUS_AUTO z FI pochodzi z apply_ferry_ais_arrival_backup (L367h powyżej), nie z assign.
 chk "DP-137: TLL-HEL STATUS_AUTO powod z FI (nie trasie SE)" \
   "select (coalesce(payload->>'powod','') like '%FI%' and coalesce(payload->>'powod','') not like '%trasie SE%') from load_events where load_id='$L367h' and event_type='STATUS_AUTO' and coalesce(payload->>'powod','') like '%promie%' order by occurred_at desc limit 1" t
 
