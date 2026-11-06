@@ -1,3 +1,15 @@
+## 2026-11-06 07:15 — #834 F7 r1: process_position e2e + eta_record obs
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: brak — F7 #834 r1 **niegotowe** (11/12 omijały funkcje; GID; linia PLAN o markerach).
+- **Krok F7:** `process_position` FI ląd → IN_TRANSIT_SE; `eta_record_segment_observations` PORT_CHECKIN from=14:00; GID HEL/STO; PLAN markery 12+11 świadomie. status **688**. Czekam CI→F7. Potem DP-22/24.
+
+## 2026-11-06 06:50 — #833 SCALONE; DP-2 11–15 (eta_seg v_route)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: **#833 SCALONE** `6b609059` (DP-2 F7 gotowe @ `bac46469`, CI unit+visual+db ✔).
+- **Krok C3** `pakiet/c3-dp-2-11-15-behavior`: 11 → DP-218; 12 → eta_seg PORT_OUT TLL-STO vs v_op TALLINK→HEL; 13–15 skan dec-*/bmapa = markery poza 15× status. status **685**. Czekam CI→F7. Potem DP-22/24.
+
 ## 2026-11-06 06:25 — #833 F7 r1: assign FI rollback (+2)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.

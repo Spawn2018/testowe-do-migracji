@@ -13,7 +13,7 @@ const ROOT = resolve(import.meta.dirname, '../..');
 /** Oczekiwane OK na lokalnym Postgresie (gate.sh). */
 export const EXPECTED_LOCAL = {
   security: 523, // DP-224 F7 #822: +2 newCount/state known dla info; było 521
-  status: 684, // DP-2 C3 F7 #833: −5 grepy +2 assign FI rollback; było 682; zostają process_position FI + eta_record v_route
+  status: 688, // DP-2 F7 #834: +process_position FI e2e +GID +eta_record obs (−1 eta_seg v_route); było 685
   storage: 37,
   money: 200, // DP-167 F7 #734 r2: +2 title_key zmiana; było 198 (r1 +4 od 194 / DP-167 +3 od 191)
   release: 146,
