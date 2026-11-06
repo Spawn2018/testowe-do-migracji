@@ -1,3 +1,9 @@
+## 2026-11-06 06:25 — #833 F7 r1: assign FI rollback (+2)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: brak F7 (r1: brak assign przy lądzie FI).
+- **Krok F7:** `sailing_mismatch_assign(L136,S136a)` rollback → sailing_id; brak STATUS_AUTO „trasie SE”; komentarz BN4 backup. status **684**. Czekam CI→F7.
+
 ## 2026-11-06 06:15 — #832 SCALONE; DP-2 reszta (inwentarz + −5 grepy)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
