@@ -49,11 +49,16 @@ describe('#837 monitorujpojazd parser / URL', () => {
     expect(scrubMonitorujPojazdToken(raw)).not.toContain(FAKE_TOKEN);
   });
 
-  it('EXPIRED → invalid; OK z lat/lon/ts UTC', () => {
+  it('EXPIRED → invalid; NOT_STARTED → pending; OK z ts Europe/Warsaw', () => {
     expect(parseMonitorujPojazdPayload({
       state: 'EXPIRED', guid: FAKE_TOKEN, reason: 2,
     }, Date.parse('2026-11-06T12:00:00Z'))).toMatchObject({ ok: false, kind: 'invalid' });
 
+    expect(parseMonitorujPojazdPayload({
+      state: 'NOT_STARTED', guid: FAKE_TOKEN, reason: 1,
+    }, Date.parse('2026-11-06T12:00:00Z'))).toMatchObject({ ok: false, kind: 'pending' });
+
+    /* Zima CET (UTC+1): „11:50” Warsaw → 10:50Z — F7 #839. */
     const ok = parseMonitorujPojazdPayload({
       state: 'OK',
       ts: '2026-11-06 11:50:00',
@@ -65,12 +70,23 @@ describe('#837 monitorujpojazd parser / URL', () => {
     expect(ok).toMatchObject({
       ok: true, lat: 54.35, lon: 18.65, speedKmh: 62, ignition: true, vehicleName: 'TEST-PLATE',
     });
-    if (ok.ok) expect(ok.observedAt).toBe('2026-11-06T11:50:00.000Z');
+    if (ok.ok) expect(ok.observedAt).toBe('2026-11-06T10:50:00.000Z');
   });
 
-  it('parse ts ISO i odrzut przyszłości', () => {
+  it('parse ts: ISO z offsetem; lokalny Warsaw zima/lato; odrzut przyszłości', () => {
     expect(parseMonitorujPojazdTimestamp('2026-11-06T10:00:00Z', Date.parse('2026-11-06T12:00:00Z')))
       .toBe('2026-11-06T10:00:00.000Z');
+    expect(parseMonitorujPojazdTimestamp('2026-11-06T10:00:00+01:00', Date.parse('2026-11-06T12:00:00Z')))
+      .toBe('2026-11-06T09:00:00.000Z');
+    /* Zima CET UTC+1 */
+    expect(parseMonitorujPojazdTimestamp('2026-11-06 11:50:00', Date.parse('2026-11-06T12:00:00Z')))
+      .toBe('2026-11-06T10:50:00.000Z');
+    /* Lato CEST UTC+2 */
+    expect(parseMonitorujPojazdTimestamp('2026-07-15 14:00:00', Date.parse('2026-07-15T13:00:00Z')))
+      .toBe('2026-07-15T12:00:00.000Z');
+    /* Lokalny Warsaw w przyszłości względem now → null (filtr +5 min) */
+    expect(parseMonitorujPojazdTimestamp('2026-11-06 14:00:00', Date.parse('2026-11-06T12:00:00Z')))
+      .toBeNull();
     expect(parseMonitorujPojazdTimestamp('2026-11-06T13:00:00Z', Date.parse('2026-11-06T12:00:00Z')))
       .toBeNull();
   });
@@ -124,7 +140,8 @@ describe('#837 monitorujpojazd-poll job', () => {
       state: 'OK',
       data: [{
         id: 1, name: 'T', lat: 54.4, lon: 18.7, speed: 40, speed_unit: 'km/h',
-        ignition: false, ts: '2026-11-06 11:58:00',
+        /* Warsaw 12:58 CET → 11:58Z */
+        ignition: false, ts: '2026-11-06 12:58:00',
       }],
     }), { status: 200 }));
     load.monitorujpojazd_error_streak = 3;
@@ -139,8 +156,33 @@ describe('#837 monitorujpojazd-poll job', () => {
     expect(positions).toHaveLength(1);
     expect(positions[0]).toMatchObject({
       source: 'MONITORUJPOJAZD', loadId: 'load-mp-1', lat: 54.4, lon: 18.7,
+      ts: '2026-11-06T11:58:00.000Z',
     });
     expect(JSON.stringify(positions[0])).not.toContain(FAKE_TOKEN);
+  });
+
+  it('NOT_STARTED → pending bez streak i bez sprawy', async () => {
+    const risks: unknown[] = [];
+    const load = baseLoad({ monitorujpojazd_error_streak: 2, monitorujpojazd_check_state: 'ok' });
+    const fetchImpl = vi.fn(async () => new Response(JSON.stringify({
+      state: 'NOT_STARTED', guid: FAKE_TOKEN, reason: 1,
+    }), { status: 200 }));
+    const store: Partial<SyncStore> = {
+      telmMonitorujPojazdPollEnabled: async () => true,
+      listMonitorujPojazdLoadsForPoll: async () => [load],
+      updateMonitorujPojazdLoadState: async (_id, patch) => { Object.assign(load, patch); },
+      raiseRisk: async (r) => { risks.push(r); return true; },
+    };
+    const r = await runMonitorujPojazdPoll({
+      store: store as SyncStore,
+      fetch: fetchImpl as unknown as typeof fetch,
+      env: {},
+      now: () => new Date('2026-11-06T12:00:00Z'),
+    });
+    expect(r.ok).toBe(true);
+    expect(load.monitorujpojazd_check_state).toBe('pending');
+    expect(load.monitorujpojazd_error_streak).toBe(2);
+    expect(risks).toHaveLength(0);
   });
 
   it('pomija poza oknem śledzenia', async () => {

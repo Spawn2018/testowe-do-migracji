@@ -38,8 +38,12 @@ export type MonitorujPojazdPositionOk = {
 
 export type MonitorujPojazdPositionErr = {
   ok: false;
-  /** invalid = EXPIRED / 404 / zły host; down = sieć/5xx; no_position = OK bez lat/lon. */
-  kind: 'invalid' | 'down' | 'no_position';
+  /**
+   * invalid = EXPIRED / 403 / 404;
+   * pending = NOT_STARTED (udostępnienie jeszcze nieaktywne — bez sprawy);
+   * down = sieć/5xx; no_position = OK bez lat/lon.
+   */
+  kind: 'invalid' | 'pending' | 'down' | 'no_position';
   status: number | null;
   warning: string;
 };
@@ -91,8 +95,28 @@ export function scrubMonitorujPojazdToken(msg: string): string {
     .replace(/([0-9a-f]{26})([0-9a-f]{6})/gi, '…$2');
 }
 
+/** Offset strefy względem UTC w minutach (jak polferries.localToUtc — DST OK). */
+function tzOffsetMinutes(utcMs: number, tz: string): number {
+  const p = new Intl.DateTimeFormat('en-US', {
+    timeZone: tz, hourCycle: 'h23',
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+  }).formatToParts(new Date(utcMs));
+  const g = (t: string) => Number(p.find((x) => x.type === t)!.value);
+  return (Date.UTC(g('year'), g('month') - 1, g('day'), g('hour'), g('minute'), g('second')) - utcMs) / 60000;
+}
+
+/** Lokalny „YYYY-MM-DD HH:MM[:SS]” → ISO UTC (Europe/Warsaw, zima/lato). */
+function warsawLocalToUtcIso(y: number, mo: number, d: number, hh: number, mi: number, ss: number): string {
+  const naive = Date.UTC(y, mo - 1, d, hh, mi, ss);
+  let utc = naive - tzOffsetMinutes(naive, 'Europe/Warsaw') * 60_000;
+  utc = naive - tzOffsetMinutes(utc, 'Europe/Warsaw') * 60_000;
+  return new Date(utc).toISOString();
+}
+
 /**
- * `car.ts` / `data.ts` ze strony share — ISO albo „YYYY-MM-DD HH:MM[:SS]” traktowane jako UTC.
+ * F7 #839: `ts` ze share — ISO z offsetem/`Z` jak Date.parse;
+ * „YYYY-MM-DD HH:MM[:SS]” bez strefy = Europe/Warsaw (serwis PL; nie UTC).
  */
 export function parseMonitorujPojazdTimestamp(raw: unknown, nowMs: number = Date.now()): string | null {
   if (typeof raw !== 'string' || !raw.trim()) return null;
@@ -104,12 +128,13 @@ export function parseMonitorujPojazdTimestamp(raw: unknown, nowMs: number = Date
   }
   const m = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?/.exec(s);
   if (m) {
-    const ms = Date.UTC(
-      Number(m[1]), Number(m[2]) - 1, Number(m[3]),
+    const iso = warsawLocalToUtcIso(
+      Number(m[1]), Number(m[2]), Number(m[3]),
       Number(m[4]), Number(m[5]), Number(m[6] ?? 0),
     );
+    const ms = Date.parse(iso);
     if (!Number.isFinite(ms) || ms > nowMs + 5 * 60_000) return null;
-    return new Date(ms).toISOString();
+    return iso;
   }
   return null;
 }
@@ -136,12 +161,21 @@ export function parseMonitorujPojazdPayload(
   }
   const o = raw as Record<string, unknown>;
   const state = String(o.state ?? '').toUpperCase();
-  if (state === 'EXPIRED' || state === 'NOT_STARTED') {
+  /* F7 #839: NOT_STARTED = udostępnienie jeszcze nieaktywne — pending, nie sprawa. */
+  if (state === 'NOT_STARTED') {
+    return {
+      ok: false,
+      kind: 'pending',
+      status: null,
+      warning: 'monitorujpojazd: NOT_STARTED',
+    };
+  }
+  if (state === 'EXPIRED') {
     return {
       ok: false,
       kind: 'invalid',
       status: null,
-      warning: `monitorujpojazd: ${state}`,
+      warning: 'monitorujpojazd: EXPIRED',
     };
   }
   if (state && state !== 'OK') {
@@ -201,7 +235,7 @@ async function readBody(res: Response): Promise<unknown> {
 
 /**
  * GET data/<uuid>/. Timeout 20 s. Tylko host sledz.monitorujpojazd.pl; redirect: manual.
- * EXPIRED/NOT_STARTED / 403/404 → invalid; 5xx/sieć → down.
+ * EXPIRED / 403/404 → invalid; NOT_STARTED → pending; 5xx/sieć → down.
  */
 export async function fetchMonitorujPojazdPosition(opts: {
   token: string;

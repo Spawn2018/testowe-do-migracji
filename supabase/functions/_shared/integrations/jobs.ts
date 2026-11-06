@@ -6998,8 +6998,17 @@ export async function runMonitorujPojazdPoll(deps: JobDeps): Promise<JobResult> 
       };
 
       if (!res.ok) {
-        const streak = (load.monitorujpojazd_error_streak ?? 0) + 1;
         const kind = res.kind;
+        /* F7 #839: NOT_STARTED → pending, bez streak / sprawy (start przy załadunku). */
+        if (kind === 'pending') {
+          await apply({
+            monitorujpojazd_check_state: 'pending',
+            monitorujpojazd_check_at: nowIso,
+          });
+          warnings.push(scrubMonitorujPojazdToken(res.warning));
+          continue;
+        }
+        const streak = (load.monitorujpojazd_error_streak ?? 0) + 1;
         if (kind === 'invalid') {
           invalid++;
           await apply({
