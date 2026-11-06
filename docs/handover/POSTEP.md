@@ -1,3 +1,9 @@
+## 2026-11-06 20:40 — #855 DP-229 F7 r3: login hasłem (nie magic link)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: brak F7 „gotowe” — CI `local-orange-maps` fail @ `84f813f4`: Playwright wystartował, ale login magic link → Timeout `[data-auth="session"]` (AuthGate: `link-pending` / `must_set_password`); unit ✔.
+- **Krok** F7 #855 r3: `ci-orange-maps.sh` ustawia hasło Auth + `must_set_password=false`; spec loguje hasłem (`#auth-pw`); `local-ui.sh` status przez `SB_CLI` (nie `@latest`). Bez migracji. Czekam CI→F7. Bez push na main.
+
 ## 2026-11-06 20:20 — #855 DP-229 F7 r2: seed SE_KAA_TRACK + CLI pin
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.

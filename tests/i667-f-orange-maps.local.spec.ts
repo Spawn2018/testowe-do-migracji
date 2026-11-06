@@ -11,24 +11,27 @@ import { execFileSync } from 'node:child_process';
 
 const APP = process.env.I2_UI_BASE ?? '';
 const URL_ = process.env.VITE_SUPABASE_URL ?? '';
-const SR = process.env.SUPABASE_SERVICE_ROLE_KEY ?? '';
 const DB = process.env.SUPABASE_DB_URL ?? '';
+/** DP-229 CI: hasło z `scripts/i667/ci-orange-maps.sh` (FIVE_ROLE_LIVE_PASSWORD). */
+const PW = process.env.I667_TEST_PASSWORD ?? 'TowerDbTest-12roles!';
 const LOCAL = !!APP && /^http:\/\/(127\.0\.0\.1|localhost):/.test(URL_);
 const psql = (sql: string) => execFileSync('psql', [DB, '-Atq', '-c', sql]).toString().trim();
 
 test.describe.configure({ mode: 'serial' });
 test.skip(!LOCAL, '#667 F: wymaga I2_UI_BASE i lokalnego Supabase (build produkcyjny)');
 
+/**
+ * DP-229 F7 r3: logowanie hasłem (nie magic link).
+ * AuthGate ma `detectSessionInUrl=false` → hash z magic linku = ekran „Dalej”
+ * (`data-auth="link-pending"`), a świeże konto z seeda ma `must_set_password`
+ * → nigdy nie widać `[data-auth="session"]`.
+ */
 async function login(page: Page, email: string) {
-  const r = await fetch(`${URL_}/auth/v1/admin/generate_link`, {
-    method: 'POST',
-    headers: { apikey: SR, Authorization: `Bearer ${SR}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ type: 'magiclink', email }),
-  });
-  const g = await r.json() as { action_link?: string; properties?: { action_link?: string } };
-  const hop = await fetch((g.action_link ?? g.properties?.action_link)!, { redirect: 'manual' });
-  const loc = hop.headers.get('location') ?? '';
-  await page.goto(APP + loc.slice(loc.indexOf('#')));
+  await page.goto(APP);
+  await page.waitForSelector('[data-auth="login"]', { timeout: 30_000 });
+  await page.locator('input[type=email]').fill(email);
+  await page.locator('#auth-pw').fill(PW);
+  await page.locator('[data-auth="login"] form button[type=submit]').click();
   await page.waitForSelector('[data-auth="session"]', { timeout: 30_000 });
 }
 

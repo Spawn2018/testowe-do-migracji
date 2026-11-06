@@ -119,6 +119,65 @@ SQL
 echo "== konta testowe =="
 node scripts/auth/seed-test-users.mjs
 
+# AuthGate: magic link → „Dalej”; świeże konto → must_set_password → set-password.
+# CI loguje hasłem (jak e2e-browser) — trzeba hasła Auth + must_set_password=false.
+echo "== przygotowanie kont UI (hasło + profil) =="
+export I667_TEST_PASSWORD="${I667_TEST_PASSWORD:-TowerDbTest-12roles!}"
+node --input-type=module <<'NODE'
+import pg from 'pg';
+
+const base = (process.env.VITE_SUPABASE_URL || '').replace(/\/$/, '');
+const sr = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+const db = process.env.SUPABASE_DB_URL || '';
+const pw = process.env.I667_TEST_PASSWORD || 'TowerDbTest-12roles!';
+const emails = [
+  'hhl@bk5.local',
+  'hhl-ops@bk5.local',
+  'ksh@bk5.local',
+  'scx@bk5.local',
+  'scx-user@bk5.local',
+];
+if (!base || !sr || !db) throw new Error('DP-229: brak URL / SERVICE_ROLE / DB_URL');
+
+const list = await fetch(`${base}/auth/v1/admin/users?per_page=200`, {
+  headers: { apikey: sr, Authorization: `Bearer ${sr}` },
+}).then(async (r) => {
+  if (!r.ok) throw new Error(`admin/users HTTP ${r.status}`);
+  return r.json();
+});
+const users = (list.users || []).filter((u) => emails.includes(String(u.email || '').toLowerCase()));
+if (users.length < 1) throw new Error('DP-229: brak kont UI po seed-test-users');
+for (const u of users) {
+  const r = await fetch(`${base}/auth/v1/admin/users/${u.id}`, {
+    method: 'PUT',
+    headers: {
+      apikey: sr,
+      Authorization: `Bearer ${sr}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ password: pw, email_confirm: true }),
+  });
+  if (!r.ok) throw new Error(`password ${u.email}: HTTP ${r.status}`);
+}
+const c = new pg.Client({ connectionString: db });
+await c.connect();
+try {
+  const q = await c.query(
+    `update app_users
+        set must_set_password = false,
+            phone = coalesce(nullif(trim(phone), ''), '+48111000229')
+      where lower(email) = any($1::text[])`,
+    [emails],
+  );
+  if ((q.rowCount ?? 0) < 1) {
+    throw new Error('DP-229: app_users bez wierszy po seedzie (trigger zaproszenia?)');
+  }
+  console.log(`UI-ready: auth=${users.length} app_users=${q.rowCount}`);
+} finally {
+  await c.end();
+}
+NODE
+
 echo "== Playwright i667 F =="
 export SB_WORKDIR="$WD"
 SPEC=tests/i667-f-orange-maps.local.spec.ts bash scripts/i2/local-ui.sh
