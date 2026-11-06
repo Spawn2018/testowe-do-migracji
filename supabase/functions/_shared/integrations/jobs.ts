@@ -2063,6 +2063,7 @@ export async function runFerrySchedule(deps: JobDeps): Promise<JobResult> {
      DP-29: structureFail → opis ryzyka z „nieczytelny…”; DP-32: klucz bez daty. */
   const dfds = await fetchDfdsDays(deps, 60);
   warnings.push(...dfds.warnings);
+  const dfFail = dfds.sailings.length === 0;
   if (dfds.sailings.length > 0) {
     const incomingD: IncomingSailing[] = dfds.sailings.map((s) => ({
       route: s.route, vessel: s.vessel, departureUtc: s.departureUtc, arrivalUtc: s.arrivalUtc,
