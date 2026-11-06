@@ -635,7 +635,27 @@ export function statusAfterGdnNynAtd(
   return 'W_REJSIE';
 }
 
-/** DP-222 B2: W_REJSIE GDN-NYN bez ATA → DOPLYNAL gdy późniejszy ATD albo arrival+6h. */
+/**
+ * DP-222 drobne #814: GDN-NYN ZAPLANOWANY/OPOZNIONY bez ATD i bez ATA —
+ * gdy ten sam statek ma późniejszy rejs z ATD → DOPLYNAL (Wawel 03.11).
+ * Bez arrival+6h: 61b — sam upływ czasu nie domyka bez potwierdzenia.
+ */
+export function shouldCloseGdnNynWithoutAtd(
+  s: Pick<DbSailing, 'id' | 'vessel_id' | 'route' | 'status' | 'departure_at' | 'actual_departure_at' | 'actual_arrival_at'>,
+  peers: readonly Pick<DbSailing, 'id' | 'vessel_id' | 'departure_at' | 'actual_departure_at'>[],
+): boolean {
+  if (s.route !== 'GDN-NYN') return false;
+  if (s.status !== 'ZAPLANOWANY' && s.status !== 'OPOZNIONY') return false;
+  if (s.actual_departure_at != null || s.actual_arrival_at != null) return false;
+  const depMs = Date.parse(s.departure_at);
+  return peers.some((x) =>
+    x.vessel_id === s.vessel_id
+    && x.id !== s.id
+    && x.actual_departure_at != null
+    && Date.parse(x.departure_at) > depMs);
+}
+
+/** DP-222 B2 + drobne: W_REJSIE bez ATA / ZAPLANOWANY bez ATD+ATA → DOPLYNAL. */
 async function closeStaleGdnNynWithoutAta(deps: JobDeps, _sinceIso?: string): Promise<number> {
   const nowMs = deps.now().getTime();
   /* Jak backfill 0412 — 7 d (portnet since=1 d za krótki na „stary” GDN-NYN). */
@@ -644,10 +664,12 @@ async function closeStaleGdnNynWithoutAta(deps: JobDeps, _sinceIso?: string): Pr
   let updated = 0;
   for (const s of existing) {
     if (s.route !== 'GDN-NYN') continue;
-    if (s.status !== 'W_REJSIE') continue;
     if (s.actual_arrival_at != null) continue;
     if (s.source === 'RECZNIE') continue;
-    if (statusAfterGdnNynAtd(s, existing, nowMs, null) !== 'DOPLYNAL') continue;
+    const close = s.status === 'W_REJSIE'
+      ? statusAfterGdnNynAtd(s, existing, nowMs, null) === 'DOPLYNAL'
+      : shouldCloseGdnNynWithoutAtd(s, existing);
+    if (!close) continue;
     if (await deps.store.updateSailing(s.id, { status: 'DOPLYNAL' })) {
       updated += 1;
       s.status = 'DOPLYNAL';
