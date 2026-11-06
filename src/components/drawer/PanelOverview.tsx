@@ -437,8 +437,9 @@ export function PanelOverview(p: Props) {
      wiersz „Rejs” ma też trasę („Tallinn → Helsinki”) — Polska – Szwecja bez zmian (statek i godziny jak dotąd) */
   const route = transportRoute(load, sailings);
   const balticRoute = isBalticRoute(route) ? ferryRouteLabel(locale, route) : null;
+  /* DP-225: nazwa z rejsu, nie ze starego `ferry.vessel` po zmianie sailing_id */
   const sailingText = curSailing
-    ? `${load.ferry.vessel ?? curSailing.vessel}${balticRoute ? ` · ${balticRoute}` : ''} · ${fmtLocal(effDeparture(curSailing))} → ${fmtLocal(effArrival(curSailing))}${curSailing.status !== 'ZAPLANOWANY' ? ` · ${sailingStatusLabel(curSailing.status, locale)}` : ''}`
+    ? `${curSailing.vessel}${balticRoute ? ` · ${balticRoute}` : ''} · ${fmtLocal(effDeparture(curSailing))} → ${fmtLocal(effArrival(curSailing))}${curSailing.status !== 'ZAPLANOWANY' ? ` · ${sailingStatusLabel(curSailing.status, locale)}` : ''}`
     : null;
   /* F7 (A9): statek z rezerwacji bez wybranego rejsu — to nie jest przypisany rejs; „rejs” jest w brakach do „Gotowy” */
   const bookedName = curSailing ? null : (load.ferry.vessel ?? '').trim() || null;

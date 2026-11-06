@@ -12,6 +12,7 @@ import { createStorageSink } from './storageFiles';
 import { friendlyDbError } from '../lib/orderNumbers';
 import { mergeBellRefresh } from '../lib/bellList';
 import { setMarginFromServer } from '../lib/p5Source';
+import { reconcileLoadsFerry } from '../lib/sailings';
 
 let active: ReturnType<typeof createSupabaseProvider> | null = null;
 
@@ -27,14 +28,16 @@ export async function refreshFromServer(opts: { keepSelection?: boolean; backgro
   /* odświeżenie w tle: zapis użytkownika w trakcie zrzutu — zrzut może być starszy niż ekran; następne sprawdzenie ponowi */
   if (opts.background && ((writesPending > 0 && Date.now() - writesSince < WRITE_STUCK_MS) || writesSeq !== seq)) return;
   if (v != null) lastLoadsVersion = v;
+  /* DP-225: `ferry` ze `sailing_id` (nie stara nazwa promu w store) */
+  const loads = reconcileLoadsFerry(snap.loads, snap.sailings);
   const sel = useTowerStore.getState().selectedLoadId;
-  const keep = opts.keepSelection && sel != null && snap.loads.some((l) => l.id === sel) ? sel : null;
+  const keep = opts.keepSelection && sel != null && loads.some((l) => l.id === sel) ? sel : null;
   if (opts.background) {
     /* dzwonek scalony jak przy samym dzwonku (przeczytane lokalnie zostają przeczytane, wpisy z push zostają) */
-    useTowerStore.setState((s) => ({ ...snap, notifications: mergeBellRefresh(s.notifications, snap.notifications), selectedLoadId: keep }));
+    useTowerStore.setState((s) => ({ ...snap, loads, notifications: mergeBellRefresh(s.notifications, snap.notifications), selectedLoadId: keep }));
     return;
   }
-  useTowerStore.setState({ ...snap, selectedLoadId: keep });
+  useTowerStore.setState({ ...snap, loads, selectedLoadId: keep });
 }
 
 /** Właściciel 21.10.2026 20:14 (pkt 5): sam dzwonek z serwera (telefon: aplikacja wraca z tła bez przeładowania). */

@@ -1,3 +1,16 @@
+## 2026-11-06 00:30 — DP-225 #827: visual LFS 502 → skip smudge w fresh-smoke
+
+- Skrzynka: #817 zamknięte (DP-224 SCALONE); #550 WSTRZYMANE; #814 drobne W TOKU; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: brak F7 na #827. Visual fail = Git LFS HTTP 502 przy `git archive` (`shots-baseline`), nie regresja DP-225. unit ✔.
+- **Krok:** `fresh-smoke.sh` — `GIT_LFS_SKIP_SMUDGE` + wykluczenie `shots-baseline` (nieużywane w fresh-smoke). Czekam CI → F7.
+- Bez push na main.
+
+## 2026-11-06 00:15 — #826 SCALONE; start DP-225 ferry.vessel
+
+- Skrzynka: #817 B3+E SCALONE; #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: **#826 SCALONE** `2ae9b68c` (F7 gotowe @ `b0f9dd76`). #813 wstrzymane.
+- **Krok DP-225** `pakiet/c2-dp-225-ferry-vessel-sync`: `reconcileLoadFerry` / `effectiveFerryVessel`; most + rehydrate; karta `curSailing.vessel`. Dalej CI→F7.
+
 ## 2026-11-05 23:45 — DP-224 B3 F7 #826: dokończenie testów + idle timeout
 
 - Skrzynka: #817 PILNE B3+E; #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.

@@ -3,7 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { buildDemoSnapshot } from '../src/data/demoProvider';
 import {
   autoRiskCode, autoStatusText, buildSeedSailings, cancelledSailingRisks, checkSailingDraft, effDeparture,
-  ferryFromSailing, hasDeparted, historicalSailings, sailingAssignDenied, selectableSailings,
+  effectiveFerryVessel, ferryFromSailing, hasDeparted, historicalSailings,
+  reconcileLoadFerry, sailingAssignDenied, selectableSailings,
 } from '../src/lib/sailings';
 import { sailingFromRow, riskFromRow } from '../src/data/mappers';
 import { friendlyDbError } from '../src/lib/orderNumbers';
@@ -50,6 +51,21 @@ describe('M10 przypisanie rejsu', () => {
     expect(f).toMatchObject({ vessel: 'Wawel', departureAt: '2026-09-24T19:00:00Z', arrivalAt: '2026-09-25T13:00:00Z', bookingRef: 'PF-1', status: 'DELAYED' });
     expect(ferryFromSailing(S({ status: 'ODWOLANY' }), null).status).toBe('CANCELLED');
     expect(ferryFromSailing(undefined, null).status).toBe('NONE');
+  });
+  /* DP-225 / F7 #824: stary ferry.vessel po zmianie sailing_id */
+  it('DP-225: effectiveFerryVessel i reconcileLoadFerry biorą statek z rejsu, nie ze starego ferry', () => {
+    const wawel = S({ id: 'sw', vessel: 'Wawel' });
+    const stale = {
+      ...base,
+      sailingId: 'sw',
+      ferry: { vessel: 'Nova Star', departureAt: '2026-09-20T16:00:00Z', arrivalAt: '2026-09-21T10:00:00Z', bookingRef: 'OLD', status: 'BOOKED' as const },
+    } as Load;
+    expect(effectiveFerryVessel(stale, [wawel])).toBe('Wawel');
+    const fixed = reconcileLoadFerry(stale, [wawel]);
+    expect(fixed.ferry.vessel).toBe('Wawel');
+    expect(fixed.ferry.bookingRef).toBe('OLD');
+    expect(fixed.ferry.departureAt).toBe(wawel.departureAt);
+    expect(reconcileLoadFerry(stale, [])).toBe(stale);
   });
 });
 
