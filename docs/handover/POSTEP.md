@@ -1,3 +1,9 @@
+## 2026-11-06 19:05 — #853 SCALONE; start DP-228 (odrzut HERE → Stan systemu)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: **#853 SCALONE** `c6dcc0da` (DP-226 cz.2, F7 gotowe @ `69ccd6df`; CI unit+db+visual ✔).
+- **Krok** `pakiet/c3-dp-228-here-reject-status` / **0425**: `here_store_road(null)` ustawia `geom_reject` (bez kasowania points/`geom_ok`); `checkRoads` → accepted + rejected; `roads_version` liczy `geom_reject`. bmapa 218. Czekam CI→F7. Bez push na main.
+
 ## 2026-11-06 18:35 — #851 SCALONE; start DP-226 cz.2 (H3 via ze słownika)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
