@@ -131,8 +131,9 @@ export function planSailingSync(o: {
       // ETA (compute_load_eta): po W_REJSIE „opóźniony” = delayed_departure_at (tu ustawiane z OPOZNIONY).
       const inTrip = cur.status === 'W_REJSIE' || cur.status === 'DOPLYNAL'
         || cur.actual_departure_at != null || cur.actual_arrival_at != null;
-      // DP-91: OPOZNIONY nie cofamy do ZAPLANOWANY przed wypłynięciem (zniknięcie remarku).
-      const keepDelayed = cur.status === 'OPOZNIONY' && status === 'ZAPLANOWANY' && !inTrip;
+      // DP-91: DFDS — OPOZNIONY nie cofamy do ZAPLANOWANY przed wypłynięciem (zniknięcie remarku).
+      // Polferries/Stena: powrót do planu w komunikacie nadal czyści opóźnienie.
+      const keepDelayed = src === 'DFDS' && cur.status === 'OPOZNIONY' && status === 'ZAPLANOWANY' && !inTrip;
       if (keepDelayed) {
         want.delayed_departure_at = cur.delayed_departure_at;
         want.delayed_arrival_at = cur.delayed_arrival_at;
