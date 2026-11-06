@@ -1,3 +1,15 @@
+## 2026-11-06 05:25 — #832 CI db FAIL → fix DP-2 asercje
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: brak F7 (db czerwone @ `7a7641eb`).
+- **Krok:** DP-2 — `::text` boolean → oczekiwane `true`; REMOVED przez `GEOFENCE_ENTER` (nie `process_position` — okno śledzenia zamknięte jak CANCELLED). Czekam CI→F7. Potem DP-22/24….
+
+## 2026-11-06 05:05 — #831 SCALONE; start C3 DP-2+12
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: **#831 SCALONE** `eb1d775c` (DP-195 F7 gotowe @ `5e9a7680`, CI unit+visual+db ✔).
+- **Krok C3** `pakiet/c3-dp-2-12-behavior-safefleet`: DP-2 — `ferry_sailings_map`/REMOVED behawioralne zamiast `pg_get_functiondef like` (status **687**); DP-12 — trajectory `presences` wszystkie w oknie, bez duplikatów. DP-9/10 → SCALONE (#668). Dalej CI→F7. Potem DP-22/24….
+
 ## 2026-11-06 04:20 — #830 SCALONE; start C3 DP-195 (WATER_GDY_KAA)
 
 - Skrzynka: #550 WSTRZYMANE; #814 → zamknięcie po DP-222; BN5–8 w planie. Bez nowego `pilne`.
