@@ -92,4 +92,18 @@ describe('I-2: paczka demo bez kanałów wysyłki (statycznie)', () => {
     }
     expect(hits).toEqual([])
   })
+
+  // DP-53 (F7 #676 r2): warunek VITE_AUTH_MODE === 'supabase' w vesselsLoad działa tylko przy buildzie —
+  // vitest na źródle go nie złapie; bramka na dist demo musi wykluczyć vesselsServer + klienta.
+  it('DP-53: brak vesselsServer i klienta Supabase w dist demo', () => {
+    const banned = ['vesselsServer', 'supabase', '@supabase/supabase-js']
+    const hits: string[] = []
+    for (const f of walk(out).filter((p) => /\.(js|html|css|map)$/.test(p))) {
+      const s = readFileSync(f, 'utf8')
+      for (const b of banned) {
+        if (s.includes(b)) hits.push(`${f.slice(out.length)}: ${b}`)
+      }
+    }
+    expect(hits, hits.slice(0, 20).join('\n')).toEqual([])
+  })
 })
