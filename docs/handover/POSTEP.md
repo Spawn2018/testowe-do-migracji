@@ -1,3 +1,9 @@
+## 2026-11-06 16:35 — #849 SCALONE; start DP-58 (local.spec maps)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: **#849 SCALONE** `448faf5b` (DP-56+57, F7 gotowe @ `8f527a5f`; CI unit+db+visual ✔; bez migracji).
+- **Krok** `pakiet/c3-dp-58-local-spec-maps`: DP-58 — `i667-f-orange-maps.local.spec.ts`: bez `.catch` na zapasowy `data-view` i bez `if (count())`; Strefy = `geo`; + TrackReplay (Ślad) + mapa telefon 390. Bez migracji. Czekam CI→F7. Bez push na main.
+
 ## 2026-11-06 16:10 — #849 F7 r1: DP-57 bez wycieku apiKey
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
