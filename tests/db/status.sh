@@ -2387,6 +2387,7 @@ chk "BN1: brak outbound HEL-TLL" \
   "select public.ferry_route_is_outbound('HEL-TLL')" f
 # DP-2 (F7 #649): zachowanie zamiast pg_get_functiondef like — mapa z ferry_ports, bez coalesce GDN/NYN,
 # join bez fr.active (DP-134), REMOVED bez zmiany statusu; promote outbound = chk ferry_route_is_outbound + e2e #461.
+# ::text boolean → 'true'/'false' (nie 't'/'f' jak bool bez castu) — jak DP-205.
 HHL=11111111-0000-0000-0000-000000000001
 S134=77777777-0000-0000-0000-00000000134a
 # departure_at unikalne vs inne rejsy Wawel w oknie ±6 h (unique vessel+departure)
@@ -2402,14 +2403,14 @@ chk "DP-2: mapa dep/arr = ferry_ports (trasa PL)" \
      join ferry_routes fr on fr.code = m.route
      join ferry_ports pd on pd.code = fr.port_from
      join ferry_ports pa on pa.code = fr.port_to
-    where m.sailing_id='$S134'; commit" t
+    where m.sailing_id='$S134'; commit" true
 chk "DP-2/BN4: mapa bez domyslnego GDN (porty ze słownika)" \
   "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
    select (m.dep_port = 'GDN' and m.arr_port = 'NYN'
        and m.dep_port = fr.port_from)::text
      from ferry_sailings_map() m
      join ferry_routes fr on fr.code = 'GDN-NYN'
-    where m.sailing_id='$S134'; commit" t
+    where m.sailing_id='$S134'; commit" true
 chk "DP-135: mapa widzi rejs przy active=true" \
   "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL';
    select count(*)::text from ferry_sailings_map() where sailing_id='$S134'; commit" 1
@@ -2421,19 +2422,24 @@ q "update ferry_routes set active=true where code='GDN-NYN';
    delete from sailings where id='$S134'" >/dev/null
 chk "DP-134: GDN-NYN przywrócone active" \
   "select active from ferry_routes where code='GDN-NYN'" t
-# DP-2 REMOVED: wjazd w Port Gdańsk nie rusza statusu (0339 / #648).
-L002=aaaaaaaa-0000-0000-0000-000000000002
+# DP-2 REMOVED: apply_geofence_status wczesny return (0339 / #648) — GEOFENCE_ENTER nie rusza statusu.
+# (process_position nie zapisuje pozycji dla REMOVED: load_in_tracking_window zamyka jak CANCELLED, 0315.)
+L002=aaaaaaaa-0000-0000-0000-0000000000d2
 mk $L002 DP2 "'HHL/DP2'" "'SCX/DP2'" IN_TRANSIT_PL "'$S1'"
 q "set session_replication_role=replica;
    update loads
       set status='REMOVED', removed_at=now(), removed_prev_status='IN_TRANSIT_PL'
     where id='$L002';
    set session_replication_role=origin;" >/dev/null
-pos $L002 54.4030 18.6800 "2026-10-01 10:00+00"
-pos $L002 54.4031 18.6801 "2026-10-01 10:05+00"
+GID_DP2=$(q "select id from geofences where project_id='$P' and kind='PORT_OUT' and route='POLFERRIES' order by name limit 1")
+q "insert into load_events (load_id, event_type, occurred_at, source, payload) values
+    ('$L002', 'GEOFENCE_ENTER', '2026-10-01 10:00+00', 'TELEMATICS_API',
+     jsonb_build_object('geofence_id', '$GID_DP2', 'geofence_kind', 'PORT_OUT',
+                        'geofence_name', 'Port Gdańsk'));" >/dev/null
 chk "DP-2: REMOVED + wjazd Port Gdańsk → status bez zmian" "$(st $L002)" REMOVED
-chk "DP-2: REMOVED — pozycje i tak zapisane" "select count(*) from positions where load_id='$L002'" 2
-q "delete from positions where load_id='$L002'; delete from loads where id='$L002'" >/dev/null
+chk "DP-2: REMOVED — brak STATUS_AUTO po GEOFENCE_ENTER" \
+  "select count(*) from load_events where load_id='$L002' and event_type='STATUS_AUTO'" 0
+q "delete from load_events where load_id='$L002'; delete from loads where id='$L002'" >/dev/null
 
 # BN8a (#720 / 0382): kraje ze słownika, ferry_route, OFF_CORRIDOR bez PL_ROAD na sztywno.
 chk "BN8a: departure_country GDN-NYN = PL" \

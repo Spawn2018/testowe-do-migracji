@@ -1,3 +1,9 @@
+## 2026-11-06 05:25 — #832 CI db FAIL → fix DP-2 asercje
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: brak F7 (db czerwone @ `7a7641eb`).
+- **Krok:** DP-2 — `::text` boolean → oczekiwane `true`; REMOVED przez `GEOFENCE_ENTER` (nie `process_position` — okno śledzenia zamknięte jak CANCELLED). Czekam CI→F7. Potem DP-22/24….
+
 ## 2026-11-06 05:05 — #831 SCALONE; start C3 DP-2+12
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
