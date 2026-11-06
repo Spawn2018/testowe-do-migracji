@@ -1,3 +1,9 @@
+## 2026-11-06 14:45 — #846 SCALONE; start DP-53 (bramka dist demo bez vesselsServer)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: **#846 SCALONE** `1ca9d874` (DP-43, F7 gotowe @ `ac061123`; CI unit+visual ✔; bez migracji).
+- **Krok** `pakiet/c3-dp-53-demo-no-vessels-server`: DP-53 — asercja na zbudowanej paczce demo (`i2-demo-no-send`): brak `vesselsServer` / klienta Supabase w `dist` (DCE `VITE_AUTH_MODE === 'supabase'`). DP-46/47 zostają odnotowane. Bez migracji. Dalej DP-54…. Bez push na main.
+
 ## 2026-11-06 14:10 — #845 SCALONE; start DP-43 (próg browser_fetch accepted)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
