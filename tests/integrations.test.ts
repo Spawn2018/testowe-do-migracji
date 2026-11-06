@@ -981,7 +981,7 @@ describe('planSailingSync — zasady', () => {
     expect(p.inserts).toHaveLength(0);
   });
 
-  it('DP-91: OPOZNIONY nie cofany do ZAPLANOWANY przed wypłynięciem', () => {
+  it('DP-91: zniknięcie remarku DFDS → ZAPLANOWANY + delayed_* null (przed wypłynięciem)', () => {
     const p = planSailingSync({
       existing: [{
         id: 's1', vessel_id: WAW, route: 'PLD-KPS',
@@ -998,8 +998,12 @@ describe('planSailingSync — zasady', () => {
         status: 'ZAPLANOWANY',
       }],
     });
-    expect(p.updates).toHaveLength(0);
-    expect(p.unchanged).toBe(1);
+    expect(p.updates).toHaveLength(1);
+    expect(p.updates[0]!.patch).toMatchObject({
+      status: 'ZAPLANOWANY',
+      delayed_departure_at: null,
+      delayed_arrival_at: null,
+    });
   });
 
   it('DP-92: actualDepartureUtc → actual_departure_at + W_REJSIE', () => {

@@ -661,6 +661,91 @@ describe('F7 #660 ferry-portnet', () => {
     expect(st.risks.some((x) => String(x.dedup).startsWith('SOURCE_DOWN:DFDS_STATUS:'))).toBe(false);
   });
 
+  it('DP-91: zniknięcie remarku DFDS przed wypłynięciem → ZAPLANOWANY; awaria okna / po ATD bez cofnięcia', async () => {
+    const rowBase = {
+      portOfLoading: 'EEPLN',
+      portOfDischarge: 'SEKPS',
+      vehicleName: 'Sirena Seaways',
+      scheduledDeparture: '2026-10-28T20:00:00.000Z',
+      scheduledArrival: '2026-10-29T06:00:00.000Z',
+      status: 'TALLIED',
+      remark: null,
+      actualDeparture: null,
+    };
+    // (a) API OK bez remarku → czyści OPOZNIONY.
+    const stClear = new MemStore();
+    stClear.sailings.push({
+      id: 'dfds-clr', vessel_id: SIRENA, route: 'PLD-KPS',
+      departure_at: '2026-10-28T20:00:00.000Z', arrival_at: '2026-10-29T06:00:00.000Z',
+      delayed_departure_at: '2026-10-28T21:00:00.000Z', delayed_arrival_at: '2026-10-29T07:00:00.000Z',
+      status: 'OPOZNIONY', source: 'DFDS',
+    });
+    const fOk = (async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('portOfLoading=EEPLN')) return new Response(JSON.stringify([rowBase]), { status: 200 });
+      if (url.includes('portOfLoading=SEKPS')) return new Response('[]', { status: 200 });
+      if (url.includes('komunikaty') || url.includes('stena')) return new Response('err', { status: 503 });
+      throw new Error(`nieoczekiwane: ${url}`);
+    }) as typeof fetch;
+    await runFerryStatus({
+      store: stClear, fetch: fOk, env: {}, now: () => new Date('2026-10-28T10:00:00Z'),
+    });
+    expect(stClear.sailings.find((x) => x.id === 'dfds-clr')).toMatchObject({
+      status: 'ZAPLANOWANY',
+      delayed_departure_at: null,
+      delayed_arrival_at: null,
+    });
+    // (b) okno API nieudane (503) → OPOZNIONY bez zmian.
+    const stFail = new MemStore();
+    stFail.sailings.push({
+      id: 'dfds-keep', vessel_id: SIRENA, route: 'PLD-KPS',
+      departure_at: '2026-10-28T20:00:00.000Z', arrival_at: '2026-10-29T06:00:00.000Z',
+      delayed_departure_at: '2026-10-28T21:00:00.000Z', delayed_arrival_at: '2026-10-29T07:00:00.000Z',
+      status: 'OPOZNIONY', source: 'DFDS',
+    });
+    const fFail = (async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('/api/timetable')) return new Response('err', { status: 503 });
+      if (url.includes('komunikaty') || url.includes('stena')) return new Response('err', { status: 503 });
+      throw new Error(`nieoczekiwane: ${url}`);
+    }) as typeof fetch;
+    await runFerryStatus({
+      store: stFail, fetch: fFail, env: {}, now: () => new Date('2026-10-28T10:00:00Z'),
+    });
+    expect(stFail.sailings.find((x) => x.id === 'dfds-keep')).toMatchObject({
+      status: 'OPOZNIONY',
+      delayed_departure_at: '2026-10-28T21:00:00.000Z',
+    });
+    // (c) po ATD (W_REJSIE) zniknięcie remarku nie cofa statusu.
+    const stTrip = new MemStore();
+    stTrip.sailings.push({
+      id: 'dfds-trip', vessel_id: SIRENA, route: 'PLD-KPS',
+      departure_at: '2026-10-28T08:00:00.000Z', arrival_at: '2026-10-28T18:00:00.000Z',
+      delayed_departure_at: '2026-10-28T08:30:00.000Z', delayed_arrival_at: null,
+      actual_departure_at: '2026-10-28T08:20:00.000Z',
+      status: 'W_REJSIE', source: 'DFDS',
+    });
+    const rowTrip = {
+      ...rowBase,
+      scheduledDeparture: '2026-10-28T08:00:00.000Z',
+      scheduledArrival: '2026-10-28T18:00:00.000Z',
+    };
+    const fTrip = (async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('portOfLoading=EEPLN')) return new Response(JSON.stringify([rowTrip]), { status: 200 });
+      if (url.includes('portOfLoading=SEKPS')) return new Response('[]', { status: 200 });
+      if (url.includes('komunikaty') || url.includes('stena')) return new Response('err', { status: 503 });
+      throw new Error(`nieoczekiwane: ${url}`);
+    }) as typeof fetch;
+    await runFerryStatus({
+      store: stTrip, fetch: fTrip, env: {}, now: () => new Date('2026-10-28T12:00:00Z'),
+    });
+    expect(stTrip.sailings.find((x) => x.id === 'dfds-trip')).toMatchObject({
+      status: 'W_REJSIE',
+      actual_departure_at: '2026-10-28T08:20:00.000Z',
+    });
+  });
+
   it('DP-90: ferry-status DFDS — puste tygodnie API ≠ SOURCE_DOWN; bez PDF/HTML', async () => {
     const st = new MemStore();
     let pdfHits = 0;

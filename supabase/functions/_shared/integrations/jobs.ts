@@ -2941,14 +2941,41 @@ export async function runFerryStatus(deps: JobDeps): Promise<JobResult> {
       DFDS_SCHEDULE_PAGE,
     ))) risks += 1;
   } else {
-    // DP-91/92: status (OPOZNIONY/NIEZNANY) albo ATD — bez statusu, ale z ATD też trafia do sync.
+    // DP-91/92: status/ATD; DP-91 F7 #858 — wiersz API bez remarku/ATD czyści OPOZNIONY przed wypłynięciem.
     const withSignal = dfdsStatus.sailings.filter((s) => s.status || s.actualDepartureUtc);
-    if (withSignal.length > 0) {
-      const incomingD: IncomingSailing[] = withSignal.map((s) => ({
+    const clearKeys = new Set(
+      dfdsStatus.sailings
+        .filter((s) => !s.status && !s.actualDepartureUtc)
+        .map((s) => `${s.route}|${s.departureUtc}`),
+    );
+    const nowMs = Date.parse(now);
+    const existingDfds = (await deps.store.sailingsSince(since))
+      .filter((s) => s.source === 'DFDS' && s.status === 'OPOZNIONY'
+        && s.actual_departure_at == null
+        && Date.parse(s.delayed_departure_at ?? s.departure_at) > nowMs
+        && clearKeys.has(`${s.route}|${new Date(s.departure_at).toISOString()}`));
+    const vessels = await deps.store.vessels();
+    const vesselName = new Map(vessels.map((v) => [v.id, v.name]));
+    const incomingD: IncomingSailing[] = [
+      ...withSignal.map((s) => ({
         route: s.route, vessel: s.vessel, departureUtc: s.departureUtc, arrivalUtc: s.arrivalUtc,
         status: s.status, expectedDepartureUtc: s.expectedDepartureUtc, expectedArrivalUtc: s.expectedArrivalUtc,
         actualDepartureUtc: s.actualDepartureUtc,
-      }));
+      })),
+      ...existingDfds.flatMap((s) => {
+        const name = vesselName.get(s.vessel_id);
+        if (!name) return [];
+        const api = dfdsStatus.sailings.find(
+          (x) => x.route === s.route && x.departureUtc === new Date(s.departure_at).toISOString(),
+        );
+        if (!api) return [];
+        return [{
+          route: s.route, vessel: name, departureUtc: api.departureUtc, arrivalUtc: api.arrivalUtc,
+          status: 'ZAPLANOWANY' as const,
+        }];
+      }),
+    ];
+    if (incomingD.length > 0) {
       const { plan, updated: u, manualKept: m } = await applySailings(deps, incomingD, since, 'DFDS');
       inserted += plan.inserts.length; updated += u; manualKept += m; unchanged += plan.unchanged; unknown += plan.unknown.length;
       for (const urow of plan.unknown) {
