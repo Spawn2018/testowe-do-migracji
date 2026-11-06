@@ -1,3 +1,9 @@
+## 2026-11-06 14:10 — #845 SCALONE; start DP-43 (próg browser_fetch accepted)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: **#845 SCALONE** `6697ee90` (DP-40 / **0423**, F7 gotowe @ `c8d412de`; CI unit+db+visual ✔).
+- **Krok** `pakiet/c3-dp-43-browser-fetch-accepted`: `acceptedBrowserFetchCount` — próg POST w `loadRoadLines` liczy przyjęte spośród `browser_fetch` (nie `lines.length` ze wszystkich; BN7 z geometrią nie maskuje braków core). Bez migracji. Dalej DP-46…. Bez push na main.
+
 ## 2026-11-06 13:45 — #844 SCALONE; start DP-40 (INLAND wierzchołki vs HERE)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.

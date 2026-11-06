@@ -450,6 +450,17 @@ export function roadsRejectSummary(rejected: { leg: string; why: string }[]): st
 }
 
 /**
+ * #667 E / #677 F7 B2 / DP-43: leg z `browser_fetch` (core) — BN7 (`map_group`) poza progiem POST.
+ */
+export function isBrowserFetchRoadRow(row: unknown): boolean {
+  if (!row || typeof row !== 'object') return false;
+  const r = row as { browser_fetch?: boolean; map_group?: string };
+  if (r.browser_fetch === false) return false;
+  if (r.map_group === 'bn7') return false;
+  return true;
+}
+
+/**
  * #667 E / #677 F7 B2: ile legów z browser_fetch (core) — BN7 nie wymusza POST.
  * Eksport pod testy (12 wierszy → 5).
  */
@@ -457,13 +468,19 @@ export function browserFetchLegCount(roads: unknown): number {
   if (!Array.isArray(roads)) return 5;
   let n = 0;
   for (const row of roads) {
-    if (!row || typeof row !== 'object') continue;
-    const r = row as { browser_fetch?: boolean; map_group?: string };
-    if (r.browser_fetch === false) continue;
-    if (r.map_group === 'bn7') continue;
+    if (!isBrowserFetchRoadRow(row)) continue;
     n += 1;
   }
   return n > 0 ? n : 5;
+}
+
+/**
+ * DP-43 (#677 F7 r1 N1): ile przyjętych spośród browser_fetch — nie `acceptedRoads(all).length`
+ * (BN7 z geometrią nie maskuje braków core).
+ */
+export function acceptedBrowserFetchCount(roads: unknown): number {
+  if (!Array.isArray(roads)) return 0;
+  return checkRoads(roads.filter(isBrowserFetchRoadRow)).accepted.length;
 }
 
 /** #667: re-export — helper bez auth w `orangeRoads.ts` (paczka demo nie ciągnie applyBasemap). */
@@ -565,8 +582,8 @@ export async function loadRoadLines(): Promise<LatLng[][]> {
         return { lines: acceptedRoads(state?.roads), roads: state?.roads };
       };
       let { lines, roads } = await read();
-      // #667 E: próg = legi browser_fetch (core), nie wszystkie BN7.
-      if (lines.length >= browserFetchLegCount(roads)) return lines;
+      // DP-43 / #667 E: próg = przyjęte spośród browser_fetch (core), nie lines ze wszystkich.
+      if (acceptedBrowserFetchCount(roads) >= browserFetchLegCount(roads)) return lines;
       if (hereRoadsSessionAt > 0 && Date.now() - hereRoadsSessionAt < HERE_ROADS_SESSION_MS) return lines;
       const started = lines;
       const { data } = await sb.auth.getSession();

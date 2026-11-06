@@ -52,6 +52,7 @@ const {
   loadRoadLines,
   checkRoads,
   browserFetchLegCount,
+  acceptedBrowserFetchCount,
   roadSpecFromRow,
   __resetRoadLinesCacheForTests,
   __setHereRoadsSessionMsForTests,
@@ -524,6 +525,40 @@ describe('#667 F e2e — brak POST przy komplecie + BN7 (B3) + cron', () => {
     expect(lines).toHaveLength(5);
     expect(fetchMock).not.toHaveBeenCalled();
     expect(getSession).not.toHaveBeenCalled();
+  });
+
+  /**
+   * DP-43 (#677 F7 r1 N1): 3 core przyjęte + 2 BN7 z geometrią → lines.length=5,
+   * ale acceptedBrowserFetchCount=3 &lt; 5 → POST (stary próg lines.length maskował braki).
+   */
+  it('DP-43: niekompletne core + BN7 z linią → POST (nie lines.length ze wszystkich)', async () => {
+    const fetchMock = vi.fn(async () => new Response('{}', { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+    getSession.mockResolvedValue({ data: { session: { access_token: 'tok' } } });
+
+    const corePartial = coreRoadsComplete().slice(0, 3);
+    const bn7WithGeom = bn7Placeholders().slice(0, 2).map((r) => ({
+      ...r,
+      points: LOOSE_OK,
+      summary: '',
+    }));
+    const roads = [...corePartial, ...coreRoadsComplete().slice(3).map((r) => ({
+      ...r,
+      points: null as null,
+      summary: '— oczekuje na HERE',
+    })), ...bn7WithGeom, ...bn7Placeholders().slice(2)];
+
+    expect(browserFetchLegCount(roads)).toBe(5);
+    expect(acceptedBrowserFetchCount(roads)).toBe(3);
+    const allAccepted = checkRoads(roads).accepted.length;
+    expect(allAccepted).toBeGreaterThanOrEqual(5); // 3 core + ≥2 BN7
+    expect(allAccepted).toBeGreaterThan(acceptedBrowserFetchCount(roads));
+
+    rpc.mockResolvedValue({ data: { roads }, error: null });
+    await loadRoadLines();
+    expect(getSession).toHaveBeenCalled();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(String(fetchMock.mock.calls[0]?.[0])).toMatch(/here-roads/);
   });
 
   it('cron 6 d (DP-198): attempted obejmuje SE-KAA (nie tylko liczba 5)', async () => {
