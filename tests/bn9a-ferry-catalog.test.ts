@@ -70,7 +70,11 @@ describe('BN9-a — katalog promów jest spójny', () => {
   });
 
   it('pomocnicze: armatorzy, porty trasy, trasy wyjazdowe armatora', () => {
-    expect(operatorsForRoute('TLL-HEL')).toEqual(['TALLINK', 'VIKING', 'ECKERO']);
+    // DP-83: seed = baza — TLL-HEL tylko TALLINK; Viking/Eckerö na TLLA-HEL.
+    expect(operatorsForRoute('TLL-HEL')).toEqual(['TALLINK']);
+    expect(operatorsForRoute('HEL-TLL')).toEqual(['TALLINK']);
+    expect(operatorsForRoute('TLLA-HEL')).toEqual(['VIKING', 'ECKERO']);
+    expect(operatorsForRoute('HELA-TLL')).toEqual(['VIKING', 'ECKERO']);
     // BN3 decyzja 60: PLD-KPS tylko DFDS (Tallink zszedł 05.2026).
     expect(operatorsForRoute('PLD-KPS')).toEqual(['DFDS']);
     expect(operatorsForRoute('KPS-PLD')).toEqual(['DFDS']);
@@ -134,13 +138,17 @@ describe('BN9-a — armator rejsu', () => {
     expect(operatorMatches(S({ id: 'a', route: 'TLL-HEL', departureAt: 'x' }), 'STENA')).toBe(false);
   });
   it('operatorMatches: nowe trasy — nazwa armatora albo jego trasa', () => {
-    const viking = S({ id: 'v', route: 'TLL-HEL', departureAt: 'x', operator: 'Viking Line' });
+    const viking = S({ id: 'v', route: 'TLLA-HEL', departureAt: 'x', operator: 'Viking Line' });
     expect(operatorMatches(viking, 'VIKING')).toBe(true);
     expect(operatorMatches(viking, 'TALLINK')).toBe(false);
-    const bare = S({ id: 'b', route: 'HEL-TLL', departureAt: 'x' });
-    expect(operatorMatches(bare, 'TALLINK')).toBe(true);
-    expect(operatorMatches(bare, 'ECKERO')).toBe(true);
-    expect(operatorMatches(bare, 'DFDS')).toBe(false);
+    // DP-83: HEL-TLL = Tallink; Viking/Eckerö na HELA-TLL.
+    const bareTallink = S({ id: 'b', route: 'HEL-TLL', departureAt: 'x' });
+    expect(operatorMatches(bareTallink, 'TALLINK')).toBe(true);
+    expect(operatorMatches(bareTallink, 'ECKERO')).toBe(false);
+    const bareEckero = S({ id: 'be', route: 'HELA-TLL', departureAt: 'x' });
+    expect(operatorMatches(bareEckero, 'ECKERO')).toBe(true);
+    expect(operatorMatches(bareEckero, 'TALLINK')).toBe(false);
+    expect(operatorMatches(bareTallink, 'DFDS')).toBe(false);
     expect(operatorMatches(S({ id: 'd', route: 'PLD-KPS', departureAt: 'x', operator: 'DFDS Seaways' }), 'DFDS')).toBe(true);
     expect(operatorMatches(S({ id: 'f', route: 'MUU-VUO', departureAt: 'x', operator: 'Finbo Cargo' }), 'ECKERO')).toBe(true);
   });

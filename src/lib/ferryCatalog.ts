@@ -101,12 +101,14 @@ export const FERRY_ROUTES: readonly FerryRouteDef[] = [
   { code: 'GDY-KAA', from: 'GDY', to: 'KAA', operators: ['STENA'], waterTrack: 'GDY-KAA', outbound: true },
   { code: 'NYN-GDN', from: 'NYN', to: 'GDN', operators: ['POLFERRIES'], waterTrack: 'GDN-NYN', outbound: false },
   { code: 'KAA-GDY', from: 'KAA', to: 'GDY', operators: ['STENA'], waterTrack: 'GDY-KAA', outbound: false },
-  { code: 'TLL-HEL', from: 'TLL', to: 'HEL', operators: ['TALLINK', 'VIKING', 'ECKERO'], waterTrack: 'TLL-HEL', outbound: true },
+  // DP-83 / F7 #680: jak baza ferry_route_operators — TLL-HEL = Tallink D;
+  // Viking/Eckerö tylko na TLLA-HEL / HELA-TLL (SEED_ROUTE_ALIASES).
+  { code: 'TLL-HEL', from: 'TLL', to: 'HEL', operators: ['TALLINK'], waterTrack: 'TLL-HEL', outbound: true },
   { code: 'MUU-VUO', from: 'MUU', to: 'VUO', operators: ['ECKERO'], waterTrack: 'MUU-VUO', outbound: true },
   { code: 'TLL-STO', from: 'TLL', to: 'STO', operators: ['TALLINK'], waterTrack: 'TLL-STO', outbound: true, via: 'Mariehamn' },
   // BN3 decyzja 60: Tallink zszedł z PLD–KPS (od 05.2026) — tylko DFDS.
   { code: 'PLD-KPS', from: 'PLD', to: 'KPS', operators: ['DFDS'], waterTrack: 'PLD-KPS', outbound: true },
-  { code: 'HEL-TLL', from: 'HEL', to: 'TLL', operators: ['TALLINK', 'VIKING', 'ECKERO'], waterTrack: 'TLL-HEL', outbound: false },
+  { code: 'HEL-TLL', from: 'HEL', to: 'TLL', operators: ['TALLINK'], waterTrack: 'TLL-HEL', outbound: false },
   { code: 'VUO-MUU', from: 'VUO', to: 'MUU', operators: ['ECKERO'], waterTrack: 'MUU-VUO', outbound: false },
   { code: 'STO-TLL', from: 'STO', to: 'TLL', operators: ['TALLINK'], waterTrack: 'TLL-STO', outbound: false, via: 'Mariehamn' },
   { code: 'KPS-PLD', from: 'KPS', to: 'PLD', operators: ['DFDS'], waterTrack: 'PLD-KPS', outbound: false },
@@ -364,7 +366,21 @@ export function routeLabelPl(code: string | null | undefined): string | null {
 
 /** Pierwsza trasa wyjazdowa armatora (porty w wierszu „Sytuacja na trasie”). */
 export function primaryRouteOf(operator: FerryOperator): FerryRouteDef {
-  return FERRY_ROUTES.find((r) => r.outbound && r.operators.includes(operator)) ?? FERRY_ROUTES[0];
+  const seed = FERRY_ROUTES.find((r) => r.outbound && r.operators.includes(operator));
+  if (seed) return seed;
+  // DP-83: Viking/Eckerö tylko na aliasach Terminal A (TLLA-HEL) — nie w FERRY_ROUTES.
+  for (const [code, a] of SEED_ROUTE_ALIASES) {
+    if (!a.outbound || !a.operators.includes(operator)) continue;
+    return {
+      code: code as FerryRouteCode,
+      from: a.from,
+      to: a.to,
+      operators: a.operators,
+      waterTrack: a.waterTrack,
+      outbound: true,
+    };
+  }
+  return FERRY_ROUTES[0];
 }
 
 /** Domyślna odprawa portu wyjazdowego bez wpisu (jak Gdańsk). */

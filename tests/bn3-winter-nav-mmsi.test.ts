@@ -138,8 +138,9 @@ function deps(store: MemStore, pages: Record<string, string | number>, now = NOW
 }
 
 describe('BN3 winter-nav / MMSI / DP-11', () => {
-  it('DP-11: operatorsForRoute — RPC przed seedem (TLL-HEL tylko TALLINK z bazy)', () => {
-    expect(operatorsForRoute('TLL-HEL')).toEqual(['TALLINK', 'VIKING', 'ECKERO']);
+  it('DP-11/DP-83: operatorsForRoute — seed = baza (TLL-HEL TALLINK); RPC nadpisuje', () => {
+    // DP-83: bez RPC seed już jak ferry_route_operators (tylko TALLINK).
+    expect(operatorsForRoute('TLL-HEL')).toEqual(['TALLINK']);
     applyFerryDictSnapshot({
       operators: [{ code: 'TALLINK', name: 'Tallink' }],
       ports: [],
