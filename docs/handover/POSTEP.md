@@ -1,3 +1,9 @@
+## 2026-11-06 20:05 — #855 DP-229 F7 r1: workdir + src/lib/pl
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: brak F7 „gotowe” — CI `local-orange-maps` fail @ `7dc35e17` (`open src/lib/pl/deepl.ts`); unit+visual ✔.
+- **Krok** F7 #855 r1: `ci-orange-maps.sh` — kopia `src/lib/pl` + `src/lib/time.ts` do workdir (Edge importy przy `supabase start`). Bez migracji. Czekam CI→F7. Bez push na main.
+
 ## 2026-11-06 19:45 — #854 SCALONE; start DP-229 (local.spec → CI)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.

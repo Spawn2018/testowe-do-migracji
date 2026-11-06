@@ -9,6 +9,11 @@ rm -rf "$WD"
 mkdir -p "$WD"
 # Kopia katalogu supabase (CLI wymaga workdir z config + migrations).
 cp -a supabase "$WD/supabase"
+# Edge Functions importują ../../../../src/lib/pl/* i describe→../time.ts —
+# workdir poza repo bez src/ → supabase start: „open src/lib/pl/deepl.ts: no such file”.
+mkdir -p "$WD/src/lib"
+cp -a src/lib/pl "$WD/src/lib/"
+cp -a src/lib/time.ts "$WD/src/lib/time.ts"
 # Brak ./seed.sql w repo — wyłącz auto-seed przy db reset, żeby nie padać na brak pliku.
 python3 - <<'PY' "$WD/supabase/config.toml"
 from pathlib import Path
