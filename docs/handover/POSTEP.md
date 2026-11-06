@@ -1,3 +1,9 @@
+## 2026-11-06 21:15 — #855 DP-229 F7 r5: zamknij szufladę przed nav
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 (#714–#720) w planie. Bez nowego `pilne` do wykonania.
+- Scalanie: brak F7 „gotowe” — CI `local-orange-maps` fail @ `53f37f45`: Kokpit/Mapa/szuflada ✔, potem Timeout klik `data-view="geo"` — `[data-drawer-scrim]` intercepts pointer events; unit+visual ✔.
+- **Krok** F7 #855 r5: `openNavView` → `closeDrawerIfOpen` (klik scrim) przed nawigacją. Bez migracji. Czekam CI→F7. Bez push na main.
+
 ## 2026-11-06 20:55 — #855 DP-229 F7 r4: waitOrangeIn (nie parked overlay)
 
 - Skrzynka: #550 WSTRZYMANE (etykieta `pilne`, właściciel 25.10: nic nie budować). BN5–8 w planie. Bez nowego `pilne` do wykonania.

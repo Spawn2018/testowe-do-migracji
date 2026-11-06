@@ -37,8 +37,21 @@ async function login(page: Page, email: string) {
   await page.waitForSelector('.grid2-map-body', { timeout: 30_000 });
 }
 
+/**
+ * DP-229 F7 r5: otwarta szuflada ma `.drawer-scrim` nad nawigacją —
+ * Playwright: „intercepts pointer events” przy kliku `data-view`.
+ */
+async function closeDrawerIfOpen(page: Page) {
+  const scrim = page.locator('[data-drawer-scrim]');
+  if (await scrim.count()) {
+    await scrim.first().click({ force: true }).catch(() => {});
+    await page.waitForSelector('aside.drawer', { state: 'detached', timeout: 5_000 }).catch(() => {});
+  }
+}
+
 /** E8: na telefonie Mapa/Strefy są poza pinami — najpierw „Więcej”. */
 async function openNavView(page: Page, view: string) {
+  await closeDrawerIfOpen(page);
   const btn = page.locator(`nav button[data-view="${view}"]`).first();
   if (!(await btn.isVisible())) {
     await page.locator('nav .nav-more-btn').click();
