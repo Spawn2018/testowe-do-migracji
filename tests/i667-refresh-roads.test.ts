@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
   refreshRoadLegs,
+  resolveLegs,
   ROAD_CRON_REFRESH_MS,
   ROAD_LEGS,
   type RoadRefreshStore,
@@ -159,6 +160,43 @@ describe('#667 C refreshRoadLegs', () => {
     expect(cron.attempted).toBe(5);
     expect(cron.missingLegs).toEqual(ROAD_LEGS.map((l) => l.leg));
     expect(cron.missingLegs).not.toContain('PL-TLL');
+  });
+
+  /**
+   * DP-54 (F7 #677 r2 M1b): leg core z browserFetch:false musi wypaść z browserOnly.
+   * BN7 z cronFetch:false nie łapie mutacji „usuń całą linię filtra browserOnly”
+   * (wtedy zostaje filtr cronFetch — core z cronFetch:true i browserFetch:false wpadłby do fetch).
+   */
+  it('DP-54: core browserFetch:false — brak fetch w browserOnly (M1b)', async () => {
+    const coreOff = {
+      ...ROAD_LEGS[0],
+      leg: 'PL-CORE-OFF',
+      browserFetch: false,
+      mapGroup: 'core' as const,
+      cronFetch: true,
+    };
+    const legs = [...ROAD_LEGS, coreOff];
+    const stale = [
+      ...ROAD_LEGS.map((l) => geom(l.leg, 40 * 864e5, null)),
+      geom('PL-CORE-OFF', 40 * 864e5, null),
+    ];
+    const fetchFn = vi.fn(async () => new Response('nope', { status: 500 }));
+    const s = store(stale);
+    s.listLegs = async () => legs;
+
+    const resolved = await resolveLegs(s, true);
+    expect(resolved.map((l) => l.leg)).not.toContain('PL-CORE-OFF');
+    expect(resolved).toHaveLength(5);
+
+    const browser = await refreshRoadLegs(s, {
+      fetch: fetchFn as unknown as typeof fetch,
+      hereApiKey: 'k',
+      maxAgeMs: ROAD_CRON_REFRESH_MS,
+      browserOnly: true,
+    });
+    expect(browser.attempted).toBe(5);
+    expect(browser.missingLegs).not.toContain('PL-CORE-OFF');
+    expect(fetchFn).toHaveBeenCalledTimes(5);
   });
 
   it('F7 #677 B1: pusty listLegs → zapas ROAD_LEGS (nie stored:0 w ciszy)', async () => {

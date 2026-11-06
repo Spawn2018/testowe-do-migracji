@@ -1,3 +1,9 @@
+## 2026-11-06 15:20 — #847 SCALONE; start DP-54 (core browserFetch:false / M1b)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: **#847 SCALONE** `c35cdd9b` (DP-53, F7 gotowe @ `d1992733`; CI unit+visual ✔; bez migracji).
+- **Krok** `pakiet/c3-dp-54-browser-only-core-off`: DP-54 — test `refreshRoadLegs`/`resolveLegs`: leg core `browserFetch:false` + `cronFetch:true` poza fetch w `browserOnly` (mutacja M1b: usunięcie linii filtra). Bez migracji. Dalej DP-56…. Bez push na main.
+
 ## 2026-11-06 14:45 — #846 SCALONE; start DP-53 (bramka dist demo bez vesselsServer)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
