@@ -1,3 +1,9 @@
+## 2026-11-06 21:35 — #855 DP-229 F7 r6: map_display_state jako HHL
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne` do wykonania.
+- Scalanie: brak F7 „gotowe” — CI `local-orange-maps` fail @ `2abf368f`: UI (Kokpit→telefon) ✔ po r5; końcowe `psql map_display_state()` → „Brak aktywnego konta” (bez JWT); unit ✔.
+- **Krok** F7 #855 r6: asercja SE-KAA przez `set_config` + `role authenticated` (uid `hhl@bk5.local`), jak bmapa `asu`. Bez migracji. Czekam CI→F7. Bez push na main.
+
 ## 2026-11-06 21:15 — #855 DP-229 F7 r5: zamknij szufladę przed nav
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 (#714–#720) w planie. Bez nowego `pilne` do wykonania.
