@@ -28,7 +28,7 @@ function denseVia(pts: readonly LatLng[], stepKm: number): LatLng[] {
   return out;
 }
 
-/** Haversine km — jak SQL `geography` / F7 r5 B4-test (b). */
+/** Haversine km — gęsta łamana / odchyłka (nie via SQL). */
 function havKm(a: LatLng, b: LatLng): number {
   const R = 6371;
   const toR = (d: number) => (d * Math.PI) / 180;
@@ -40,26 +40,91 @@ function havKm(a: LatLng, b: LatLng): number {
   return 2 * R * Math.asin(Math.sqrt(h));
 }
 
-function segKm(a: LatLng, b: LatLng): number {
-  return havKm(a, b);
+/** Vincenty WGS84 (m) — jak PostGIS `geography` / `here_corridor_via_points` (DP-38). */
+function geodesicM(a: LatLng, b: LatLng): number {
+  const toR = (d: number) => (d * Math.PI) / 180;
+  const aLat = toR(a[0]);
+  const aLon = toR(a[1]);
+  const bLat = toR(b[0]);
+  const bLon = toR(b[1]);
+  const f = 1 / 298.257223563;
+  const A = 6378137;
+  const B = 6356752.314245;
+  const L = bLon - aLon;
+  const U1 = Math.atan((1 - f) * Math.tan(aLat));
+  const U2 = Math.atan((1 - f) * Math.tan(bLat));
+  const sinU1 = Math.sin(U1);
+  const cosU1 = Math.cos(U1);
+  const sinU2 = Math.sin(U2);
+  const cosU2 = Math.cos(U2);
+  let lam = L;
+  let lamP = 0;
+  let iter = 0;
+  let sinLam = 0;
+  let cosLam = 0;
+  let sinSig = 0;
+  let cosSig = 0;
+  let sig = 0;
+  let sinAlpha = 0;
+  let cos2A = 0;
+  let cos2SigM = 0;
+  let C = 0;
+  do {
+    sinLam = Math.sin(lam);
+    cosLam = Math.cos(lam);
+    sinSig = Math.sqrt(
+      (cosU2 * sinLam) ** 2 + (cosU1 * sinU2 - sinU1 * cosU2 * cosLam) ** 2,
+    );
+    if (sinSig === 0) return 0;
+    cosSig = sinU1 * sinU2 + cosU1 * cosU2 * cosLam;
+    sig = Math.atan2(sinSig, cosSig);
+    sinAlpha = (cosU1 * cosU2 * sinLam) / sinSig;
+    cos2A = 1 - sinAlpha * sinAlpha;
+    cos2SigM = cos2A !== 0 ? cosSig - (2 * sinU1 * sinU2) / cos2A : 0;
+    C = (f / 16) * cos2A * (4 + f * (4 - 3 * cos2A));
+    lamP = lam;
+    lam =
+      L +
+      (1 - C) *
+        f *
+        sinAlpha *
+        (sig +
+          C *
+            sinSig *
+            (cos2SigM + C * cosSig * (-1 + 2 * cos2SigM * cos2SigM)));
+  } while (Math.abs(lam - lamP) > 1e-12 && ++iter < 200);
+  const u2 = (cos2A * (A * A - B * B)) / (B * B);
+  const Aa = 1 + (u2 / 16384) * (4096 + u2 * (-768 + u2 * (320 - 175 * u2)));
+  const Bb = (u2 / 1024) * (256 + u2 * (-128 + u2 * (74 - 47 * u2)));
+  const dSig =
+    Bb *
+    sinSig *
+    (cos2SigM +
+      (Bb / 4) *
+        (cosSig * (-1 + 2 * cos2SigM * cos2SigM) -
+          (Bb / 6) *
+            cos2SigM *
+            (-3 + 4 * sinSig * sinSig) *
+            (-3 + 4 * cos2SigM * cos2SigM)));
+  return B * Aa * (sig - dSig);
 }
 
-/** Jak `here_corridor_via_points`: via co ~100 km = najbliższy wierzchołek śladu (nie cięciwa). */
+/** Jak `here_corridor_via_points`: via co ~100 km = najbliższy wierzchołek śladu (metry geodezyjne). */
 function viaAlongCorridor(pts: readonly LatLng[], pMax = 14): LatLng[] {
   if (pts.length < 2) return [...pts];
-  const steps = pts.map((p, i) => (i === 0 ? 0 : segKm(pts[i - 1]!, p)));
+  const steps = pts.map((p, i) => (i === 0 ? 0 : geodesicM(pts[i - 1]!, p)));
   const cum: number[] = [];
   let s = 0;
   for (const d of steps) {
     s += d;
     cum.push(s);
   }
-  const lenKm = cum[cum.length - 1]!;
-  let n = Math.min(pMax, Math.max(0, Math.floor(lenKm / 100) - 1));
-  if (n < 1 && lenKm >= 200) n = 1;
+  const lenM = cum[cum.length - 1]!;
+  let n = Math.min(pMax, Math.max(0, Math.floor(lenM / 100_000) - 1));
+  if (n < 1 && lenM >= 200_000) n = 1;
   const vias: LatLng[] = [];
   for (let i = 1; i <= n; i += 1) {
-    const target = (lenKm * i) / (n + 1);
+    const target = (lenM * i) / (n + 1);
     let best = 0;
     let bestAbs = Infinity;
     for (let j = 0; j < cum.length; j += 1) {
@@ -179,7 +244,7 @@ describe('#667 F7 r3–r6 B4/B5/B7 kaaDeviationOk — korytarze z 0354', () => {
     expect(SE_E22_PROD.some(([lat, lng]) => Math.abs(lat - 62.391) < 1e-4 && Math.abs(lng - 17.340) < 1e-4)).toBe(true);
   });
 
-  it('F7 r6 B4-test (b): viaAlongCorridor (haversine) = lista po przesunięciu na E4', () => {
+  it('F7 r6 B4-test (b): viaAlongCorridor (geodezja) = lista SQL po przesunięciu na E4', () => {
     const via = viaAlongCorridor(SE_E22_PROD, 14);
     const expected: LatLng[] = [
       [56.1646, 15.6308],
@@ -201,6 +266,35 @@ describe('#667 F7 r3–r6 B4/B5/B7 kaaDeviationOk — korytarze z 0354', () => {
       expect(via[i]![0]).toBeCloseTo(expected[i]![0], 3);
       expect(via[i]![1]).toBeCloseTo(expected[i]![1], 3);
     }
+  });
+
+  // DP-38 / F7 #673 r7: haversine brał 9. via 63.2909 (remis ~49 km do celu);
+  // geodezja WGS84 jak SQL `geography` → 63.8127 (Umeå E4).
+  it('DP-38: viaAlongCorridor INLAND = lista jak SQL (geodezja, nie haversine)', () => {
+    const via = viaAlongCorridor(SE_KAA_INLAND_PROD, 14);
+    const expected: LatLng[] = [
+      [56.1646, 15.6308],
+      [56.865, 16.385],
+      [57.755, 16.58],
+      [58.594, 16.183],
+      [59.371, 16.507],
+      [60.151, 16.929],
+      [60.6638, 17.109],
+      [62.391, 17.34],
+      [62.6323, 17.9379],
+      [63.8127, 20.3263],
+      [64.3511, 21.2932],
+      [64.7507, 20.9528],
+      [65.8054, 21.7591],
+    ];
+    expect(via).toHaveLength(expected.length);
+    for (let i = 0; i < via.length; i += 1) {
+      expect(via[i]![0]).toBeCloseTo(expected[i]![0], 3);
+      expect(via[i]![1]).toBeCloseTo(expected[i]![1], 3);
+    }
+    // Regresja haversine: 9. via nie wraca na Örnsköldsvik.
+    expect(via[9]![0]).toBeCloseTo(63.8127, 3);
+    expect(Math.abs(via[9]![0]! - 63.2909)).toBeGreaterThan(0.1);
   });
 
   it('linia HERE-like wzdłuż SE_E22 przechodzi sparse (controlPts + 15 km)', () => {
