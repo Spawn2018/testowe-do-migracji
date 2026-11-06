@@ -287,24 +287,27 @@ export function fiE75NearestTown(km: number): string {
   return best.name;
 }
 
+/** Prefiks drogi FI w Digitraffic: valtatie / kantatie / seututie / maantie + numer. */
+const FI_ROAD_CODE_PREFIX = /^(vt|kt|st|mt)\d+/i;
+
 /**
- * DP-220 / #809: Digitraffic często zwraca `name` = „vt4_Mäntsälä_Ohkola”.
- * Do tytułu odcinka: bez prefiksu `vtN_`, `_` → „–”; pusty / sam kod → null.
+ * DP-221 / #809: Digitraffic często zwraca `name` = „vt4_Mäntsälä_Ohkola” / „st624_…”.
+ * Do tytułu odcinka: bez prefiksu `vt|kt|st|mt`+numer+`_`, `_` → „–”; pusty / sam kod → null.
  */
 export function fiStationDisplayName(raw: string | null | undefined): string | null {
   const s = (raw ?? '').trim();
   if (s.length < 2) return null;
-  const stripped = s.replace(/^vt\d+_/i, '').replace(/_+/g, '–').trim();
+  const stripped = s.replace(/^(vt|kt|st|mt)\d+_/i, '').replace(/_+/g, '–').trim();
   if (stripped.length < 2) return null;
-  /* Sam identyfikator bez części miejscowości (np. „vt4”) — odrzuć. */
-  if (/^vt\d+$/i.test(stripped)) return null;
+  /* Sam identyfikator bez części miejscowości (np. „vt4”, „st624”) — odrzuć. */
+  if (FI_ROAD_CODE_PREFIX.test(stripped)) return null;
   return stripped;
 }
 
 /**
  * DP-217: etykieta odcinka 25 km — miejscowości przy starcie i końcu odcinka
  * (nie para kotwic całej trasy). Przy tej samej miejscowości: stacje albo „km a–b”.
- * DP-220: nazwy stacji przez `fiStationDisplayName` (bez kodów vt4_…).
+ * DP-221: nazwy stacji przez `fiStationDisplayName` (bez kodów vt/kt/st/mt…).
  */
 export function fiE75SegmentLabel(
   seg: number,

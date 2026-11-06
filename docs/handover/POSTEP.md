@@ -1,3 +1,9 @@
+## 2026-11-06 01:30 — #828 SCALONE; DP-221 F7 B1+B2 (vt/kt/st/mt)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: **#828 SCALONE** `dd7d637a` (DP-223 F7 gotowe @ `0d6db86a`, CI unit+visual+db ✔). #816 do zamknięcia.
+- **Krok DP-221** `pakiet/c2-dp-220-fi-segment-titles` / #813 (rebase na `main`): F7 B1 — `fiStationDisplayName` prefiksy `vt|kt|st|mt`; B2 — numeracja DP-221 (nie DP-220). Test st624/kt51/mt1234. Dalej CI→F7.
+
 ## 2026-11-06 01:05 — #827 SCALONE; start DP-223 route-hazards 30 min
 
 - Skrzynka: #550 WSTRZYMANE; #816 DP-223 (bez etykiety — F7 #827 wskazuje kolejność); BN5–8 w planie. Bez nowego `pilne`.
