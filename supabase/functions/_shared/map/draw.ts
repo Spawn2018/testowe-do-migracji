@@ -673,13 +673,16 @@ export const WATER_GDN_NYN: readonly Xy[] = [
   [17.97, 58.91],
 ];
 
+/** DP-195 / DP-78: tor Gdynia–Karlskrona — podejście od południa (jak `WATER_GDY_KAA_LANE` na froncie). */
 export const WATER_GDY_KAA: readonly Xy[] = [
   [18.54, 54.533],
   [18.85, 54.9],
   [17.6, 55.35],
   [16.5, 55.75],
-  [16.05, 56.02],
-  [15.95, 56.16],
+  [15.85, 55.98],
+  [15.62, 56.06],
+  [15.595, 56.107],
+  [15.61, 56.135],
   [15.63, 56.161],
 ];
 

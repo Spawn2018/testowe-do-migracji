@@ -286,6 +286,12 @@ describe('B-MAPA geometria', () => {
     expect(lineHitsLand(STRAIGHT_GDY_KAA)).toBe(true);
   });
 
+  // DP-195 (#762 C3): serwerowy WATER_GDY_KAA = frontowy WATER_GDY_KAA_LANE (DP-78).
+  it('DP-195: WATER_GDY_KAA i WATER_GDY_KAA_LANE to te same punkty', async () => {
+    const { WATER_GDY_KAA_LANE } = await import('../src/lib/map/ferryLanes');
+    expect([...WATER_GDY_KAA]).toEqual([...WATER_GDY_KAA_LANE]);
+  });
+
   it('warstwa H-6 nie woła HERE', () => {
     expect(H6_LAYER_ENABLED).toBe(false);
     expect(h6Requests(false, true)).toBe(false);

@@ -1,3 +1,9 @@
+## 2026-11-06 04:20 — #830 SCALONE; start C3 DP-195 (WATER_GDY_KAA)
+
+- Skrzynka: #550 WSTRZYMANE; #814 → zamknięcie po DP-222; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: **#830 SCALONE** `2bc91a32` (DP-222 drobne F7 gotowe @ `7391afbc`, CI unit+visual+db ✔ / **0417**+**0418**).
+- **Krok C3** `pakiet/c3-dp-195-water-gdy-kaa`: `WATER_GDY_KAA` = punkty DP-78; `WATER_GDY_KAA_LANE` alias z `_shared`; test wspólnych punktów. Dalej CI→F7. Potem C3 DP-2/12/….
+
 ## 2026-11-06 03:55 — DP-222: Nova 02.11 ATD + fix prevArr (**0418**)
 
 - Skrzynka: #550 WSTRZYMANE; #814 drobne W TOKU; BN5–8 w planie. Bez nowego `pilne`.
