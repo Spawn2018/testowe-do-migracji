@@ -1,3 +1,9 @@
+## 2026-11-06 09:20 — #837 PILNE monitorujpojazd (TS-08) — start 0420
+
+- Skrzynka: #550 WSTRZYMANE; #837 PILNE (właściciel 09:06) wpisane do PLAN §4. BN5–8 w planie.
+- Scalanie: #836 SCALONE `b577c010`; #838 DP-29+30+32 otwarte — **najpierw #837** (komentarz PR). Bez push na main.
+- **Krok** `pakiet/837-monitorujpojazd-ts08` / **0420**: ukrycie tokenu (`monitorujpojazd_token` / `mp:<6>`), maska audit, poll `monitorujpojazd-poll` co 2 min, API `…/websatadmin/share/data/<uuid>/` (OK/EXPIRED/NOT_STARTED; **bez historii trasy**). Front chip + Stan systemu. security **532**. Czekam CI→F7.
+
 ## 2026-11-06 08:15 — #836 F7 r1: DP-24 via + dedup + h3 zachowanie
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.

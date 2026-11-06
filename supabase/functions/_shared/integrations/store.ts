@@ -1307,7 +1307,7 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
     },
     async processPosition(row: {
       loadId: string; lat: number; lon: number; ts: string;
-      source: 'EMTRACK_WEB' | 'TELEMATICS_API' | 'SUBCONTRACTOR_LINK' | 'SAFEFLEET';
+      source: 'EMTRACK_WEB' | 'TELEMATICS_API' | 'SUBCONTRACTOR_LINK' | 'SAFEFLEET' | 'MONITORUJPOJAZD';
       speed?: number | null; heading?: number | null; ignition?: boolean | null; raw?: unknown;
     }) {
       must(await sb.rpc('process_position', {
@@ -1364,6 +1364,11 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
       if (r.error) throw new Error(`telm_safefleet_poll_enabled: ${r.error.message}`);
       return r.data === true;
     },
+    async telmMonitorujPojazdPollEnabled() {
+      const r = await sb.rpc('telm_monitorujpojazd_poll_enabled');
+      if (r.error) throw new Error(`telm_monitorujpojazd_poll_enabled: ${r.error.message}`);
+      return r.data === true;
+    },
     async rioLinksLockTry(ttlSec = 90, token?: string) {
       const r = await sb.rpc('rio_links_lock_try', {
         p_ttl_sec: ttlSec,
@@ -1387,6 +1392,18 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
     async safefleetPollLockRelease(token?: string) {
       const r = await sb.rpc('safefleet_poll_lock_release', { p_token: token ?? null });
       if (r.error) throw new Error(`safefleet_poll_lock_release: ${r.error.message}`);
+    },
+    async monitorujpojazdPollLockTry(ttlSec = 90, token?: string) {
+      const r = await sb.rpc('monitorujpojazd_poll_lock_try', {
+        p_ttl_sec: ttlSec,
+        p_token: token ?? null,
+      });
+      if (r.error) throw new Error(`monitorujpojazd_poll_lock_try: ${r.error.message}`);
+      return r.data === true;
+    },
+    async monitorujpojazdPollLockRelease(token?: string) {
+      const r = await sb.rpc('monitorujpojazd_poll_lock_release', { p_token: token ?? null });
+      if (r.error) throw new Error(`monitorujpojazd_poll_lock_release: ${r.error.message}`);
     },
     async saveOrphanPosition(row: {
       plate: string; trackingObjectId?: string | null;
@@ -1493,6 +1510,35 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
       safefleet_trajectory_done?: boolean;
     }) {
       must(await sb.from('loads').update(patch).eq('id', loadId), 'loads safefleet state');
+    },
+    async listMonitorujPojazdLoadsForPoll() {
+      const r = await sb.from('loads').select(
+        'id,monitorujpojazd_token,monitorujpojazd_check_state,monitorujpojazd_check_at,monitorujpojazd_last_fix_at,monitorujpojazd_error_streak,telematics_vehicle_id,status,plan_load_date,tracking_opened_at',
+      )
+        .eq('telematics_provider', 'MONITORUJPOJAZD')
+        .not('monitorujpojazd_token', 'is', null)
+        .not('status', 'in', '("CANCELLED","REMOVED","UNLOADED","DELIVERED","READY_TO_INVOICE","INVOICED")');
+      if (r.error) throw new Error(`loads monitorujpojazd: ${r.error.message}`);
+      return (r.data ?? []).map((row) => ({
+        id: row.id as string,
+        monitorujpojazd_token: String(row.monitorujpojazd_token),
+        monitorujpojazd_check_state: (row.monitorujpojazd_check_state as string | null) ?? null,
+        monitorujpojazd_check_at: (row.monitorujpojazd_check_at as string | null) ?? null,
+        monitorujpojazd_last_fix_at: (row.monitorujpojazd_last_fix_at as string | null) ?? null,
+        monitorujpojazd_error_streak: Number(row.monitorujpojazd_error_streak ?? 0),
+        telematics_vehicle_id: (row.telematics_vehicle_id as string | null) ?? null,
+        status: (row.status as string | null) ?? null,
+        plannedLoadDate: (row.plan_load_date as string | null) ?? null,
+        trackingOpenedAt: (row.tracking_opened_at as string | null) ?? null,
+      }));
+    },
+    async updateMonitorujPojazdLoadState(loadId: string, patch: {
+      monitorujpojazd_check_state?: 'ok' | 'pending' | 'invalid' | 'down';
+      monitorujpojazd_check_at?: string;
+      monitorujpojazd_last_fix_at?: string;
+      monitorujpojazd_error_streak?: number;
+    }) {
+      must(await sb.from('loads').update(patch).eq('id', loadId), 'loads monitorujpojazd state');
     },
     async lastPositionFix(loadId: string, source: string) {
       const r = await sb.from('positions').select('lat,lon,ts').eq('load_id', loadId).eq('source', source)
