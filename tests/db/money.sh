@@ -353,6 +353,16 @@ err "anon nie wywoła latest_vehicle_positions"                          $KSH "s
 err "zalogowany nie wywoła latest_vehicle_positions"                    $SCX "select * from latest_vehicle_positions(30)" "permission denied"
 chk "system: ryzyko projektowe (bez transportu) zapisane"               "$(Q "select raise_integration_risk('$P',null,'FERRY','HIGH','Źródło niedostępne','{}','SOURCE_DOWN:T12:2026-09-26')")" t
 chk "system: ten sam klucz → bez duplikatu (false)"                     "$(Q "select raise_integration_risk('$P',null,'FERRY','HIGH','Źródło niedostępne','{}','SOURCE_DOWN:T12:2026-09-26')")" f
+# DP-31 / F7 #668 r8: SOURCE_DOWN otwarte — HIGH→MEDIUM + nowy opis (bez duplikatu).
+# L xx: dedup SOURCE_DOWN:DP31:*; vessel niepotrzebny.
+sys "select raise_integration_risk('$P',null,'FERRY','HIGH','Źródło niedostępne: Polferries','{\"title_key\":\"rk_source_down\",\"params\":{\"source\":\"Polferries\",\"source_key\":\"rk_src_POLFERRIES_SCHEDULE\"}}','SOURCE_DOWN:DP31:sev')"
+chk "DP-31: HIGH→MEDIUM raise → false"                                  "$(Q "select raise_integration_risk('$P',null,'FERRY','MEDIUM','Źródło niedostępne: Polferries — PDF','{\"title_key\":\"rk_source_down\",\"params\":{\"source\":\"Polferries\",\"source_key\":\"rk_src_POLFERRIES_SCHEDULE\"},\"ostrzezenia\":[\"pdf\"]}','SOURCE_DOWN:DP31:sev')")" f
+chk "DP-31: otwarte — severity/title MEDIUM"                            "$(Q "select severity||'|'||title from risk_signals where dedup_key='SOURCE_DOWN:DP31:sev' and resolved_at is null")" "MEDIUM|Źródło niedostępne: Polferries — PDF"
+chk "DP-31: jeden otwarty wiersz"                                       "$(Q "select count(*) from risk_signals where dedup_key='SOURCE_DOWN:DP31:sev'")" 1
+XMIN31=$(Q "select xmin::text from risk_signals where dedup_key='SOURCE_DOWN:DP31:sev' and resolved_at is null")
+chk "DP-31: identyczne raise → false"                                   "$(Q "select raise_integration_risk('$P',null,'FERRY','MEDIUM','Źródło niedostępne: Polferries — PDF','{\"title_key\":\"rk_source_down\",\"params\":{\"source\":\"Polferries\",\"source_key\":\"rk_src_POLFERRIES_SCHEDULE\"},\"ostrzezenia\":[\"pdf\"]}','SOURCE_DOWN:DP31:sev')")" f
+chk "DP-31: identyczne raise → xmin bez zmian"                          "$(Q "select xmin::text from risk_signals where dedup_key='SOURCE_DOWN:DP31:sev' and resolved_at is null")" "$XMIN31"
+sys "update risk_signals set resolved_at = now() where dedup_key='SOURCE_DOWN:DP31:sev' and resolved_at is null"
 # DP-167 / F7 #734 r1–r2: ROAD_* bez load_id — update otwartego; detail z title_key
 # znormalizowany jak trigger → identyczne raise bez UPDATE (xmin); zmiana title_key → kolumna.
 # FERRY+load_id — waga zamrożona (wariant a).
