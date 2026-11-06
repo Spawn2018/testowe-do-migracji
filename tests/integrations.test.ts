@@ -7,7 +7,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import {
-  clearDmiResponseCache, MIN_INTERVAL_MIN, runFerryAis, runFerrySchedule, runFerryStatus, runFerryWeather, runJob,
+  clearDmiResponseCache, MIN_INTERVAL_MIN, previousActualArrivalBefore, runFerryAis, runFerrySchedule, runFerryStatus, runFerryWeather, runJob,
   runRoadPl, runRoadSe, runTrafficFlow,
   type JobDeps, type JobResult, type SyncStore, type VehiclePos,
 } from '../supabase/functions/_shared/integrations/jobs';
@@ -487,6 +487,36 @@ describe('ferry-ais — Digitraffic (prawdziwa odpowiedź 25.09.2026)', () => {
     const s = st.sailings.find((x) => x.vessel_id === NS)!;
     expect(s.actual_departure_at).toBe('2026-11-04T17:09:44.000Z');
     expect(s.status).toBe('W_REJSIE');
+    expect(r.observations?.['M/F Nova Star:DEP']).toMatch(/^WYPŁYNĄŁ_/);
+  });
+  it('DP-222: Nova 02.11 para AIS; późniejsze ATA nie psuje since/accept', async () => {
+    const st = new MemStore();
+    const target = sail(NS, '2026-11-02T17:00:00.000Z', '2026-11-03T11:00:00.000Z');
+    target.id = 'nova-0211-gdn';
+    const later = sail(NS, '2026-11-03T17:00:00.000Z', '2026-11-04T11:00:00.000Z', 'NYN-GDN');
+    later.id = 'nova-0311-nyn';
+    later.status = 'DOPLYNAL';
+    later.actual_departure_at = '2026-11-03T17:23:30.000Z';
+    later.actual_arrival_at = '2026-11-04T10:25:14.000Z';
+    st.sailings.push(target, later);
+    expect(previousActualArrivalBefore(st.sailings, NS, target.id, target.departure_at)).toBeNull();
+    for (const p of [
+      { lat: 54.4040, lon: 18.6781, observedAt: '2026-11-02T17:04:10.000Z', sogKn: 0 },
+      { lat: 54.4037, lon: 18.6774, observedAt: '2026-11-02T17:08:47.000Z', sogKn: 1.3 },
+      { lat: 54.4044, lon: 18.6713, observedAt: '2026-11-02T17:11:46.000Z', sogKn: 4.8 },
+      { lat: 54.4052, lon: 18.6668, observedAt: '2026-11-02T17:13:46.000Z', sogKn: 5.1 },
+      { lat: 54.4117, lon: 18.6597, observedAt: '2026-11-02T17:19:06.000Z', sogKn: 5.8 },
+      { lat: 54.4275, lon: 18.6499, observedAt: '2026-11-02T17:28:16.000Z', sogKn: 7 },
+      { lat: 54.4348, lon: 18.6556, observedAt: '2026-11-02T17:31:36.000Z', sogKn: 9.1 },
+      { lat: 54.4917, lon: 18.7493, observedAt: '2026-11-02T17:54:26.000Z', sogKn: 16.1 },
+    ]) {
+      st.vesselPositions.push({ vesselId: NS, ...p });
+    }
+    const out = AIS.replace('17.850695, 57.980348', '18.7493, 54.4917')
+      .replace('"sog" : 17.1', '"sog" : 16.1')
+      .replace('1790278580817', String(Date.parse('2026-11-02T17:54:26.000Z')));
+    const r = await runFerryAis(deps(st, { 'digitraffic.fi': out }, {}, new Date('2026-11-02T17:55:00Z')).d);
+    expect(st.sailings.find((x) => x.id === target.id)?.actual_departure_at).toBe('2026-11-02T17:19:06.000Z');
     expect(r.observations?.['M/F Nova Star:DEP']).toMatch(/^WYPŁYNĄŁ_/);
   });
   it('DP-222 F7 B1: postój w porcie 2 h po ETD → bez ATD', async () => {

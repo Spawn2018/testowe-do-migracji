@@ -3437,6 +3437,32 @@ export function acceptActualDepartureAt(
   return true;
 }
 
+/**
+ * DP-222 (#814 Nova 02.11): poprzednie `actual_arrival_at` tylko z rejsów
+ * o wcześniejszym `departure_at` (i ATA ≤ plan tego odejścia). Max ATA
+ * spośród *wszystkich* rejsów (w tym późniejszych) psuje since/accept —
+ * backfill 0412 i cron na historii dostawały since z przyszłości.
+ */
+export function previousActualArrivalBefore(
+  sailings: ReadonlyArray<Pick<DbSailing, 'id' | 'vessel_id' | 'departure_at' | 'actual_arrival_at'>>,
+  vesselId: string,
+  sailingId: string,
+  beforeDepartureIso: string,
+): string | null {
+  const before = Date.parse(beforeDepartureIso);
+  if (!Number.isFinite(before)) return null;
+  const times = sailings
+    .filter((x) => {
+      if (x.vessel_id !== vesselId || x.id === sailingId || x.actual_arrival_at == null) return false;
+      const dep = Date.parse(x.departure_at);
+      const ata = Date.parse(x.actual_arrival_at);
+      return Number.isFinite(dep) && Number.isFinite(ata) && dep < before && ata <= before;
+    })
+    .map((x) => x.actual_arrival_at!)
+    .sort();
+  return times.at(-1) ?? null;
+}
+
 /** BN4: etykiety portów docelowych dla ryzyka INFO `AIS_<port>` (jak NYN/KAA + HEL/STO/KPS/VUO). */
 export const AIS_ARRIVAL_PORT_LABEL: Readonly<Record<string, string>> = {
   NYN: 'Nynäshamn',
@@ -3613,11 +3639,9 @@ export async function runFerryAis(deps: JobDeps): Promise<JobResult> {
       if (ageMin <= 15 && depHub) {
         const dist = distanceKm(fix.lat, fix.lon, depHub.lat, depHub.lon);
         const moving = (fix.sogKn ?? 0) >= 3;
-        const prevArr = sailings
-          .filter((x) => x.vessel_id === s.vessel_id && x.id !== s.id && x.actual_arrival_at)
-          .map((x) => x.actual_arrival_at!)
-          .sort()
-          .at(-1) ?? null;
+        const prevArr = previousActualArrivalBefore(
+          sailings, s.vessel_id, s.id, s.departure_at,
+        );
         const plan2h = new Date(Date.parse(s.departure_at) - 2 * 3600_000).toISOString();
         const sinceIso = prevArr != null && prevArr > plan2h ? prevArr : plan2h;
         let depAt: string | null = null;
