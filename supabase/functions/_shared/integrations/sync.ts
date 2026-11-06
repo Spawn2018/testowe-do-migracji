@@ -222,11 +222,12 @@ const warsawStamp = (utc: string) => new Intl.DateTimeFormat('pl-PL', {
 
 /** Awaria źródła albo zmiana struktury → ryzyko widoczne w kolejce, nigdy cicha pustka.
  *  Emtrack (A8) i RIO (E44): jeden klucz bez daty, w tytule „od kiedy”. Reszta: jeden klucz na dzień.
- *  F7 #661 Decyzja 50: VIKING_SCHEDULE = MEDIUM (Imperva 403 — bez obchodzenia; HHL, bez push/e-mail). */
+ *  F7 #661 Decyzja 50: VIKING_SCHEDULE = MEDIUM (Imperva 403 — bez obchodzenia; HHL, bez push/e-mail).
+ *  DP-32 / F7 #668 r8: DFDS_SCHEDULE bez daty — wielodniowa praca z PDF nie mnoży ryzyk. */
 export function sourceDownRisk(src: SourceId, warnings: string[], nowIso: string, url?: string): RiskInput {
   /* F7 #699 B4: ERR_RSS bez daty — inaczej ~144 wierszy/dzień przy złym XML. */
   const sticky = src === 'EMTRACK_WEB' || src === 'RIO' || src === 'KSH_SHAREPOINT' || src === 'HERE_ROADS'
-    || src === 'ERR_RSS';
+    || src === 'ERR_RSS' || src === 'DFDS_SCHEDULE';
   const when = warsawStamp(nowIso);
   return {
     kind: SOURCE_KIND[src],

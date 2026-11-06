@@ -1,8 +1,20 @@
+## 2026-11-06 10:15 — #839 SCALONE; #838 merge main po #837
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: **#839 SCALONE** `a83743fa` (#837 monitorujpojazd / **0420**, F7 @ `33db67f9`). #838 nie czyściło się z main → merge `origin/main`, konflikt tylko PLAN/POSTEP.
+- **Krok:** push merge na `pakiet/c3-dp-29-30-32-dfds-structure` → CI→F7. Potem DP-31/38…. Bez push na main.
+
 ## 2026-11-06 09:20 — #837 PILNE monitorujpojazd (TS-08) — start 0420
 
 - Skrzynka: #550 WSTRZYMANE; #837 PILNE (właściciel 09:06) wpisane do PLAN §4. BN5–8 w planie.
 - Scalanie: #836 SCALONE `b577c010`; #838 DP-29+30+32 otwarte — **najpierw #837** (komentarz PR). Bez push na main.
 - **Krok** `pakiet/837-monitorujpojazd-ts08` / **0420**: ukrycie tokenu (`monitorujpojazd_token` / `mp:<6>`), maska audit, poll `monitorujpojazd-poll` co 2 min, API `…/websatadmin/share/data/<uuid>/` (OK/EXPIRED/NOT_STARTED; **bez historii trasy**). Front chip + Stan systemu. security **532**. Czekam CI→F7.
+
+## 2026-11-06 09:00 — #836 SCALONE; start DP-29+30+32 DFDS
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: **#836 SCALONE** `b577c010` (DP-22+24 F7 gotowe @ `d5c927c0`, CI unit+visual+db ✔ / **0419**).
+- **Krok C3** `pakiet/c3-dp-29-30-32-dfds-structure`: DP-29 — `structureFail` łapie „nieczytelny rejs”, opis w SOURCE_DOWN; DP-30 — bez martwego „bez rozpoznanych”; DP-32 — `DFDS_SCHEDULE` sticky jak EMTRACK. Unit DFDS ✔. Czekam CI→F7.
 
 ## 2026-11-06 08:15 — #836 F7 r1: DP-24 via + dedup + h3 zachowanie
 
