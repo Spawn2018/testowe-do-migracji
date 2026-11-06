@@ -1,3 +1,9 @@
+## 2026-11-06 13:45 — #844 SCALONE; start DP-40 (INLAND wierzchołki vs HERE)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: **#844 SCALONE** `66877eeb` (DP-39, F7 gotowe @ `5d25a7c7`; CI unit+visual ✔; bez migracji).
+- **Krok** `pakiet/c3-dp-40-inland-vertices` / **0423**: SELECT prod SE-KAA-INLAND — `16.120/59.279` 15,6 m (zostaje); `16.337/59.133` 9,3 km → `16.22388/59.06971` (st_closestpoint). Test i667. Dalej DP-43…. Bez push na main.
+
 ## 2026-11-06 13:05 — #843 SCALONE; start DP-39 (sesja here-roads 5 min)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`. Rejestr **DP-226** (F7 #843: via_points INLAND z SQL).

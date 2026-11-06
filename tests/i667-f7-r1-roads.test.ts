@@ -139,15 +139,15 @@ function viaAlongCorridor(pts: readonly LatLng[], pMax = 14): LatLng[] {
   return [pts[0]!, ...vias, pts[pts.length - 1]!];
 }
 
-/** F7 r6 uwaga 2: korytarz z pliku 0354 (parsowanie `st_makepoint`), nie ręczna kopia. */
-function corridorFrom0354(code: 'SE_E22' | 'SE_KAA_INLAND'): LatLng[] {
-  const sql = readFileSync(
-    new URL('../supabase/migrations/0354_667_kaa_corridor_lulea.sql', import.meta.url),
-    'utf8',
-  );
+/** F7 r6 / DP-40: korytarz z migracji (parsowanie `st_makepoint`), nie ręczna kopia. */
+function corridorFromMigration(
+  code: 'SE_E22' | 'SE_KAA_INLAND',
+  file: string,
+): LatLng[] {
+  const sql = readFileSync(new URL(`../supabase/migrations/${file}`, import.meta.url), 'utf8');
   const marker = `where code = '${code}'`;
   const idx = sql.indexOf(marker);
-  if (idx < 0) throw new Error(`brak ${code} w 0354`);
+  if (idx < 0) throw new Error(`brak ${code} w ${file}`);
   const before = sql.slice(0, idx);
   const start = before.lastIndexOf('st_makeline(array[');
   if (start < 0) throw new Error(`brak st_makeline dla ${code}`);
@@ -160,6 +160,14 @@ function corridorFrom0354(code: 'SE_E22' | 'SE_KAA_INLAND'): LatLng[] {
   }
   if (pts.length < 8) throw new Error(`${code}: za mało punktów (${pts.length})`);
   return pts;
+}
+
+function corridorFrom0354(code: 'SE_E22' | 'SE_KAA_INLAND'): LatLng[] {
+  // DP-40: INLAND po SELECT HERE — pełna geometria w 0423 (Malmköping → closest).
+  if (code === 'SE_KAA_INLAND') {
+    return corridorFromMigration(code, '0423_dp40_se_kaa_inland_vertices.sql');
+  }
+  return corridorFromMigration(code, '0354_667_kaa_corridor_lulea.sql');
 }
 
 const SE_E22_PROD = corridorFrom0354('SE_E22');
@@ -270,6 +278,7 @@ describe('#667 F7 r3–r6 B4/B5/B7 kaaDeviationOk — korytarze z 0354', () => {
 
   // DP-38 / F7 #673 r7: haversine brał 9. via 63.2909 (remis ~49 km do celu);
   // geodezja WGS84 jak SQL `geography` → 63.8127 (Umeå E4).
+  // DP-40: po przesunięciu Malmköping→HERE lista via: Gävle wypada, Hudiksvall wchodzi.
   it('DP-38: viaAlongCorridor INLAND = lista jak SQL (geodezja, nie haversine)', () => {
     const via = viaAlongCorridor(SE_KAA_INLAND_PROD, 14);
     const expected: LatLng[] = [
@@ -279,7 +288,7 @@ describe('#667 F7 r3–r6 B4/B5/B7 kaaDeviationOk — korytarze z 0354', () => {
       [58.594, 16.183],
       [59.371, 16.507],
       [60.151, 16.929],
-      [60.6638, 17.109],
+      [61.7279, 17.065],
       [62.391, 17.34],
       [62.6323, 17.9379],
       [63.8127, 20.3263],
@@ -311,8 +320,15 @@ describe('#667 F7 r3–r6 B4/B5/B7 kaaDeviationOk — korytarze z 0354', () => {
     expect(kaaDeviationOk(line, SE_KAA_INLAND_PROD, { sparseCorridor: true, controlPts: ctrl })).toBe(true);
   });
 
-  it('F7 r5 uwaga 1: wierzchołek INLAND 16.120/59.279 w korytarzu (OSRM; odbiór SELECT po wdrożeniu)', () => {
+  it('F7 r5 / DP-40: INLAND 16.120/59.279 zostaje (SELECT HERE 15,6 m); Malmköping→closest', () => {
+    // DP-40 / F7 #673 r7: SELECT prod SE-KAA-INLAND — 59.279/16.120 OK; 59.133/16.337 było 9,3 km.
     expect(SE_KAA_INLAND_PROD.some(([lat, lng]) => Math.abs(lat - 59.279) < 1e-4 && Math.abs(lng - 16.120) < 1e-4)).toBe(true);
+    expect(SE_KAA_INLAND_PROD.some(([lat, lng]) => Math.abs(lat - 59.133) < 1e-4 && Math.abs(lng - 16.337) < 1e-4)).toBe(false);
+    expect(
+      SE_KAA_INLAND_PROD.some(
+        ([lat, lng]) => Math.abs(lat - 59.06971) < 1e-5 && Math.abs(lng - 16.22388) < 1e-5,
+      ),
+    ).toBe(true);
   });
 
   it('F7 r6 B4-test (a): fixture SE-NYN + korytarze z 0354 — pada bez dens., przechodzi po r4/r6', () => {
