@@ -1,3 +1,9 @@
+## 2026-11-06 06:15 — #832 SCALONE; DP-2 reszta (inwentarz + −5 grepy)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: **#832 SCALONE** `20e490b8` (DP-2 cz.1 + DP-12 F7 gotowe @ `6597881e`, CI unit+visual+db ✔).
+- **Krok C3** `pakiet/c3-dp-2-reszta-behavior`: PLAN inwentarz 1–15; status −5 grepy functiondef (BN8a refresh/assign, DP-136×2, DP-137) → **682**; zostają `process_position` FI + `eta_record` v_route (+ skan dec-* / bmapa). Dalej CI→F7. Potem DP-22/24….
+
 ## 2026-11-06 05:25 — #832 CI db FAIL → fix DP-2 asercje
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
