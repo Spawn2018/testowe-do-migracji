@@ -1,3 +1,9 @@
+## 2026-11-06 11:25 — #840 DP-227 F7 r1: bmapa asu map_display_state
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: brak F7 „gotowe do scalenia” (tylko #841 otwarte).
+- **Krok** #841 F7 r1: db FAIL bmapa 211/213 — `map_display_state` wymaga authenticated; testy DP-227 przez `asu HHL` (jak DP-224). unit/visual ✔. Czekam CI→F7. Bez push na main.
+
 ## 2026-11-06 10:50 — #838 SCALONE; start #840 DP-227 (geom_ok)
 
 - Skrzynka: #550 WSTRZYMANE; **#840 PILNE** (właściciel 10:40) wpisane jako DP-227. BN5–8 w planie.
