@@ -1,3 +1,9 @@
+## 2026-11-06 02:45 — DP-220 F7 #829 niegotowe → fixture hhl/carrier
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: brak — F7 #829 @ `4c20f763` **niegotowe** (db dec-auto 83/84: load …d220 bez `hhl_order_no` → FK risk).
+- **Krok F7:** fixture DP-220 — `hhl_order_no=T-D220/ETA` + `carrier_order_no=SCX-D220`; `count(*)` load; EXPECTED dec-auto **85**. Dalej CI→F7. Potem dokończenie drobne DP-222.
+
 ## 2026-11-06 02:10 — #813 SCALONE; start DP-220 ETA_BREACH **0416**
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.

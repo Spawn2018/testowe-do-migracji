@@ -131,10 +131,16 @@ val "l3_scan: params.code to kod transportu" "select l3_scan(timestamptz '2026-1
 $PSQL -c "update risk_signals set detail = jsonb_set(detail, '{params,code}', '\"SG-D930\"') where dedup_key='l3:NO_AWIZACJA:33333333-0000-0000-0000-00000000d930'" >/dev/null
 val "l3_upsert_alarm nie nadpisuje kodu identyfikatorem" "update risk_signals set severity='HIGH', detail = jsonb_set(jsonb_set(coalesce(detail,'{}'::jsonb), '{params,code}', '\"SG-D930\"'), '{l3_level}', '\"warning\"') where dedup_key='l3:NO_AWIZACJA:33333333-0000-0000-0000-00000000d930'; select l3_upsert_alarm((select project_id from loads where id='33333333-0000-0000-0000-00000000d930'), '33333333-0000-0000-0000-00000000d930', 'RESOURCE_MISSING', 'l3:NO_AWIZACJA:33333333-0000-0000-0000-00000000d930', '33333333: zly', 'rk_res_driver', true, true, now(), jsonb_build_object('params', jsonb_build_object('code', left('33333333-0000-0000-0000-00000000d930'::text, 8))), now()); select detail#>>'{params,code}' from risk_signals where dedup_key='l3:NO_AWIZACJA:33333333-0000-0000-0000-00000000d930' and resolved_at is null" "SG-D930"
 
-# DP-220 (#809): ETA_BREACH — ten sam CRITICAL, nowe minuty → title + params.
-$PSQL -c "insert into loads (id, project_id, order_no, status, plan_load_date) values
-  ('33333333-0000-0000-0000-00000000d220','$P','DP-220/ETA','IN_TRANSIT_PL','2026-11-06')
-  on conflict (id) do update set status='IN_TRANSIT_PL', plan_load_date=excluded.plan_load_date" >/dev/null
+# DP-220 (#809 / F7 #829): ETA_BREACH — ten sam CRITICAL, nowe minuty → title + params.
+# enforce_order_numbers: IN_TRANSIT_PL wymaga hhl_order_no + carrier_order_no (#713 count).
+$PSQL -c "insert into loads (id, project_id, order_no, hhl_order_no, carrier_order_no, status, plan_load_date) values
+  ('33333333-0000-0000-0000-00000000d220','$P','DP-220/ETA','T-D220/ETA','SCX-D220','IN_TRANSIT_PL','2026-11-06')
+  on conflict (id) do update set
+    status='IN_TRANSIT_PL',
+    plan_load_date=excluded.plan_load_date,
+    hhl_order_no=excluded.hhl_order_no,
+    carrier_order_no=excluded.carrier_order_no" >/dev/null
+val "DP-220: fixture load …d220" "select count(*) from loads where id='33333333-0000-0000-0000-00000000d220' and hhl_order_no='T-D220/ETA'" 1
 $PSQL -c "insert into risk_signals (project_id, load_id, kind, severity, title, title_key, detail, dedup_key, detected_at)
   values ('$P','33333333-0000-0000-0000-00000000d220','ETA_BREACH','CRITICAL',
     'Opóźnienie 100 min wobec planu dostawy (próg 30)',
