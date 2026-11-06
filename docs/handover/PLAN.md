@@ -2698,6 +2698,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 06.11.2026 18:35 | #851 SCALONE `62d1cc1d` (DP-226 / **0424** F7 @ `d608592b`); start **DP-226 cz.2** H3 via ze słownika | pętla / C3 |
 | 06.11.2026 19:05 | #853 SCALONE `c6dcc0da` (DP-226 cz.2 F7 @ `69ccd6df`); start **DP-228** / **0425** (odrzut HERE przy starej linii → Stan systemu) | pętla / C3 |
 | 06.11.2026 19:45 | #854 SCALONE `4f79c0fd` (DP-228 / **0425** F7 @ `6ef49bbd`); start **DP-229** — CI `local-orange-maps` (local.spec + lokalny SB) | pętla / C3 |
+| 06.11.2026 20:20 | #855 DP-229 F7 r2: fixture SE_KAA_TRACK + supabase@3.0.0 (fail „Zła geometria”) | pętla / C3 F7 |
 | 06.11.2026 20:05 | #855 DP-229 F7 r1: workdir CI kopiuje `src/lib/pl` + `time.ts` (fail deepl.ts) | pętla / C3 F7 |
 | 06.11.2026 16:35 | #849 SCALONE `448faf5b` (DP-56+57 F7 @ `8f527a5f`); start **DP-58** (local.spec bez if/catch; telefon + TrackReplay) | pętla / C3 |
 | 06.11.2026 16:10 | #849 F7 r1: DP-57 bez `e.message` (apiKey) — `edgeErrorResponse` `blad`/`slownik` + mask log | pętla / C3 F7 |

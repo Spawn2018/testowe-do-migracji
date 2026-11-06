@@ -1,3 +1,9 @@
+## 2026-11-06 20:20 — #855 DP-229 F7 r2: seed SE_KAA_TRACK + CLI pin
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: brak F7 „gotowe” — CI `local-orange-maps` fail @ `177486b4` (`here_store_road` → „Zła geometria”: brak `SE_KAA_TRACK` po stegra); unit ✔, visual w toku na poprzednim SHA.
+- **Krok** F7 #855 r2: fixture `SE_KAA_TRACK` (jak bmapa #572) przed `here_store_road`; CLI `supabase@3.0.0` (nie `@latest`). Bez migracji. Czekam CI→F7. Bez push na main.
+
 ## 2026-11-06 20:05 — #855 DP-229 F7 r1: workdir + src/lib/pl
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.

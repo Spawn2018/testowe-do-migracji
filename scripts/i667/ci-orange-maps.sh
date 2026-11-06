@@ -25,10 +25,13 @@ t = t.replace('[db.seed]\n# If enabled, seeds the database after migrations duri
 p.write_text(t, encoding='utf-8')
 PY
 
-echo "== supabase start =="
-npx -y supabase@latest start --workdir "$WD" -x studio,imgproxy,logflare,vector,supavisor
+# Przypięta wersja CLI (F7 #855) — check nie zmienia się sam po wydaniu nowej.
+SB_CLI=${SB_CLI:-supabase@3.0.0}
 
-eval "$(npx -y supabase@latest status --workdir "$WD" -o env 2>/dev/null | grep -E '^(API_URL|ANON_KEY|SERVICE_ROLE_KEY|DB_URL)=')"
+echo "== supabase start =="
+npx -y "$SB_CLI" start --workdir "$WD" -x studio,imgproxy,logflare,vector,supavisor
+
+eval "$(npx -y "$SB_CLI" status --workdir "$WD" -o env 2>/dev/null | grep -E '^(API_URL|ANON_KEY|SERVICE_ROLE_KEY|DB_URL)=')"
 case "$API_URL" in http://127.0.0.1:*|http://localhost:*) ;; *) echo "DP-229 STOP: API_URL nie lokalny: $API_URL" >&2; exit 2 ;; esac
 
 export VITE_SUPABASE_URL="$API_URL" VITE_SUPABASE_ANON_KEY="$ANON_KEY"
@@ -55,7 +58,29 @@ EOF
 echo "== seed stegra + SE-KAA + 1 transport =="
 psql "$DB_URL" -v ON_ERROR_STOP=1 -q -f supabase/seed/stegra.sql
 psql "$DB_URL" -v ON_ERROR_STOP=1 -q <<'SQL'
--- Pomarańczowa linia SE-KAA (słownik SE_KAA_TRACK) — bez prawdziwego śladu GPS.
+-- SE_KAA_TRACK nie ma w seedzie / migracjach (buduje się ze śladu GPS).
+-- Fixture jak tests/db/bmapa.sh #572 — bez tego here_corridor_points → null → „Zła geometria” (DP-228).
+insert into corridor_polylines (code, geom, total_km, source, updated_at)
+values (
+  'SE_KAA_TRACK',
+  st_segmentize(st_setsrid(st_makeline(array[
+    st_makepoint(15.63, 56.17), st_makepoint(16.05, 56.50), st_makepoint(16.40, 57.00),
+    st_makepoint(16.50, 57.50), st_makepoint(16.45, 58.00), st_makepoint(16.18, 58.59),
+    st_makepoint(16.30, 59.00), st_makepoint(16.54, 59.61), st_makepoint(16.80, 60.00),
+    st_makepoint(17.10, 60.70), st_makepoint(17.20, 61.50), st_makepoint(17.40, 62.40),
+    st_makepoint(18.50, 63.20), st_makepoint(20.20, 63.80), st_makepoint(21.00, 64.70),
+    st_makepoint(21.50, 65.30), st_makepoint(21.76, 65.81)
+  ]), 4326), 0.05),
+  1400,
+  'fixture DP-229 CI (nie GPS)',
+  now()
+)
+on conflict (code) do update
+  set geom = excluded.geom, total_km = excluded.total_km, source = excluded.source, updated_at = now();
+update corridor_polylines
+   set total_km = round((st_length(geom::geography)/1000.0)::numeric, 2)
+ where code = 'SE_KAA_TRACK';
+-- Pomarańczowa linia SE-KAA z wierzchołków korytarza (≥2 punktów).
 select here_store_road('SE-KAA', here_corridor_points('SE_KAA_TRACK'), 'DP-229 CI SE-KAA', now());
 -- Jeden transport widoczny na Mapie / Harmonogramie (TrackReplay + szuflada).
 insert into loads (
