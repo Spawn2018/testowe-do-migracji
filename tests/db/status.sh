@@ -2455,13 +2455,43 @@ chk "BN8a: assume_dep GDN-NYN = 60" \
 chk "BN8a: corridor_code PL-GDN = PL_ROAD" \
   "select corridor_code from here_road_legs where leg='PL-GDN'" PL_ROAD
 # DP-2: zamiast pg_get_functiondef like —
-# refresh/road_corridor_pre + assign bez PL → W5a/W5b/W5d + DP-136 (FI propose);
-# process_position finland_land_geom + eta_record v_route → zostają poniżej (brak e2e 1:1).
-chk "BN8a: process_position ląd FI" \
-  "select pg_get_functiondef('public.process_position(uuid,double precision,double precision,timestamptz,position_source,numeric,numeric,boolean,jsonb)'::regprocedure) like '%finland_land_geom%'" t
-chk "BN8a: eta_record filtr po v_route" \
-  "select (pg_get_functiondef('public.eta_record_segment_observations(uuid)'::regprocedure) like '%PORT_OUT%, v_route)%'
-     and pg_get_functiondef('public.eta_record_segment_observations(uuid)'::regprocedure) not like '%PORT_OUT%, v_op)%')" t
+# refresh/road_corridor_pre + assign bez PL → W5a/W5b/W5d + DP-136 (FI propose/assign);
+# 11 process_position×finland_land_geom → DP-218 process_position FI (60.173/24.827) → IN_TRANSIT_SE;
+# 12 eta_record×v_route → TLL-STO vs alias TALLINK→TLL-HEL (stary v_op bierze HEL).
+L2e1=55555555-0000-0000-0000-0000000002e1
+S2e1=77777777-0000-0000-0000-0000000002e1
+V2e1=66666666-0000-0000-0000-0000000002e1
+GID_HEL_OUT=$(q "select id from geofences where project_id='$P' and name='Terminal Tallinn D HEL' and kind='PORT_OUT' limit 1")
+GID_STO_OUT=$(q "select id from geofences where project_id='$P' and name='Terminal Tallinn D' and kind='PORT_OUT' and route='TLL-STO' limit 1")
+q "insert into vessels (id, name, operator) values
+    ('$V2e1', 'DP-2 eta v_route', 'Tallink')
+   on conflict (id) do nothing;
+   insert into sailings (id, project_id, vessel_id, route, departure_at, arrival_at, status, source)
+   values ('$S2e1', '$P', '$V2e1', 'TLL-STO',
+           '2026-11-01 12:00+00', '2026-11-01 20:00+00', 'ZAPLANOWANY', 'TALLINK')
+   on conflict (id) do nothing" >/dev/null
+mk $L2e1 A2e1 "'HHL/A2e1'" "'SCX/A2e1'" IN_TRANSIT_PL "'$S2e1'"
+q "insert into load_events (load_id, event_type, occurred_at, payload) values
+    ('$L2e1', 'GEOFENCE_ENTER', '2026-11-01 10:00+00',
+     jsonb_build_object('geofence_id', '$GID_HEL_OUT', 'geofence_kind', 'PORT_OUT',
+                        'geofence_name', 'Terminal Tallinn D HEL', 'route', 'TLL-HEL')),
+    ('$L2e1', 'GEOFENCE_ENTER', '2026-11-01 14:00+00',
+     jsonb_build_object('geofence_id', '$GID_STO_OUT', 'geofence_kind', 'PORT_OUT',
+                        'geofence_name', 'Terminal Tallinn D', 'route', 'TLL-STO'))" >/dev/null
+chk "DP-2: eta_obs_route_key L2e1 = TLL-STO" \
+  "select public.eta_obs_route_key('$L2e1')" TLL-STO
+chk "DP-2: eta_seg PORT_OUT × v_route = STO 14:00" \
+  "select (public.eta_seg_event_at('$L2e1','GEOFENCE_ENTER','PORT_OUT',null,null,
+            public.eta_obs_route_key('$L2e1'))
+           = timestamptz '2026-11-01 14:00+00')::text" true
+chk "DP-2: eta_seg PORT_OUT × v_op TALLINK = HEL 10:00 (stary)" \
+  "select (public.eta_seg_event_at('$L2e1','GEOFENCE_ENTER','PORT_OUT',null,null,
+            public.eta_record_v_op('TLL-STO'))
+           = timestamptz '2026-11-01 10:00+00')::text" true
+q "delete from load_events where load_id='$L2e1';
+   delete from loads where id='$L2e1';
+   delete from sailings where id='$S2e1';
+   delete from vessels where id='$V2e1'" >/dev/null
 L820=aaaaaaaa-0000-0000-0000-00000000820a
 q "insert into loads (id, project_id, carrier_org_id, hhl_order_no, carrier_order_no, status, plan_load_date, plan_delivery_date, ferry_route)
     values ('$L820','$P','$SCXO','HHL/BN8A-820','SCX/BN8A-820','PLANNED', current_date, current_date + 3, 'TLL-HEL')" >/dev/null
