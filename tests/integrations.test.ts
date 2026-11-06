@@ -7,7 +7,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
 import {
-  clearDmiResponseCache, runFerryAis, runFerrySchedule, runFerryStatus, runFerryWeather, runJob,
+  clearDmiResponseCache, MIN_INTERVAL_MIN, runFerryAis, runFerrySchedule, runFerryStatus, runFerryWeather, runJob,
   runRoadPl, runRoadSe, runTrafficFlow,
   type JobDeps, type JobResult, type SyncStore, type VehiclePos,
 } from '../supabase/functions/_shared/integrations/jobs';
@@ -394,6 +394,22 @@ describe('ferry-status — komunikaty (prawdziwa strona 26.09.2026)', () => {
     // F7 #765 A: pominięcie tylko w odpowiedzi / logu — nie w integration_runs.
     expect(st.runs.map((r) => r.job)).toEqual(['ferry-schedule', 'ferry-status', 'ferry-status']);
     expect(st.runs.filter((r) => r.result.skipped)).toHaveLength(0);
+  });
+  it('DP-223 (#816): route-hazards MIN=30 — po 30 min nie skipped (cron :17/:47)', async () => {
+    expect(MIN_INTERVAL_MIN['route-hazards']).toBe(30);
+    const st = new MemStore();
+    st.runs.push({
+      job: 'route-hazards',
+      at: NOW.toISOString(),
+      ok: true,
+      result: { job: 'route-hazards', mode: 'LIVE', ok: true, started_at: NOW.toISOString() },
+    });
+    const early = await runJob('route-hazards', deps(st, {}, {}, new Date(NOW.getTime() + 20 * 60_000)).d);
+    expect(early.skipped).toBe(true);
+    expect(early.observations?.skipped_gap_min).toBeTruthy();
+    const later = await runJob('route-hazards', deps(st, {}, {}, new Date(NOW.getTime() + 30 * 60_000)).d);
+    expect(later.skipped).toBeUndefined();
+    expect(later.ok).toBe(true);
   });
   it('DP-187: lastRun=start+90s, now=start+15min → nie pomija (kotwica started_at)', async () => {
     const st = new MemStore();
