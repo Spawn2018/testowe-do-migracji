@@ -39,3 +39,13 @@ jobs:
         run: sudo apt-get update -q && sudo apt-get install -y -q postgresql-client
       - name: DP-229 — local-ui i667 F
         run: bash scripts/i667/ci-orange-maps.sh
+      - name: Playwright report (fail)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: i667-f-orange-maps-report
+          path: |
+            test-results/
+            playwright-report/
+          if-no-files-found: ignore
+          retention-days: 7

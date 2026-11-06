@@ -1,3 +1,9 @@
+## 2026-11-06 20:55 — #855 DP-229 F7 r4: waitOrangeIn (nie parked overlay)
+
+- Skrzynka: #550 WSTRZYMANE (etykieta `pilne`, właściciel 25.10: nic nie budować). BN5–8 w planie. Bez nowego `pilne` do wykonania.
+- Scalanie: brak F7 „gotowe” — CI `local-orange-maps` fail @ `7824f691`: login ✔, Playwright → Timeout `.corridor-map-el .leaflet-overlay-pane` „resolved to hidden” (mapa w schowku puli `visibility:hidden` vs globalny selektor); unit ✔.
+- **Krok** F7 #855 r4: spec — `waitOrangeIn` w kontenerze widoku + bez zbędnego kliknięcia bieżącego `data-view`; seed PL-GDN/SE-NYN/PL-GDY; artifact report przy fail. Bez migracji. Czekam CI→F7. Bez push na main.
+
 ## 2026-11-06 20:40 — #855 DP-229 F7 r3: login hasłem (nie magic link)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.

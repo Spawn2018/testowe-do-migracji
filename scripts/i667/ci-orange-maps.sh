@@ -80,8 +80,11 @@ on conflict (code) do update
 update corridor_polylines
    set total_km = round((st_length(geom::geography)/1000.0)::numeric, 2)
  where code = 'SE_KAA_TRACK';
--- Pomarańczowa linia SE-KAA z wierzchołków korytarza (≥2 punktów).
+-- Pomarańczowe legi rdzenia (NETWORK_LINES na Kokpicie/Mapie) — geom_ok=true przy zapisie.
 select here_store_road('SE-KAA', here_corridor_points('SE_KAA_TRACK'), 'DP-229 CI SE-KAA', now());
+select here_store_road('PL-GDN', '[[52.07,17.02],[52.53,17.6],[53.41,18.45],[54.40,18.68]]'::jsonb, 'DP-229 CI PL-GDN', now());
+select here_store_road('SE-NYN', '[[58.90,17.95],[60.67,17.14],[62.39,17.31],[65.80,21.76]]'::jsonb, 'DP-229 CI SE-NYN', now());
+select here_store_road('PL-GDY', '[[52.07,17.02],[53.5,18.0],[54.53,18.54]]'::jsonb, 'DP-229 CI PL-GDY', now());
 -- Jeden transport widoczny na Mapie / Harmonogramie (TrackReplay + szuflada).
 insert into loads (
   id, project_id, carrier_org_id, order_no, hhl_order_no, carrier_order_no,
