@@ -1,3 +1,9 @@
+## 2026-11-06 17:40 — #850 F7 r1: local.spec selektory E8 / Przebieg
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: brak F7 „gotowe” — F7 r1 prosi o lokalny przebieg + poprawki selektorów.
+- **Krok** F7 #850 r1: `i667-f-orange-maps.local.spec.ts` — warstwa `/przebieg/i` (nie „Ślad”); `[data-map-table] tr[data-load]`; `openNavView` (telefon: Mapa spod „Więcej”). Lokalny SB niedostępny na Windows (bez Dockera) — nie uruchomiono `local-ui.sh`; selektory zgodne z `MapView` / `Nav` / e8-phone-gate. Czekam CI→F7. Bez push na main.
+
 ## 2026-11-06 16:35 — #849 SCALONE; start DP-58 (local.spec maps)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
