@@ -131,6 +131,22 @@ val "l3_scan: params.code to kod transportu" "select l3_scan(timestamptz '2026-1
 $PSQL -c "update risk_signals set detail = jsonb_set(detail, '{params,code}', '\"SG-D930\"') where dedup_key='l3:NO_AWIZACJA:33333333-0000-0000-0000-00000000d930'" >/dev/null
 val "l3_upsert_alarm nie nadpisuje kodu identyfikatorem" "update risk_signals set severity='HIGH', detail = jsonb_set(jsonb_set(coalesce(detail,'{}'::jsonb), '{params,code}', '\"SG-D930\"'), '{l3_level}', '\"warning\"') where dedup_key='l3:NO_AWIZACJA:33333333-0000-0000-0000-00000000d930'; select l3_upsert_alarm((select project_id from loads where id='33333333-0000-0000-0000-00000000d930'), '33333333-0000-0000-0000-00000000d930', 'RESOURCE_MISSING', 'l3:NO_AWIZACJA:33333333-0000-0000-0000-00000000d930', '33333333: zly', 'rk_res_driver', true, true, now(), jsonb_build_object('params', jsonb_build_object('code', left('33333333-0000-0000-0000-00000000d930'::text, 8))), now()); select detail#>>'{params,code}' from risk_signals where dedup_key='l3:NO_AWIZACJA:33333333-0000-0000-0000-00000000d930' and resolved_at is null" "SG-D930"
 
+# DP-220 (#809): ETA_BREACH — ten sam CRITICAL, nowe minuty → title + params.
+$PSQL -c "insert into loads (id, project_id, order_no, status, plan_load_date) values
+  ('33333333-0000-0000-0000-00000000d220','$P','DP-220/ETA','IN_TRANSIT_PL','2026-11-06')
+  on conflict (id) do update set status='IN_TRANSIT_PL', plan_load_date=excluded.plan_load_date" >/dev/null
+$PSQL -c "insert into risk_signals (project_id, load_id, kind, severity, title, title_key, detail, dedup_key, detected_at)
+  values ('$P','33333333-0000-0000-0000-00000000d220','ETA_BREACH','CRITICAL',
+    'Opóźnienie 100 min wobec planu dostawy (próg 30)',
+    'rk_eta_breach',
+    '{\"l3\":\"1\",\"l3_level\":\"critical\",\"params\":{\"minutes\":100,\"threshold\":30}}'::jsonb,
+    'ETA_BREACH:33333333-0000-0000-0000-00000000d220', now())
+  on conflict (dedup_key) where dedup_key is not null and resolved_at is null do update
+    set resolved_at = null,
+        severity = 'CRITICAL',
+        title = excluded.title,
+        detail = excluded.detail" >/dev/null
+val "DP-220: l3_upsert_alarm odświeża minuty ETA_BREACH" "select l3_upsert_alarm('$P','33333333-0000-0000-0000-00000000d220','ETA_BREACH','ETA_BREACH:33333333-0000-0000-0000-00000000d220','Opóźnienie 45 min wobec planu dostawy (próg 30)','rk_eta_breach',true,true,now()+interval '2 hours',jsonb_build_object('params',jsonb_build_object('minutes',45,'threshold',30)),now()); select title||'|'||(detail#>>'{params,minutes}') from risk_signals where dedup_key='ETA_BREACH:33333333-0000-0000-0000-00000000d220' and resolved_at is null" "Opóźnienie 45 min wobec planu dostawy (próg 30)|45"
 
 echo; echo "[dec-auto] L-1b"
 val "zniknięcie bez kodu → bez decyzji" "select (l1b_note_row_gone('$P','$L','') is null)" t
