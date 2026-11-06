@@ -43,6 +43,8 @@ export interface DfdsSailing {
   status?: FerryStatus;
   expectedDepartureUtc?: string;
   expectedArrivalUtc?: string;
+  /** DP-92: ATD z Dynamic → actual_departure_at + W_REJSIE (przed remarkiem). */
+  actualDepartureUtc?: string;
   rawStatus?: string;
   rawRemark?: string;
 }
@@ -114,6 +116,7 @@ export function parseDfdsRemarkEta(
 /**
  * BN3: status/remark z wiersza Dynamic → FerryStatus.
  * F7 #682 B3: odwołanie DFDS niepotwierdzone → zawsze NIEZNANY (bez ODWOLANY).
+ * DP-92: ATD (`actualDeparture`) przed remarkiem → actualDepartureUtc (+ OPOZNIONY gdy ≥ próg).
  * `delayMin` z `app_parameters.FERRY_PORT_DELAY_MIN` (B1).
  */
 export function dfdsApiStatusFields(
@@ -122,10 +125,16 @@ export function dfdsApiStatusFields(
   departureUtc: string,
   arrivalUtc: string,
   delayMin: number = FERRY_PORT_DELAY_MIN_DEFAULT,
-): Pick<DfdsSailing, 'status' | 'expectedDepartureUtc' | 'expectedArrivalUtc' | 'rawStatus' | 'rawRemark'> {
+): Pick<
+  DfdsSailing,
+  'status' | 'expectedDepartureUtc' | 'expectedArrivalUtc' | 'actualDepartureUtc' | 'rawStatus' | 'rawRemark'
+> {
   const rawStatus = row.status == null ? '' : String(row.status).trim();
   const rawRemark = row.remark == null ? '' : String(row.remark).trim();
-  const out: Pick<DfdsSailing, 'status' | 'expectedDepartureUtc' | 'expectedArrivalUtc' | 'rawStatus' | 'rawRemark'> = {
+  const out: Pick<
+    DfdsSailing,
+    'status' | 'expectedDepartureUtc' | 'expectedArrivalUtc' | 'actualDepartureUtc' | 'rawStatus' | 'rawRemark'
+  > = {
     rawStatus: rawStatus || undefined,
     rawRemark: rawRemark || undefined,
   };
@@ -133,6 +142,19 @@ export function dfdsApiStatusFields(
   // F7 B3: wartość odwołania z API DFDS niepotwierdzona → NIEZNANY + ryzyko w jobie.
   if (/cancel|odwo|cancell?ed/i.test(`${rawStatus} ${rawRemark}`)) {
     out.status = 'NIEZNANY';
+    return out;
+  }
+  // DP-92: ATD ma pierwszeństwo przed remarkiem (już wypłynął → W_REJSIE w sync).
+  const actualDep = isoToUtc(String(row.actualDeparture ?? ''));
+  if (actualDep) {
+    out.actualDepartureUtc = actualDep;
+    if (Date.parse(actualDep) - Date.parse(departureUtc) >= thresholdMs) {
+      out.status = 'OPOZNIONY';
+      out.expectedDepartureUtc = actualDep;
+      out.expectedArrivalUtc = new Date(
+        Date.parse(arrivalUtc) + (Date.parse(actualDep) - Date.parse(departureUtc)),
+      ).toISOString();
+    }
     return out;
   }
   const etd = rawRemark ? parseDfdsRemarkEtd(rawRemark, departureUtc, route) : null;
@@ -151,14 +173,6 @@ export function dfdsApiStatusFields(
     out.expectedArrivalUtc = eta;
     out.expectedDepartureUtc = departureUtc;
     return out;
-  }
-  const actualDep = isoToUtc(String(row.actualDeparture ?? ''));
-  if (actualDep && Date.parse(actualDep) - Date.parse(departureUtc) >= thresholdMs) {
-    out.status = 'OPOZNIONY';
-    out.expectedDepartureUtc = actualDep;
-    out.expectedArrivalUtc = new Date(
-      Date.parse(arrivalUtc) + (Date.parse(actualDep) - Date.parse(departureUtc)),
-    ).toISOString();
   }
   return out;
 }

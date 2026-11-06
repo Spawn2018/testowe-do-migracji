@@ -40,6 +40,8 @@ export interface IncomingSailing {
   route: FerryRoute; vessel: string; departureUtc: string; arrivalUtc: string;
   /** tylko odczyt komunikatów (ferry-status); rozkład (ferry-schedule) nie zmienia statusu */
   status?: FerryStatus; expectedDepartureUtc?: string; expectedArrivalUtc?: string;
+  /** DP-92: ATD DFDS → actual_departure_at + W_REJSIE */
+  actualDepartureUtc?: string;
 }
 export type SailingPatch = Partial<Pick<DbSailing, 'vessel_id' | 'departure_at' | 'arrival_at' | 'delayed_departure_at' | 'delayed_arrival_at' | 'actual_departure_at' | 'actual_arrival_at' | 'status' | 'source' | 'source_ref'>>;
 export interface SailingInsert {
@@ -129,9 +131,25 @@ export function planSailingSync(o: {
       // ETA (compute_load_eta): po W_REJSIE „opóźniony” = delayed_departure_at (tu ustawiane z OPOZNIONY).
       const inTrip = cur.status === 'W_REJSIE' || cur.status === 'DOPLYNAL'
         || cur.actual_departure_at != null || cur.actual_arrival_at != null;
-      if (status === 'ODWOLANY' || !inTrip) want.status = status;
-      want.delayed_departure_at = delayed.dep;
-      want.delayed_arrival_at = delayed.arr;
+      // DP-91: OPOZNIONY nie cofamy do ZAPLANOWANY przed wypłynięciem (zniknięcie remarku).
+      const keepDelayed = cur.status === 'OPOZNIONY' && status === 'ZAPLANOWANY' && !inTrip;
+      if (keepDelayed) {
+        want.delayed_departure_at = cur.delayed_departure_at;
+        want.delayed_arrival_at = cur.delayed_arrival_at;
+      } else {
+        if (status === 'ODWOLANY' || !inTrip) want.status = status;
+        want.delayed_departure_at = delayed.dep;
+        want.delayed_arrival_at = delayed.arr;
+      }
+    }
+    // DP-92: ATD DFDS — actual_departure_at + W_REJSIE (#446); ODWOLANY/RECZNIE bez zmiany statusu.
+    if (inc.actualDepartureUtc) {
+      const atd = iso(inc.actualDepartureUtc);
+      if (atd && iso(cur.actual_departure_at) !== atd) want.actual_departure_at = atd;
+      if (cur.source !== 'RECZNIE' && cur.status !== 'ODWOLANY'
+        && cur.status !== 'DOPLYNAL' && want.status !== 'ODWOLANY') {
+        want.status = 'W_REJSIE';
+      }
     }
     const patch: SailingPatch = {};
     for (const [k, v] of Object.entries(want) as [keyof SailingPatch, unknown][]) {

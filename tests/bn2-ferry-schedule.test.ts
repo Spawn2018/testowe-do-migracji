@@ -710,6 +710,21 @@ describe('BN2 Viking / Eckerö / DFDS HTML tygodniowy → 14 dni', () => {
       'PLD-KPS', sched, arr,
     );
     expect(junk.status).toBeUndefined();
+    // DP-92: ATD przed remarkiem — expected z ATD, nie z New ETD 03:00.
+    const atdFirst = dfdsApiStatusFields(
+      {
+        remark: 'New ETD is at 28/10 03:00am',
+        status: 'TALLIED',
+        actualDeparture: '2026-10-27T22:20:00.000Z',
+      },
+      'PLD-KPS', sched, arr, 15,
+    );
+    expect(atdFirst).toMatchObject({
+      actualDepartureUtc: '2026-10-27T22:20:00.000Z',
+      status: 'OPOZNIONY',
+      expectedDepartureUtc: '2026-10-27T22:20:00.000Z',
+    });
+    expect(atdFirst.expectedDepartureUtc).not.toBe('2026-10-28T01:00:00.000Z');
     const pld = parseDfdsTimetableApi(DFDS_API.pld_kps_week44);
     const fromRemark = pld.sailings.filter((s) => s.rawRemark?.includes('New ETD') && s.status === 'OPOZNIONY');
     expect(fromRemark.length).toBeGreaterThanOrEqual(2);

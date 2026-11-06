@@ -928,11 +928,13 @@ async function fetchEckeroDays(deps: JobDeps, days: number): Promise<{
 /**
  * #666 E / BN2 — DFDS Dynamic `/api/timetable` (oba kierunki, tygodnie do horyzontu);
  * zapas: PDF sezonowy ze strony, potem HTML/PDF tygodniówki. Bez stałej HTML w jobie.
+ * DP-90: `apiOnly` (ferry-status) — bez PDF/HTML; puste tygodnie OK (fetchedOk>0).
  */
 async function fetchDfdsDays(
   deps: JobDeps,
   days: number,
   delayMin: number = FERRY_PORT_DELAY_MIN_DEFAULT,
+  opts: { apiOnly?: boolean } = {},
 ): Promise<{
   sailings: ReturnType<typeof parseDfdsWeeklyHtml>['sailings'];
   warnings: string[];
@@ -1031,14 +1033,17 @@ async function fetchDfdsDays(
   }
 
   /* F7 #668 r6: apiComplete tylko przy realnych rejsach (nie same puste []).
-     Wszystkie tygodnie puste → zapas PDF; struktura → failedWindows + PDF. */
+     Wszystkie tygodnie puste → zapas PDF; struktura → failedWindows + PDF.
+     DP-90: ferry-status — tylko API (bez PDF/HTML); puste tygodnie = fetchedOk>0. */
   const apiComplete = failedWindows.length === 0 && apiSailings.length > 0;
-  if (apiComplete) {
+  if (apiComplete || opts.apiOnly) {
     return {
       sailings: apiSailings,
       warnings,
       fetchedOk: apiOk,
-      structureFail: false,
+      structureFail: opts.apiOnly
+        ? (apiOk === 0 && apiStructureFail)
+        : false,
       apiSailingsCount: apiSailings.length,
     };
   }
@@ -1508,21 +1513,23 @@ async function applyDigitrafficPortCallActuals(deps: JobDeps, sinceIso: string):
       }
       // F7 #660: RECZNIE → tylko actual_*; ODWOLANY bez zmiany statusu (jak AIS).
       // BN3 decyzja 58: ATA − arrival ≥ FERRY_PORT_DELAY_MIN → delayed_arrival_at (ATD bez opóźnienia wypłynięcia).
+      // DP-93: delayed_arrival_at nie dopisywane rejsowi ODWOLANY.
       if (pick.kind === 'hit') {
         const hit = pick.item;
         const lateArr = t - Date.parse(hit.arrival_at) >= delayMinMs;
+        const setDelayed = lateArr && hit.source !== 'RECZNIE' && hit.status !== 'ODWOLANY';
         const patch = sailingActualPatch(
           hit,
           {
             actual_arrival_at: c.actualArrivalUtc,
-            ...(lateArr && hit.source !== 'RECZNIE' ? { delayed_arrival_at: c.actualArrivalUtc } : {}),
+            ...(setDelayed ? { delayed_arrival_at: c.actualArrivalUtc } : {}),
           },
           'DOPLYNAL',
         );
         if (await deps.store.updateSailing(hit.id, patch)) {
           updated += 1;
           hit.actual_arrival_at = c.actualArrivalUtc;
-          if (lateArr && hit.source !== 'RECZNIE') hit.delayed_arrival_at = c.actualArrivalUtc;
+          if (setDelayed) hit.delayed_arrival_at = c.actualArrivalUtc;
           if (hit.source !== 'RECZNIE' && hit.status !== 'ODWOLANY') hit.status = 'DOPLYNAL';
         }
       }
@@ -2919,12 +2926,13 @@ export async function runFerryStatus(deps: JobDeps): Promise<JobResult> {
 
   // BN3: DFDS Dynamic — remark „New ETD…” / actualDeparture → OPOZNIONY (ferry-status, nie rozkład).
   // F7 #682 B1: próg z app_parameters.FERRY_PORT_DELAY_MIN.
+  // DP-90: tylko API (bez PDF/HTML); puste tygodnie ≠ SOURCE_DOWN (fetchedOk>0).
   const delayMin = deps.store.ferryPortDelayMin
     ? await deps.store.ferryPortDelayMin()
     : FERRY_PORT_DELAY_MIN_DEFAULT;
-  const dfdsStatus = await fetchDfdsDays(deps, 7, delayMin);
+  const dfdsStatus = await fetchDfdsDays(deps, 7, delayMin, { apiOnly: true });
   warnings.push(...dfdsStatus.warnings.filter((w) => !warnings.includes(w)));
-  const dfStatusFail = dfdsStatus.apiSailingsCount === 0;
+  const dfStatusFail = dfdsStatus.fetchedOk === 0;
   if (dfStatusFail) {
     if (await deps.store.raiseRisk(sourceDownRisk(
       'DFDS_STATUS',
@@ -2933,16 +2941,18 @@ export async function runFerryStatus(deps: JobDeps): Promise<JobResult> {
       DFDS_SCHEDULE_PAGE,
     ))) risks += 1;
   } else {
-    const withStatus = dfdsStatus.sailings.filter((s) => s.status);
-    if (withStatus.length > 0) {
-      const incomingD: IncomingSailing[] = withStatus.map((s) => ({
+    // DP-91/92: status (OPOZNIONY/NIEZNANY) albo ATD — bez statusu, ale z ATD też trafia do sync.
+    const withSignal = dfdsStatus.sailings.filter((s) => s.status || s.actualDepartureUtc);
+    if (withSignal.length > 0) {
+      const incomingD: IncomingSailing[] = withSignal.map((s) => ({
         route: s.route, vessel: s.vessel, departureUtc: s.departureUtc, arrivalUtc: s.arrivalUtc,
         status: s.status, expectedDepartureUtc: s.expectedDepartureUtc, expectedArrivalUtc: s.expectedArrivalUtc,
+        actualDepartureUtc: s.actualDepartureUtc,
       }));
       const { plan, updated: u, manualKept: m } = await applySailings(deps, incomingD, since, 'DFDS');
       inserted += plan.inserts.length; updated += u; manualKept += m; unchanged += plan.unchanged; unknown += plan.unknown.length;
       for (const urow of plan.unknown) {
-        const raw = withStatus.find((p) => p.vessel === urow.vessel && p.departureUtc === urow.departureUtc);
+        const raw = withSignal.find((p) => p.vessel === urow.vessel && p.departureUtc === urow.departureUtc);
         if (await deps.store.raiseRisk(unknownStatusRisk(urow, `${raw?.rawStatus ?? ''} / ${raw?.rawRemark ?? ''}`, 'DFDS'))) {
           risks += 1;
         }

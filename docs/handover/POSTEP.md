@@ -1,3 +1,9 @@
+## 2026-11-06 23:55 — #857 SCALONE; start DP-90…93 (C4)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne` do wykonania.
+- Scalanie: **#857 SCALONE** `20787725` (F7: gotowe do scalenia @ `632d144b`; CI unit+visual zielone). Bez push na main.
+- **Krok** C4 **DP-90…93** (F7 #682 r1, łączone #713): ferry-status DFDS tylko API (`apiOnly`, puste tygodnie ≠ SOURCE_DOWN); OPOZNIONY nie cofany; ATD → `actual_departure_at`+W_REJSIE przed remarkiem; Portnet bez `delayed_arrival_at` na ODWOLANY. Gałąź `pakiet/c4-dp-90-93-dfds-status`. Bez migracji. Czekam CI→F7.
+
 ## 2026-11-06 23:25 — #856 SCALONE; start DP-83 (C4)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne` do wykonania.
