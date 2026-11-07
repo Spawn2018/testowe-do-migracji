@@ -105,18 +105,26 @@ const MONTH_NAMES =
 const CANCEL_RE = /\b(cancel(?:led|ed)?|call(?:ed)?\s+off|will\s+not\s+(?:sail|operate|depart)|odwo[lł]an|anulowan|tühistatud|tühistamine)\b/i;
 const SUSPEND_SAILING_RE = /\bsuspended\b/i;
 const SAILING_CTX_RE = /\b(sailing|departure|departing|voyage|vessel|route|ferry|shuttle)\b/i;
-const RESUME_RE = /\b(?:is\s+not\s+cancel|not\s+cancelled|not\s+canceled|is\s+no\s+longer\s+cancelled|is\s+no\s+longer\s+canceled|has\s+been\s+reinstated|resum(?:e|es|ed|ing)|returns?\s+to|back\s+in\s+service|operates\s+as\s+planned|will\s+operate\s+as\s+(?:planned|scheduled))\b/i;
+const SHIP_NAME_ALT = String.raw`MyStar|Megastar|Victoria\s+I|Baltic\s*Queen|Silja\s*Europa`;
+const SHIP_NAME_RE = new RegExp(`\\b(?:${SHIP_NAME_ALT})\\b`, 'i');
+const PORT_NAME_ALT = String.raw`Tallinn|Helsinki|Stockholm`;
+/** DP-109 / F7 #878 r2: statek+`returns to` tylko z dopełnieniem usługi (route/service/…), nie portem. */
+const RESUME_RE = new RegExp(
+  String.raw`(?:` +
+    String.raw`\b(?:is\s+not\s+cancel|not\s+cancelled|not\s+canceled|is\s+no\s+longer\s+cancelled|is\s+no\s+longer\s+canceled|has\s+been\s+reinstated|resum(?:e|es|ed|ing)|back\s+in\s+service|operates\s+as\s+planned|will\s+operate\s+as\s+(?:planned|scheduled))\b` +
+    String.raw`|\b(?:${SHIP_NAME_ALT})\s+returns?\s+to\s+(?:the\s+)?(?:[\w–-]+\s+)?(?:route|service|traffic|schedule|line)\b` +
+    String.raw`|\breturns?\s+to\s+(?:the\s+)?(?:route|service|traffic|schedule|line)\b` +
+  String.raw`)`,
+  'i',
+);
 /** #686 / decyzja 72 cz. 2: sufiks przywrócenia (ścisła allowlista jak 68). */
 const RESTORE_TAIL = String.raw`(?:will\s+operate\s+as\s+(?:planned|scheduled)|has\s+been\s+reinstated|is\s+no\s+longer\s+cancel(?:led|ed))\.?`;
 /** F7 #683 R13-B2 / 72b: kampania tylko `type=`, nie `data-type` (`\b` łapie po `-`). */
 const CAMPAIGN_TYPE_RE = /(?<![\w-])type\s*=\s*(["'])campaign\1/i;
 /** F7 #683 R13-B1: cudzysłów `"`/`'` albo bez cudzysłowu. */
 const ALERT_GROUP_RE = /data-analytics-group\s*=\s*(?:(["'])Alert\1|Alert\b)/i;
-const SHIP_NAME_ALT = String.raw`MyStar|Megastar|Victoria\s+I|Baltic\s*Queen|Silja\s*Europa`;
-const SHIP_NAME_RE = new RegExp(`\\b(?:${SHIP_NAME_ALT})\\b`, 'i');
 /** F7 #683 R13-B3: kampania z treścią serwisową zatruwa całą pulę. */
 const CAMPAIGN_SERVICE_RE = /\b(correction|update|operate|reinstat)/i;
-const PORT_NAME_ALT = String.raw`Tallinn|Helsinki|Stockholm`;
 const DATE_CAPTURE = String.raw`(\d{1,2})\s+(${MONTH_NAMES})(?:\s+(\d{4}))?`;
 /** F7 #683 R6 / decyzja 68: jedyny dozwolony sufiks przed kropką (prawdziwy Alert 28.10). */
 const DUE_TO_SUFFIX = String.raw`(?:\s+due\s+to\s+(?:a\s+)?(?:technical\s+fault|technical\s+reasons|weather\s+conditions|storm|strong\s+winds))?`;
@@ -339,7 +347,7 @@ function classify(text: string): TallinkAlertKind {
     return SAILING_CTX_RE.test(text) ? 'ODWOLANY' : 'INFO';
   }
   if (CANCEL_RE.test(text)) return 'ODWOLANY';
-  if (/technical fault|service (?:update|disruption)/i.test(text)) return 'INFO';
+  // DP-109: zbędne `technical fault|service update` → INFO (i tak default).
   return 'INFO';
 }
 
