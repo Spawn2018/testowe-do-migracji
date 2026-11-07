@@ -156,9 +156,16 @@ export function planSailingSync(o: {
   return plan;
 }
 
-const warsaw = (utc: string) => new Intl.DateTimeFormat('pl-PL', {
+/** Czas warszawski do tytułu / params.dep ryzyk widocznych dla HHL (DP-97 F7 #862). */
+export const warsaw = (utc: string) => new Intl.DateTimeFormat('pl-PL', {
   timeZone: 'Europe/Warsaw', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',
 }).format(new Date(utc));
+
+/** Normalizacja ISO UTC — tylko dedup Portnet (params.dep = warsaw). */
+export function riskDepUtc(utc: string): string {
+  const ms = Date.parse(utc);
+  return Number.isFinite(ms) ? new Date(ms).toISOString() : utc;
+}
 
 /** Ryzyko dla HHL: status rejsu nierozpoznany — rejs bez zmian, do weryfikacji. */
 export function unknownStatusRisk(s: IncomingSailing, raw: string, source: AutoSailingSource = 'POLFERRIES'): RiskInput {

@@ -1,8 +1,21 @@
-﻿## 2026-11-07 01:35 — PILNE #859 DP-231 (przerywa DP-97)
+## 2026-11-07 02:00 — #863 SCALONE; DP-97 F7 poprawki (warsaw + auto-zamknięcie)
+
+- Skrzynka: #859 zamknięte; #550 WSTRZYMANE; BN5–8 w planie. F7 #863 → **DP-234** w rejestrze (Q-18 strefy przy skróconej historii).
+- Scalanie: **#863 SCALONE** `6e7a8762` (DP-231 F7: gotowe @ `483f789a`; CI unit+db+visual zielone). Bez push na main.
+- **Krok** C4 **DP-97** F7 #862: `params.dep` = warsaw (nie UTC) w PORTNET + `unknownStatusRisk` bez zmian; auto-`resolveRisks` przy hicie/`none`; test: niejednoznaczne→ryzyko, kolejny hit→zamknięte, inny statek nietknięty. Gałąź `pakiet/c4-dp-97-portnet-unknown-utc`. Bez migracji.
+
+## 2026-11-07 01:35 — PILNE #859 DP-231 (przerywa DP-97)
 
 - Skrzynka: **#859** (`dla-cursora`+`pilne`) — mapa promów pozycje z 05.11; F7 #862: najpierw #859. #550 WSTRZYMANE; BN5–8 w planie.
 - Scalanie: brak F7 „gotowe” na #862 (niegotowe / poprawki + wstrzymanie). Bez push na main.
 - **Krok** PILNE **DP-231**: `ferry_track_sample` ≤20 próbek 15 min/statek + latest aktywnego; `ORDER BY observed_at DESC`; klient `.limit(1000)` + Stan „Częściowo” przy ucięciu; testy bmapa + unit. Migracja **0426**. Gałąź `pakiet/c4-dp-231-ferry-track-sample`. DP-97 (#862) WSTRZYMANE do po F7 #859. Marker wieku >15 min już był (`ferryMarkerTone`).
+
+## 2026-11-07 01:15 — #858 SCALONE; start DP-97 (C4)
+
+- Skrzynka: #550 WSTRZYMANE. BN5–8 w planie. Bez nowego `pilne` do wykonania.
+- Scalanie: **#858 SCALONE** `d1c63bed` (DP-90…93 F7: gotowe @ `570f90b4`; CI unit+db+visual zielone). Bez push na main.
+- **Krok** C4 **DP-97**: start (później F7: odwrotnie — poprawione 02:00). Gałąź `pakiet/c4-dp-97-portnet-unknown-utc`.
+
 ## 2026-11-06 23:55 — #857 SCALONE; start DP-90…93 (C4)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne` do wykonania.
