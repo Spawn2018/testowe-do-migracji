@@ -470,6 +470,33 @@ describe('BN3 Tallink Alert', () => {
     });
   });
 
+  it('DP-112: HH:MM w nawiasie UTC/local/Finnish/Swedish — nie multiTime; zakres HH:MM–HH:MM zostaje', () => {
+    // Adnotacja strefy po godzinie rejsu — wcześniej 16:30+14:30 → fałszywe multiTime.
+    const withParen = parseAlertContentDates(
+      'The MyStar 16:30 departure from Tallinn to Helsinki on 2 November is cancelled (14:30 UTC).',
+      2026,
+    );
+    expect(withParen).toMatchObject({
+      startYmd: '2026-11-02', endYmd: '2026-11-02', hm: '16:30', multiTime: false,
+    });
+    // Kolejność w nawiasie: słowo strefy przed godziną; kilka stref.
+    expect(parseAlertContentDates(
+      'Departure at 16:30 on 2 November (Finnish time 16:30 / 14:30 UTC).',
+      2026,
+    )).toMatchObject({ hm: '16:30', multiTime: false });
+    expect(parseAlertContentDates(
+      'Sailing at 18:30 on 2 November (18:30 local / 17:30 Swedish time).',
+      2026,
+    )).toMatchObject({ hm: '18:30', multiTime: false });
+    // Zakres dwóch godzin poza nawiasem TZ — nadal ambiguous (R2-B2).
+    expect(parseAlertContentDates(
+      'The 10:30–13:30 departures on 2 November are cancelled.',
+      2026,
+    )).toMatchObject({ multiTime: true, hm: null });
+    // Mutacja: bez stripParenTzHours → withParen.multiTime true — ten expect pada.
+    expect(withParen?.multiTime).toBe(false);
+  });
+
   it('F7 R4-B1: data ogłoszenia / względny dzień → ambiguous (nie ODWOLANY na dniu ogłoszenia)', () => {
     // Probe F7 r4: okno 1.11; publikacja 1.11 + tomorrow/Monday → fałszywy match na 1.11 16:30.
     const windowYmd = '2026-11-01';

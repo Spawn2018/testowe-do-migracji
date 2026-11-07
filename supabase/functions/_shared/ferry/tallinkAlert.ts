@@ -11,6 +11,8 @@
  * DP-111: częste formy dat w allowliście i `parseAlertContentDates` — „November 2”, „2nd November”,
  *   „2–4 November”, „from 2 to 4 November”, „tomorrow”, dni tygodnia (kotwica = dateStart/dziś);
  *   bezwzględne → auto; tomorrow/weekday → `contentStartYmd` bez `autoCancelOk`/`autoRestoreOk`.
+ * DP-112: HH:MM w nawiasie z UTC/local/Finnish/Swedish (time) — nie liczą się do multiTime;
+ *   zakres „HH:MM–HH:MM” poza takim nawiasem nadal ambiguous.
  * R5: auto-ODWOLANY wyłącznie przy ścisłym wzorcu zdania (allowlist) — bez may/buffet/trasy z innego zdania.
  * R6 / decyzja 68: cała treść = dokładnie jedno zdanie wzorcowe (+ opcjonalnie zdania z listy przeprosin);
  *   opcjonalny sufiks „due to (a )?(technical fault|…)”; każde inne zdanie → ryzyko MEDIUM.
@@ -474,9 +476,23 @@ function hmToMin(hm: string): number {
   return (h ?? 0) * 60 + (m ?? 0);
 }
 
+/**
+ * DP-112: nawias ze wskazaniem strefy (UTC / local / Finnish / Swedish [time])
+ * i godziną — adnotacja, nie druga godzina rejsu. Zakres HH:MM–HH:MM poza takim
+ * nawiasem zostaje (multiTime).
+ */
+function stripParenTzHours(text: string): string {
+  return text.replace(/\([^()]*\)/g, (paren) => {
+    const hasHm = /\d{1,2}:\d{2}/.test(paren);
+    const hasTz = /\b(?:UTC|local|Finnish|Swedish)(?:\s+time)?\b/i.test(paren);
+    return hasHm && hasTz ? ' ' : paren;
+  });
+}
+
 function uniqueHmIn(text: string): string[] {
+  const cleaned = stripParenTzHours(text);
   return [...new Set(
-    [...text.matchAll(/\b(?:at\s+)?(\d{1,2}):(\d{2})\b/gi)].map(
+    [...cleaned.matchAll(/\b(?:at\s+)?(\d{1,2}):(\d{2})\b/gi)].map(
       (m) => `${String(Number(m[1])).padStart(2, '0')}:${m[2]}`,
     ),
   )];
