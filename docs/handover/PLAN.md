@@ -2717,6 +2717,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 07.11.2026 04:00 | DP-101 F7 #866: atomowe `sailing_cancel_auto` **0427**; rejestr DP-230/232/233 (#852/#860/#861) | pętla / C4 F7 |
 | 07.11.2026 04:50 | #866 SCALONE `54bdb1c4` (DP-101); start **DP-233** / **0428** (`client_variant` + filtr Harmonogramu) | pętla / C4 |
 | 07.11.2026 07:10 | DP-233 #867 `851f131a` gotowe do F7 (CI unit/visual/db); potem DP-232/230 | pętla / C4 |
+| 07.11.2026 15:50 | DP-108 #877 F7 r2: UUID 12 hex (`…000108`) + `fail++` przy fixture; ferry-status **23** | pętla / C4 F7 |
 | 07.11.2026 15:20 | #876 SCALONE `2653f5e1` (DP-107 F7 @ `e4c1bffe`); start **DP-108** (AUTO→`FERRY_CANCELLED`; ferry-status **23**) | pętla / C4 |
 | 07.11.2026 14:10 | DP-235 #875 F7 r2: powtórka nie zamyka `GPS_WRONG_PORT`; tol ±1 m; status **727** | pętla / C4 |
 | 07.11.2026 13:50 | #874 SCALONE `12cb27ca` (DP-236 F7 @ `48474c00`); start **DP-235** / **0431** (PORT_IN + repeat stale) | pętla / C4 |

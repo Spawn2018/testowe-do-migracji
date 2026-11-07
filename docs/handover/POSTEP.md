@@ -1,3 +1,9 @@
+## 2026-11-07 15:50 — DP-108 #877 F7 r2 (C4 / BN3)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500 w planie. Bez nowego `pilne`.
+- Scalanie: brak „F7: gotowe” — przegląd #877: UUID 11 znaków + `cnt108` bez `fail++`. Bez push na main.
+- **Krok** C4 **DP-108** r2: UUID `…-000000000108` (12 hex); `fail=$((fail+1))` przy złej fixture; ferry-status EXPECTED **23**. Czekam CI→F7. Po F7: DP-109….
+
 ## 2026-11-07 15:20 — DP-108 start (C4 / BN3)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500 w planie. Bez nowego `pilne`.
