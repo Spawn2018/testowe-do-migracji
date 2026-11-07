@@ -1,3 +1,9 @@
+## 2026-11-07 03:10 — #864 SCALONE; start DP-100 (C4)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne` do wykonania.
+- Scalanie: **#864 SCALONE** `7d4aa352` (DP-99 F7: gotowe @ `6f2c65ba`; CI unit+db+visual zielone). Bez push na main.
+- **Krok** C4 **DP-100**: `updateSailing` przy `status=ODWOLANY` → `.neq('status','ODWOLANY')` (bez partial unique — po PRZYWROCONY wolny drugi ODWOLANY). Test mock store + MemStore. Gałąź `pakiet/c4-dp-100-auto-odwolany-dedup`. Bez migracji.
+
 ## 2026-11-07 02:30 — #862 SCALONE; start DP-99 (C4)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne` do wykonania.
