@@ -1,3 +1,9 @@
+## 2026-11-07 21:58 — #884 SCALONE; DP-140 analiza (C4 / BN4 sailings)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608 w planie. Bez nowego `pilne` do budowy.
+- Scalanie: **#884 SCALONE** `fe98b825` (DP-126 F7: gotowe @ `5be7cf8d`; CI unit/visual/db ✔). `deploy-main` robi resztę. Bez push na main.
+- **Krok** C4 **DP-140**: SELECT prod (pooler) — zapytanie kontrolne #713 → **10** rejsów (nie 28; okno 14 d). 9× brak ATD (Finbo/Sirena/Baltic Queen/XPRS) + 1× W_REJSIE z ATD bez ATA (Estelle GDY-KAA); **10/10** z późniejszym ATD tego samego statku; ładunki **0**; overlap `ferry_sailings_map` **0**. Propozycja: rozszerzyć dowód floty DP-222 na wszystkie trasy + GDY-KAA; bez auto `arrival+6h` bez ATD (61b). Plik `docs/handover/DP-140_ANALIZA_PRZETERMINOWANE_REJSY.md`; komentarz #713/#720. Gałąź `pakiet/c4-dp-140-overdue-sailings-analysis`. Bez migracji / bez zmiany kodu zasad.
+
 ## 2026-11-07 21:28 — DP-126 r2: F7 #884 (C4 / ERR RSS)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608 w planie. Bez nowego `pilne` do budowy.
