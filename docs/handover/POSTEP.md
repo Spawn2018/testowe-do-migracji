@@ -1,3 +1,9 @@
+## 2026-11-07 09:40 — DP-230 CI fix #870 (C4)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: brak F7 po HEAD; db FAIL @ 5458603a. Bez push na main.
+- **Krok** C4 **DP-230** CI: UUID testów `230g`/`230h` → `2310`/`2311` (hex); risks automat **11** kluczy (bez fałszywego `rk_eta_breach`); rejestr **DP-235** (FERRY+PORT_IN obcej trasy). Gałąź `pakiet/c4-dp-230-gps-port-tractor-warn` / #870. Czekam CI→F7. Otwarte w DP-230: stale GPS >30 min. Po F7: DP-102….
+
 ## 2026-11-07 09:05 — DP-230 F7 #870 B1/B2 (C4)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.

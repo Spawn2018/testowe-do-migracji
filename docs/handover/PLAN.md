@@ -1226,6 +1226,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-97 | Cursor | ryzyka `FERRY_UNKNOWN:PORTNET_ATA/ATD:…` — auto-zamknięcie gdy sprawa wyjaśniona; `params.dep` = warsaw (nie UTC) | F7 #682 r2 / F7 #862 | BN3 | SCALONE (#862 `e29f647d`) |
 | DP-231 | Cursor | **PILNE** mapa promów: `ferry_track_sample` ucinany do 1000 najstarszych → limit/statek + ORDER DESC + klient `.limit`/Częściowo | #859 | C4 / B-MAPA | SCALONE (#863 `6e7a8762` / **0426**) |
 | DP-234 | Cursor | Q-18 (`ferryPhase`): po DP-231 ~5 h historii/statek — długi rejs bez strefy portu wyjścia → kierunek tylko z COG; przywrócić historię stref bez limitu 1000 | F7 #863 | C4 / B-MAPA | w kolejce (po PILNYM) |
+| DP-235 | Cursor | FERRY + GPS w PORT_IN innej trasy niż rejs (prod 17184 Karlskrona przy GDN-NYN) → to samo ryzyko „GPS w porcie X, rejs Y” (nie czekać bez ETA) | F7 #870 / prod 07.11 | C4 / GPS+prom | w kolejce |
 | DP-98 | Cursor | `TALLINK_HEL_TLL_URL` zwraca 404 → ostrzeżenie co 10 min — poprawić/usunąć | F7 #683 | BN3 | DONE w #687 (DP-114: nowy URL) |
 | DP-114 | Cursor | Tallink HEL–TLL 404 po #683: nowy URL; niepełna pula → brak auto; streak ≥ 3 SOURCE_DOWN; F7 r1 usable HTML + streak z integration_runs; F7 r2 test markera | #687 / PR #689 | SCALONE `5fc7d4a0` | DONE |
 | DP-115 | Cursor | `stenaIrmBackoffUntilMs` — stan w pamięci modułu (jak dawny streak Tallink); ocenić persist / Edge cold start | F7 #689 r1 | BN3 / AIS | w kolejce |
@@ -1332,7 +1333,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-99 | Cursor | `operatorFromSailingSource` fallback MUU-VUO → VIKING (prod tylko ECKERO), domyślnie TALLINK → z `data-company` ts.ee albo `ferry_route_operators` (DP-1) | F7 #683 | BN3 | SCALONE (#864 `7d4aa352`) |
 | DP-100 | Cursor | dedup AUTO tylko aplikacyjny → partial unique index `(sailing_id, kind) where source='AUTO'` albo `.neq('status','ODWOLANY')` w update | F7 #683 | BN3 | SCALONE (#865 `0f983406`) |
 | DP-101 | Cursor | AUTO ODWOLANY + notice atomowo (RPC `sailing_cancel_auto` / **0427**) — Tallink Alert + ts.ee; bez duplikatów przy wyścigu | F7 #683 / F7 #866 | BN3 | SCALONE (#866 `54bdb1c4`) |
-| DP-230 | Cursor | ostrzeżenie: GPS w innym porcie niż rejs / ten sam ciągnik w dwóch zleceniach; bez FERRY przy obcym GPS; REMOVED poza dup; ryzyko nie znika samym ATD (**0429**, F7 #870) | #852 → PR #870 | C4 | W TOKU (`pakiet/c4-dp-230-gps-port-tractor-warn`) |
+| DP-230 | Cursor | ostrzeżenie: GPS w innym porcie niż rejs / ten sam ciągnik w dwóch zleceniach; bez FERRY przy obcym GPS; REMOVED poza dup; ryzyko nie znika samym ATD (**0429**, F7 #870); otwarte: powtórzony fix >30 min = stale | #852 → PR #870 | C4 | W TOKU (`pakiet/c4-dp-230-gps-port-tractor-warn`) |
 | DP-232 | Cursor | pole wyboru „emtrack” przy Link śledzenia w oknie awizacji (stały link aplikacji emtrack) | #860 → PR #869 | C4 / awizacja | SCALONE (#869 `2c5903e0`) |
 | DP-233 | Cursor | Harmonogram: filtr Załadunki/Rozładunki dziś/jutro + `app_users.client_variant` (**0428**) | #861 → PR #867 | C4 / Harmonogram | SCALONE (#867 `886648a6`) |
 | DP-102 | Cursor | ts.ee dopasowanie `existing.find` ±3 h (BN2) → reguła jednego kandydata, ±30 min dla komunikatu z godziną; prefiks „Lisainfo” w nocie | F7 #683 | BN3 | w kolejce |

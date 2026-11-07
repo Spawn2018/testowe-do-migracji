@@ -4480,8 +4480,9 @@ q "insert into load_events (load_id, event_type, occurred_at) values
 q "select public.promote_ferry_departures('2026-11-10 20:10+00')" >/dev/null
 chk "DP-230: ATD + brak GPS → FERRY" "$(st $L230f)" FERRY
 # ATD + GPS w porcie rejsu → FERRY jak dziś (F7 #870 B1)
-L230g=55555555-0000-0000-0000-00000000230g
-S230g=77777777-0000-0000-0000-00000000230g
+# UUID hex only (230g/h → 2310/2311; a–f już zajęte w DP-230).
+L230g=55555555-0000-0000-0000-000000002310
+S230g=77777777-0000-0000-0000-000000002310
 q "insert into sailings (id, project_id, vessel_id, route, departure_at, arrival_at,
     actual_departure_at, status, source) values
   ('$S230g', '$P', '$V230', 'GDY-KAA',
@@ -4506,7 +4507,7 @@ q "select public.detect_gps_wrong_ferry_port('2026-11-10 18:20+00')" >/dev/null
 chk "DP-230: FERRY + obcy GPS → GPS_WRONG_PORT zostaje" \
   "$(rk $L230e GPS_WRONG_PORT)" 1
 # F7 B2: REMOVED nie liczy się do TRACTOR_DUP
-L230h=55555555-0000-0000-0000-00000000230h
+L230h=55555555-0000-0000-0000-000000002311
 mk $L230h H230 "'HHL/H230'" "'SCX/H230'" IN_TRANSIT_PL null
 q "update loads set
     tractor_plate = 'WT 23001',
