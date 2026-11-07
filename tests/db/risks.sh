@@ -81,10 +81,11 @@ elif psql "$ST" -Atqc "select 1" >/dev/null 2>&1; then
   # #557 PR2 F7 r3: overdue + rk_ferry_check_after_arrival; + rk_sailing_mismatch
   # #622: + rk_emtrack_orphan (scan sierot w status.sh)
   # DP-131: + rk_ferry_not_departed (GPS ≤3 km port wyjścia po ATD/ATA)
-  chk "automat statusów/promów (tower_test_status): 9 kluczy, 0 generycznych" \
-    "$(psql "$ST" -Atqc "select count(distinct title_key)||'/'||count(*) filter (where title_key is null or title_key='rk_generic') from risk_signals")" "9/0"
+  # DP-230: + rk_gps_wrong_port + rk_tractor_duplicate
+  chk "automat statusów/promów (tower_test_status): 11 kluczy, 0 generycznych" \
+    "$(psql "$ST" -Atqc "select count(distinct title_key)||'/'||count(*) filter (where title_key is null or title_key='rk_generic') from risk_signals")" "11/0"
   chk "automat: klucze funkcji" "$(psql "$ST" -Atqc "select string_agg(distinct title_key, ',' order by title_key) from risk_signals")" \
-    "rk_auto_status_blocked,rk_emtrack_orphan,rk_ferry_check_after_arrival,rk_ferry_not_departed,rk_ferry_overdue,rk_loading_not_ready,rk_port_no_loaded,rk_sailing_cancelled,rk_sailing_mismatch"
+    "rk_auto_status_blocked,rk_emtrack_orphan,rk_ferry_check_after_arrival,rk_ferry_not_departed,rk_ferry_overdue,rk_gps_wrong_port,rk_loading_not_ready,rk_port_no_loaded,rk_sailing_cancelled,rk_sailing_mismatch,rk_tractor_duplicate"
 else
   fail=$((fail+2)); echo "  FAIL  brak bazy tower_test_status — uruchom najpierw tests/db/run.sh"
 fi

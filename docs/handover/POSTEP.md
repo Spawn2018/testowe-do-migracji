@@ -1,3 +1,9 @@
+## 2026-11-07 08:40 — #869 SCALONE; start DP-230 (C4)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: **#869 SCALONE** `2c5903e0` (DP-232 F7 @ `5c6a186a`). Bez push na main.
+- **Krok** C4 **DP-230** (#852): `detect_gps_wrong_ferry_port` + `detect_duplicate_tractor_plate` + flaga ETA obok „odpłynął” (**0429**); i18n; status.sh +10. Gałąź `pakiet/c4-dp-230-gps-port-tractor`. Po F7: DP-102….
+
 ## 2026-11-07 07:50 — DP-232: migawki + selektor e8 (C4)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
