@@ -1,3 +1,15 @@
+## 2026-11-07 17:20 — DP-111 #879 r2 (C4 / BN3)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500 w planie. Bez nowego `pilne`.
+- Scalanie: brak „F7: gotowe” — przegląd #879: tomorrow/weekday w auto łamało R4-B1. Bez push na main.
+- **Krok** C4 **DP-111** r2: `relativeDate` — tomorrow/weekday → `contentStartYmd` bez `autoCancelOk`/`autoRestoreOk`; bezwzględne zostają w auto; mutacja w teście. vitest bn3-tallink-alert **75**. Gałąź `pakiet/c4-dp-111-tallink-date-forms`. Czekam CI→F7. Po F7: DP-112….
+
+## 2026-11-07 17:05 — DP-111 start (C4 / BN3)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500 w planie. Bez nowego `pilne`.
+- Scalanie: **#878 SCALONE** `f1ec3346` (DP-109 F7 @ `ac245ba2`, CI unit/visual/db ✔). Bez push na main.
+- **Krok** C4 **DP-111**: `parseDatePhrase` + `DATE_FLEX` w allowliście 68 — November 2 / 2nd / 2–4 / from…to / tomorrow / weekday (kotwica dateStart); zakres → start/end; poza allowlistą (data po „cancelled”) nadal ambiguous. vitest bn3-tallink-alert **75**. Gałąź `pakiet/c4-dp-111-tallink-date-forms`. Po F7: DP-112….
+
 ## 2026-11-07 16:30 — DP-109 #878 r2 (C4 / BN3)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500 w planie. Bez nowego `pilne`.
