@@ -5,7 +5,7 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import {
-  fetchStenaDays, pickUniqueInWindow, runFerryPortnet, runFerrySchedule, runFerryStatus,
+  fetchStenaDays, operatorFromSailingSource, pickUniqueInWindow, runFerryPortnet, runFerrySchedule, runFerryStatus,
   type JobDeps, type JobResult, type SyncStore,
 } from '../supabase/functions/_shared/integrations/jobs';
 import type { DbSailing, RiskInput, SailingInsert, SailingPatch } from '../supabase/functions/_shared/integrations/sync';
@@ -127,6 +127,20 @@ class MemStore implements SyncStore {
   /** F7 #682 B1 — domyślnie 15; testy mogą nadpisać. */
   delayMin = 15;
   async ferryPortDelayMin() { return this.delayMin; }
+  /** DP-99 — historia AUTO z ts.ee. */
+  notices: { sailingId: string; operator: string; kind: string; note?: string | null }[] = [];
+  async insertOperatorNotice(row: {
+    sailingId: string;
+    operator: string;
+    kind: 'ODWOLANY' | 'OPOZNIONY' | 'ZMIANA_GODZINY' | 'PRZYWROCONY';
+    note?: string | null;
+    sourceUrl?: string | null;
+  }) {
+    this.notices.push({
+      sailingId: row.sailingId, operator: row.operator, kind: row.kind, note: row.note,
+    });
+    return `n${this.notices.length}`;
+  }
 }
 
 function deps(store: MemStore, pages: Record<string, string | number>, now = NOW): JobDeps {
@@ -346,6 +360,73 @@ describe('F7 #660 r2/r3 Port of Tallinn / Stockholm bez zmyślonych godzin', () 
       departure_at: '2026-10-30T05:30:00.000Z',
       arrival_at: '2026-10-30T07:30:00.000Z',
     });
+  });
+
+  // DP-99 (F7 #683): data-company → operator; MUU-VUO fallback ECKERO (nie VIKING).
+  it('DP-99: notice z data-company; MUU-VUO bez company → ECKERO', async () => {
+    expect(operatorFromSailingSource('DIGITRAFFIC', 'MUU-VUO')).toBe('ECKERO');
+    expect(operatorFromSailingSource('DIGITRAFFIC', 'MUU-VUO', 'viking_line_abp')).toBe('VIKING');
+    expect(operatorFromSailingSource('DIGITRAFFIC', 'TLL-HEL', 'tallink')).toBe('TALLINK');
+    expect(operatorFromSailingSource('DIGITRAFFIC', 'TLLA-HEL', 'eckeroe_line_ab_oy')).toBe('ECKERO');
+    expect(operatorFromSailingSource('', 'TLLA-HEL')).toBe('VIKING');
+
+    const st = new MemStore();
+    st.vessels = async () => [
+      ...(await new MemStore().vessels()),
+      { id: 'v-finbo', name: 'M/F Finbo Cargo', mmsi: 230987100 },
+    ];
+    st.sailings.push(
+      {
+        id: 'finbo', vessel_id: 'v-finbo', route: 'MUU-VUO',
+        departure_at: '2026-10-30T08:00:00.000Z', arrival_at: '2026-10-30T10:30:00.000Z',
+        delayed_departure_at: null, delayed_arrival_at: null,
+        actual_departure_at: null, actual_arrival_at: null,
+        status: 'ZAPLANOWANY', source: 'DIGITRAFFIC',
+      },
+      {
+        id: 'xprs', vessel_id: 'v-xprs', route: 'TLLA-HEL',
+        departure_at: '2026-10-30T01:30:00.000Z', arrival_at: '2026-10-30T03:30:00.000Z',
+        delayed_departure_at: null, delayed_arrival_at: null,
+        actual_departure_at: null, actual_arrival_at: null,
+        status: 'ZAPLANOWANY', source: 'DIGITRAFFIC',
+      },
+    );
+    const html = `<!DOCTYPE html><html><body>
+<table class="table" id="passenger-lines-outbound"><tbody>
+<tr data-terminal="hhla" data-from_to="vuosaari" data-company="eckeroe_line_ab_oy">
+<td data-sort_value="10:00">10:00</td>
+<td data-sort_value="FINBO CARGO">FINBO CARGO</td>
+<td data-sort_value="Muuga">Muuga</td>
+<td data-sort_value="Vuosaari">Vuosaari</td>
+<td data-sort_value="HHLA">HHLA</td>
+<td data-sort_value="Eckerö Line">Eckerö Line</td>
+<td data-sort_value="Cancelled">Cancelled</td>
+</tr>
+<tr data-terminal="a" data-from_to="helsinki" data-company="viking_line_abp">
+<td data-sort_value="03:30">03:30</td>
+<td data-sort_value="VIKING XPRS">VIKING XPRS</td>
+<td data-sort_value="Tallinn">Tallinn</td>
+<td data-sort_value="Helsinki">Helsinki</td>
+<td data-sort_value="A">Terminal A</td>
+<td data-sort_value="Viking Line Abp">Viking Line Abp</td>
+<td data-sort_value="Cancelled">Cancelled</td>
+</tr>
+</tbody></table>
+<table class="table" id="passenger-lines-inbound"><tbody></tbody></table>
+</body></html>`;
+    const pages: Record<string, string | number> = {
+      ...basePages,
+      'api/timetables': 503,
+      'ts.ee/en/departures': html,
+      'ts.ee/en/arrivals': html,
+    };
+    await runFerrySchedule(deps(st, pages));
+    expect(st.sailings.find((s) => s.id === 'finbo')?.status).toBe('ODWOLANY');
+    expect(st.sailings.find((s) => s.id === 'xprs')?.status).toBe('ODWOLANY');
+    expect(st.notices).toEqual(expect.arrayContaining([
+      expect.objectContaining({ sailingId: 'finbo', operator: 'ECKERO', kind: 'ODWOLANY' }),
+      expect.objectContaining({ sailingId: 'xprs', operator: 'VIKING', kind: 'ODWOLANY' }),
+    ]));
   });
 });
 
