@@ -1,3 +1,9 @@
+## 2026-11-07 22:50 — DP-237 r2: B1–B3 (C4 / dowód floty)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608/#714/#716/#718/#720 w planie. Bez nowego `pilne` do budowy.
+- Scalanie: brak F7 na #886 (koordynator: B1 blokujące + B2/B3). CI r1 unit/visual/db ✔ @ `e68dab1f`. Bez push na main.
+- **Krok** C4 **DP-237** r2 (#886): B2 — W_REJSIE+ATD → `DOPLYNAL`, bez ATD → `ZAMKNIETY_BEZ_POTWIERDZENIA`; B1 — trigger chroni znacznik (+ test `status.sh`); B3 — niezakończony transport → HIGH `rk_ferry_unconfirmed_dep` HHL+SCX bez domknięcia. Vitest dp222+integrations OK. Czekam CI → F7.
+
 ## 2026-11-07 22:15 — #885 SCALONE; start DP-237 (C4 / dowód floty)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608/#714/#716/#718/#720 w planie. Bez nowego `pilne` do budowy.

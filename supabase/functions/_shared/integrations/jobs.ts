@@ -323,6 +323,11 @@ export interface SyncStore {
   updateSailing(id: string, patch: SailingPatch): Promise<boolean>;
   /** #685-a / decyzja 74: liczba transportów z sailing_id (przed usunięciem Portnet). */
   sailingAssignedLoadCount?(sailingId: string): Promise<number>;
+  /**
+   * DP-237 B3: id niezakończonych transportów na rejsie
+   * (nie CANCELLED/REMOVED/UNLOADED/DELIVERED/READY_TO_INVOICE/INVOICED).
+   */
+  sailingUnfinishedLoadIds?(sailingId: string): Promise<string[]>;
   /** #685-a / decyzja 74: usuń rejs (nie RECZNIE). */
   deleteSailing?(id: string): Promise<boolean>;
   /** BN3 decyzja 57: AUTO komunikat do historii operator_notices (created_by null). */
@@ -682,9 +687,10 @@ function laterVesselAtd(
 }
 
 /**
- * DP-222 F7 #818 B2 + DP-237 / decyzja 114: po ATD — nie zostawiaj W_REJSIE na zawsze.
- * ATA → DOPLYNAL; późniejszy ATD floty bez ATA → ZAMKNIETY_BEZ_POTWIERDZENIA (nie „Dopłynął”);
- * GDN-NYN: arrival+6h przy znanym ATD (W_REJSIE) → DOPLYNAL; trwający → W_REJSIE.
+ * DP-222 F7 #818 B2 + DP-237 r2 (decyzja 114 / B2): po ATD — nie zostawiaj W_REJSIE.
+ * ATA → DOPLYNAL; W_REJSIE z ATD + późniejszy ATD floty → DOPLYNAL (statek wypłynął);
+ * GDN-NYN: arrival+6h przy znanym ATD → DOPLYNAL; trwający → W_REJSIE.
+ * Znacznik ZAMKNIETY_BEZ_POTWIERDZENIA tylko bez ATD (shouldClose*).
  */
 export function statusAfterGdnNynAtd(
   s: Pick<DbSailing, 'id' | 'vessel_id' | 'route' | 'departure_at' | 'arrival_at'>,
@@ -693,14 +699,14 @@ export function statusAfterGdnNynAtd(
   ataIso: string | null = null,
 ): 'W_REJSIE' | 'DOPLYNAL' | 'ZAMKNIETY_BEZ_POTWIERDZENIA' {
   if (ataIso) return 'DOPLYNAL';
-  if (laterVesselAtd(s, peers)) return FLEET_CLOSE_STATUS;
+  if (laterVesselAtd(s, peers)) return 'DOPLYNAL';
   if (s.route === 'GDN-NYN' && Date.parse(s.arrival_at) + 6 * 3600_000 < nowMs) return 'DOPLYNAL';
   return 'W_REJSIE';
 }
 
 /**
  * DP-222 drobne + DP-237: ZAPLANOWANY/OPOZNIONY bez ATD+ATA + późniejszy ATD floty
- * (wszystkie trasy). Bez arrival+6h (61b).
+ * (wszystkie trasy) → ZAMKNIETY_BEZ_POTWIERDZENIA. Bez arrival+6h (61b).
  */
 export function shouldCloseGdnNynWithoutAtd(
   s: Pick<DbSailing, 'id' | 'vessel_id' | 'route' | 'status' | 'departure_at' | 'actual_departure_at' | 'actual_arrival_at'>,
@@ -715,14 +721,47 @@ export function shouldCloseGdnNynWithoutAtd(
 export const shouldCloseFleetEvidenceWithoutAtd = shouldCloseGdnNynWithoutAtd;
 
 /**
- * DP-222 B2 + DP-237: W_REJSIE bez ATA / ZAPLANOWANY bez ATD+ATA → znacznik floty
- * (lub DOPLYNAL tylko przy GDN-NYN arrival+6h z ATD). Pomiń cancel-suspect; resolve AIS_DEP_DELAY.
+ * DP-237 B3: rejs bez ATD z niezakończonym transportem — nie domykaj znacznikiem;
+ * HIGH HHL+SCX (sprawdź, czy transport płynął).
+ */
+export function fleetUnconfirmedDepRisk(
+  s: Pick<DbSailing, 'id' | 'route' | 'departure_at'>,
+  loadId: string,
+  vesselName?: string,
+): RiskInput & { loadId: string } {
+  const dep = s.departure_at.slice(0, 16);
+  const vessel = vesselName ?? 'prom';
+  return {
+    kind: 'FERRY',
+    severity: 'HIGH',
+    title: `Rejs bez potwierdzenia wypłynięcia — sprawdź, czy transport płynął (${vessel}, ${dep})`,
+    titleKey: 'rk_ferry_unconfirmed_dep',
+    params: { vessel, dep },
+    detail: {
+      audience: 'HHL_PRZEWOZNIK',
+      sailing_id: s.id,
+      trasa: s.route,
+      odejscie: s.departure_at,
+      zrodlo: 'FLEET_EVIDENCE',
+    },
+    dedup: `FERRY_UNCONFIRMED_DEP:${s.id}:${loadId}`,
+    loadId,
+  };
+}
+
+/**
+ * DP-222 B2 + DP-237 r2: W_REJSIE+ATD → DOPLYNAL (późniejszy ATD / GDN arrival+6h);
+ * ZAPLANOWANY/OPOZNIONY bez ATD → ZAMKNIETY_BEZ_POTWIERDZENIA.
+ * Pomiń cancel-suspect; B3: bez ATD + niezakończony transport → ryzyko, bez domknięcia.
+ * Resolve AIS_DEP_DELAY po domknięciu.
  */
 async function closeStaleGdnNynWithoutAta(deps: JobDeps, _sinceIso?: string): Promise<number> {
   const nowMs = deps.now().getTime();
   /* 14 d — okno analizy DP-140; GDN-NYN wcześniej 7 d. */
   const lookback = new Date(nowMs - 14 * 864e5).toISOString();
   const existing = await deps.store.sailingsSince(lookback);
+  const vessels = await deps.store.vessels();
+  const vesselName = (id: string) => vessels.find((v) => v.id === id)?.name;
   let updated = 0;
   for (const s of existing) {
     if (s.actual_arrival_at != null) continue;
@@ -735,6 +774,28 @@ async function closeStaleGdnNynWithoutAta(deps: JobDeps, _sinceIso?: string): Pr
     if (deps.store.hasOpenRisk
       && await deps.store.hasOpenRisk(cancelSuspectRiskDedup(s.id))) {
       continue;
+    }
+    /* B3: znacznik tylko bez ATD — przy niezakończonych transportach nie domykaj. */
+    if (nextSt === FLEET_CLOSE_STATUS && s.actual_departure_at == null) {
+      const loadIds = deps.store.sailingUnfinishedLoadIds
+        ? await deps.store.sailingUnfinishedLoadIds(s.id)
+        : (deps.store.sailingAssignedLoadCount
+          && (await deps.store.sailingAssignedLoadCount(s.id)) > 0
+          ? [s.id]
+          : []);
+      if (loadIds.length > 0) {
+        for (const lid of loadIds) {
+          const risk = fleetUnconfirmedDepRisk(s, lid, vesselName(s.vessel_id));
+          /* Fallback bez listy id: dedup na rejs, bez load_id. */
+          if (!deps.store.sailingUnfinishedLoadIds && lid === s.id) {
+            const { loadId: _drop, ...rest } = risk;
+            await deps.store.raiseRisk({ ...rest, dedup: `FERRY_UNCONFIRMED_DEP:${s.id}` });
+          } else {
+            await deps.store.raiseRisk(risk);
+          }
+        }
+        continue;
+      }
     }
     if (await deps.store.updateSailing(s.id, { status: nextSt })) {
       updated += 1;

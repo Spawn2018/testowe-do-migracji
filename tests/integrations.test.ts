@@ -538,7 +538,7 @@ describe('ferry-ais — Digitraffic (prawdziwa odpowiedź 25.09.2026)', () => {
     expect(st.sailings.find((x) => x.vessel_id === NS)?.actual_departure_at ?? null).toBeNull();
     expect(r.observations?.['M/F Nova Star:DEP']).toBeUndefined();
   });
-  it('DP-222 F7 B2: ATD + późniejszy rejs z ATD → DOPLYNAL (bez ATA)', async () => {
+  it('DP-222 F7 B2 / DP-237 r2: ATD + późniejszy rejs z ATD → DOPLYNAL (bez ATA)', async () => {
     const st = new MemStore();
     const old = sail(WAW, '2026-11-03T17:00:00.000Z', '2026-11-04T07:00:00.000Z');
     old.status = 'W_REJSIE';
@@ -552,7 +552,7 @@ describe('ferry-ais — Digitraffic (prawdziwa odpowiedź 25.09.2026)', () => {
     const mid = AIS.replace('1790278580817', String(Date.parse('2026-11-05T12:00:00.000Z')));
     const r = await runFerryAis(deps(st, { 'digitraffic.fi': mid }, {}, new Date('2026-11-05T12:05:00Z')).d);
     expect(st.sailings.find((x) => x.id === old.id)).toMatchObject({
-      status: 'ZAMKNIETY_BEZ_POTWIERDZENIA',
+      status: 'DOPLYNAL',
       actual_arrival_at: null,
       actual_departure_at: '2026-11-03T17:10:00.000Z',
     });

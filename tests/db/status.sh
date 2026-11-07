@@ -4761,5 +4761,36 @@ chk "DP-235: helper repeat_stale po ATD" \
       '2026-11-16 20:05+00'::timestamptz
     )::text" true
 
+# ---------------------------------------------------------------------------
+# DP-237 B1 (#886): trigger nie cofa ZAMKNIETY_BEZ_POTWIERDZENIA przy ATD
+# (jak DP-130 dla DOPLYNAL). UUID …2370–2371; vessel DP-237; L xx: 18–19.11.
+# ---------------------------------------------------------------------------
+echo; echo "[DP-237] trigger ZAMKNIETY_BEZ_POTWIERDZENIA"
+V237=66666666-0000-0000-0000-000000002370
+S237a=77777777-0000-0000-0000-000000002370
+S237b=77777777-0000-0000-0000-000000002371
+q "insert into vessels (id, name, operator) values
+ ('$V237', 'M/F DP-237 Estelle', 'Stena Line')
+ on conflict (id) do nothing;
+ insert into sailings (id, project_id, vessel_id, route, departure_at, arrival_at,
+    actual_departure_at, actual_arrival_at, status, source) values
+  ('$S237a', '$P', '$V237', 'GDY-KAA',
+   '2026-11-18 12:00+00', '2026-11-18 22:00+00',
+   '2026-11-18 12:05+00', null, 'W_REJSIE', 'STENA'),
+  ('$S237b', '$P', '$V237', 'GDY-KAA',
+   '2026-11-19 08:00+00', '2026-11-19 18:00+00',
+   null, null, 'ZAPLANOWANY', 'STENA')
+ on conflict (id) do nothing" >/dev/null
+# B1: jawny znacznik przy ATD — trigger nie wraca do W_REJSIE
+q "update sailings set status = 'ZAMKNIETY_BEZ_POTWIERDZENIA' where id='$S237a'" >/dev/null
+chk "DP-237 B1: UPDATE ZAMKNIETY przy ATD → zostaje znacznik" \
+  "select status from sailings where id='$S237a'" ZAMKNIETY_BEZ_POTWIERDZENIA
+chk "DP-237 B1: ATA nadal null po znaczniku" \
+  "select (actual_arrival_at is null)::text from sailings where id='$S237a'" true
+# ATD bez jawnego znacznika / DOPLYNAL nadal → W_REJSIE
+q "update sailings set actual_departure_at = '2026-11-19 08:05+00' where id='$S237b'" >/dev/null
+chk "DP-237 B1: actual_departure bez znacznika → W_REJSIE" \
+  "select status from sailings where id='$S237b'" W_REJSIE
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

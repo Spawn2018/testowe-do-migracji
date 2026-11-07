@@ -57,7 +57,13 @@ class MemStore implements SyncStore {
     if (delayed_departure_at !== undefined) s.delayed_departure_at = delayed_departure_at;
     return true;
   }
-  async sailingAssignedLoadCount() { return 0; }
+  unfinishedBySailing = new Map<string, string[]>();
+  async sailingAssignedLoadCount(id: string) {
+    return (this.unfinishedBySailing.get(id) ?? []).length;
+  }
+  async sailingUnfinishedLoadIds(id: string) {
+    return this.unfinishedBySailing.get(id) ?? [];
+  }
   async deleteSailing() { return false; }
   async raiseRisk(r: RiskInput & { loadId?: string }) {
     if (this.risks.some((x) => x.dedup === r.dedup)) return false;
@@ -204,7 +210,7 @@ describe('DP-222 UMG × ferry-portnet — ATD GDN-NYN', () => {
     expect(st.sailings.find((s) => s.id === 'gdn-waw')?.actual_departure_at ?? null).toBeNull();
   });
 
-  it('DP-222 B2 / DP-237: W_REJSIE bez ATA + późniejszy ATD → ZAMKNIETY_BEZ_POTWIERDZENIA', async () => {
+  it('DP-222 B2 / DP-237 r2: W_REJSIE z ATD + późniejszy ATD → DOPLYNAL', async () => {
     const st = new MemStore();
     const old: DbSailing = {
       id: 'gdn-waw', vessel_id: WAW, route: 'GDN-NYN',
@@ -222,7 +228,7 @@ describe('DP-222 UMG × ferry-portnet — ATD GDN-NYN', () => {
     };
     st.sailings.push(old, next);
     expect(statusAfterGdnNynAtd(old, [old, next], Date.parse('2026-11-05T12:00:00Z'), null))
-      .toBe('ZAMKNIETY_BEZ_POTWIERDZENIA');
+      .toBe('DOPLYNAL');
     const r = await runFerryPortnet(deps(st, {
       'port-calls': PORTNET,
       'statki-spodziewane': UMG_ETA,
@@ -232,7 +238,7 @@ describe('DP-222 UMG × ferry-portnet — ATD GDN-NYN', () => {
     expect(r.ok).toBe(true);
     expect(r.observations?.dp222_closed_gdn).toBe('1');
     expect(st.sailings.find((s) => s.id === 'gdn-waw')).toMatchObject({
-      status: 'ZAMKNIETY_BEZ_POTWIERDZENIA',
+      status: 'DOPLYNAL',
       actual_arrival_at: null,
       actual_departure_at: '2026-11-03T17:05:00.000Z',
     });
@@ -304,5 +310,42 @@ describe('DP-222 UMG × ferry-portnet — ATD GDN-NYN', () => {
       actual_departure_at: null,
       actual_arrival_at: null,
     });
+  });
+
+  it('DP-237 B3: ZAPLANOWANY bez ATD + transport → bez znacznika, HIGH HHL+SCX', async () => {
+    const st = new MemStore();
+    const old: DbSailing = {
+      id: 'gdn-waw-b3', vessel_id: WAW, route: 'GDN-NYN',
+      departure_at: '2026-11-03T17:00:00.000Z', arrival_at: '2026-11-04T07:00:00.000Z',
+      delayed_departure_at: null, delayed_arrival_at: null,
+      actual_departure_at: null, actual_arrival_at: null,
+      status: 'ZAPLANOWANY', source: 'POLFERRIES',
+    };
+    const next: DbSailing = {
+      id: 'nyn-waw-b3', vessel_id: WAW, route: 'NYN-GDN',
+      departure_at: '2026-11-04T17:14:00.000Z', arrival_at: '2026-11-05T07:00:00.000Z',
+      delayed_departure_at: null, delayed_arrival_at: null,
+      actual_departure_at: '2026-11-04T17:20:00.000Z', actual_arrival_at: null,
+      status: 'W_REJSIE', source: 'POLFERRIES',
+    };
+    st.sailings.push(old, next);
+    st.unfinishedBySailing.set('gdn-waw-b3', ['load-b3']);
+    const r = await runFerryPortnet(deps(st, {
+      'port-calls': PORTNET,
+      'statki-spodziewane': UMG_ETA,
+      'statki-wychodzace': UMG_OUT,
+      'statki-w-porcie': UMG_IN,
+    }, new Date('2026-11-05T12:00:00Z')));
+    expect(r.ok).toBe(true);
+    expect(st.sailings.find((s) => s.id === 'gdn-waw-b3')?.status).toBe('ZAPLANOWANY');
+    expect(st.risks).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        severity: 'HIGH',
+        titleKey: 'rk_ferry_unconfirmed_dep',
+        loadId: 'load-b3',
+        dedup: 'FERRY_UNCONFIRMED_DEP:gdn-waw-b3:load-b3',
+        detail: expect.objectContaining({ audience: 'HHL_PRZEWOZNIK' }),
+      }),
+    ]));
   });
 });
