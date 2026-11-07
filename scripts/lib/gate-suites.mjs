@@ -13,7 +13,7 @@ const ROOT = resolve(import.meta.dirname, '../..');
 /** Oczekiwane OK na lokalnym Postgresie (gate.sh). */
 export const EXPECTED_LOCAL = {
   security: 532, // #837: +9 monitorujpojazd_token (SELECT/UPDATE/INSERT×1 + err×3 + sanitizer + clear + audit); było 523
-  status: 705, // DP-230 F7 #870: +17 GPS port/ciągnik/ATD/REMOVED/FERRY+obcy; było 688
+  status: 709, // DP-230 F7 #870: +4 stale GPS >30 min (powtórzony fix); było 705
   storage: 37,
   money: 205, // DP-31 SOURCE_DOWN HIGH→MEDIUM +5; było 200 (DP-167 F7 #734 r2 +2 od 198)
   release: 146,

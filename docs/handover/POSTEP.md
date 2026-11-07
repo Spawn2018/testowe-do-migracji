@@ -1,3 +1,9 @@
+## 2026-11-07 10:05 — DP-230 stale GPS >30 min #870 (C4)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: CI @ b6fe3e02 zielone (unit/db/visual); brak „F7: gotowe do scalenia”. Bez push na main.
+- **Krok** C4 **DP-230**: `gps_fresh_position` — powtórzony identyczny fix >30 min = jak brak GPS; detect/blokada FERRY na świeżym GPS; resolve tylko przy świeżym GPS poza obcym portem (nie na stale); status EXPECTED **709**. Gałąź `pakiet/c4-dp-230-gps-port-tractor-warn` / #870. Czekam CI→F7. Po F7: DP-102….
+
 ## 2026-11-07 09:40 — DP-230 CI fix #870 (C4)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
