@@ -2082,10 +2082,15 @@ describe('BN3 Port of Tallinn Lisainfo', () => {
     expect(r.events[0]!.lisainfo).toMatch(/Cancelled/i);
     expect(r.events[0]!.vessel).toBe('M/F Megastar');
     expect(r.events[0]!.route).toBe('TLL-HEL');
-    // DP-102: prefiks Lisainfo w nocie AUTO.
-    expect(portTallinnCancelNote(r.events[0]!.lisainfo)).toMatch(/^Lisainfo:/);
-    expect(portTallinnCancelNote(null)).toBe('Lisainfo: Port of Tallinn: odwołanie (ts.ee)');
-    expect(portTallinnCancelNote('Lisainfo: już')).toBe('Lisainfo: już');
+    // DP-102 / F7 #871: bez prefiksu Lisainfo w nocie AUTO (treść komunikatu).
+    expect(portTallinnCancelNote(r.events[0]!.lisainfo)).not.toMatch(/^Lisainfo/i);
+    expect(portTallinnCancelNote(r.events[0]!.lisainfo)).toMatch(/Cancelled/i);
+    expect(portTallinnCancelNote(null)).toBe('Port of Tallinn: odwołanie (ts.ee)');
+    expect(portTallinnCancelNote('Lisainfo: Cancelled — technical reasons'))
+      .toBe('Cancelled — technical reasons');
+    expect(portTallinnCancelNote('Additional info: Cancelled overnight'))
+      .toBe('Cancelled overnight');
+    expect(portTallinnCancelNote('Lisainfo')).toBe('Port of Tallinn: odwołanie (ts.ee)');
   });
 
   it('F7 B5: ts.ee cancelled → AUTO notice + dedup przy drugim przebiegu', async () => {
@@ -2120,7 +2125,8 @@ describe('BN3 Port of Tallinn Lisainfo', () => {
     expect(st.sailings[0]!.status).toBe('ODWOLANY');
     expect(st.notices).toHaveLength(1);
     expect(st.notices[0]!.source).toBe('AUTO');
-    expect(st.notices[0]!.note).toMatch(/^Lisainfo:/);
+    expect(st.notices[0]!.note).not.toMatch(/^Lisainfo/i);
+    expect(st.notices[0]!.note).toMatch(/Cancelled/i);
     await runFerryPortnet(deps(st, pages, NOW));
     expect(st.notices).toHaveLength(1);
   });
@@ -2163,6 +2169,8 @@ describe('BN3 Port of Tallinn Lisainfo', () => {
     await runFerryPortnet(deps(amb, pages, NOW));
     expect(amb.sailings.every((s) => s.status === 'ZAPLANOWANY')).toBe(true);
     expect(amb.notices).toHaveLength(0);
+    expect(amb.risks.some((r) => String(r.dedup).startsWith('FERRY_UNKNOWN:TS_EE:'))).toBe(true);
+    expect(amb.risks.some((r) => r.titleKey === 'rk_ferry_status_unknown')).toBe(true);
 
     const far = new MemStore();
     // 03:30Z = 2 h przed 05:30Z (07:30 Tallinn) — w starym ±3 h trafilibyśmy; w ±30 min nie.

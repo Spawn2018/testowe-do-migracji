@@ -1829,13 +1829,16 @@ function tallinnDateYmd(now: Date): string {
 }
 
 /**
- * DP-102 — nota AUTO z ts.ee: zawsze prefiks „Lisainfo” (treść kolumny lub fallback).
+ * DP-102 / F7 #871 — nota AUTO z ts.ee: treść komunikatu bez nagłówka kolumny
+ * „Lisainfo” / „Additional info” (źródło i tak w source_url + source=AUTO).
  */
 export function portTallinnCancelNote(lisainfo: string | null | undefined): string {
   const raw = (lisainfo ?? '').trim();
-  if (!raw) return 'Lisainfo: Port of Tallinn: odwołanie (ts.ee)';
-  if (/^Lisainfo\b/i.test(raw)) return raw;
-  return `Lisainfo: ${raw}`;
+  if (!raw) return 'Port of Tallinn: odwołanie (ts.ee)';
+  const stripped = raw
+    .replace(/^(?:Lisainfo\s*:?\s*|Additional\s+info\s*:\s*)/i, '')
+    .trim();
+  return stripped || 'Port of Tallinn: odwołanie (ts.ee)';
 }
 
 /**
@@ -1896,7 +1899,28 @@ async function applyPortTallinn(deps: JobDeps, sinceIso: string): Promise<{
       (s) => Date.parse(e.kind === 'DEPARTURE' ? s.departure_at : s.arrival_at),
       WINDOW_MS,
     );
-    if (pick.kind !== 'hit') continue;
+    const ambDedup = `FERRY_UNKNOWN:TS_EE:${vesselId}:${e.route}:${e.atUtc}`;
+    // F7 #871 (nieblokujące): ambiguous w ±30 min → ryzyko HHL jak Portnet FERRY_UNKNOWN.
+    if (pick.kind === 'ambiguous') {
+      warnings.push(
+        `ts.ee odwołanie niejednoznaczne: ${e.vessel} ${e.route} (±30 min, ${pick.items.length} rejsy)`,
+      );
+      await deps.store.raiseRisk({
+        kind: 'FERRY', severity: 'MEDIUM',
+        title: `ts.ee: niejednoznaczne odwołanie ${e.vessel} — bez zmiany, do weryfikacji HHL`,
+        titleKey: 'rk_ferry_status_unknown',
+        params: { vessel: e.vessel, dep: warsaw(e.atUtc) },
+        detail: {
+          zrodlo: 'PORT_TALLINN', statek: e.vessel, at: e.atUtc, rejsy: pick.items.length,
+        },
+        dedup: ambDedup,
+      });
+      continue;
+    }
+    if (pick.kind === 'none') {
+      await deps.store.resolveRisks(ambDedup);
+      continue;
+    }
     const hit = pick.item;
     // DP-101 / F7 #866: atomowe AUTO ODWOLANY + notice (RPC) — bez wyścigu dwóch przebiegów.
     const cancelledOk = deps.store.cancelSailingAuto
@@ -1912,6 +1936,7 @@ async function applyPortTallinn(deps: JobDeps, sinceIso: string): Promise<{
       cancelled += 1;
       hit.status = 'ODWOLANY';
     }
+    await deps.store.resolveRisks(ambDedup);
   }
   return { warnings, fail: false, cancelled };
 }
