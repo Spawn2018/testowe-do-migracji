@@ -1642,5 +1642,35 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
       const d = r.data as { lat: number; lon: number; ts: string };
       return { lat: Number(d.lat), lon: Number(d.lon), ts: String(d.ts) };
     },
+    /** DP-186: EE RESTRICTIONS/SAFETY — last-good w bazie. */
+    async getEeHeavyFeedDbCache(
+      code: 'RESTRICTIONS' | 'SAFETY',
+      nowMs: number,
+      maxAgeMs: number = 60 * 60 * 1000,
+    ) {
+      const r = await sb.from('ee_road_feed_cache')
+        .select('events,fetched_at,n_events')
+        .eq('feed_code', code)
+        .maybeSingle();
+      if (r.error || !r.data) return null;
+      const fetchedAt = Date.parse(String((r.data as { fetched_at: string }).fetched_at));
+      if (!Number.isFinite(fetchedAt)) return null;
+      if (Number.isFinite(maxAgeMs) && nowMs - fetchedAt > maxAgeMs) return null;
+      const raw = (r.data as { events: unknown }).events;
+      const events = Array.isArray(raw) ? raw as import('./roadBaltic.ts').BalticRoadEvent[] : [];
+      return { fetchedAt, events: events.map((e) => ({ ...e })) };
+    },
+    async setEeHeavyFeedDbCache(
+      code: 'RESTRICTIONS' | 'SAFETY',
+      events: import('./roadBaltic.ts').BalticRoadEvent[],
+      fetchedAtMs: number,
+    ) {
+      must(await sb.from('ee_road_feed_cache').upsert({
+        feed_code: code,
+        events,
+        n_events: events.length,
+        fetched_at: new Date(fetchedAtMs).toISOString(),
+      }, { onConflict: 'feed_code' }), 'ee_road_feed_cache upsert');
+    },
   };
 }

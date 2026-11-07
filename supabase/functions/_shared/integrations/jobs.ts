@@ -571,6 +571,20 @@ export interface SyncStore {
   patchRoadRiskOpis?(original: string, pl: string): Promise<number>;
   deeplUsage?(): Promise<{ characters: number; limit: number }>;
   deeplAddUsage?(n: number): Promise<number>;
+  /**
+   * DP-186: ostatnia dobra kopia EE RESTRICTIONS/SAFETY w bazie (cold start).
+   * `maxAgeMs` = Infinity → dowolny wiek (cache-stale przy błędzie fetch).
+   */
+  getEeHeavyFeedDbCache?(
+    code: 'RESTRICTIONS' | 'SAFETY',
+    nowMs: number,
+    maxAgeMs?: number,
+  ): Promise<{ fetchedAt: number; events: import('./roadBaltic.ts').BalticRoadEvent[] } | null>;
+  setEeHeavyFeedDbCache?(
+    code: 'RESTRICTIONS' | 'SAFETY',
+    events: import('./roadBaltic.ts').BalticRoadEvent[],
+    fetchedAtMs: number,
+  ): Promise<void>;
 }
 export interface JobDeps {
   store: SyncStore;
@@ -5459,18 +5473,33 @@ export async function runRoadEe(deps: JobDeps): Promise<JobResult> {
     }
   }
   /*
-   * DP-180: RESTRICTIONS/SAFETY co 60 min z cache; świeża kopia → OK + ee_*_source=cache
-   * (liczy się do complete); timeout 45 s tylko RESTRICTIONS; budżet 120 s bez zmian.
+   * DP-180 + DP-186: RESTRICTIONS/SAFETY co 60 min — pamięć procesu, potem baza
+   * (cold start); świeża kopia → OK + ee_*_source=cache (liczy się do complete);
+   * timeout 45 s tylko RESTRICTIONS; budżet 120 s bez zmian.
    */
   const feedsToFetch: (typeof EE_DATEX_FEEDS)[number][] = [];
   for (const feed of otherFeeds) {
     if (isEeHeavyFeedCode(feed.code)) {
-      const cached = getEeHeavyFeedCache(feed.code, started, EE_HEAVY_FEED_CACHE_TTL_MS);
-      if (cached) {
+      const mem = getEeHeavyFeedCache(feed.code, started, EE_HEAVY_FEED_CACHE_TTL_MS);
+      if (mem) {
         parts.push({
           code: feed.code, ok: true, warning: null,
-          per: balticFeedObsOk(cached.length, 0, 'cache', 0),
-          format: 'cache', events: cached, ms: 0, source: 'cache',
+          per: balticFeedObsOk(mem.length, 0, 'cache', 0),
+          format: 'cache', events: mem, ms: 0, source: 'cache',
+        });
+        continue;
+      }
+      const dbHit = deps.store.getEeHeavyFeedDbCache
+        ? await deps.store.getEeHeavyFeedDbCache(
+          feed.code, started, EE_HEAVY_FEED_CACHE_TTL_MS,
+        )
+        : null;
+      if (dbHit) {
+        setEeHeavyFeedCache(feed.code, dbHit.events, dbHit.fetchedAt);
+        parts.push({
+          code: feed.code, ok: true, warning: null,
+          per: balticFeedObsOk(dbHit.events.length, 0, 'cache', 0),
+          format: 'cache', events: dbHit.events, ms: 0, source: 'cache',
         });
         continue;
       }
@@ -5485,11 +5514,29 @@ export async function runRoadEe(deps: JobDeps): Promise<JobResult> {
   for (const part of rest) {
     if (part.ok && isEeHeavyFeedCode(part.code)) {
       setEeHeavyFeedCache(part.code, part.events, started);
+      if (deps.store.setEeHeavyFeedDbCache) {
+        try {
+          await deps.store.setEeHeavyFeedDbCache(part.code, part.events, started);
+        } catch (e) {
+          warnings.push(
+            `EE ${part.code}: zapis cache bazy nieudany (${e instanceof Error ? e.message : 'błąd'})`,
+          );
+        }
+      }
       parts.push({ ...part, source: part.source ?? 'fetch' });
       continue;
     }
     if (!part.ok && isEeHeavyFeedCode(part.code)) {
-      const stale = getEeHeavyFeedCache(part.code, started, Number.POSITIVE_INFINITY);
+      let stale = getEeHeavyFeedCache(part.code, started, Number.POSITIVE_INFINITY);
+      if (!stale && deps.store.getEeHeavyFeedDbCache) {
+        const dbStale = await deps.store.getEeHeavyFeedDbCache(
+          part.code, started, Number.POSITIVE_INFINITY,
+        );
+        if (dbStale) {
+          setEeHeavyFeedCache(part.code, dbStale.events, dbStale.fetchedAt);
+          stale = dbStale.events;
+        }
+      }
       if (stale) {
         parts.push({
           ...part,
