@@ -14,10 +14,12 @@ import { getNowIso } from '../lib/frozenNow';
 import { lazyRetry } from '../lib/lazyRetry';
 import { StatusScreen } from '../components/options/StatusScreen';
 import { withHereRoadsRejects } from '../lib/hereRoadsStatus';
+import { ferryTrackSampleTruncatedAt, withFerryTrackTruncation } from '../lib/ferryTrackHealth';
 import { appErrorsFromDb, perfFromDb, type AppErrors, type OtherJob, type Perf, type SourceRow, type SourceState } from '../lib/sysSource';
 import type { Locale } from '../types';
 
 export { withHereRoadsRejects } from '../lib/hereRoadsStatus';
+export { withFerryTrackTruncation } from '../lib/ferryTrackHealth';
 
 const SystemStatusPanel = lazy(lazyRetry(() => import('./SystemStatusPanel')));
 
@@ -231,9 +233,12 @@ export default function LiveStatus({ admin }: { admin: boolean }) {
           nowIso={nowIso}
           admin={admin}
           live={{
-            rows: withHereRoadsRejects(
-              liveSourceRows(locale, data.runs, data.devices, data.backups, nowIso),
-              data.roadRejected,
+            rows: withFerryTrackTruncation(
+              withHereRoadsRejects(
+                liveSourceRows(locale, data.runs, data.devices, data.backups, nowIso),
+                data.roadRejected,
+              ),
+              ferryTrackSampleTruncatedAt() != null,
             ),
             jobs: liveOtherJobs(locale, data.runs, nowIso),
             perf,
