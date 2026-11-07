@@ -478,5 +478,44 @@ o=$(sys "begin; set local role authenticated; set local request.jwt.claim.sub='$
 if [ "$o" = "true" ]; then ok=$((ok+1)); echo "  OK    DP-231 RPC < 1000 wierszy"; else fail=$((fail+1)); echo "  FAIL  DP-231 RPC ≥1000 → $o"; fi
 sys "delete from vessel_positions where vessel_id in ('$V231A','$V231B')" >/dev/null
 
+# DP-234 / F7 #863: długi rejs — kotwice stref (ostatni w porcie + pierwszy po wyjściu)
+# przy ≤20 świeżych binach; faza Q-18 jak z pełnej historii (nie sam COG).
+echo; echo "[DP-234] ferry_track_sample kotwice stref Q-18"
+V234=55555555-0000-0000-0000-00000000234a
+sys "insert into vessels (id, name, operator, mmsi) values
+  ('$V234','M/F DP234','Polferries',999234001)
+  on conflict (id) do update set name=excluded.name, mmsi=excluded.mmsi" >/dev/null
+sys "delete from vessel_positions where vessel_id='$V234'" >/dev/null
+# GDN @ −12 h, wyjście @ −11.75 h, potem 48 binów 15 min na morzu (środek Bałtyku) — świeże bez strefy.
+sys "insert into vessel_positions (vessel_id, lat, lon, sog_kn, cog, observed_at, source) values
+  ('$V234', 54.40, 18.67, 5, 10, now() - interval '12 hours', 'AISSTREAM'),
+  ('$V234', 54.55, 18.50, 12, 350, now() - interval '11 hours 45 minutes', 'AISSTREAM')" >/dev/null
+sys "insert into vessel_positions (vessel_id, lat, lon, sog_kn, cog, observed_at, source)
+     select '$V234', 56.0 + (g.i * 0.02), 18.0, 14, 170,
+            now() - (g.i * 15 || ' minutes')::interval, 'AISSTREAM'
+       from generate_series(0, 47) as g(i)" >/dev/null
+val "DP-234 fixture positions = 50" "select count(*)::text from vessel_positions where vessel_id='$V234'" "50"
+o=$(sys "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL_BM';
+  select count(*) from ferry_track_sample() where vessel_id='$V234'; commit;" \
+  | grep -v -E '^(BEGIN|SET|COMMIT|ROLLBACK)$' | tail -1)
+# ≤20 świeżych + kotwica GDN + pierwszy po wyjściu (gdy nie w top 20) → typowo 22
+if [ "$o" -ge 21 ] && [ "$o" -le 24 ]; then ok=$((ok+1)); echo "  OK    DP-234 sample z kotwicami ($o)"; else fail=$((fail+1)); echo "  FAIL  DP-234 sample count → $o (oczekiwano 21–24)"; fi
+o=$(sys "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL_BM';
+  select (bool_or(abs(lat - 54.40) < 0.01 and abs(lon - 18.67) < 0.01)
+      and bool_or(abs(lat - 54.55) < 0.01 and abs(lon - 18.50) < 0.01))::text
+    from ferry_track_sample() where vessel_id='$V234'; commit;" \
+  | grep -v -E '^(BEGIN|SET|COMMIT|ROLLBACK)$' | tail -1)
+if [ "$o" = "true" ]; then ok=$((ok+1)); echo "  OK    DP-234 kotwice GDN + wyjście w RPC"; else fail=$((fail+1)); echo "  FAIL  DP-234 kotwice → $o"; fi
+o=$(sys "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL_BM';
+  select (max(observed_at) >= now() - interval '2 minutes')::text
+    from ferry_track_sample() where vessel_id='$V234'; commit;" \
+  | grep -v -E '^(BEGIN|SET|COMMIT|ROLLBACK)$' | tail -1)
+if [ "$o" = "true" ]; then ok=$((ok+1)); echo "  OK    DP-234 najnowsza w RPC"; else fail=$((fail+1)); echo "  FAIL  DP-234 najnowsza → $o"; fi
+o=$(sys "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL_BM';
+  select (count(*) < 1000)::text from ferry_track_sample(); commit;" \
+  | grep -v -E '^(BEGIN|SET|COMMIT|ROLLBACK)$' | tail -1)
+if [ "$o" = "true" ]; then ok=$((ok+1)); echo "  OK    DP-234 RPC < 1000 wierszy"; else fail=$((fail+1)); echo "  FAIL  DP-234 RPC ≥1000 → $o"; fi
+sys "delete from vessel_positions where vessel_id='$V234'" >/dev/null
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

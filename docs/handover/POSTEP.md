@@ -1,3 +1,9 @@
+## 2026-11-07 18:15 — #880 SCALONE; start DP-234 (C4 / B-MAPA)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500 w planie. Bez nowego `pilne`.
+- Scalanie: **#880 SCALONE** `1f1afb3d` (DP-112 F7: gotowe @ `f7508f4a`; CI unit/visual/db ✔). Bez push na main.
+- **Krok** C4 **DP-234**: `ferry_track_sample` — ≤20 świeżych binów + kotwice Q-18 (ostatni fix w PORT_ZONES z 48 h + pierwszy po wyjściu) + latest aktywnego; faza jak pełna historia, nie sam COG; test unit + bmapa. Migracja **0432**. Gałąź `pakiet/c4-dp-234-ferry-zone-history`.
+
 ## 2026-11-07 17:48 — DP-112 start (C4 / BN3)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500 w planie. Bez nowego `pilne`.
