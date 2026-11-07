@@ -13,6 +13,7 @@ import {
   autoRestoreFromRestoreSentence,
   decodeTallinkCmsHtml,
   departureMatchesAlert,
+  departureTzForRoute,
   finalizeTallinkAlertsForStatus,
   isTallinkAlertHtmlUsable,
   matchTallinkAlertSailings,
@@ -39,6 +40,29 @@ const FIX = readFileSync(new URL('./fixtures/tallink-alert-cancel-mystar.html', 
 const NOW = new Date('2026-10-31T12:00:00Z');
 const MYST = 'v-myst';
 
+/** DP-106: rejs dobę później — lastYmd > contentStart (ostatni dzień rozkładu niepełny). */
+function withHorizonCover<T extends {
+  id: string; vesselName: string; route: string; departureAt: string; status: string; source: string;
+}>(sailings: T[]): T[] {
+  const lastByVessel = new Map<string, T>();
+  for (const s of sailings) {
+    const prev = lastByVessel.get(s.vesselName);
+    if (!prev || s.departureAt > prev.departureAt) lastByVessel.set(s.vesselName, s);
+  }
+  const extra: T[] = [];
+  for (const [name, last] of lastByVessel) {
+    const nextIso = new Date(Date.parse(last.departureAt) + 36 * 3600 * 1000).toISOString();
+    extra.push({
+      ...last,
+      id: `hz-${name}`,
+      departureAt: nextIso,
+      status: 'ZAPLANOWANY',
+      source: 'TALLINK',
+    });
+  }
+  return [...sailings, ...extra];
+}
+
 describe('BN3 Tallink Alert', () => {
   it('dekoduje escapes CMS i wyciąga Alert (bez kampanii); data z treści', () => {
     const decoded = decodeTallinkCmsHtml(FIX);
@@ -61,14 +85,14 @@ describe('BN3 Tallink Alert', () => {
   it('F7 B1: jednoznaczność na pełnej puli — 5× ODWOLANY + 1 płynący → ambiguous', () => {
     const alert = parseTallinkAlerts(FIX, TALLINK_HOME(), NOW).alerts[0]!;
     // R4: contentHm 07:30 Tallinn ≈ 05:30Z — wszystkie w ±30 min, żeby pełna pula w match.
-    const inWin = [0, 1, 2, 3, 4, 5].map((i) => ({
+    const inWin = withHorizonCover([0, 1, 2, 3, 4, 5].map((i) => ({
       id: i < 5 ? `od${i}` : 's5',
       vesselName: 'M/F MyStar',
       route: 'TLL-HEL' as const,
       departureAt: `2026-11-02T05:${String(10 + i * 4).padStart(2, '0')}:00.000Z`,
       status: i < 5 ? 'ODWOLANY' : 'ZAPLANOWANY',
       source: 'TALLINK',
-    }));
+    })));
     const r = matchTallinkAlertSailings(alert, inWin);
     expect(r.kind).toBe('ambiguous');
     expect(r.kind === 'ambiguous' && r.candidates.length).toBe(6);
@@ -76,22 +100,22 @@ describe('BN3 Tallink Alert', () => {
 
   it('F7 B1: jedyne trafienie ODWOLANY → already_cancelled; RECZNIE → manual_only', () => {
     const alert = parseTallinkAlerts(FIX, TALLINK_HOME(), NOW).alerts[0]!;
-    const cancelled = matchTallinkAlertSailings(alert, [{
+    const cancelled = matchTallinkAlertSailings(alert, withHorizonCover([{
       id: 's1', vesselName: 'M/F MyStar', route: 'TLL-HEL',
       departureAt: '2026-11-02T05:30:00.000Z', status: 'ODWOLANY', source: 'TALLINK',
-    }]);
+    }]));
     expect(cancelled.kind).toBe('already_cancelled');
 
-    const recznie = matchTallinkAlertSailings(alert, [{
+    const recznie = matchTallinkAlertSailings(alert, withHorizonCover([{
       id: 's3', vesselName: 'M/F MyStar', route: 'TLL-HEL',
       departureAt: '2026-11-02T05:30:00.000Z', status: 'ZAPLANOWANY', source: 'RECZNIE',
-    }]);
+    }]));
     expect(recznie.kind).toBe('manual_only');
 
-    const one = matchTallinkAlertSailings(alert, [{
+    const one = matchTallinkAlertSailings(alert, withHorizonCover([{
       id: 's1', vesselName: 'M/F MyStar', route: 'TLL-HEL',
       departureAt: '2026-11-02T05:30:00.000Z', status: 'ZAPLANOWANY', source: 'TALLINK',
-    }]);
+    }]));
     expect(one.kind).toBe('match');
     expect(one.kind === 'match' && one.sailing.id).toBe('s1');
   });
@@ -103,6 +127,20 @@ describe('BN3 Tallink Alert', () => {
       departureAt: '2026-10-20T05:30:00.000Z', status: 'DOPLYNAL', source: 'TALLINK',
     }]);
     expect(r.kind).toBe('beyond_horizon');
+  });
+
+  it('DP-106: start == lastYmd → beyond_horizon; dzień później → match', () => {
+    const alert = parseTallinkAlerts(FIX, TALLINK_HOME(), NOW).alerts[0]!;
+    const sameDay = matchTallinkAlertSailings(alert, [{
+      id: 's-same', vesselName: 'M/F MyStar', route: 'TLL-HEL',
+      departureAt: '2026-11-02T05:30:00.000Z', status: 'ZAPLANOWANY', source: 'TALLINK',
+    }]);
+    expect(sameDay.kind).toBe('beyond_horizon');
+    const covered = matchTallinkAlertSailings(alert, withHorizonCover([{
+      id: 's-ok', vesselName: 'M/F MyStar', route: 'TLL-HEL',
+      departureAt: '2026-11-02T05:30:00.000Z', status: 'ZAPLANOWANY', source: 'TALLINK',
+    }]));
+    expect(covered.kind).toBe('match');
   });
 
   it('F7 B2: data/HH:MM z treści; porównanie Tallinn; ±30 min; po północy', () => {
@@ -135,6 +173,30 @@ describe('BN3 Tallink Alert', () => {
     expect(fromTo.routes).toEqual(['TLL-HEL']);
     expect(fromTo.contentHm).toBe('19:30');
     expect(fromTo.autoCancelOk).toBe(true);
+  });
+
+  it('DP-105: HH:MM STO-* w strefie Stockholm (nie Tallinn)', () => {
+    expect(departureTzForRoute('STO-TLL')).toBe('Europe/Stockholm');
+    expect(departureTzForRoute('TLL-STO')).toBe('Europe/Tallinn');
+    const alert = parseTallinkAlerts(
+      wrapAlert(
+        'The Victoria I 18:30 sailing from Stockholm to Tallinn on 2 November is cancelled.',
+        '2026-11-02',
+      ),
+      TALLINK_HOME(),
+      NOW,
+    ).alerts[0]!;
+    expect(alert.routes).toEqual(['STO-TLL']);
+    expect(alert.contentHm).toBe('18:30');
+    // 18:30 Europe/Stockholm 2.11 (CET=UTC+1) = 17:30Z; w Tallinnie to 19:30 — stary bug.
+    const depSto = '2026-11-02T17:30:00.000Z';
+    expect(departureMatchesAlert(depSto, alert, 'STO-TLL')).toBe(true);
+    expect(departureMatchesAlert(depSto, alert, 'TLL-HEL')).toBe(false);
+    const hit = matchTallinkAlertSailings(alert, withHorizonCover([{
+      id: 's-sto', vesselName: 'M/F Victoria I', route: 'STO-TLL',
+      departureAt: depSto, status: 'ZAPLANOWANY', source: 'TALLINK',
+    }]));
+    expect(hit.kind).toBe('match');
   });
 
   it('F7 B2: wygasłe okno — filterReject expired (w puli, bez auto)', () => {
@@ -2031,6 +2093,7 @@ describe('BN3 #686 Tallink restore', () => {
 
     // Beyond / zatrucie puli / brak klucza daty.
     const stBeyond = new MemStore();
+    stBeyond.horizonCover = false; // DP-106: bez syntetycznego dnia+1 — tu testujemy beyond_horizon
     stBeyond.sailings.push(odSailing('s-early', {
       departure_at: '2026-11-01T14:30:00.000Z',
       arrival_at: '2026-11-01T16:30:00.000Z',
@@ -2276,6 +2339,11 @@ class MemStore implements SyncStore {
   reassigned: string[] = [];
   /** F7 #698 r2 B-r2-1: symulacja wyścigu HHL (updateSailing / cancelSailingAuto → false). */
   failStatusUpdate = false;
+  /**
+   * DP-106: doklej syntetyczny rejs +36 h (Scheduler zwykle ma dzień dalej).
+   * Wyłącz w testach beyond_horizon (np. restore_beyond).
+   */
+  horizonCover = true;
   /** DP-101: atomowe cancel_auto (nie para notice+update). */
   ops: string[] = [];
   n = 0;
@@ -2287,7 +2355,31 @@ class MemStore implements SyncStore {
     ];
   }
   async sailingsSince(from: string) {
-    return this.sailings.filter((s) => s.departure_at >= from).map((s) => ({ ...s }));
+    const rows = this.sailings.filter((s) => s.departure_at >= from).map((s) => ({ ...s }));
+    if (!this.horizonCover) return rows;
+    const lastByVessel = new Map<string, DbSailing>();
+    for (const s of rows) {
+      const prev = lastByVessel.get(s.vessel_id);
+      if (!prev || s.departure_at > prev.departure_at) lastByVessel.set(s.vessel_id, s);
+    }
+    for (const [vid, last] of lastByVessel) {
+      const nextIso = new Date(Date.parse(last.departure_at) + 36 * 3600 * 1000).toISOString();
+      if (rows.some((s) => s.vessel_id === vid && s.departure_at > last.departure_at)) continue;
+      rows.push({
+        id: `hz-${vid}`,
+        vessel_id: vid,
+        route: last.route,
+        departure_at: nextIso,
+        arrival_at: new Date(Date.parse(nextIso) + 2 * 3600 * 1000).toISOString(),
+        delayed_departure_at: null,
+        delayed_arrival_at: null,
+        actual_departure_at: null,
+        actual_arrival_at: null,
+        status: 'ZAPLANOWANY',
+        source: 'TALLINK',
+      });
+    }
+    return rows;
   }
   async insertSailings(rows: SailingInsert[]) {
     for (const r of rows) {
