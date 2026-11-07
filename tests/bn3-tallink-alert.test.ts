@@ -301,6 +301,9 @@ describe('BN3 Tallink Alert — runFerryStatus (F7 B5)', () => {
     await runFerryStatus(deps(st, pages, NOW));
     expect(st.notices).toHaveLength(1); // already_cancelled → bez nowego AUTO
 
+    // DP-100: nawet bezpośredni update ODWOLANY na już ODWOLANY → false (jak store.neq).
+    expect(await st.updateSailing('s-ok', { status: 'ODWOLANY' })).toBe(false);
+
     // Niejednoznaczny: dwa rejsy TLL-HEL w ±30 min od 07:30 → ryzyko, bez ODWOLANY.
     const amb = new MemStore();
     amb.sailings.push(
@@ -2201,6 +2204,8 @@ class MemStore implements SyncStore {
     if (!s) return false;
     if (s.source === 'RECZNIE' && patch.status) return false;
     if (this.failStatusUpdate && patch.status) return false;
+    // DP-100: jak store.updateSailing — ODWOLANY na już ODWOLANY → false (bez drugiego AUTO).
+    if (patch.status === 'ODWOLANY' && s.status === 'ODWOLANY') return false;
     Object.assign(s, patch);
     return true;
   }

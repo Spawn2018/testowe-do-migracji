@@ -319,13 +319,18 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
     },
     async updateSailing(id: string, patch: SailingPatch) {
       // F7 #421 r2: RECZNIE chroni delayed_*/status/plan; actual_* z AIS wolno dopisać także po ręcznej edycji.
+      // DP-100 / F7 #683: przy ODWOLANY — `.neq('status','ODWOLANY')`, żeby drugi przebieg / wyścig
+      // nie zwrócił sukcesu i nie dorzucił kolejnego AUTO notice (bez partial unique — po PRZYWROCONY
+      // wolno znów ODWOLANY + nowy wpis w historii).
       const { actual_departure_at, actual_arrival_at, ...rest } = patch;
       const at = new Date().toISOString();
       const restKeys = Object.keys(rest) as (keyof typeof rest)[];
       let wrote = false;
       if (restKeys.length) {
+        let q = sb.from('sailings').update({ ...rest, updated_at: at }).eq('id', id).neq('source', 'RECZNIE');
+        if (rest.status === 'ODWOLANY') q = q.neq('status', 'ODWOLANY');
         const r = must(
-          await sb.from('sailings').update({ ...rest, updated_at: at }).eq('id', id).neq('source', 'RECZNIE').select('id'),
+          await q.select('id'),
           'sailings update',
         ) as unknown[];
         wrote = r.length > 0;

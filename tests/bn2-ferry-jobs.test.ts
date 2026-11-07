@@ -84,6 +84,8 @@ class MemStore implements SyncStore {
     const { actual_departure_at, actual_arrival_at, ...rest } = patch;
     let wrote = false;
     if (Object.keys(rest).length) {
+      // DP-100: jak store.updateSailing — ODWOLANY na już ODWOLANY → false.
+      if (rest.status === 'ODWOLANY' && s.status === 'ODWOLANY') return false;
       if (s.source !== 'RECZNIE') { Object.assign(s, rest); wrote = true; }
     }
     if (actual_departure_at !== undefined) { s.actual_departure_at = actual_departure_at; wrote = true; }
