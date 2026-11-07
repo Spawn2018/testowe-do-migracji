@@ -436,5 +436,47 @@ if [ "$n3b" = "0" ]; then ok=$((ok+1)); echo "  OK    P2 brak Verkö → rebuild
 sys "delete from positions where load_id='$L572b'" >/dev/null
 sys "delete from loads where id='$L572b'" >/dev/null
 
+# DP-231 / #859: >1000 próbek 15 min → RPC zwraca najnowszą każdego statku; ≤1000; DESC
+echo; echo "[DP-231] ferry_track_sample limit + najnowsze"
+V231A=55555555-0000-0000-0000-00000000231a
+V231B=55555555-0000-0000-0000-00000000231b
+sys "insert into vessels (id, name, operator, mmsi) values
+  ('$V231A','M/F DP231 A','Polferries',999231001),
+  ('$V231B','M/F DP231 B','Polferries',999231002)
+  on conflict (id) do update set name=excluded.name, mmsi=excluded.mmsi" >/dev/null
+sys "delete from vessel_positions where vessel_id in ('$V231A','$V231B')" >/dev/null
+# 60 binów × 2 statki = 120 (plus inne z zestawu) — dawniej 48 h×wiele MMSI >1000; tu sprawdzamy limit 20/statek + latest
+sys "insert into vessel_positions (vessel_id, lat, lon, sog_kn, cog, observed_at, source)
+     select v.id, 54.4 + (g.i * 0.001), 18.7, 12, 10,
+            now() - (g.i * 15 || ' minutes')::interval, 'AISSTREAM'
+       from (values ('$V231A'::uuid), ('$V231B'::uuid)) as v(id)
+       cross join generate_series(0, 59) as g(i)" >/dev/null
+val "DP-231 fixture positions = 120" "select count(*)::text from vessel_positions where vessel_id in ('$V231A','$V231B')" "120"
+o=$(sys "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL_BM';
+  select count(*) from ferry_track_sample() where vessel_id in ('$V231A','$V231B'); commit;" \
+  | grep -v -E '^(BEGIN|SET|COMMIT|ROLLBACK)$' | tail -1)
+# 20 binów/statek × 2 = 40
+if [ "$o" = "40" ]; then ok=$((ok+1)); echo "  OK    DP-231 sample ≤20/statek ($o)"; else fail=$((fail+1)); echo "  FAIL  DP-231 sample count → $o (oczekiwano 40)"; fi
+o=$(sys "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL_BM';
+  select (max(observed_at) >= now() - interval '2 minutes')::text
+    from ferry_track_sample() where vessel_id='$V231A'; commit;" \
+  | grep -v -E '^(BEGIN|SET|COMMIT|ROLLBACK)$' | tail -1)
+if [ "$o" = "true" ]; then ok=$((ok+1)); echo "  OK    DP-231 najnowsza A w RPC"; else fail=$((fail+1)); echo "  FAIL  DP-231 najnowsza A → $o"; fi
+o=$(sys "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL_BM';
+  select (max(observed_at) >= now() - interval '2 minutes')::text
+    from ferry_track_sample() where vessel_id='$V231B'; commit;" \
+  | grep -v -E '^(BEGIN|SET|COMMIT|ROLLBACK)$' | tail -1)
+if [ "$o" = "true" ]; then ok=$((ok+1)); echo "  OK    DP-231 najnowsza B w RPC"; else fail=$((fail+1)); echo "  FAIL  DP-231 najnowsza B → $o"; fi
+o=$(sys "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL_BM';
+  select ((select observed_at from ferry_track_sample() fetch first 1 row only)
+          >= all (select observed_at from ferry_track_sample()))::text; commit;" \
+  | grep -v -E '^(BEGIN|SET|COMMIT|ROLLBACK)$' | tail -1)
+if [ "$o" = "true" ]; then ok=$((ok+1)); echo "  OK    DP-231 ORDER BY observed_at DESC"; else fail=$((fail+1)); echo "  FAIL  DP-231 sort DESC → $o"; fi
+o=$(sys "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL_BM';
+  select (count(*) < 1000)::text from ferry_track_sample(); commit;" \
+  | grep -v -E '^(BEGIN|SET|COMMIT|ROLLBACK)$' | tail -1)
+if [ "$o" = "true" ]; then ok=$((ok+1)); echo "  OK    DP-231 RPC < 1000 wierszy"; else fail=$((fail+1)); echo "  FAIL  DP-231 RPC ≥1000 → $o"; fi
+sys "delete from vessel_positions where vessel_id in ('$V231A','$V231B')" >/dev/null
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

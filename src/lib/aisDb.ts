@@ -9,6 +9,11 @@ import type { AisPosition } from './ais';
 import { visibleFerryMarkers, type TrackFix } from './map/draw';
 import { estimateFerryPositions, type SailingMapRow } from './ferry/estimate';
 import { ensureSailingAisMarkers, setSailingVesselIndex, withVoyages } from './bn9c2Ferry';
+import {
+  clearFerryTrackSampleTruncation,
+  FERRY_TRACK_SAMPLE_LIMIT,
+  noteFerryTrackSampleTruncated,
+} from './ferryTrackHealth';
 
 export interface VesselPositionRow {
   vessel_id: string;
@@ -62,11 +67,14 @@ export async function fetchVesselPositions(): Promise<AisPosition[]> {
 export async function fetchMapFerryMarkers(): Promise<AisPosition[]> {
   const sb = await getSupabase();
   const [res, sail] = await Promise.all([
-    sb.rpc('ferry_track_sample'),
+    /* DP-231: jawny limit = max-rows PostgREST; dokładnie LIMIT → ucięcie (Stan: Częściowo). */
+    sb.rpc('ferry_track_sample').limit(FERRY_TRACK_SAMPLE_LIMIT),
     sb.rpc('ferry_sailings_map').then((r) => r, () => ({ data: null, error: true })),
   ]);
   /* 22.10.2026: błąd odczytu = wyjątek — mapa zostawia ostatnie pozycje promów zamiast pustej listy */
   if (res.error || !Array.isArray(res.data)) throw new Error(res.error?.message ?? 'ferry_track_sample: brak danych');
+  if (res.data.length >= FERRY_TRACK_SAMPLE_LIMIT) noteFerryTrackSampleTruncated();
+  else clearFerryTrackSampleTruncation();
   const sailRows = !sail.error && Array.isArray(sail.data) ? (sail.data as SailingMapRow[]) : [];
   const nowMs = Date.now();
   /* F7 #824: sailing_id → vessel_id dla aisShipFix (gdy markera bez voyage) */
@@ -113,7 +121,12 @@ export function withEstimates(markers: AisPosition[], sailRows: readonly Sailing
   return out;
 }
 
-function markersFromTrack(data: unknown[]): AisPosition[] {
+/**
+ * DP-231: buduje markery z próbek RPC. `visibleFerryMarkers` bierze max(ts) per statek —
+ * przy uciętej liście ASC i tak wyjdzie „najnowszy ze starych”; RPC musi sortować DESC.
+ * Eksport pod unit: ucięty ASC nie może wygrać nad świeższym wierszem tego samego id.
+ */
+export function markersFromTrack(data: unknown[]): AisPosition[] {
   const rows = data as TrackRow[];
   const fixes: TrackFix[] = rows.map((r) => ({
     id: r.vessel_id,
