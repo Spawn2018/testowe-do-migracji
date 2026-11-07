@@ -1,3 +1,9 @@
+## 2026-11-07 07:50 — DP-232: migawki + selektor e8 (C4)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: brak F7 na #869. Bez push na main.
+- **Krok** C4 **DP-232** (#869): migawki awizacja emtrack + odświeżone `awizacja-rejs-*` z update 42347543584; e8-phone-gate `input.input` (checkbox nie psuje RIO). Czekam CI→F7. Po F7: DP-230 (#852) → DP-102….
+
 ## 2026-11-07 07:20 — #867 SCALONE; start DP-232 (C4)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne` do wykonania.
