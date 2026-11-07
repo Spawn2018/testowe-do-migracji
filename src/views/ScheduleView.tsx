@@ -43,6 +43,15 @@ import { StageBar, StageChip } from '../components/shell/StageBar';
 import { useIsPhone } from '../lib/useIsPhone';
 import { kshSyncLine, kshSyncOf } from '../lib/kshSyncView';
 import { KshPreviewPanel } from '../components/schedule/KshPreviewPanel';
+import {
+  applySchedDayFilter,
+  countSchedDay,
+  defaultDayKind,
+  schedDayYmd,
+  type SchedDayKind,
+  type SchedDayOffset,
+} from '../lib/schedDayFilter';
+import { getAuthProfile } from '../auth/profile';
 
 /** I-1: import w produkcji przez import_schedule() w bazie (podgląd i zapis w jednej transakcji). */
 const SERVER_IMPORT = import.meta.env.VITE_AUTH_MODE === 'supabase' && SUPABASE_AUTH_ENABLED;
@@ -184,6 +193,14 @@ export function ScheduleView() {
   const [loadTo, setLoadTo] = useState('');
   const [delivFrom, setDelivFrom] = useState('');
   const [delivTo, setDelivTo] = useState('');
+  /* DP-233: Załadunki/Rozładunki · dziś/jutro — widoczne poza arkuszem filtrów */
+  const [dayKind, setDayKind] = useState<SchedDayKind | null>(() => defaultDayKind(getAuthProfile()?.client_variant ?? null));
+  const [dayOffset, setDayOffset] = useState<SchedDayOffset>('today');
+  /* przy każdym wejściu w widok wariant KSH wraca do domyślnego filtra (dziś) */
+  useEffect(() => {
+    const v = defaultDayKind(getAuthProfile()?.client_variant ?? null);
+    if (v) { setDayKind(v); setDayOffset('today'); }
+  }, []);
   const base = useMemo(
     () => filterLoads(loads, role, stageFilter, search),
     [loads, role, stageFilter, search],
@@ -191,6 +208,7 @@ export function ScheduleView() {
 
   const nowIso = getNowIso();
   const picks = useMemo(() => weekPicks(nowIso), [nowIso]);
+  const dayYmd = useMemo(() => schedDayYmd(nowIso, dayOffset), [nowIso, dayOffset]);
   const rangeOf = (pick: string, from: string, to: string) => (pick === 'all' ? null
     : pick === 'range' ? (from || to ? { from, to } : null)
       : picks.find((p) => p.id === pick) ?? null);
@@ -203,7 +221,14 @@ export function ScheduleView() {
   );
   /* E30 pkt 3: liczba przy każdym filtrze stanu = wiersze po kliknięciu (po pozostałych filtrach) */
   const counts = useMemo(() => Object.fromEntries(QUICKS.map((q) => [q, pre.filter((l) => quickMatch(l, q)).length])) as Record<Exclude<Quick, 'all'>, number>, [pre]);
-  const list = useMemo(() => pre.filter((l) => quickMatch(l, quick)), [pre, quick]);
+  const dayCounts = useMemo(() => ({
+    loading: countSchedDay(pre.filter((l) => quickMatch(l, quick)), 'loading', dayYmd),
+    unloading: countSchedDay(pre.filter((l) => quickMatch(l, quick)), 'unloading', dayYmd),
+  }), [pre, quick, dayYmd]);
+  const list = useMemo(
+    () => applySchedDayFilter(pre.filter((l) => quickMatch(l, quick)), dayKind, dayYmd),
+    [pre, quick, dayKind, dayYmd],
+  );
   const ver = scheduleVersions[0];
   const skippedNote = ver?.skippedStandard
     ? ` · pominięto ${ver.skippedStandard} ${plPlural(ver.skippedStandard, 'wiersz', 'wiersze', 'wierszy')} typu STANDARD`
@@ -335,8 +360,30 @@ export function ScheduleView() {
   const fileCols = fileColsFor(role, layout.fileHidden);
   const extrasAllowed = shortExtrasFor(role);
   const extras = layout.shortExtras.filter((x) => extrasAllowed.includes(x));
-  const activeFilters = (quick !== 'all' ? 1 : 0) + (loadPick !== 'all' ? 1 : 0) + (delivPick !== 'all' ? 1 : 0) + (sailPick ? 1 : 0);
-  const clearFilters = () => { setQuick('all'); setLoadPick('all'); setDelivPick('all'); setLoadFrom(''); setLoadTo(''); setDelivFrom(''); setDelivTo(''); setSailPick(null); };
+  const activeFilters = (quick !== 'all' ? 1 : 0) + (loadPick !== 'all' ? 1 : 0) + (delivPick !== 'all' ? 1 : 0) + (sailPick ? 1 : 0) + (dayKind ? 1 : 0);
+  const clearFilters = () => {
+    setQuick('all'); setLoadPick('all'); setDelivPick('all'); setLoadFrom(''); setLoadTo(''); setDelivFrom(''); setDelivTo(''); setSailPick(null);
+    setDayKind(null); setDayOffset('today');
+  };
+  const toggleDayKind = (k: SchedDayKind) => setDayKind((cur) => (cur === k ? null : k));
+  const dayFilterBtns = (
+    <div className="s7-day-filter" data-sched-day-filter role="group" aria-label={s7(locale, 's7_day_filter')}>
+      <button type="button" className="chipbtn s7-chip" data-day-kind="loading" aria-pressed={dayKind === 'loading'} onClick={() => toggleDayKind('loading')}>
+        {s7(locale, 's7_day_loading')} · <em className="chip-n">{dayCounts.loading}</em>
+      </button>
+      <button type="button" className="chipbtn s7-chip" data-day-kind="unloading" aria-pressed={dayKind === 'unloading'} onClick={() => toggleDayKind('unloading')}>
+        {s7(locale, 's7_day_unloading')} · <em className="chip-n">{dayCounts.unloading}</em>
+      </button>
+      <span className="s7-day-offset" role="group" aria-label={s7(locale, 's7_day_when')}>
+        <button type="button" className="chipbtn s7-chip" data-day-offset="today" aria-pressed={dayOffset === 'today'} onClick={() => setDayOffset('today')}>
+          {s7(locale, 's7_day_today')}
+        </button>
+        <button type="button" className="chipbtn s7-chip" data-day-offset="tomorrow" aria-pressed={dayOffset === 'tomorrow'} onClick={() => setDayOffset('tomorrow')}>
+          {s7(locale, 's7_day_tomorrow')}
+        </button>
+      </span>
+    </div>
+  );
   const pickedSailing = sailPick ? sailings.find((x) => x.id === sailPick) ?? null : null;
   const sailChip = pickedSailing ? (
     <button type="button" className="chipbtn s7-chip" aria-pressed="true" data-sail-filter={pickedSailing.id} title={sv(locale, 'sv_filter_clear')} onClick={() => setSailPick(null)}>
@@ -798,6 +845,8 @@ export function ScheduleView() {
                 {actionsOpen ? <div className="sched-actions sched-actions-pop s7-more" role="menu">{moreItems}</div> : null}
               </div>
             </div>
+            {/* DP-233: Załadunki/Rozładunki poza arkuszem filtrów (widoczne pod wyszukiwaniem) */}
+            <div className="filters s7-day-row" data-sched-day-row>{dayFilterBtns}</div>
             {stageFilter || sailChip ? <div className="filters s7-stage-row">{stageFilter ? <StageChip /> : null}{sailChip}</div> : null}
             {sheetOpen ? (
               <div className="s7-sheet-back" onClick={() => setSheetOpen(false)}>
@@ -842,6 +891,7 @@ export function ScheduleView() {
         ) : (
           <div className="filters s7-filters" data-sched-filters>
             <input type="search" className="s7-search" placeholder={s7(locale, searchKey)} aria-label={s7(locale, searchKey)} value={search} onChange={(e) => setSearch(e.target.value)} />
+            {dayFilterBtns}
             <label className="s7-sel" data-week="load">
               <span>{s7(locale, 's7_f_load')}:</span>
               <select value={loadPick} onChange={(e) => setLoadPick(e.target.value)}>

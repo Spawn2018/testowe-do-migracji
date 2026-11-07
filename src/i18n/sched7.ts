@@ -100,6 +100,13 @@ export const PL: Record<string, string> = {
   s7_q_cancelled: 'Anulowane',
   s7_filters: 'Filtry',
   s7_filters_n: 'Filtry · {n}',
+  /* DP-233 (#861): szybki filtr Załadunki / Rozładunki · dziś/jutro */
+  s7_day_filter: 'Załadunki i rozładunki',
+  s7_day_loading: 'Załadunki',
+  s7_day_unloading: 'Rozładunki',
+  s7_day_when: 'Dzień',
+  s7_day_today: 'Dziś',
+  s7_day_tomorrow: 'Jutro',
   s7_sheet_load: 'Tydzień załadunku',
   s7_sheet_deliv: 'Tydzień dostawy',
   s7_sheet_state: 'Stan',

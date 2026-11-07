@@ -29,6 +29,8 @@ export interface AuthProfile {
   preview_read_only?: boolean | null;
   /** wyglad/P3 (E37): „ostatnie logowanie” w menu konta — pole wypełnia logika profilu (gdy jest). */
   last_sign_in_at?: string | null;
+  /** DP-233 (#861): wariant KSH — LOADING/UNLOADING (domyślny filtr Harmonogramu); null = zwykły CLIENT_USER. */
+  client_variant?: 'LOADING' | 'UNLOADING' | null;
 }
 
 let current: AuthProfile | null = null;

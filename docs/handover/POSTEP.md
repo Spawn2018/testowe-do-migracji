@@ -1,3 +1,9 @@
+## 2026-11-07 04:50 — #866 SCALONE; start DP-233 (C4)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne` do wykonania.
+- Scalanie: **#866 SCALONE** `54bdb1c4` (DP-101 F7: gotowe @ `eadf18f4`; CI unit+db+visual zielone). Bez push na main.
+- **Krok** C4 **DP-233** (#861): filtr Harmonogramu Załadunki/Rozładunki · dziś/jutro + sort po godzinie; `app_users.client_variant` + `admin_set_client_variant` + `my_profile` (**0428**); UI kont KSH. Gałąź `pakiet/c4-dp-233-harmonogram-zaladunki-rozladunki`.
+
 ## 2026-11-07 04:00 — DP-101 F7 #866: atomowe sailing_cancel_auto (C4)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`. #861/#860/#852 (prośby właściciela) — w rejestrze DP-233/232/230; realizacja **po** F7+scaleniu #866.

@@ -84,6 +84,7 @@ authenticated admin_set_mfa_enforcement
 authenticated admin_set_permit_requirement
 authenticated admin_set_user_active
 authenticated admin_set_user_role
+authenticated admin_set_client_variant
 authenticated admin_sms_zone_recipient_set
 authenticated admin_sms_zone_test
 authenticated admin_sms_zone_trigger_set

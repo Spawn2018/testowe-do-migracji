@@ -9,6 +9,7 @@ admin_user_profile_set | GUARD | select admin_user_profile_set('$KSHID','Jan','K
 admin_revoke_invite | GUARD | select admin_revoke_invite(gen_random_uuid()) | Wyłącznie administrator HHL
 admin_set_user_active | GUARD | select admin_set_user_active('$KSHID', true) | Wyłącznie administrator HHL
 admin_set_user_role | GUARD | select admin_set_user_role('$KSHID', 'CLIENT_USER') | Role nadaje wyłącznie
+admin_set_client_variant | GUARD | select admin_set_client_variant('$KSHID', 'LOADING') | Wariant KSH ustawia wyłącznie|Brak aktywnego konta
 cancel_load | GUARD | select cancel_load('$L2', 'test strażnika') | wyłącznie HHL
 create_document | GUARD | select id from create_document('$L2', 'CMR', 'a.pdf', 'application/pdf', 100) | niewidoczny dla konta
 fx_rate_before | GUARD | select rate_pln from fx_rate_before(current_date) | Brak aktywnego konta

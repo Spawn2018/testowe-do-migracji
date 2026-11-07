@@ -24,7 +24,7 @@ export const EXPECTED_LOCAL = {
   invite: 48,
   risks: 46, // #398: +8 +1 SMS; #411: +3 (blok *_RESOLVED + url)
   import: 425, // #653 revoke enqueue_active_wt: +2 privilege chk; było 423
-  nullguard: 914, // DP-206 cz.2: +5 e49_detour_decide GUARD (4 odmowy + 1 pozytywny HHL); cz.1 było 909
+  nullguard: 919, // DP-233: +5 admin_set_client_variant GUARD (4 odmowy + 1 pozytywny HHL); było 914
   i2: 677, // DP-224 F7 #822: +2 info/watch OK; #666 było 675
   i30: 10,
   i31: 10, // D-1300: +korekta n_sek=7
