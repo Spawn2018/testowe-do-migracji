@@ -335,6 +335,7 @@ export function AwizacjaModal({ load, onClose }: Props) {
             load={load}
             locale={locale}
             nowIso={nowIso}
+            trailerPlate={trailerPlate}
             onOpenRio={import.meta.env.VITE_AUTH_MODE !== 'supabase'
               ? () => pushToast(t(locale, 'p4c_tl_open_demo'), 'LOW', load.id)
               : async () => {

@@ -407,3 +407,6 @@ Odświeżone migawki Harmonogramu po dodaniu chipów Załadunki/Rozładunki · D
 Przyczyna: DP-233 (#861/#867) — chipy dnia poza arkuszem filtrów; lista bez zmiany wyglądu wierszy/kart.
 Pozostałe z 15 smoke (Kokpit, Mapa, karty, Ryzyka, Drogi, pogoda, Rejsy, pasek promu, awizacja) bez zmian bajt w bajt. Matrycy 280/`shots-baseline` nie ruszano (P11).
 Wzorca `shots-baseline` nie zmieniano.
+
+## DP-232 (07.11.2026) — Awizacja: checkbox emtrack
+Nowe migawki okna Awizacja z zaznaczonym polem wyboru „emtrack” (stały `https://emtrack.eu/app/`, pole nieaktywne) — komputer 1440 + telefon 390 (`awizacja-emtrack-checkbox-hhl-pl-{1440,390}-light.png`). Odświeżenie `awizacja-rejs-przed-zaladunkiem-*` gdy checkbox widać także przy niezaznaczonym (wiersz pod etykietą „Link śledzenia”). Matrycy 280/`shots-baseline` nie ruszano (P11).

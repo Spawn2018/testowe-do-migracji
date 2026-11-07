@@ -538,6 +538,51 @@ test.describe('DP-67 visual — Awizacja: rejs przed planowanym załadunkiem (HH
   }
 })
 
+/* DP-232 (#860) — Awizacja: pole wyboru „emtrack” przy Link śledzenia (zaznaczone → stały URL, pole nieaktywne).
+   SG-11; komputer 1440 + telefon 390. */
+test.describe('DP-232 visual — Awizacja: checkbox emtrack (HHL pl)', () => {
+  test.describe.configure({ mode: 'serial' })
+
+  for (const width of [1440, 390]) {
+    const file = `awizacja-emtrack-checkbox__hhl__pl__${width}__light.png`
+    test(file, async ({ page }) => {
+      await page.emulateMedia({ reducedMotion: 'reduce' })
+      await gotoFrozen(page, width)
+      await setRole(page, 'HHL')
+      await setTheme(page, 'light', 'dark')
+      await navTo(page, 'sched')
+      await page.evaluate(() => {
+        const el = [...document.querySelectorAll('[data-load]')].find((r) => /\bSG-11\b/.test(r.textContent ?? '')) as HTMLElement | undefined
+        if (!el) throw new Error('brak wiersza SG-11')
+        el.click()
+      })
+      await page.locator('.drawer [data-awiz-fix]').first().waitFor({ state: 'attached' })
+      await page.evaluate(() => {
+        const btn = document.querySelector('.drawer [data-awiz-fix]')
+        for (let d = btn?.closest('details'); d; d = d.parentElement?.closest('details') ?? null) d.open = true
+      })
+      await page.locator('.drawer [data-awiz-fix]').first().click()
+      const modal = page.locator('[data-awiz-modal]')
+      await expect(modal).toBeVisible()
+      const box = modal.locator('[data-tl-emtrack-box]')
+      await expect(box).toBeVisible()
+      await box.check()
+      await expect(modal.locator('[data-tl-emtrack="1"]')).toBeVisible()
+      await expect(modal.locator('[data-tl-emtrack-url]')).toHaveValue('https://emtrack.eu/app/')
+      await page.setViewportSize({ width, height: width < 769 ? 3400 : 2200 })
+      await page.evaluate(async () => {
+        if (document.fonts?.ready) await document.fonts.ready
+      })
+      await page.waitForTimeout(600)
+      await expect(modal).toHaveScreenshot(file, {
+        maxDiffPixels: 60,
+        threshold: 0.28,
+        animations: 'disabled',
+      })
+    })
+  }
+})
+
 /* DP-233 (#861) — Harmonogram: filtr Załadunki · Dziś widoczny bez arkusza filtrów (komputer 1440 + telefon 390).
    Lista/wiersze bez zmian wyglądu; aktywny tylko day-filter. Demo: plannedLoadDate = 2026-09-23. */
 test.describe('DP-233 visual — filtr Załadunki dziś (HHL pl)', () => {

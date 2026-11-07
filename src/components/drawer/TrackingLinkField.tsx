@@ -7,13 +7,17 @@
  * Pole jest niekontrolowane: wartość z kluczem żyje tylko w stanie okna awizacji, nie w atrybucie `value` w drzewie strony.
  * „Zmień link” bez wklejenia nowego zostawia obecny (E44: „SCX zawsze musi dodać link”).
  * Wartość i zapis należą do okna awizacji (bez zmian); dane o linku z serwera — `load.trackingLink` (wykonawca).
+ * DP-232 (#860): pole wyboru „emtrack” → stały `EMTRACK_APP_URL`, pole tekstowe nieaktywne.
  */
 import { useEffect, useId, useRef, useState } from 'react';
 import type { Load, Locale, TrackingLinkInfo } from '../../types';
 import { t, tp } from '../../i18n/messages';
+import { pt } from '../../i18n/p7';
 import {
+  EMTRACK_APP_URL,
   isMonitorujPojazdTrackingRef, isSafefleetTrackingRef, trackerKind,
 } from '../../lib/trackerLink';
+import { trailerHasManyPlates } from '../../lib/p7Awiz';
 import { trackingLinkNotes } from '../../lib/p4c';
 import { isoMs } from '../../lib/statusAxis';
 
@@ -38,6 +42,7 @@ export function TrackingLinkField({
   nowIso,
   onOpenRio,
   upper = false,
+  trailerPlate = '',
 }: {
   value: string;
   onChange: (v: string) => void;
@@ -51,6 +56,8 @@ export function TrackingLinkField({
   onOpenRio?: () => void;
   /** wyglad/P7-a (E32 „okno Awizacja”): etykieta wersalikami jak pozostałe pola okna */
   upper?: boolean;
+  /** DP-232: numer naczepy z formularza — ostrzeżenie przy emtrack bez naczepy / z dwoma numerami */
+  trailerPlate?: string;
 }) {
   const id = useId();
   const saved = savedRef ?? '';
@@ -75,7 +82,8 @@ export function TrackingLinkField({
     focusNext.current = null;
   });
 
-  const chip = savedSecret && !editing;
+  const emtrackOn = trackerKind(value) === 'emtrack';
+  const chip = savedSecret && !editing && !emtrackOn;
   const view = chip && info?.provider === 'RIO' ? trackingLinkNotes(info, load, nowIso, locale) : null;
   const asset = (info?.asset ?? '').trim();
   const expired = !!info?.validTo && isoMs(info.validTo) <= isoMs(nowIso);
@@ -103,26 +111,59 @@ export function TrackingLinkField({
     focusNext.current = 'input';
   };
 
+  const setEmtrack = (on: boolean) => {
+    if (on) {
+      setEditing(false);
+      setMasked(false);
+      setTyped(EMTRACK_APP_URL);
+      onChange(EMTRACK_APP_URL);
+      return;
+    }
+    setTyped('');
+    setMasked(false);
+    onChange('');
+    focusNext.current = 'input';
+  };
+
   const kind = trackerKind(typed);
-  const hint = kind === 'rio'
-    ? t(locale, 'p4c_tl_typed_rio')
-    : kind === 'safefleet'
-      ? (isSafefleetTrackingRef(typed) || !typed.trim()
-        ? t(locale, 'p4c_tl_typed_safefleet')
-        : t(locale, 'p4c_tl_typed_safefleet_bad'))
-      : kind === 'monitorujpojazd'
-        ? (isMonitorujPojazdTrackingRef(typed) || !typed.trim()
-          ? t(locale, 'p4c_tl_typed_monitorujpojazd')
-          : t(locale, 'p4c_tl_typed_monitorujpojazd_bad'))
-      : kind === 'emtrack'
-        ? t(locale, 'p4c_tl_typed_emtrack')
-        : kind === 'other'
-          ? t(locale, 'p4c_tl_typed_other')
-          : t(locale, 'p4c_tl_empty');
+  const hint = emtrackOn
+    ? t(locale, 'p4c_tl_emtrack_locked')
+    : kind === 'rio'
+      ? t(locale, 'p4c_tl_typed_rio')
+      : kind === 'safefleet'
+        ? (isSafefleetTrackingRef(typed) || !typed.trim()
+          ? t(locale, 'p4c_tl_typed_safefleet')
+          : t(locale, 'p4c_tl_typed_safefleet_bad'))
+        : kind === 'monitorujpojazd'
+          ? (isMonitorujPojazdTrackingRef(typed) || !typed.trim()
+            ? t(locale, 'p4c_tl_typed_monitorujpojazd')
+            : t(locale, 'p4c_tl_typed_monitorujpojazd_bad'))
+          : kind === 'emtrack'
+            ? t(locale, 'p4c_tl_typed_emtrack')
+            : kind === 'other'
+              ? t(locale, 'p4c_tl_typed_other')
+              : t(locale, 'p4c_tl_empty');
+
+  const trailerWarn = emtrackOn
+    ? (!trailerPlate.trim()
+      ? t(locale, 'p4c_tl_emtrack_need_trailer')
+      : trailerHasManyPlates(trailerPlate)
+        ? pt(locale, 'p7_m_trailer_many')
+        : null)
+    : null;
 
   return (
-    <div className="form-field tlf" data-awiz-tracking data-tl-mode={chip ? 'saved' : masked ? 'new-rio' : editing ? 'change' : 'input'}>
+    <div className="form-field tlf" data-awiz-tracking data-tl-mode={chip ? 'saved' : masked ? 'new-rio' : emtrackOn ? 'emtrack' : editing ? 'change' : 'input'} data-tl-emtrack={emtrackOn ? '1' : '0'}>
       <span id={id} className={upper ? 'tlf-lbl up' : 'tlf-lbl'}>{t(locale, 'awiz_tracking')}</span>
+      <label className="am-check tlf-emtrack" data-tl-emtrack-check>
+        <input
+          type="checkbox"
+          checked={emtrackOn}
+          onChange={(e) => setEmtrack(e.target.checked)}
+          data-tl-emtrack-box
+        />
+        <span>{t(locale, 'p4c_tl_emtrack_check')}</span>
+      </label>
       {chip ? (
         <div className="tlf-saved">
           <span className="tlf-chip" aria-describedby={id} data-tl-chip>
@@ -157,6 +198,20 @@ export function TrackingLinkField({
           </div>
           <small className="awiz-track-hint" data-awiz-tracking-kind="rio">{t(locale, 'p4c_tl_typed_rio')}</small>
         </>
+      ) : emtrackOn ? (
+        <>
+          <input
+            aria-labelledby={id}
+            className="input"
+            value={EMTRACK_APP_URL}
+            disabled
+            readOnly
+            data-tl-emtrack-url
+            autoComplete="off"
+            spellCheck={false}
+          />
+          <small className="awiz-track-hint" data-awiz-tracking-kind="emtrack">{hint}</small>
+        </>
       ) : (
         <>
           <input
@@ -171,6 +226,14 @@ export function TrackingLinkField({
             onChange={(e) => {
               const v = e.target.value;
               setTyped(v);
+              if (trackerKind(v) === 'emtrack') {
+                setMasked(false);
+                setEditing(false);
+                setTyped(EMTRACK_APP_URL);
+                onChange(EMTRACK_APP_URL);
+                pasted.current = false;
+                return;
+              }
               push(v);
               if (pasted.current && secretLikePaste(v)) setMasked(true);
               pasted.current = false;
@@ -186,7 +249,10 @@ export function TrackingLinkField({
           <small className="awiz-track-hint" data-awiz-tracking-kind={kind}>{hint}</small>
         </>
       )}
-      {editing && !chip ? (
+      {trailerWarn ? (
+        <small className="am-warn" role="status" data-tl-emtrack-trailer-warn>{trailerWarn}</small>
+      ) : null}
+      {editing && !chip && !emtrackOn ? (
         <div className="tlf-change">
           <small>{t(locale, 'p4c_tl_change_hint')}</small>
           <button type="button" className="tlf-keep" data-tl-keep onClick={keep}>

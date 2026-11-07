@@ -103,7 +103,9 @@ describe('I-0 — przykłady P4-c tylko w demo', () => {
       expect(html).toContain('data-tl-chip');
       expect(html).not.toContain(FAKE);
     }
-    /* emtrack i inne adresy — jak dziś, w polu */
-    expect(render('https://emtrack.eu/app/', null)).toContain('value="https://emtrack.eu/app/"');
+    /* DP-232: emtrack — checkbox zaznaczony, stały URL w nieaktywnym polu */
+    const em = render('https://emtrack.eu/app/', null);
+    expect(em).toContain('data-tl-emtrack="1"');
+    expect(em).toContain('value="https://emtrack.eu/app/"');
   });
 });
