@@ -4537,62 +4537,42 @@ else
   chk "DP-230: brak cron.job (stub) — gps-wrong OK" "select 1" 1
   chk "DP-230: brak cron.job (stub) — tractor-dup OK" "select 1" 1
 fi
-# F7 #870: powtórzony identyczny GPS >30 min = stale (jak brak GPS)
+# F7 #870: postój 2 h w obcym PORT_OUT (ten sam punkt co 15 min) + ATD → bez FERRY, ryzyko otwarte
+# (powtórzony fix ≠ stale przed odejściem — postój w porcie to sygnał; repeat→stale dopiero po ATD = DP-235)
 L230i=55555555-0000-0000-0000-000000002312
-L230j=55555555-0000-0000-0000-000000002313
-L230k=55555555-0000-0000-0000-000000002314
 S230i=77777777-0000-0000-0000-000000002312
-S230j=77777777-0000-0000-0000-000000002313
-S230k=77777777-0000-0000-0000-000000002314
 q "insert into sailings (id, project_id, vessel_id, route, departure_at, arrival_at,
     actual_departure_at, status, source) values
   ('$S230i', '$P', '$V230', 'GDY-KAA',
-   '2026-11-12 18:00+00', '2026-11-13 04:00+00', null, 'ZAPLANOWANY', 'STENA'),
-  ('$S230j', '$P', '$V230', 'GDY-KAA',
-   '2026-11-12 20:00+00', '2026-11-13 06:00+00', null, 'ZAPLANOWANY', 'STENA'),
-  ('$S230k', '$P', '$V230', 'GDY-KAA',
-   '2026-11-12 22:00+00', '2026-11-13 08:00+00',
-   '2026-11-12 22:05+00', 'W_REJSIE', 'STENA')
+   '2026-11-12 18:00+00', '2026-11-13 04:00+00',
+   '2026-11-12 18:05+00', 'W_REJSIE', 'STENA')
  on conflict (id) do nothing" >/dev/null
-# Tylko powtórzony fix >30 min w obcym porcie → brak ryzyka (stale)
 mk $L230i I230 "'HHL/I230'" "'SCX/I230'" IN_TRANSIT_PL "'$S230i'"
 q "insert into load_events (load_id, event_type, occurred_at) values
  ('$L230i','MILESTONE_LOADED','2026-11-12 08:00+00');
  insert into positions (load_id, ts, geom_raw, source) values
  ('$L230i', '2026-11-12 16:00+00',
   st_setsrid(st_makepoint(18.6800, 54.4030), 4326), 'TELEMATICS_API'),
- ('$L230i', '2026-11-12 16:45+00',
-  st_setsrid(st_makepoint(18.6800, 54.4030), 4326), 'TELEMATICS_API')" >/dev/null
-q "select public.detect_gps_wrong_ferry_port('2026-11-12 16:50+00')" >/dev/null
-chk "DP-230: powtórzony GPS >30 min → 0 GPS_WRONG_PORT" \
-  "$(rk $L230i GPS_WRONG_PORT)" 0
-# Świeży GPS → ryzyko; potem same powtórki → ryzyko zostaje (bez resolve na stale)
-mk $L230j J230 "'HHL/J230'" "'SCX/J230'" IN_TRANSIT_PL "'$S230j'"
-q "insert into load_events (load_id, event_type, occurred_at) values
- ('$L230j','MILESTONE_LOADED','2026-11-12 08:00+00');
- insert into positions (load_id, ts, geom_raw, source) values
- ('$L230j', '2026-11-12 18:10+00',
-  st_setsrid(st_makepoint(18.6800, 54.4030), 4326), 'TELEMATICS_API')" >/dev/null
-q "select public.detect_gps_wrong_ferry_port('2026-11-12 18:15+00')" >/dev/null
-chk "DP-230: świeży GPS obcy → GPS_WRONG_PORT" \
-  "$(rk $L230j GPS_WRONG_PORT)" 1
-q "insert into positions (load_id, ts, geom_raw, source) values
- ('$L230j', '2026-11-12 18:50+00',
-  st_setsrid(st_makepoint(18.6800, 54.4030), 4326), 'TELEMATICS_API')" >/dev/null
-q "select public.detect_gps_wrong_ferry_port('2026-11-12 18:55+00')" >/dev/null
-chk "DP-230: po stale repeat ryzyko zostaje" \
-  "$(rk $L230j GPS_WRONG_PORT)" 1
-# ATD + tylko powtórzony obcy GPS (bez otwartego ryzyka) → FERRY jak brak GPS
-mk $L230k K230 "'HHL/K230'" "'SCX/K230'" IN_TRANSIT_PL "'$S230k'"
-q "insert into load_events (load_id, event_type, occurred_at) values
- ('$L230k','MILESTONE_LOADED','2026-11-12 08:00+00');
- insert into positions (load_id, ts, geom_raw, source) values
- ('$L230k', '2026-11-12 21:10+00',
+ ('$L230i', '2026-11-12 16:15+00',
   st_setsrid(st_makepoint(18.6800, 54.4030), 4326), 'TELEMATICS_API'),
- ('$L230k', '2026-11-12 21:50+00',
+ ('$L230i', '2026-11-12 16:30+00',
+  st_setsrid(st_makepoint(18.6800, 54.4030), 4326), 'TELEMATICS_API'),
+ ('$L230i', '2026-11-12 16:45+00',
+  st_setsrid(st_makepoint(18.6800, 54.4030), 4326), 'TELEMATICS_API'),
+ ('$L230i', '2026-11-12 17:00+00',
+  st_setsrid(st_makepoint(18.6800, 54.4030), 4326), 'TELEMATICS_API'),
+ ('$L230i', '2026-11-12 17:15+00',
+  st_setsrid(st_makepoint(18.6800, 54.4030), 4326), 'TELEMATICS_API'),
+ ('$L230i', '2026-11-12 17:30+00',
+  st_setsrid(st_makepoint(18.6800, 54.4030), 4326), 'TELEMATICS_API'),
+ ('$L230i', '2026-11-12 17:45+00',
+  st_setsrid(st_makepoint(18.6800, 54.4030), 4326), 'TELEMATICS_API'),
+ ('$L230i', '2026-11-12 18:00+00',
   st_setsrid(st_makepoint(18.6800, 54.4030), 4326), 'TELEMATICS_API')" >/dev/null
-q "select public.promote_ferry_departures('2026-11-12 22:10+00')" >/dev/null
-chk "DP-230: ATD + stale obcy GPS → FERRY" "$(st $L230k)" FERRY
+q "select public.promote_ferry_departures('2026-11-12 18:10+00')" >/dev/null
+chk "DP-230: ATD + postój 2h obcy PORT_OUT → bez FERRY" "$(st $L230i)" IN_TRANSIT_PL
+chk "DP-230: ATD + postój 2h obcy → GPS_WRONG_PORT" \
+  "$(rk $L230i GPS_WRONG_PORT)" 1
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]

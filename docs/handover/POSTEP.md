@@ -1,3 +1,9 @@
+## 2026-11-07 10:40 — DP-230 F7 #870: bez stale przed ATD (C4)
+
+- **Gałąź / commit** `pakiet/c4-dp-230-gps-port-tractor-warn` (po push)
+- **Migracje** **0429** (bez `gps_fresh_position`; ostatni GPS + `raw.stale_point` jak r1)
+- **Krok** C4 **DP-230** F7: cofnięty „powtórzony fix >30 min = stale” przed odejściem (psuło postój w porcie → fałszywy FERRY); test postój 2 h co 15 min + ATD → bez FERRY + ryzyko; status EXPECTED **707**. Repeat→stale tylko po ATD → **DP-235**. Czekam CI→F7. Po F7: DP-102….
+
 ## 2026-11-07 10:05 — DP-230 stale GPS >30 min #870 (C4)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.

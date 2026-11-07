@@ -1,10 +1,11 @@
--- DP-230 (#852 / F7 #870): ostrzeżenia (bez auto-zmiany przypisania rejsu):
--- 1) świeży GPS w PORT_OUT obcej trasy vs rejs (dep−6 h, status < FERRY);
---    powtórzony identyczny fix >30 min = jak brak GPS (`gps_fresh_position`);
+-- DP-230 (#852): ostrzeżenia (bez auto-zmiany przypisania rejsu):
+-- 1) GPS w geostrefie PORT_OUT innego armatora/trasy niż port wyjścia przypisanego rejsu
+--    (okno od dep−6 h, status przed FERRY);
 -- 2) ta sama tractor_plate (telm_norm_plate) w ≥2 aktywnych zleceniach z nakładającymi się oknami;
--- 3) flaga ETA „przypisany rejs odpłynął bez transportu” + towarzysz GPS przy otwartym GPS_WRONG_PORT;
--- 4) promote_ferry_departures → FERRY po ATD tylko gdy brak/stale GPS albo GPS w PORT_OUT rejsu;
---    otwarte GPS_WRONG_PORT albo świeży GPS w obcym porcie → bez FERRY.
+-- 3) flaga ETA „przypisany rejs odpłynął bez transportu” dostaje towarzyszący tekst GPS, gdy
+--    otwarte GPS_WRONG_PORT (nie zostaje sama);
+-- 4) promote_ferry_departures → FERRY po ATD tylko gdy brak GPS przed odejściem albo GPS
+--    w PORT_OUT portu wyjścia rejsu; inaczej ryzyko + bez FERRY (bez podmiany na AIS).
 
 begin;
 
@@ -72,65 +73,6 @@ comment on function public.risk_audience_for(text, jsonb) is
   'BN6 + DP-203/121/205/217 + DP-230 FERRY audience=HHL_PRZEWOZNIK (GPS obcy port).';
 
 -- ---------------------------------------------------------------------------
--- 0) Ostatni „żywy” GPS — powtórzony identyczny fix >30 min = jak brak GPS
---    (emtrack bez sygnału dokłada stary punkt z nowym ts; F7 #870 / prod 17184).
--- ---------------------------------------------------------------------------
-create or replace function public.gps_fresh_position(
-  p_load_id uuid,
-  p_before timestamptz default null
-) returns table (ts timestamptz, geom geometry)
-language plpgsql
-stable
-security definer
-set search_path to 'public', 'extensions'
-as $function$
-declare
-  v_ts timestamptz;
-  v_geom geometry;
-begin
-  if p_load_id is null then
-    return;
-  end if;
-
-  select p.ts, p.geom_raw::geometry
-    into v_ts, v_geom
-    from public.positions p
-   where p.load_id = p_load_id
-     and (p_before is null or p.ts <= p_before)
-     and coalesce((p.raw->>'stale_point')::boolean, false) is not true
-   order by p.ts desc
-   limit 1;
-
-  if v_geom is null then
-    return;
-  end if;
-
-  -- Ten sam punkt (±5 m) istnieje ≥30 min wcześniej → przestarzały / brak GPS.
-  if exists (
-    select 1
-      from public.positions older
-     where older.load_id = p_load_id
-       and (p_before is null or older.ts <= p_before)
-       and older.ts <= v_ts - interval '30 minutes'
-       and coalesce((older.raw->>'stale_point')::boolean, false) is not true
-       and st_dwithin(older.geom_raw::geography, v_geom::geography, 5)
-  ) then
-    return;
-  end if;
-
-  ts := v_ts;
-  geom := v_geom;
-  return next;
-end $function$;
-
-revoke all on function public.gps_fresh_position(uuid, timestamptz)
-  from public, anon, authenticated;
-grant execute on function public.gps_fresh_position(uuid, timestamptz)
-  to service_role;
-comment on function public.gps_fresh_position(uuid, timestamptz) is
-  'DP-230: ostatni GPS bez stale_point; powtórzony identyczny fix >30 min → pusto (jak brak GPS).';
-
--- ---------------------------------------------------------------------------
 -- 1) GPS w innym porcie niż rejs
 -- ---------------------------------------------------------------------------
 create or replace function public.detect_gps_wrong_ferry_port(
@@ -153,9 +95,8 @@ declare
   v_gps_port text;
   v_dep_port text;
 begin
-  -- Zamknij tylko gdy: świeży GPS poza obcą strefą / zmieniono rejs /
-  -- FERRY ze świeżym GPS w porcie rejsu.
-  -- Nie zamykaj samym ATD/FERRY ani samym brakiem GPS / stale repeat (F7 #870).
+  -- Zamknij tylko gdy: GPS poza obcą strefą / zmieniono rejs / FERRY z GPS w porcie rejsu.
+  -- Nie zamykaj samym ATD ani statusem ≥ FERRY przy GPS w obcym porcie (F7 #870 B1).
   update public.risk_signals rs
      set resolved_at = coalesce(v_now, now())
    where rs.resolved_at is null
@@ -168,33 +109,44 @@ begin
           where l.id = rs.load_id
             and rs.dedup_key = 'GPS_WRONG_PORT:' || l.id::text || ':' || s.id::text
        )
-       or exists (
+       or not exists (
          select 1
            from public.loads l
            join public.sailings s on s.id = l.sailing_id
-           join lateral public.gps_fresh_position(l.id) lp on true
+           join lateral (
+             select p.geom_raw
+               from public.positions p
+              where p.load_id = l.id
+                and coalesce((p.raw->>'stale_point')::boolean, false) is not true
+              order by p.ts desc
+              limit 1
+           ) lp on true
+           join public.geofences g
+             on g.project_id = l.project_id
+            and g.active
+            and g.kind = 'PORT_OUT'
+            and st_contains(g.geom, lp.geom_raw)
+            and public.ferry_geofence_matches_route(g.route, s.route) is not true
           where l.id = rs.load_id
             and rs.dedup_key = 'GPS_WRONG_PORT:' || l.id::text || ':' || s.id::text
-            and not exists (
-              select 1
-                from public.geofences g
-               where g.project_id = l.project_id
-                 and g.active
-                 and g.kind = 'PORT_OUT'
-                 and st_contains(g.geom, lp.geom)
-                 and public.ferry_geofence_matches_route(g.route, s.route) is not true
-            )
        )
        or exists (
          select 1
            from public.loads l
            join public.sailings s on s.id = l.sailing_id
-           join lateral public.gps_fresh_position(l.id) lp on true
+           join lateral (
+             select p.geom_raw
+               from public.positions p
+              where p.load_id = l.id
+                and coalesce((p.raw->>'stale_point')::boolean, false) is not true
+              order by p.ts desc
+              limit 1
+           ) lp on true
            join public.geofences g
              on g.project_id = l.project_id
             and g.active
             and g.kind = 'PORT_OUT'
-            and st_contains(g.geom, lp.geom)
+            and st_contains(g.geom, lp.geom_raw)
             and public.ferry_geofence_matches_route(g.route, s.route) is true
           where l.id = rs.load_id
             and l.status >= 'FERRY'
@@ -212,19 +164,26 @@ begin
            g.route as gps_route,
            g.name as gps_fence_name,
            g.country as gps_country,
-           st_y(lp.geom) as lat,
-           st_x(lp.geom) as lon,
+           st_y(lp.geom_raw::geometry) as lat,
+           st_x(lp.geom_raw::geometry) as lon,
            lp.ts as pos_ts
       from public.loads l
       join public.sailings s on s.id = l.sailing_id
       left join public.ferry_routes fr on fr.code = upper(btrim(s.route)) and fr.active
       left join public.ferry_ports pf on pf.code = fr.port_from
-      join lateral public.gps_fresh_position(l.id) lp on true
+      join lateral (
+        select p.ts, p.geom_raw
+          from public.positions p
+         where p.load_id = l.id
+           and coalesce((p.raw->>'stale_point')::boolean, false) is not true
+         order by p.ts desc
+         limit 1
+      ) lp on true
       join public.geofences g
         on g.project_id = l.project_id
        and g.active
        and g.kind = 'PORT_OUT'
-       and st_contains(g.geom, lp.geom)
+       and st_contains(g.geom, lp.geom_raw)
        and public.ferry_geofence_matches_route(g.route, s.route) is not true
      where l.status < 'FERRY'
        and coalesce(s.delayed_departure_at, s.departure_at) is not null
@@ -288,7 +247,7 @@ revoke all on function public.detect_gps_wrong_ferry_port(timestamptz, interval)
 grant execute on function public.detect_gps_wrong_ferry_port(timestamptz, interval)
   to service_role;
 comment on function public.detect_gps_wrong_ferry_port(timestamptz, interval) is
-  'DP-230: świeży GPS w PORT_OUT obcej trasy vs rejs (od dep−6 h, status < FERRY) → HIGH rk_gps_wrong_port; powtórzony fix >30 min jak brak GPS; zamykanie bez samego ATD/FERRY/stale (F7 #870).';
+  'DP-230: GPS w PORT_OUT obcej trasy vs rejs (od dep−6 h, status < FERRY) → HIGH rk_gps_wrong_port; zamykanie bez samego ATD/FERRY (F7 #870).';
 
 -- ---------------------------------------------------------------------------
 -- 2) Ten sam ciągnik w ≥2 aktywnych zleceniach
@@ -507,13 +466,16 @@ begin
     return false;
   end if;
 
-  -- Świeży GPS przed odejściem (powtórzony identyczny >30 min → jak brak).
-  select fp.geom
+  select p.geom_raw::geometry
     into v_geom
-    from public.gps_fresh_position(p_load_id, p_dep) fp
+    from public.positions p
+   where p.load_id = p_load_id
+     and p.ts <= p_dep
+     and coalesce((p.raw->>'stale_point')::boolean, false) is not true
+   order by p.ts desc
    limit 1;
 
-  -- Brak GPS / stale repeat przed odejściem → jak dotąd (AIS / rozkład).
+  -- Brak GPS przed odejściem → jak dotąd (AIS / rozkład).
   if v_geom is null then
     return true;
   end if;
@@ -614,7 +576,7 @@ revoke all on function public.gps_allows_ferry_promote(uuid, text, timestamptz)
 grant execute on function public.gps_allows_ferry_promote(uuid, text, timestamptz)
   to service_role;
 comment on function public.gps_allows_ferry_promote(uuid, text, timestamptz) is
-  'DP-230: FERRY po ATD — blokada gdy otwarte GPS_WRONG_PORT lub świeży GPS w obcym PORT_OUT; brak GPS / stale >30 min / port własny / poza portem — jak #461.';
+  'DP-230: FERRY po ATD — blokada gdy GPS w obcym PORT_OUT (rk_gps_wrong_port); brak GPS / port własny / poza portem — jak #461.';
 
 do $$
 declare
