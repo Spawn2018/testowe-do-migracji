@@ -170,7 +170,7 @@ import {
   unquoteSecret,
 } from './emtrackLogin.ts';
 import {
-  isSourceFailure, planSailingSync, riskDepUtc, sourceDownRisk, unknownStatusRisk,
+  isSourceFailure, planSailingSync, sourceDownRisk, unknownStatusRisk, warsaw,
   type AutoSailingSource, type DbSailing, type IncomingSailing, type RiskInput, type SailingInsert, type SailingPatch, type VesselRow,
 } from './sync.ts';
 
@@ -1499,16 +1499,17 @@ async function applyDigitrafficPortCallActuals(deps: JobDeps, sinceIso: string):
         && s.route === c.arrivalRoute
         && s.actual_arrival_at == null);
       const pick = pickUniqueInWindow(pool, t, (s) => Date.parse(s.arrival_at), WINDOW_MS);
+      const ataDedup = `FERRY_UNKNOWN:PORTNET_ATA:${vesselId}:${c.actualArrivalUtc}`;
       if (pick.kind === 'ambiguous') {
-        // DP-97: FERRY_UNKNOWN:PORTNET_* bez resolveRisks/resolveStale — zostaje dla HHL.
+        // DP-97 F7 #862: params.dep = warsaw (HHL); dedup UTC; auto-zamknięcie dopiero po hicie / gdy okno wyjaśnione.
         warnings.push(`Portnet ATA niejednoznaczna: ${c.vessel} ${c.arrivalRoute} (±3 h, ${pick.items.length} rejsy)`);
         await deps.store.raiseRisk({
           kind: 'FERRY', severity: 'MEDIUM',
           title: `Portnet: niejednoznaczne dopasowanie ATA ${c.vessel} — bez zmiany, do weryfikacji HHL`,
           titleKey: 'rk_ferry_status_unknown',
-          params: { vessel: c.vessel, dep: riskDepUtc(c.actualArrivalUtc) },
+          params: { vessel: c.vessel, dep: warsaw(c.actualArrivalUtc) },
           detail: { zrodlo: 'DIGITRAFFIC_PORTCALL', statek: c.vessel, ata: c.actualArrivalUtc, rejsy: pick.items.length },
-          dedup: `FERRY_UNKNOWN:PORTNET_ATA:${vesselId}:${c.actualArrivalUtc}`,
+          dedup: ataDedup,
         });
         continue;
       }
@@ -1533,6 +1534,10 @@ async function applyDigitrafficPortCallActuals(deps: JobDeps, sinceIso: string):
           if (setDelayed) hit.delayed_arrival_at = c.actualArrivalUtc;
           if (hit.source !== 'RECZNIE' && hit.status !== 'ODWOLANY') hit.status = 'DOPLYNAL';
         }
+        await deps.store.resolveRisks(ataDedup);
+      } else if (pick.kind === 'none') {
+        /* Okno bez kandydatów bez ATA = sprawa wyjaśniona (wszystkie actual_* albo brak rejsu). */
+        await deps.store.resolveRisks(ataDedup);
       }
     }
     if (c.actualDepartureUtc && c.departureRoute) {
@@ -1542,16 +1547,16 @@ async function applyDigitrafficPortCallActuals(deps: JobDeps, sinceIso: string):
         && s.route === c.departureRoute
         && s.actual_departure_at == null);
       const pick = pickUniqueInWindow(pool, t, (s) => Date.parse(s.departure_at), WINDOW_MS);
+      const atdDedup = `FERRY_UNKNOWN:PORTNET_ATD:${vesselId}:${c.actualDepartureUtc}`;
       if (pick.kind === 'ambiguous') {
-        // DP-97: FERRY_UNKNOWN:PORTNET_* bez resolveRisks/resolveStale — zostaje dla HHL.
         warnings.push(`Portnet ATD niejednoznaczna: ${c.vessel} ${c.departureRoute} (±3 h, ${pick.items.length} rejsy)`);
         await deps.store.raiseRisk({
           kind: 'FERRY', severity: 'MEDIUM',
           title: `Portnet: niejednoznaczne dopasowanie ATD ${byId.get(vesselId) ?? c.vessel} — bez zmiany, do weryfikacji HHL`,
           titleKey: 'rk_ferry_status_unknown',
-          params: { vessel: c.vessel, dep: riskDepUtc(c.actualDepartureUtc) },
+          params: { vessel: c.vessel, dep: warsaw(c.actualDepartureUtc) },
           detail: { zrodlo: 'DIGITRAFFIC_PORTCALL', statek: c.vessel, atd: c.actualDepartureUtc, rejsy: pick.items.length },
-          dedup: `FERRY_UNKNOWN:PORTNET_ATD:${vesselId}:${c.actualDepartureUtc}`,
+          dedup: atdDedup,
         });
         continue;
       }
@@ -1561,6 +1566,9 @@ async function applyDigitrafficPortCallActuals(deps: JobDeps, sinceIso: string):
         updated += 1;
         pick.item.actual_departure_at = c.actualDepartureUtc;
         if (pick.item.source !== 'RECZNIE' && pick.item.status !== 'ODWOLANY') pick.item.status = 'W_REJSIE';
+      }
+      if (pick.kind === 'hit' || pick.kind === 'none') {
+        await deps.store.resolveRisks(atdDedup);
       }
     }
   }

@@ -516,8 +516,8 @@ describe('F7 #660 ferry-portnet', () => {
     expect(one).toMatchObject({ kind: 'hit', item: { id: 'n' } });
   });
 
-  // DP-97 (F7 #682 r2): PORTNET_ATA/ATD bez auto-zamknięcia; params.dep = ISO UTC.
-  it('DP-97: Portnet UNKNOWN params.dep UTC i bez auto-zamknięcia po jednoznacznym hicie', async () => {
+  // DP-97 (F7 #862): params.dep = warsaw; dedup UTC; auto-zamknięcie po jednoznacznym hicie.
+  it('DP-97: Portnet UNKNOWN params.dep warsaw + auto-zamknięcie po jednoznacznym hicie', async () => {
     const ata = '2026-10-29T16:30:00.000Z';
     expect(riskDepUtc(ata)).toBe(ata);
     expect(riskDepUtc('2026-10-29T16:30:00+00:00')).toBe(ata);
@@ -530,8 +530,8 @@ describe('F7 #660 ferry-portnet', () => {
       'diverted',
       'POLFERRIES',
     );
-    expect(unk.params.dep).toBe('2026-10-26T18:00:00.000Z');
-    expect(String(unk.params.dep)).toMatch(/^\d{4}-\d{2}-\d{2}T.*Z$/); // ISO UTC, nie pl-PL/Warsaw
+    expect(unk.params.dep).toBe('26.10, 19:00'); // warsaw — bez surowego ISO UTC w tytule HHL
+    expect(String(unk.dedup)).toContain('2026-10-26T18:00:00.000Z');
 
     const amb = new MemStore();
     amb.sailings.push(
@@ -549,19 +549,32 @@ describe('F7 #660 ferry-portnet', () => {
         actual_departure_at: null, actual_arrival_at: null,
         status: 'W_REJSIE', source: 'TALLINK',
       },
+      {
+        id: 'other', vessel_id: '00000000-0000-4000-8000-000000000099', route: 'TLL-HEL',
+        departure_at: '2026-10-29T15:00:00.000Z', arrival_at: '2026-10-29T17:00:00.000Z',
+        delayed_departure_at: null, delayed_arrival_at: null,
+        actual_departure_at: null, actual_arrival_at: null,
+        status: 'W_REJSIE', source: 'TALLINK',
+      },
     );
+    await amb.raiseRisk({
+      kind: 'FERRY', severity: 'MEDIUM',
+      title: 'inny statek', titleKey: 'rk_ferry_status_unknown',
+      params: { vessel: 'Other', dep: 'x' },
+      detail: {},
+      dedup: 'FERRY_UNKNOWN:PORTNET_ATA:00000000-0000-4000-8000-000000000099:2026-10-29T16:30:00.000Z',
+    });
     await runFerryPortnet(deps(amb, { 'port-calls': PORTNET }, new Date('2026-10-29T20:00:00Z')));
-    const risk = amb.risks.find((r) => String(r.dedup).startsWith('FERRY_UNKNOWN:PORTNET_ATA:'));
+    const risk = amb.risks.find((r) => String(r.dedup) === `FERRY_UNKNOWN:PORTNET_ATA:${MEGA}:${ata}`);
     expect(risk).toBeTruthy();
-    expect(risk!.params.dep).toBe(ata);
+    expect(risk!.params.dep).toBe('29.10, 17:30');
     expect(String(risk!.dedup)).toContain(ata);
 
-    // Drugi przebieg: jednoznacznie a2 (a1 już z ATA) — job NIE zamyka PORTNET_ATA.
+    // Drugi przebieg: jednoznacznie a2 (a1 już z ATA) — zamyka PORTNET_ATA tego statku; inny statek nietknięty.
     amb.sailings.find((s) => s.id === 'a1')!.actual_arrival_at = '2026-10-29T16:05:00.000Z';
-    const before = amb.risks.filter((r) => String(r.dedup).startsWith('FERRY_UNKNOWN:PORTNET_')).length;
     await runFerryPortnet(deps(amb, { 'port-calls': PORTNET }, new Date('2026-10-29T20:15:00Z')));
-    expect(amb.risks.filter((r) => String(r.dedup).startsWith('FERRY_UNKNOWN:PORTNET_')).length).toBe(before);
-    expect(amb.risks.some((r) => String(r.dedup).startsWith('FERRY_UNKNOWN:PORTNET_ATA:'))).toBe(true);
+    expect(amb.risks.some((r) => String(r.dedup) === `FERRY_UNKNOWN:PORTNET_ATA:${MEGA}:${ata}`)).toBe(false);
+    expect(amb.risks.some((r) => String(r.dedup).startsWith('FERRY_UNKNOWN:PORTNET_ATA:00000000-0000-4000-8000-000000000099:'))).toBe(true);
     expect(amb.sailings.find((s) => s.id === 'a2')).toMatchObject({
       actual_arrival_at: ata,
       status: 'DOPLYNAL',
