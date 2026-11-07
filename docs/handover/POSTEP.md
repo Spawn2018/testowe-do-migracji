@@ -1,3 +1,9 @@
+## 2026-11-07 16:30 — DP-109 #878 r2 (C4 / BN3)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500 w planie. Bez nowego `pilne`.
+- Scalanie: brak „F7: gotowe” — przegląd #878: statek+`returns to` port wyciszał ODWOLANY. Bez push na main.
+- **Krok** C4 **DP-109** r2: `SHIP returns to` tylko z dopełnieniem `route|service|traffic|schedule|line` (nie port); test „MyStar returns to Tallinn” → ODWOLANY. Gałąź `pakiet/c4-dp-109-resume-returns-to`. Czekam CI→F7. Po F7: DP-111….
+
 ## 2026-11-07 16:14 — DP-109 start (C4 / BN3)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500 w planie. Bez nowego `pilne`.

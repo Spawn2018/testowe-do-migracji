@@ -108,12 +108,12 @@ const SAILING_CTX_RE = /\b(sailing|departure|departing|voyage|vessel|route|ferry
 const SHIP_NAME_ALT = String.raw`MyStar|Megastar|Victoria\s+I|Baltic\s*Queen|Silja\s*Europa`;
 const SHIP_NAME_RE = new RegExp(`\\b(?:${SHIP_NAME_ALT})\\b`, 'i');
 const PORT_NAME_ALT = String.raw`Tallinn|Helsinki|Stockholm`;
-/** DP-109 / F7 #683 r2: `returns? to` tylko statek lub trasa/usługa — nie „passengers return to Tallinn by bus”. */
+/** DP-109 / F7 #878 r2: statek+`returns to` tylko z dopełnieniem usługi (route/service/…), nie portem. */
 const RESUME_RE = new RegExp(
   String.raw`(?:` +
     String.raw`\b(?:is\s+not\s+cancel|not\s+cancelled|not\s+canceled|is\s+no\s+longer\s+cancelled|is\s+no\s+longer\s+canceled|has\s+been\s+reinstated|resum(?:e|es|ed|ing)|back\s+in\s+service|operates\s+as\s+planned|will\s+operate\s+as\s+(?:planned|scheduled))\b` +
-    String.raw`|\b(?:${SHIP_NAME_ALT})\s+returns?\s+to\b` +
-    String.raw`|\breturns?\s+to\s+(?:the\s+)?(?:route|service)\b` +
+    String.raw`|\b(?:${SHIP_NAME_ALT})\s+returns?\s+to\s+(?:the\s+)?(?:[\w–-]+\s+)?(?:route|service|traffic|schedule|line)\b` +
+    String.raw`|\breturns?\s+to\s+(?:the\s+)?(?:route|service|traffic|schedule|line)\b` +
   String.raw`)`,
   'i',
 );

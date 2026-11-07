@@ -270,7 +270,7 @@ describe('BN3 Tallink Alert', () => {
   });
 
   it('DP-109: „passengers return to Tallinn by bus” nie wycisza ODWOLANY; statek/trasa nadal INFO', () => {
-    // F7 #683 r2: luźne `returns? to` w RESUME_RE wyciszało prawdziwe odwołanie.
+    // F7 #683 r2 / #878 r2: luźne `returns? to` wyciszało ODWOLANY; statek→port też.
     const bus = parseTallinkAlerts(
       wrapAlert(
         'Megastar sailing cancelled; passengers return to Tallinn by bus.',
@@ -280,6 +280,16 @@ describe('BN3 Tallink Alert', () => {
       NOW,
     ).alerts[0]!;
     expect(bus.kind).toBe('ODWOLANY');
+
+    const returnsToPort = parseTallinkAlerts(
+      wrapAlert(
+        'The 16:30 MyStar departure is cancelled due to a technical fault; MyStar returns to Tallinn.',
+        '2026-11-02',
+      ),
+      TALLINK_HOME(),
+      NOW,
+    ).alerts[0]!;
+    expect(returnsToPort.kind).toBe('ODWOLANY');
 
     const shipReturns = parseTallinkAlerts(
       wrapAlert('MyStar returns to the Tallinn–Helsinki route on 2 November.', '2026-11-02'),
