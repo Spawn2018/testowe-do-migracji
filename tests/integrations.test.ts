@@ -980,6 +980,55 @@ describe('planSailingSync — zasady', () => {
     expect(p.unknownVessels).toEqual(['M/F Baltivia']);
     expect(p.inserts).toHaveLength(0);
   });
+
+  it('DP-91: zniknięcie remarku DFDS → ZAPLANOWANY + delayed_* null (przed wypłynięciem)', () => {
+    const p = planSailingSync({
+      existing: [{
+        id: 's1', vessel_id: WAW, route: 'PLD-KPS',
+        departure_at: '2026-10-27T21:59:00.000Z', arrival_at: '2026-10-28T07:30:00.000Z',
+        delayed_departure_at: '2026-10-27T23:00:00.000Z', delayed_arrival_at: '2026-10-28T08:31:00.000Z',
+        status: 'OPOZNIONY', source: 'DFDS',
+      }],
+      vessels: [{ id: WAW, name: 'M/F Sirena Seaways', mmsi: null }],
+      projectId: 'p',
+      source: 'DFDS',
+      incoming: [{
+        route: 'PLD-KPS', vessel: 'M/F Sirena Seaways',
+        departureUtc: '2026-10-27T21:59:00.000Z', arrivalUtc: '2026-10-28T07:30:00.000Z',
+        status: 'ZAPLANOWANY',
+      }],
+    });
+    expect(p.updates).toHaveLength(1);
+    expect(p.updates[0]!.patch).toMatchObject({
+      status: 'ZAPLANOWANY',
+      delayed_departure_at: null,
+      delayed_arrival_at: null,
+    });
+  });
+
+  it('DP-92: actualDepartureUtc → actual_departure_at + W_REJSIE', () => {
+    const p = planSailingSync({
+      existing: [{
+        id: 's1', vessel_id: WAW, route: 'PLD-KPS',
+        departure_at: '2026-10-27T21:59:00.000Z', arrival_at: '2026-10-28T07:30:00.000Z',
+        delayed_departure_at: null, delayed_arrival_at: null,
+        status: 'ZAPLANOWANY', source: 'DFDS',
+      }],
+      vessels: [{ id: WAW, name: 'M/F Sirena Seaways', mmsi: null }],
+      projectId: 'p',
+      source: 'DFDS',
+      incoming: [{
+        route: 'PLD-KPS', vessel: 'M/F Sirena Seaways',
+        departureUtc: '2026-10-27T21:59:00.000Z', arrivalUtc: '2026-10-28T07:30:00.000Z',
+        actualDepartureUtc: '2026-10-27T22:05:00.000Z',
+      }],
+    });
+    expect(p.updates).toHaveLength(1);
+    expect(p.updates[0]!.patch).toMatchObject({
+      actual_departure_at: '2026-10-27T22:05:00.000Z',
+      status: 'W_REJSIE',
+    });
+  });
 });
 
 describe('ferry-weather — II-8 FMI+DMI+SMHI', () => {
