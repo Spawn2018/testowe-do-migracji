@@ -1,3 +1,9 @@
+## 2026-11-07 13:20 — DP-236 #874 r2 (C4)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500 w planie. Bez nowego `pilne`.
+- Scalanie: brak „F7: gotowe” — przegląd #874: 2 poprawki przed F7. Bez push na main.
+- **Krok** C4 **DP-236** r2: test GPS >2 h przed ATD → FERRY + 0 MISSED; backfill okno 1 h→3 h + `p.ts > dep_at`; status EXPECTED **718**. Czekam CI→F7. Po F7: DP-235….
+
 ## 2026-11-07 13:05 — DP-236 start (#873 / 0430)
 
 - Skrzynka: #550 WSTRZYMANE; #873 DP-236 (Spawn2018, bez etykiety — polecenie z F7 #872); BN5–8 w planie. Bez nowego `pilne`.

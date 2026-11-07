@@ -4576,15 +4576,17 @@ chk "DP-230: ATD + postój 2h obcy → GPS_WRONG_PORT" \
 
 # ---------------------------------------------------------------------------
 # DP-236 (#873): świeży GPS daleko od PORT_OUT → bez FERRY + MISSED_SAILING
-# UUID …2360–2362; vessel DP-236 (nie koliduje z DP-230).
+# UUID …2360–2363; vessel DP-236 (nie koliduje z DP-230). L xx: 14–15.11.
 # ---------------------------------------------------------------------------
 V236=66666666-0000-0000-0000-000000002360
 L236a=55555555-0000-0000-0000-000000002360
 L236b=55555555-0000-0000-0000-000000002361
 L236c=55555555-0000-0000-0000-000000002362
+L236d=55555555-0000-0000-0000-000000002363
 S236a=77777777-0000-0000-0000-000000002360
 S236b=77777777-0000-0000-0000-000000002361
 S236c=77777777-0000-0000-0000-000000002362
+S236d=77777777-0000-0000-0000-000000002363
 q "insert into vessels (id, name, operator) values
  ('$V236', 'M/F DP-236 Horizon', 'Polferries')
  on conflict (id) do nothing;
@@ -4598,7 +4600,10 @@ q "insert into vessels (id, name, operator) values
    '2026-11-14 16:05+00', 'W_REJSIE', 'POLFERRIES'),
   ('$S236c', '$P', '$V236', 'GDN-NYN',
    '2026-11-14 20:00+00', '2026-11-15 14:00+00',
-   '2026-11-14 20:05+00', 'W_REJSIE', 'POLFERRIES')
+   '2026-11-14 20:05+00', 'W_REJSIE', 'POLFERRIES'),
+  ('$S236d', '$P', '$V236', 'GDN-NYN',
+   '2026-11-15 08:00+00', '2026-11-16 02:00+00',
+   '2026-11-15 08:05+00', 'W_REJSIE', 'POLFERRIES')
  on conflict (id) do nothing" >/dev/null
 # 1) GPS ~280 km (Warszawa) + ATD → bez FERRY + MISSED_SAILING
 mk $L236a A236 "'HHL/A236'" "'SCX/A236'" IN_TRANSIT_PL "'$S236a'"
@@ -4633,6 +4638,16 @@ q "insert into load_events (load_id, event_type, occurred_at) values
 q "select public.promote_ferry_departures('2026-11-14 20:10+00')" >/dev/null
 chk "DP-236: brak GPS → FERRY" "$(st $L236c)" FERRY
 chk "DP-236: brak GPS → 0 MISSED_SAILING" "$(rk $L236c MISSED_SAILING)" 0
+# 4) GPS daleko, ale starszy niż 2 h przed ATD → FERRY jak dziś (#874 r2)
+mk $L236d D236 "'HHL/D236'" "'SCX/D236'" IN_TRANSIT_PL "'$S236d'"
+q "insert into load_events (load_id, event_type, occurred_at) values
+ ('$L236d','MILESTONE_LOADED','2026-11-14 22:00+00');
+ insert into positions (load_id, ts, geom_raw, source) values
+ ('$L236d', '2026-11-15 05:00+00',
+  st_setsrid(st_makepoint(21.0122, 52.2297), 4326), 'TELEMATICS_API')" >/dev/null
+q "select public.promote_ferry_departures('2026-11-15 08:10+00')" >/dev/null
+chk "DP-236: GPS >2 h przed ATD → FERRY" "$(st $L236d)" FERRY
+chk "DP-236: GPS >2 h przed ATD → 0 MISSED_SAILING" "$(rk $L236d MISSED_SAILING)" 0
 chk "DP-236: parametr FERRY_PROMOTE_MAX_KM_FROM_PORT" \
   "select value::text from app_parameters where key='FERRY_PROMOTE_MAX_KM_FROM_PORT'" 5
 

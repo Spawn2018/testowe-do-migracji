@@ -1,7 +1,7 @@
 -- DP-236 (#873): GPS daleko od PORT_OUT przed ATD → bez FERRY + ryzyko rk_missed_sailing.
 -- Świeży GPS ≤2 h przed odejściem i > X km od strefy PORT_OUT portu wyjścia → blokada.
 -- Brak GPS / GPS starszy niż 2 h → jak dziś (AIS / rozkład).
--- Jednorazowo: FERRY + rejs DOPLYNAL + świeży GPS (≤1 h) daleko od obu portów → ryzyko (bez zmiany statusu).
+-- Jednorazowo: FERRY + rejs DOPLYNAL + świeży GPS (≤3 h, po ATD) daleko od obu portów → ryzyko (bez zmiany statusu).
 
 begin;
 
@@ -284,7 +284,8 @@ begin
       into v_geom
       from public.positions p
      where p.load_id = r.load_id
-       and p.ts >= now() - interval '1 hour'
+       and p.ts >= now() - interval '3 hours'
+       and p.ts > r.dep_at
        and coalesce((p.raw->>'stale_point')::boolean, false) is not true
      order by p.ts desc
      limit 1;

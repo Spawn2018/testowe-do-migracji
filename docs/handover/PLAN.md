@@ -1227,7 +1227,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-231 | Cursor | **PILNE** mapa promów: `ferry_track_sample` ucinany do 1000 najstarszych → limit/statek + ORDER DESC + klient `.limit`/Częściowo | #859 | C4 / B-MAPA | SCALONE (#863 `6e7a8762` / **0426**) |
 | DP-234 | Cursor | Q-18 (`ferryPhase`): po DP-231 ~5 h historii/statek — długi rejs bez strefy portu wyjścia → kierunek tylko z COG; przywrócić historię stref bez limitu 1000 | F7 #863 | C4 / B-MAPA | w kolejce (po PILNYM) |
 | DP-235 | Cursor | (a) FERRY + GPS w PORT_IN innej trasy niż rejs (prod 17184 Karlskrona przy GDN-NYN) → ryzyko „GPS w porcie X, rejs Y”; (b) powtórzony identyczny fix >30 min = stale **tylko po ATD/dep** (przed odejściem postój w porcie = sygnał; opc. `raw` fix time emtrack) | F7 #870 / prod 07.11 | C4 / GPS+prom | w kolejce (po DP-236) |
-| DP-236 | Cursor | świeży GPS ≤2 h przed ATD > X km od PORT_OUT → bez FERRY + `rk_missed_sailing` (HHL+SCX); backfill FERRY+DOPLYNAL+GPS≤1 h daleko od obu portów; param `FERRY_PROMOTE_MAX_KM_FROM_PORT` (**0430**) | #873 / prod TS-08 07.11 | C4 / GPS+prom | W TOKU (`pakiet/c4-dp-236-missed-sailing-gps`) |
+| DP-236 | Cursor | świeży GPS ≤2 h przed ATD > X km od PORT_OUT → bez FERRY + `rk_missed_sailing` (HHL+SCX); backfill FERRY+DOPLYNAL+GPS≤3 h po ATD daleko od obu portów; param `FERRY_PROMOTE_MAX_KM_FROM_PORT` (**0430**) | #873 / prod TS-08 07.11 | C4 / GPS+prom | W TOKU (`pakiet/c4-dp-236-missed-sailing-gps` / #874 r2) |
 | DP-98 | Cursor | `TALLINK_HEL_TLL_URL` zwraca 404 → ostrzeżenie co 10 min — poprawić/usunąć | F7 #683 | BN3 | DONE w #687 (DP-114: nowy URL) |
 | DP-114 | Cursor | Tallink HEL–TLL 404 po #683: nowy URL; niepełna pula → brak auto; streak ≥ 3 SOURCE_DOWN; F7 r1 usable HTML + streak z integration_runs; F7 r2 test markera | #687 / PR #689 | SCALONE `5fc7d4a0` | DONE |
 | DP-115 | Cursor | `stenaIrmBackoffUntilMs` — stan w pamięci modułu (jak dawny streak Tallink); ocenić persist / Edge cold start | F7 #689 r1 | BN3 / AIS | w kolejce |
@@ -2717,6 +2717,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 07.11.2026 04:00 | DP-101 F7 #866: atomowe `sailing_cancel_auto` **0427**; rejestr DP-230/232/233 (#852/#860/#861) | pętla / C4 F7 |
 | 07.11.2026 04:50 | #866 SCALONE `54bdb1c4` (DP-101); start **DP-233** / **0428** (`client_variant` + filtr Harmonogramu) | pętla / C4 |
 | 07.11.2026 07:10 | DP-233 #867 `851f131a` gotowe do F7 (CI unit/visual/db); potem DP-232/230 | pętla / C4 |
+| 07.11.2026 13:20 | DP-236 #874 r2: test GPS >2 h → FERRY; backfill 3 h + po ATD; status **718** | pętla / C4 F7 |
 | 07.11.2026 13:05 | #872 SCALONE `47751480` (DP-105+106 F7 @ `ca8d7393`); start **DP-236** / **0430** (#873; przed DP-235) | pętla / C4 |
 | 07.11.2026 10:40 | DP-230 #870 F7: bez `gps_fresh` przed ATD (postój=sygnał); test 2 h; repeat→stale → DP-235; status **707** | pętla / C4 F7 |
 | 06.11.2026 22:10 | #855 DP-229 F7 r8: psql pop ostatniej linii (fail uuid+true z set_config) | pętla / C3 F7 |
