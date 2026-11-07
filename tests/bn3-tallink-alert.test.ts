@@ -210,6 +210,41 @@ describe('BN3 Tallink Alert', () => {
     expect(alerts[0]!.autoCancelOk).toBe(false);
   });
 
+  it('DP-107: Scheduler grudzień + „on 2 January” → rok+1 (nie ciche wygaśnięcie)', () => {
+    const text =
+      'The MyStar 16:30 departure from Tallinn to Helsinki on 2 January is cancelled.';
+    const decNow = new Date('2026-12-15T12:00:00Z');
+    const alert = parseTallinkAlerts(
+      wrapAlert(text, '2026-12-15'),
+      TALLINK_HOME(),
+      decNow,
+    ).alerts[0]!;
+    expect(alert.filterReject).toBeNull();
+    expect(alert.contentStartYmd).toBe('2027-01-02');
+    expect(alert.autoCancelOk).toBe(true);
+    // Bez kotwicy: stary bug = 2026-01-02.
+    expect(parseAlertContentDates(text, 2026)).toMatchObject({ startYmd: '2026-01-02' });
+    expect(parseAlertContentDates(text, 2026, '2026-12-15')).toMatchObject({
+      startYmd: '2027-01-02',
+    });
+  });
+
+  it('DP-107: długie okno 2025-12…2026-11 + „on 2 November” → 2026 (nie 2025)', () => {
+    const text =
+      'The MyStar 16:30 departure from Tallinn to Helsinki on 2 November is cancelled.';
+    const inner =
+      `<Scheduler dateStart="2025-12-20" timeStart="00:01" dateEnd="2026-11-05" timeEnd="23:59">` +
+      `<CwsSection data-analytics-group="Alert"><CwsP>${text}</CwsP></CwsSection></Scheduler>`;
+    const alert = parseTallinkAlerts(
+      wrapRendered(inner),
+      TALLINK_HOME(),
+      NOW,
+    ).alerts[0]!;
+    expect(alert.filterReject).toBeNull();
+    expect(alert.contentStartYmd).toBe('2026-11-02');
+    expect(alert.autoCancelOk).toBe(true);
+  });
+
   it('F7 B3: negacja / wznowienie → INFO (nie ODWOLANY)', () => {
     const notCancel = parseTallinkAlerts(
       wrapAlert('MyStar on Tallinn–Helsinki on 2 November is not cancelled and operates as planned.', '2026-11-02'),
