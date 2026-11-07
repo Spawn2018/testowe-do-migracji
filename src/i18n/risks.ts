@@ -42,6 +42,8 @@ const pl: Dict = {
   rk_sailing_cancelled: 'Rejs {vessel} z {dep} odwołany — transport wymaga nowego rejsu',
   /* DP-236 (#873): świeży GPS daleko od PORT_OUT przed ATD — bez FERRY */
   rk_missed_sailing: 'Transport nie zdążył na rejs {vessel} {dep} — GPS {km} km od portu; przypisz nowy rejs',
+  /* DP-237 B3: rejs bez ATD + niezakończony transport — nie domykaj znacznikiem */
+  rk_ferry_unconfirmed_dep: 'Rejs bez potwierdzenia wypłynięcia — sprawdź, czy transport płynął ({vessel}, {dep})',
   rk_silent_vehicle: 'Brak pozycji pojazdu {plate} od {minutes} min',
   /** #622: pozycje naczepy w sierotach, transport bez GPS */
   rk_emtrack_orphan: 'Pozycje naczepy nie trafiają do transportu {code} — sprawdź nr naczepy',

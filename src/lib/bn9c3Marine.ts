@@ -137,7 +137,8 @@ export type SeaSailing = Pick<Sailing, 'id' | 'route' | 'arrivalAt' | 'delayedAr
  */
 export function crossingAhead(l: SeaLoad, s: SeaSailing, nowMs: number): boolean {
   const arr = Date.parse(s.delayedArrivalAt || s.arrivalAt);
-  const voyageOpen = s.status !== 'DOPLYNAL' && Number.isFinite(arr) && arr > nowMs;
+  const voyageOpen = s.status !== 'DOPLYNAL' && s.status !== 'ZAMKNIETY_BEZ_POTWIERDZENIA'
+    && Number.isFinite(arr) && arr > nowMs;
   const tile = stageTileOf(l);
   return voyageOpen || (tile != null && BEFORE_OR_ON_FERRY.has(tile));
 }

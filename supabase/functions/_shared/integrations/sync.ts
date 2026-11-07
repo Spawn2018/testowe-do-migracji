@@ -15,7 +15,10 @@ export type SailingSource =
 export type AutoSailingSource =
   | 'POLFERRIES' | 'STENA'
   | 'TALLINK' | 'VIKING' | 'ECKERO' | 'DFDS';
-export type DbSailingStatus = 'ZAPLANOWANY' | 'OPOZNIONY' | 'ODWOLANY' | 'W_REJSIE' | 'DOPLYNAL';
+export type DbSailingStatus =
+  | 'ZAPLANOWANY' | 'OPOZNIONY' | 'ODWOLANY' | 'W_REJSIE' | 'DOPLYNAL'
+  /** DP-237 / decyzja 114: domknięty dowodem floty bez ATD/ATA — nie wygląda jak DOPLYNAL. */
+  | 'ZAMKNIETY_BEZ_POTWIERDZENIA';
 export const SOURCE_RANK: Record<SailingSource, number> = {
   DANE_STARTOWE: 1,
   POLFERRIES: 2, STENA: 2, TALLINK: 2, VIKING: 2, ECKERO: 2, DFDS: 2,
@@ -131,6 +134,7 @@ export function planSailingSync(o: {
       // ETA (compute_load_eta): po W_REJSIE „opóźniony” = delayed_departure_at (tu ustawiane z OPOZNIONY).
       // DP-91 F7 #858: zniknięcie remarku DFDS przed wypłynięciem → ZAPLANOWANY + delayed_* null (jak Polferries).
       const inTrip = cur.status === 'W_REJSIE' || cur.status === 'DOPLYNAL'
+        || cur.status === 'ZAMKNIETY_BEZ_POTWIERDZENIA'
         || cur.actual_departure_at != null || cur.actual_arrival_at != null;
       if (status === 'ODWOLANY' || !inTrip) want.status = status;
       want.delayed_departure_at = delayed.dep;
@@ -141,7 +145,8 @@ export function planSailingSync(o: {
       const atd = iso(inc.actualDepartureUtc);
       if (atd && iso(cur.actual_departure_at) !== atd) want.actual_departure_at = atd;
       if (cur.source !== 'RECZNIE' && cur.status !== 'ODWOLANY'
-        && cur.status !== 'DOPLYNAL' && want.status !== 'ODWOLANY') {
+        && cur.status !== 'DOPLYNAL' && cur.status !== 'ZAMKNIETY_BEZ_POTWIERDZENIA'
+        && want.status !== 'ODWOLANY') {
         want.status = 'W_REJSIE';
       }
     }

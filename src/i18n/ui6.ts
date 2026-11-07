@@ -431,6 +431,7 @@ const pl: Dict = {
   a6_role_HHL_OPS: 'Operacje HHL',
   a6_role_SITE_VIEWER: 'Plac budowy — podgląd',
   a6_sailing_status_label_doplynal: 'Dopłynął',
+  a6_sailing_status_label_zamkniety_bez_potwierdzenia: 'Zamknięty bez potwierdzenia',
   a6_sailing_status_label_odwolany: 'Odwołany',
   a6_sailing_status_label_opozniony: 'Opóźniony',
   a6_sailing_status_label_w_rejsie: 'W rejsie',

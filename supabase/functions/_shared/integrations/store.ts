@@ -412,6 +412,14 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
       if (res.error) throw new Error(`loads by sailing: ${res.error.message}`);
       return res.count ?? 0;
     },
+    /** DP-237 B3: niezakończone transporty na rejsie (domknięcie floty bez ATD). */
+    async sailingUnfinishedLoadIds(sailingId: string) {
+      const res = await sb.from('loads').select('id')
+        .eq('sailing_id', sailingId)
+        .not('status', 'in', '("CANCELLED","REMOVED","UNLOADED","DELIVERED","READY_TO_INVOICE","INVOICED")');
+      if (res.error) throw new Error(`loads unfinished by sailing: ${res.error.message}`);
+      return (res.data ?? []).map((r) => r.id as string);
+    },
     async deleteSailing(id: string) {
       const r = must(
         await sb.from('sailings').delete().eq('id', id).neq('source', 'RECZNIE').select('id'),

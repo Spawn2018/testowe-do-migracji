@@ -119,7 +119,9 @@ export interface Awizacja {
 /** M10 — rejs z rozkładu (`sailings`); jedno źródło prawdy o statku i godzinach. */
 /** BN9-a / BN1: kod z katalogu albo surowy kod z bazy (gdy spoza seeda/RPC — `routeUnknown`). */
 export type FerryRoute = FerryRouteCode | string;
-export type SailingStatus = 'ZAPLANOWANY' | 'OPOZNIONY' | 'ODWOLANY' | 'W_REJSIE' | 'DOPLYNAL';
+export type SailingStatus =
+  | 'ZAPLANOWANY' | 'OPOZNIONY' | 'ODWOLANY' | 'W_REJSIE' | 'DOPLYNAL'
+  | 'ZAMKNIETY_BEZ_POTWIERDZENIA';
 export interface Sailing {
   id: string;
   vessel: string;
