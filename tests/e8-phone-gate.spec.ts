@@ -2206,7 +2206,8 @@ test.describe('wyglad/P4-c — link śledzenia (E44), „Gotowy” (L6, L9), spr
       await expect(f.locator('[data-tl-open]')).toBeVisible();
       await f.locator('[data-tl-change]').click();
       await expect(f).toHaveAttribute('data-tl-mode', 'change');
-      const input = f.locator('input');
+      /* DP-232: checkbox emtrack też jest `input` — URL to `input.input` */
+      const input = f.locator('input.input');
       await expect(input).toHaveValue('');
       await expect(input).toBeFocused();
       /* wklejony link z kluczem znika z pola od razu (E44 pkt 8) — klucza nie ma nigdzie w stronie */
@@ -2218,9 +2219,9 @@ test.describe('wyglad/P4-c — link śledzenia (E44), „Gotowy” (L6, L9), spr
       expect(await page.evaluate((k) => document.documentElement.outerHTML.includes(k), FAKE)).toBe(false);
       /* wpisany ręcznie — zakryty po wyjściu z pola */
       await f.locator('[data-tl-repaste]').click();
-      await expect(f.locator('input')).toBeFocused();
-      await f.locator('input').pressSequentially(`https://public.position-sharing.rio.cloud/?id=1&secret=${FAKE}`, { delay: 0 });
-      await f.locator('input').blur();
+      await expect(f.locator('input.input')).toBeFocused();
+      await f.locator('input.input').pressSequentially(`https://public.position-sharing.rio.cloud/?id=1&secret=${FAKE}`, { delay: 0 });
+      await f.locator('input.input').blur();
       await expect(f).toHaveAttribute('data-tl-mode', 'new-rio');
       expect(await page.evaluate((k) => document.documentElement.outerHTML.includes(k), FAKE)).toBe(false);
       await f.locator('[data-tl-keep]').click();
@@ -2239,8 +2240,8 @@ test.describe('wyglad/P4-c — link śledzenia (E44), „Gotowy” (L6, L9), spr
     const f = page.locator('[data-awiz-tracking]');
     await f.locator('[data-tl-change]').click();
     const FAKE = 'zmyslony-P4C-2';
-    await f.locator('input').dispatchEvent('paste');
-    await f.locator('input').fill(`https://public.position-sharing.rio.cloud/?id=11111111-1111-1111-1111-111111111111&secret=${FAKE}`);
+    await f.locator('input.input').dispatchEvent('paste');
+    await f.locator('input.input').fill(`https://public.position-sharing.rio.cloud/?id=11111111-1111-1111-1111-111111111111&secret=${FAKE}`);
     await page.locator('[data-awiz-save]').click();
     await expect(page.locator('.awiz-modal')).toHaveCount(0);
     await page.locator('[data-awiz-open]').click();
@@ -2363,7 +2364,7 @@ test.describe('wyglad/P4-c — link śledzenia (E44), „Gotowy” (L6, L9), spr
       await page.locator('[data-awiz-tracking]').scrollIntoViewIfNeeded();
       hits.push(...await measure(page, 'awizacja-link', width, 'SCX'));
       await page.locator('[data-tl-change]').click();
-      const font = await page.locator('[data-awiz-tracking] input').evaluate((e) => parseFloat(getComputedStyle(e).fontSize));
+      const font = await page.locator('[data-awiz-tracking] input.input').evaluate((e) => parseFloat(getComputedStyle(e).fontSize));
       expect(font, 'pole ≥ 16 px').toBeGreaterThanOrEqual(16);
       hits.push(...await measure(page, 'awizacja-link-zmiana', width, 'SCX'));
       await page.keyboard.press('Escape');

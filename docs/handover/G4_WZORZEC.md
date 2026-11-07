@@ -409,4 +409,7 @@ Pozostałe z 15 smoke (Kokpit, Mapa, karty, Ryzyka, Drogi, pogoda, Rejsy, pasek 
 Wzorca `shots-baseline` nie zmieniano.
 
 ## DP-232 (07.11.2026) — Awizacja: checkbox emtrack
-Nowe migawki okna Awizacja z zaznaczonym polem wyboru „emtrack” (stały `https://emtrack.eu/app/`, pole nieaktywne) — komputer 1440 + telefon 390 (`awizacja-emtrack-checkbox-hhl-pl-{1440,390}-light.png`). Odświeżenie `awizacja-rejs-przed-zaladunkiem-*` gdy checkbox widać także przy niezaznaczonym (wiersz pod etykietą „Link śledzenia”). Matrycy 280/`shots-baseline` nie ruszano (P11).
+Z `visual.yml` `update=true` run 42347543584 @ `f1f26b46` (gałąź `pakiet/c4-dp-232-emtrack-checkbox`; część telefon padła na starym selektorze `input` vs checkbox — poprawka w e8-phone-gate):
+- `awizacja-emtrack-checkbox-hhl-pl-{1440,390}-light.png` — nowe, zaznaczony checkbox emtrack, stały URL, pole nieaktywne.
+- `awizacja-rejs-przed-zaladunkiem-hhl-pl-{1440,390}-light.png` — odświeżone (checkbox „emtrack” pod etykietą „Link śledzenia”, niezaznaczony).
+Matrycy 280/`shots-baseline` nie ruszano (P11).
