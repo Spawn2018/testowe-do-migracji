@@ -13,6 +13,7 @@ import {
   autoRestoreFromRestoreSentence,
   decodeTallinkCmsHtml,
   departureMatchesAlert,
+  departureTzForRoute,
   finalizeTallinkAlertsForStatus,
   isTallinkAlertHtmlUsable,
   matchTallinkAlertSailings,
@@ -135,6 +136,30 @@ describe('BN3 Tallink Alert', () => {
     expect(fromTo.routes).toEqual(['TLL-HEL']);
     expect(fromTo.contentHm).toBe('19:30');
     expect(fromTo.autoCancelOk).toBe(true);
+  });
+
+  it('DP-105: HH:MM STO-* w strefie Stockholm (nie Tallinn)', () => {
+    expect(departureTzForRoute('STO-TLL')).toBe('Europe/Stockholm');
+    expect(departureTzForRoute('TLL-STO')).toBe('Europe/Tallinn');
+    const alert = parseTallinkAlerts(
+      wrapAlert(
+        'The Victoria I 18:30 sailing from Stockholm to Tallinn on 2 November is cancelled.',
+        '2026-11-02',
+      ),
+      TALLINK_HOME(),
+      NOW,
+    ).alerts[0]!;
+    expect(alert.routes).toEqual(['STO-TLL']);
+    expect(alert.contentHm).toBe('18:30');
+    // 18:30 Europe/Stockholm 2.11 (CET=UTC+1) = 17:30Z; w Tallinnie to 19:30 — stary bug.
+    const depSto = '2026-11-02T17:30:00.000Z';
+    expect(departureMatchesAlert(depSto, alert, 'STO-TLL')).toBe(true);
+    expect(departureMatchesAlert(depSto, alert, 'TLL-HEL')).toBe(false);
+    const hit = matchTallinkAlertSailings(alert, [{
+      id: 's-sto', vesselName: 'M/F Victoria I', route: 'STO-TLL',
+      departureAt: depSto, status: 'ZAPLANOWANY', source: 'TALLINK',
+    }]);
+    expect(hit.kind).toBe('match');
   });
 
   it('F7 B2: wygasłe okno — filterReject expired (w puli, bez auto)', () => {

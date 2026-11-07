@@ -2,7 +2,8 @@
  * BN3 — Tallink Alert (tallink.com): bloki CMS `data-analytics-group="Alert"`.
  *
  * Decyzja 59: jawne odwołanie + jednoznaczne dopasowanie (pełna pula statek/trasa/okno;
- * data+HH:MM z treści, Europe/Tallinn, ±30 min) → ODWOLANY; inaczej FERRY MEDIUM.
+ * data+HH:MM z treści w strefie portu wypłynięcia, ±30 min) → ODWOLANY; inaczej FERRY MEDIUM.
+ * DP-105: STO-* (i inne) — HH:MM Alertu vs `departure_at` w TZ origin trasy, nie zawsze Tallinn.
  * F7 #683 B1–B4; R2-B2: >1 HH:MM lub >1 data w treści → niejednoznaczne.
  * R3-B1: ODWOLANY tylko przy dacie sparsowanej z treści; Scheduler = wyłącznie wygaśnięcie.
  * R4-B1: auto-ODWOLANY tylko gdy w tym samym zdaniu co cancel: statek + 1×HH:MM + 1×data;
@@ -153,7 +154,7 @@ export interface TallinkAlert {
   /** Data z treści Alertu (B2/R3-B1/R4-B1) — wymagana do automatycznego ODWOLANY. */
   contentStartYmd: string | null;
   contentEndYmd: string | null;
-  /** Godzina lokalna Tallinn HH:MM z treści (±30 min). */
+  /** Godzina lokalna portu wypłynięcia HH:MM z treści (±30 min; DP-105). */
   contentHm: string | null;
   sourceUrl: string;
 }
@@ -417,14 +418,27 @@ function tallinnYmd(d: Date): string {
   return `${g('year')}-${g('month')}-${g('day')}`;
 }
 
-export function tallinnYmdHm(departureIso: string): { ymd: string; hm: string } {
+/** DP-105: strefa lokalna portu wypłynięcia z kodu trasy (`STO-TLL` → Stockholm). */
+export function departureTzForRoute(route: string): string {
+  const origin = (route.split('-')[0] ?? '').toUpperCase();
+  if (origin === 'STO' || origin === 'KPS') return 'Europe/Stockholm';
+  if (origin === 'HEL' || origin === 'HELA' || origin === 'VUO') return 'Europe/Helsinki';
+  return 'Europe/Tallinn';
+}
+
+export function ymdHmInTz(departureIso: string, timeZone: string): { ymd: string; hm: string } {
   const p = new Intl.DateTimeFormat('en-CA', {
-    timeZone: 'Europe/Tallinn',
+    timeZone,
     year: 'numeric', month: '2-digit', day: '2-digit',
     hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
   }).formatToParts(new Date(departureIso));
   const g = (t: string) => p.find((x) => x.type === t)!.value;
   return { ymd: `${g('year')}-${g('month')}-${g('day')}`, hm: `${g('hour')}:${g('minute')}` };
+}
+
+/** @deprecated DP-105: użyj `ymdHmInTz` + `departureTzForRoute`; zostaje dla Tallinn-default. */
+export function tallinnYmdHm(departureIso: string): { ymd: string; hm: string } {
+  return ymdHmInTz(departureIso, 'Europe/Tallinn');
 }
 
 function hmToMin(hm: string): number {
@@ -682,9 +696,21 @@ export function parseAlertContentDates(
   };
 }
 
-/** Czy odejście pasuje do Alertu — Europe/Tallinn; tylko data z treści (R3-B1); ±30 min przy HH:MM. */
-export function departureMatchesAlert(departureIso: string, alert: TallinkAlert): boolean {
-  const { ymd, hm } = tallinnYmdHm(departureIso);
+/**
+ * Czy odejście pasuje do Alertu — strefa portu wypłynięcia (DP-105);
+ * tylko data z treści (R3-B1); ±30 min przy HH:MM.
+ * `route` z kandydata; gdy brak — jedyna trasa z Alertu, inaczej Tallinn.
+ */
+export function departureMatchesAlert(
+  departureIso: string,
+  alert: TallinkAlert,
+  route?: string | null,
+): boolean {
+  const routeCode = route ?? (alert.routes.length === 1 ? alert.routes[0]! : null);
+  const { ymd, hm } = ymdHmInTz(
+    departureIso,
+    routeCode ? departureTzForRoute(routeCode) : 'Europe/Tallinn',
+  );
   // F7 #683 R3-B1: bez contentStartYmd → brak dopasowania (nie używaj okna Schedulera).
   const start = alert.contentStartYmd;
   const end = alert.contentEndYmd;
@@ -1003,8 +1029,9 @@ export function matchTallinkAlertSailings(
   if (alert.vessel) {
     const vesselSails = sailings.filter((s) => s.vesselName === alert.vessel);
     if (vesselSails.length > 0) {
-      const lastMs = Math.max(...vesselSails.map((s) => Date.parse(s.departureAt)));
-      const lastYmd = tallinnYmdHm(new Date(lastMs).toISOString()).ymd;
+      const last = vesselSails.reduce((a, b) =>
+        Date.parse(a.departureAt) >= Date.parse(b.departureAt) ? a : b);
+      const lastYmd = ymdHmInTz(last.departureAt, departureTzForRoute(last.route)).ymd;
       if (start > lastYmd) return { kind: 'beyond_horizon' };
     }
   }
@@ -1012,7 +1039,7 @@ export function matchTallinkAlertSailings(
   const pool = sailings.filter((s) => {
     if (alert.vessel && s.vesselName !== alert.vessel) return false;
     if (alert.routes.length && !alert.routes.includes(s.route as FerryRoute)) return false;
-    if (!departureMatchesAlert(s.departureAt, alert)) return false;
+    if (!departureMatchesAlert(s.departureAt, alert, s.route)) return false;
     if (!alert.vessel && alert.routes.length === 0) return false;
     return true;
   });
@@ -1048,8 +1075,9 @@ export function matchTallinkRestoreSailings(
   if (alert.vessel) {
     const vesselSails = sailings.filter((s) => s.vesselName === alert.vessel);
     if (vesselSails.length > 0) {
-      const lastMs = Math.max(...vesselSails.map((s) => Date.parse(s.departureAt)));
-      const lastYmd = tallinnYmdHm(new Date(lastMs).toISOString()).ymd;
+      const last = vesselSails.reduce((a, b) =>
+        Date.parse(a.departureAt) >= Date.parse(b.departureAt) ? a : b);
+      const lastYmd = ymdHmInTz(last.departureAt, departureTzForRoute(last.route)).ymd;
       if (start > lastYmd) return { kind: 'beyond_horizon' };
     }
   }
@@ -1057,7 +1085,7 @@ export function matchTallinkRestoreSailings(
   const pool = sailings.filter((s) => {
     if (alert.vessel && s.vesselName !== alert.vessel) return false;
     if (alert.routes.length && !alert.routes.includes(s.route as FerryRoute)) return false;
-    if (!departureMatchesAlert(s.departureAt, alert)) return false;
+    if (!departureMatchesAlert(s.departureAt, alert, s.route)) return false;
     if (!alert.vessel && alert.routes.length === 0) return false;
     return true;
   });

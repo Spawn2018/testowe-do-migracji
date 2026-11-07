@@ -1,3 +1,9 @@
+## 2026-11-07 12:10 — DP-105 start (C4 / BN3)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500 w planie. Bez nowego `pilne`.
+- Scalanie: **#871 SCALONE** `266b50c4` (DP-102+103 F7 gotowe @ `8f84d80d`, CI unit/visual/db ✔). Bez push na main.
+- **Krok** C4 **DP-105**: Tallink Alert — `departureMatchesAlert` / beyond_horizon w TZ portu wypłynięcia (`departureTzForRoute`: STO/KPS→Stockholm, HEL→Helsinki, else Tallinn); test Victoria I 18:30 from Stockholm. Gałąź `pakiet/c4-dp-105-tallink-sto-tz`. Po F7: DP-106….
+
 ## 2026-11-07 11:45 — DP-102 F7 #871: bez Lisainfo w nocie (C4 / BN3)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500 w planie. Bez nowego `pilne`.
