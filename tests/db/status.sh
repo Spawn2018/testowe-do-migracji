@@ -3680,89 +3680,6 @@ else
   chk "DP-133: brak cron.job (stub) — gps-port OK" "select 1" 1
 fi
 
-# ---------------------------------------------------------------------------
-# DP-230 (#852): GPS w innym porcie niż rejs; ten sam ciągnik w 2 aktywnych.
-# UUID / vessel z numerem 230; daty poza zakresami DP-131.
-# ---------------------------------------------------------------------------
-S230a=77777777-0000-0000-0000-00000000230a
-S230b=77777777-0000-0000-0000-00000000230b
-L230a=55555555-0000-0000-0000-00000000230a
-L230b=55555555-0000-0000-0000-00000000230b
-L230c=55555555-0000-0000-0000-00000000230c
-L230d=55555555-0000-0000-0000-00000000230d
-V230=66666666-0000-0000-0000-000000000230
-q "insert into vessels (id, name, operator) values
- ('$V230', 'M/F Wawel 230', 'Polferries')
- on conflict (id) do nothing" >/dev/null
-# GDN-NYN odpływa 18:00Z; GDY-KAA 19:30Z — okno 6 h
-q "insert into sailings (id, project_id, vessel_id, route, departure_at, arrival_at, status, source) values
-   ('$S230a', '$P', '$V230', 'GDN-NYN',
-    '2026-11-06 18:00+00', '2026-11-07 12:00+00', 'ZAPLANOWANY', 'POLFERRIES'),
-   ('$S230b', '$P', '$V230', 'GDY-KAA',
-    '2026-11-06 19:30+00', '2026-11-07 10:00+00', 'ZAPLANOWANY', 'STENA')" >/dev/null
-chk "DP-230: fikstura rejsów GDN-NYN + GDY-KAA" \
-  "select count(*) from sailings where id in ('$S230a','$S230b')" 2
-# load A: rejs GDN, GPS w Gdyni (54.53321, 18.54425) — ~0 km GDY, daleko od GDN
-q "insert into loads (id,project_id,carrier_org_id,order_no,hhl_order_no,carrier_order_no,status,sailing_id,plan_load_date,plan_delivery_date,telematics_vehicle_id,tractor_plate)
-   values ('$L230a','$P','$SCXO','KSH/230A','HHL/230A','SCX/230A','IN_TRANSIT_PL','$S230a',
-    '2026-11-05','2026-11-08','TEL-230A','PO 230AA')" >/dev/null
-q "insert into load_events (load_id, event_type, occurred_at) values
- ('$L230a','MILESTONE_LOADED','2026-11-05 08:00+00');
- insert into positions (load_id, ts, geom_raw, source) values
- ('$L230a', '2026-11-06 17:00+00',
-  st_setsrid(st_makepoint(18.54425, 54.53321), 4326), 'TELEMATICS_API')" >/dev/null
-q "select public.detect_gps_wrong_ferry_port('2026-11-06 17:05+00')" >/dev/null
-chk "DP-230: GPS Gdynia + rejs GDN → GPS_WRONG_PORT HIGH" \
-  "select count(*)||'/'||max(severity::text)||'/'||max(title_key)
-     from risk_signals
-    where load_id='$L230a' and dedup_key like 'GPS_WRONG_PORT:%' and resolved_at is null" \
-  "1/HIGH/rk_gps_wrong_ferry_port"
-chk "DP-230: audience HHL_PRZEWOZNIK" \
-  "select audience::text from risk_signals
-    where load_id='$L230a' and dedup_key like 'GPS_WRONG_PORT:%' and resolved_at is null" \
-  HHL_PRZEWOZNIK
-# load B: rejs GDN, GPS w Gdańsku — brak ryzyka
-q "insert into loads (id,project_id,carrier_org_id,order_no,hhl_order_no,carrier_order_no,status,sailing_id,plan_load_date,plan_delivery_date,telematics_vehicle_id,tractor_plate)
-   values ('$L230b','$P','$SCXO','KSH/230B','HHL/230B','SCX/230B','IN_TRANSIT_PL','$S230a',
-    '2026-11-05','2026-11-08','TEL-230B','PO 230BB')" >/dev/null
-q "insert into load_events (load_id, event_type, occurred_at) values
- ('$L230b','MILESTONE_LOADED','2026-11-05 08:00+00');
- insert into positions (load_id, ts, geom_raw, source) values
- ('$L230b', '2026-11-06 17:00+00',
-  st_setsrid(st_makepoint(18.68130, 54.40372), 4326), 'TELEMATICS_API')" >/dev/null
-q "select public.detect_gps_wrong_ferry_port('2026-11-06 17:05+00')" >/dev/null
-chk "DP-230: GPS Gdańsk + rejs GDN → 0 GPS_WRONG_PORT" \
-  "$(rk $L230b GPS_WRONG_PORT)" 0
-# ciągnik overlap: L230c + L230d ta sama tablica, nakładające się daty
-q "insert into loads (id,project_id,carrier_org_id,order_no,hhl_order_no,carrier_order_no,status,sailing_id,plan_load_date,plan_delivery_date,telematics_vehicle_id,tractor_plate)
-   values
-   ('$L230c','$P','$SCXO','KSH/230C','HHL/230C','SCX/230C','IN_TRANSIT_PL','$S230a',
-    '2026-11-05','2026-11-09','TEL-230C','PO 1X230'),
-   ('$L230d','$P','$SCXO','KSH/230D','HHL/230D','SCX/230D','IN_TRANSIT_PL','$S230b',
-    '2026-11-06','2026-11-10','TEL-230D','po-1x230')" >/dev/null
-q "select public.detect_tractor_plate_overlap('2026-11-06 18:00+00')" >/dev/null
-chk "DP-230: ten sam ciągnik → 2× TRACTOR_OVERLAP" \
-  "select count(*) from risk_signals
-    where dedup_key like 'TRACTOR_OVERLAP:PO1X230:%' and resolved_at is null" 2
-chk "DP-230: title_key rk_tractor_plate_overlap" \
-  "select count(*) from risk_signals
-    where load_id in ('$L230c','$L230d') and title_key='rk_tractor_plate_overlap' and resolved_at is null" 2
-# bez nakładania dat — zamknięcie
-q "update loads set plan_load_date='2026-12-01', plan_delivery_date='2026-12-05' where id='$L230d'" >/dev/null
-q "select public.detect_tractor_plate_overlap('2026-11-06 18:10+00')" >/dev/null
-chk "DP-230: bez nakładania dat → 0 TRACTOR_OVERLAP" \
-  "select count(*) from risk_signals
-    where dedup_key like 'TRACTOR_OVERLAP:PO1X230:%' and resolved_at is null" 0
-if [ "$(q "select to_regclass('cron.job') is not null")" = "t" ]; then
-  chk "DP-230: cron tower-gps-wrong-port" \
-    "select count(*) from cron.job where jobname='tower-gps-wrong-port' and command ilike '%detect_gps_wrong_ferry_port%'" 1
-  chk "DP-230: cron tower-tractor-overlap" \
-    "select count(*) from cron.job where jobname='tower-tractor-overlap' and command ilike '%detect_tractor_plate_overlap%'" 1
-else
-  chk "DP-230: brak cron.job (stub) — gps-port OK" "select 1" 1
-  chk "DP-230: brak cron.job (stub) — tractor OK" "select 1" 1
-fi
-
 # DP-136 (F7 #708 r1 / F7 #712 r1): przepięcie — ląd SE|FI.
 # DP-2: bez pg_get_functiondef like — propose + assign rollback (FI).
 # Osobny vessel — …0001+2026-10-12 12:00 już zajęte przez S649o (unique vessel+departure).
@@ -4531,6 +4448,37 @@ chk "DP-230: bez nakładki okien → 0 TRACTOR_DUP" \
   "select count(*) from risk_signals
     where dedup_key like 'TRACTOR_DUP:%' and resolved_at is null
       and load_id in ('$L230c','$L230d')" 0
+# ATD + GPS w obcym porcie → bez FERRY + ryzyko (komentarz #852)
+L230e=55555555-0000-0000-0000-00000000230e
+L230f=55555555-0000-0000-0000-00000000230f
+S230e=77777777-0000-0000-0000-00000000230e
+S230f=77777777-0000-0000-0000-00000000230f
+q "insert into sailings (id, project_id, vessel_id, route, departure_at, arrival_at,
+    actual_departure_at, status, source) values
+  ('$S230e', '$P', '$V230', 'GDY-KAA',
+   '2026-11-10 18:00+00', '2026-11-11 04:00+00',
+   '2026-11-10 18:05+00', 'W_REJSIE', 'STENA'),
+  ('$S230f', '$P', '$V230', 'GDY-KAA',
+   '2026-11-10 20:00+00', '2026-11-11 06:00+00',
+   '2026-11-10 20:05+00', 'W_REJSIE', 'STENA')
+ on conflict (id) do nothing" >/dev/null
+mk $L230e E230 "'HHL/E230'" "'SCX/E230'" IN_TRANSIT_PL "'$S230e'"
+q "insert into load_events (load_id, event_type, occurred_at) values
+ ('$L230e','MILESTONE_LOADED','2026-11-10 08:00+00');
+ -- GPS w Gdańsku (POLFERRIES) przed ATD Steny
+ insert into positions (load_id, ts, geom_raw, source) values
+ ('$L230e', '2026-11-10 17:50+00',
+  st_setsrid(st_makepoint(18.6800, 54.4030), 4326), 'TELEMATICS_API')" >/dev/null
+q "select public.promote_ferry_departures('2026-11-10 18:10+00')" >/dev/null
+chk "DP-230: ATD + GPS obcy port → bez FERRY" "$(st $L230e)" IN_TRANSIT_PL
+chk "DP-230: ATD + obcy GPS → GPS_WRONG_PORT" \
+  "$(rk $L230e GPS_WRONG_PORT)" 1
+# brak GPS przed odejściem → FERRY jak dotąd
+mk $L230f F230 "'HHL/F230'" "'SCX/F230'" IN_TRANSIT_PL "'$S230f'"
+q "insert into load_events (load_id, event_type, occurred_at) values
+ ('$L230f','MILESTONE_LOADED','2026-11-10 08:00+00')" >/dev/null
+q "select public.promote_ferry_departures('2026-11-10 20:10+00')" >/dev/null
+chk "DP-230: ATD + brak GPS → FERRY" "$(st $L230f)" FERRY
 if [ "$(q "select to_regclass('cron.job') is not null")" = "t" ]; then
   chk "DP-230: cron tower-gps-wrong-port" \
     "select count(*) from cron.job where jobname='tower-gps-wrong-port' and command ilike '%detect_gps_wrong_ferry_port%'" 1

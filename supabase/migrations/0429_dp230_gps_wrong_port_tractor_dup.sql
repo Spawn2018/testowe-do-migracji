@@ -1,9 +1,11 @@
--- DP-230 (#852): ostrzeżenia (tylko sygnał, bez auto-zmian zlecenia):
+-- DP-230 (#852): ostrzeżenia (bez auto-zmiany przypisania rejsu):
 -- 1) GPS w geostrefie PORT_OUT innego armatora/trasy niż port wyjścia przypisanego rejsu
 --    (okno od dep−6 h, status przed FERRY);
 -- 2) ta sama tractor_plate (telm_norm_plate) w ≥2 aktywnych zleceniach z nakładającymi się oknami;
 -- 3) flaga ETA „przypisany rejs odpłynął bez transportu” dostaje towarzyszący tekst GPS, gdy
---    otwarte GPS_WRONG_PORT (nie zostaje sama).
+--    otwarte GPS_WRONG_PORT (nie zostaje sama);
+-- 4) promote_ferry_departures → FERRY po ATD tylko gdy brak GPS przed odejściem albo GPS
+--    w PORT_OUT portu wyjścia rejsu; inaczej ryzyko + bez FERRY (bez podmiany na AIS).
 
 begin;
 
@@ -399,7 +401,192 @@ begin
 end $$;
 
 -- ---------------------------------------------------------------------------
--- 4) Cron — osobne joby (jak DP-133: jedna awaria nie wycofuje drugiej)
+-- 4) FERRY po ATD tylko przy GPS w porcie wyjścia (lub brak GPS przed odejściem)
+-- ---------------------------------------------------------------------------
+create or replace function public.gps_allows_ferry_promote(
+  p_load_id uuid,
+  p_sail_route text,
+  p_dep timestamptz
+) returns boolean
+language plpgsql
+security definer
+set search_path to 'public', 'extensions'
+as $function$
+declare
+  v_project uuid;
+  v_sailing uuid;
+  v_geom geometry;
+  v_in_own boolean;
+  v_foreign record;
+  v_dep_port text;
+  v_gps_port text;
+  v_code text;
+  v_title text;
+  v_params jsonb;
+  v_dedup text;
+begin
+  if p_load_id is null or p_dep is null then
+    return true;
+  end if;
+
+  select l.project_id, l.sailing_id
+    into v_project, v_sailing
+    from public.loads l
+   where l.id = p_load_id;
+
+  select p.geom_raw::geometry
+    into v_geom
+    from public.positions p
+   where p.load_id = p_load_id
+     and p.ts <= p_dep
+     and coalesce((p.raw->>'stale_point')::boolean, false) is not true
+   order by p.ts desc
+   limit 1;
+
+  -- Brak GPS przed odejściem → jak dotąd (AIS / rozkład).
+  if v_geom is null then
+    return true;
+  end if;
+
+  select exists (
+    select 1
+      from public.geofences g
+     where g.project_id = v_project
+       and g.active
+       and g.kind = 'PORT_OUT'
+       and st_contains(g.geom, v_geom)
+       and public.ferry_geofence_matches_route(g.route, p_sail_route) is true
+  ) into v_in_own;
+
+  if v_in_own is true then
+    return true;
+  end if;
+
+  -- GPS w obcym PORT_OUT → ryzyko (HHL+SCX); bez FERRY / bez AIS na mapie.
+  select g.route as gps_route,
+         g.name as gps_fence_name,
+         g.country as gps_country,
+         pf.code as dep_port_code,
+         pf.name as dep_port_name
+    into v_foreign
+    from public.geofences g
+    left join public.ferry_routes fr
+      on fr.code = upper(btrim(p_sail_route)) and fr.active
+    left join public.ferry_ports pf on pf.code = fr.port_from
+   where g.project_id = v_project
+     and g.active
+     and g.kind = 'PORT_OUT'
+     and st_contains(g.geom, v_geom)
+     and public.ferry_geofence_matches_route(g.route, p_sail_route) is not true
+   order by g.name
+   limit 1;
+
+  -- GPS poza PORT_OUT (droga / morze) — bez blokady (jak #461 AIS/SCHEDULE).
+  if v_foreign.gps_route is null then
+    return true;
+  end if;
+
+  if v_sailing is not null then
+    v_dedup := 'GPS_WRONG_PORT:' || p_load_id || ':' || v_sailing;
+    if not exists (
+      select 1 from public.risk_signals
+       where dedup_key = v_dedup and resolved_at is not null
+    ) then
+      v_dep_port := coalesce(
+        nullif(btrim(v_foreign.dep_port_name), ''),
+        nullif(btrim(v_foreign.dep_port_code), ''),
+        'rejsu'
+      );
+      v_gps_port := case
+        when upper(coalesce(v_foreign.gps_route, '')) in ('POLFERRIES', 'GDN-NYN')
+             and v_foreign.gps_country = 'PL'
+          then 'Gdańsk'
+        when upper(coalesce(v_foreign.gps_route, '')) in ('STENA', 'GDY-KAA')
+             and v_foreign.gps_country = 'PL'
+          then 'Gdynia'
+        else coalesce(nullif(btrim(v_foreign.gps_fence_name), ''), 'innym')
+      end;
+      v_code := coalesce(
+        nullif(nullif(btrim(public.load_sms_code(p_load_id)), ''), '—'),
+        'transport'
+      );
+      v_params := jsonb_build_object(
+        'code', v_code,
+        'gps_port', v_gps_port,
+        'dep_port', v_dep_port
+      );
+      v_title := format(
+        'GPS w porcie %s, rejs z portu %s — sprawdź przydział',
+        v_gps_port, v_dep_port
+      );
+      perform public.raise_risk(
+        p_load_id, 'FERRY', 'HIGH', v_title,
+        jsonb_build_object(
+          'sailing_id', v_sailing,
+          'title_key', 'rk_gps_wrong_port',
+          'params', v_params,
+          'audience', 'HHL_PRZEWOZNIK',
+          'gps_route', v_foreign.gps_route,
+          'sail_route', p_sail_route,
+          'dep', p_dep,
+          'source', 'promote_ferry_departures'
+        ),
+        v_dedup
+      );
+    end if;
+  end if;
+
+  return false;
+end $function$;
+
+revoke all on function public.gps_allows_ferry_promote(uuid, text, timestamptz)
+  from public, anon, authenticated;
+grant execute on function public.gps_allows_ferry_promote(uuid, text, timestamptz)
+  to service_role;
+comment on function public.gps_allows_ferry_promote(uuid, text, timestamptz) is
+  'DP-230: FERRY po ATD — blokada gdy GPS w obcym PORT_OUT (rk_gps_wrong_port); brak GPS / port własny / poza portem — jak #461.';
+
+do $$
+declare
+  v_def text;
+  v_new text;
+  v_old text := $o$    if r.status = 'FERRY' then
+      continue;
+    end if;
+
+    /* #461: bez dzwonka przy AIS / SCHEDULE_ASSUMED (trg_load_status_matrix_notify × bulk_quiet). */
+    v_prev := current_setting('tower.bulk_quiet', true);$o$;
+  v_rep text := $r$    if r.status = 'FERRY' then
+      continue;
+    end if;
+
+    -- DP-230 (#852): bez FERRY gdy ostatni GPS przed odejściem nie jest w porcie wyjścia.
+    if public.gps_allows_ferry_promote(r.load_id, r.sailing_route, v_dep) is not true then
+      continue;
+    end if;
+
+    /* #461: bez dzwonka przy AIS / SCHEDULE_ASSUMED (trg_load_status_matrix_notify × bulk_quiet). */
+    v_prev := current_setting('tower.bulk_quiet', true);$r$;
+begin
+  if to_regprocedure('public.promote_ferry_departures(timestamptz)') is null then
+    raise exception 'DP-230 0429: brak promote_ferry_departures';
+  end if;
+  v_def := pg_get_functiondef('public.promote_ferry_departures(timestamptz)'::regprocedure);
+  if position('gps_allows_ferry_promote' in v_def) > 0 then
+    return;
+  end if;
+  if position(v_old in v_def) = 0 then
+    raise exception 'DP-230 0429: nie znaleziono miejsca wstawienia gps_allows_ferry_promote';
+  end if;
+  v_new := replace(v_def, v_old, v_rep);
+  if position('gps_allows_ferry_promote' in v_new) = 0 then
+    raise exception 'DP-230 0429: podmiana promote_ferry_departures nie weszła';
+  end if;
+  execute v_new;
+end $$;
+
+-- ---------------------------------------------------------------------------
+-- 5) Cron — osobne joby (jak DP-133: jedna awaria nie wycofuje drugiej)
 -- ---------------------------------------------------------------------------
 do $cron230$
 begin

@@ -1,3 +1,21 @@
+## 2026-11-07 08:50 — DP-230: blokada FERRY + testy (C4)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: brak otwartego PR F7. Bez push na main.
+- **Krok** C4 **DP-230** (#852): `gps_allows_ferry_promote` w `promote_ferry_departures` (ATD + obcy PORT_OUT → bez FERRY + ryzyko); usunięty sprzeczny blok testów; status +13 (**0429**). Gałąź `pakiet/c4-dp-230-gps-port-tractor-warn`. Czekam CI→F7. Po F7: DP-102….
+
+## 2026-11-07 08:50 — DP-230: blokada FERRY + testy (C4)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: brak otwartego PR F7. Bez push na main.
+- **Krok** C4 **DP-230** (#852): `gps_allows_ferry_promote` w `promote_ferry_departures` (ATD + obcy PORT_OUT → bez FERRY + ryzyko); usunięty sprzeczny blok testów; status +13 (**0429**). Gałąź `pakiet/c4-dp-230-gps-port-tractor-warn`. Czekam CI→F7. Po F7: DP-102….
+
+## 2026-11-07 08:50 — DP-230: blokada FERRY + testy (C4)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: brak otwartego PR F7. Bez push na main.
+- **Krok** C4 **DP-230** (#852): `gps_allows_ferry_promote` w `promote_ferry_departures` (ATD + obcy PORT_OUT → bez FERRY + ryzyko); usunięty sprzeczny blok testów; status +13 (**0429**). Gałąź `pakiet/c4-dp-230-gps-port-tractor-warn`. Czekam CI→F7. Po F7: DP-102….
+
 ## 2026-11-07 08:40 — #869 SCALONE; start DP-230 (C4)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
