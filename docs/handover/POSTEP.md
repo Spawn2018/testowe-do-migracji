@@ -1,3 +1,9 @@
+## 2026-11-07 20:28 — #882 SCALONE; start DP-115 (C4 / Stena IRM backoff)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608 w planie. Bez nowego `pilne` do budowy.
+- Scalanie: **#882 SCALONE** `c6200559` (DP-117+118 F7: gotowe @ `96e1a45d`; CI unit/visual/db ✔). `deploy-main` robi resztę. Bez push na main.
+- **Krok** C4 **DP-115**: `stena_irm_backoff_until` w wyniku `ferry-ais` + hydrate z `recentJobResults` (zimny start Edge); `clearStenaIrmBackoff` w testach; vitest dp115. Gałąź `pakiet/c4-dp-115-stena-irm-backoff`. Bez migracji.
+
 ## 2026-11-07 20:00 — #881 SCALONE; start DP-117+118 (C4 / max_rows)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608 w planie. Bez nowego `pilne` do budowy.

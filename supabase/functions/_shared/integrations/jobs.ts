@@ -589,6 +589,11 @@ export interface JobResult {
   /** F7 #689 R1-B3 / DP-114: niepełna pula Tallink Alert — streak SOURCE_DOWN z integration_runs. */
   tallink_alert_incomplete?: boolean;
   /**
+   * DP-115 / F7 #689: Stena IRM 403/429 — ISO do kiedy nie wołać IRM
+   * (persist w integration_runs; zimny start Edge nie resetuje okna).
+   */
+  stena_irm_backoff_until?: string;
+  /**
    * DP-187: początek przebiegu (ISO) — `runJob` liczy odstęp od startu, nie od `ran_at`
    * (wolny Tark Tee ~90 s nie pomija następnego crona co 15 min).
    */
@@ -3628,20 +3633,39 @@ export const AIS_ARRIVAL_PORT_LABEL: Readonly<Record<string, string>> = {
   KPS: 'Kapellskär',
 };
 
-/** Wycofanie Stena IRM po 403/429 — bez SOURCE_DOWN przy każdym przebiegu (F7).
- *  DP-115: ten sam wzorzec stanu w pamięci modułu co dawny streak Tallink — ocenić osobno. */
+/** DP-115: wycofanie Stena IRM po 403/429 — 15 min bez SOURCE_DOWN przy każdym przebiegu. */
+export const STENA_IRM_BACKOFF_MS = 15 * 60_000;
+
+/** Pamięć izolatu + hydrate z integration_runs (zimny start Edge). */
 let stenaIrmBackoffUntilMs = 0;
 
+/** Testy DP-115: wyczyść backoff w pamięci (symulacja zimnego startu Edge). */
+export function clearStenaIrmBackoff(): void {
+  stenaIrmBackoffUntilMs = 0;
+}
+
+/** DP-115: przywróć okno z ostatniego ferry-ais, gdy pamięć izolatu jest pusta/wygasła. */
+async function hydrateStenaIrmBackoff(deps: JobDeps, nowMs: number): Promise<void> {
+  if (nowMs < stenaIrmBackoffUntilMs) return;
+  if (!deps.store.recentJobResults) return;
+  const recent = await deps.store.recentJobResults('ferry-ais', 1);
+  const until = recent[0]?.stena_irm_backoff_until;
+  if (typeof until !== 'string') return;
+  const ms = Date.parse(until);
+  if (Number.isFinite(ms) && ms > nowMs) stenaIrmBackoffUntilMs = ms;
+}
+
 async function readStenaIrm(deps: JobDeps, nowMs: number): Promise<{ fixes: VesselFix[]; warning: string | null; suppressRisk?: boolean }> {
+  await hydrateStenaIrmBackoff(deps, nowMs);
   if (nowMs < stenaIrmBackoffUntilMs) {
     return { fixes: [], warning: null, suppressRisk: true };
   }
   const r = await readText(deps, STENA_FERRIES_URL, { headers: { 'User-Agent': STENA_IRM_UA, Accept: 'application/json' } });
   if (!r.ok) {
     if (/HTTP 403|HTTP 429/.test(r.warning)) {
-      const wasBacking = nowMs < stenaIrmBackoffUntilMs;
-      stenaIrmBackoffUntilMs = nowMs + 15 * 60_000;
-      return { fixes: [], warning: r.warning, suppressRisk: wasBacking };
+      stenaIrmBackoffUntilMs = nowMs + STENA_IRM_BACKOFF_MS;
+      /* Pierwszy 403/429 w oknie → SOURCE_DOWN; kolejne przebiegi w oknie nie dochodzą tu (early return). */
+      return { fixes: [], warning: r.warning, suppressRisk: false };
     }
     return { fixes: [], warning: r.warning };
   }
@@ -3930,7 +3954,19 @@ export async function runFerryAis(deps: JobDeps): Promise<JobResult> {
   await deps.store.recordRun('ferry-departures', true, {
     job: 'ferry-departures', mode: 'LIVE', ok: true, departures, observations,
   });
-  return { job: 'ferry-ais', mode: 'LIVE', ok: true, risks, warnings, observations, departures };
+  return {
+    job: 'ferry-ais',
+    mode: 'LIVE',
+    ok: true,
+    risks,
+    warnings,
+    observations,
+    departures,
+    /* DP-115: okno 403/429 w wyniku — kolejny zimny start Edge czyta recentJobResults. */
+    stena_irm_backoff_until: stenaIrmBackoffUntilMs > nowD.getTime()
+      ? new Date(stenaIrmBackoffUntilMs).toISOString()
+      : undefined,
+  };
 }
 
 /** ferry-ais-listen — AIS-POLF (05.10). Nasłuch aisstream co minutę przez ~50 s (limit ścienny funkcji Edge
