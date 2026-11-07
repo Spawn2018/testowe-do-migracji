@@ -399,8 +399,8 @@ Dodatkowo `mapa-hhl-pl-1920-{light,dark-default}.png` z actual (light: 419199390
 Harmonogram III-2 (`visual-states`): 11√ó `stan-*.png` (najechanie/fokus/pusty √ó light+dark; wci≈õniƒôty/zablokowany/≈Çadowanie/b≈ÇƒÖd/walidacja dark) z `visual.yml` `update=true` run 41930872357 @ `318accc3` ‚Äî StageBar E28 na Harmonogramie 1440 (fail PR 41927587305: `stan-najechanie-dark`, 4277 px). Pozosta≈Çe z 15 smoke (pasek-na-promie = tracking bar, nie StageBar; awizacja/karty/drogi/pogoda/rejsy/ryzyka) bez zmian bajt w bajt. Matrycy 280/`shots-baseline` nie ruszano (P11).
 Wzorca `shots-baseline` nie zmieniano.
 
-## DP-233 (07.11.2026) ó Harmonogram: filtr Za≥adunki/Roz≥adunki
-Odúwieøone migawki Harmonogramu po dodaniu chipÛw Za≥adunki/Roz≥adunki ∑ Dziú/Jutro (`data-sched-day-filter` / `data-sched-day-row`).
-- `stan-najechanie-dark.png` ó actual z faila zrzutÛw PR #867 (run 42337181191 @ `06660ee6`, 3019 px).
-- `harmonogram-zaladunki-dzis-hhl-pl-1440-light.png` ó nowa migawka z aktywnym filtrem Za≥adunki ∑ Dziú (update run 42339397365 @ `b481e21e`); telefon 390 i pozosta≥e `stan-*` ó po kolejnym `visual.yml` `update=true`.
-Matrycy 280/`shots-baseline` nie ruszano (P11).
+## DP-233 (07.11.2026) ‚Äî Harmonogram: filtr Za≈Çadunki/Roz≈Çadunki
+Od≈õwie≈ºone migawki Harmonogramu po dodaniu chip√≥w Za≈Çadunki/Roz≈Çadunki ¬∑ Dzi≈õ/Jutro (data-sched-day-filter / data-sched-day-row).
+- 11√ó stan-*.png (III-2) + harmonogram-zaladunki-dzis-hhl-pl-{1440,390}-light.png z isual.yml update=true run 42343237066 @ 37bdedfc (ga≈ÇƒÖ≈∫ pakiet/c4-dp-233-harmonogram-zaladunki-rozladunki).
+Przyczyna: DP-233 (#861/#867) ‚Äî chipy dnia poza arkuszem filtr√≥w; lista bez zmiany wyglƒÖdu wierszy/kart.
+Pozosta≈Çe z 15 smoke (Kokpit, Mapa, karty, Ryzyka, Drogi, pogoda, Rejsy, pasek promu, awizacja) bez zmian bajt w bajt. Matrycy 280/shots-baseline nie ruszano (P11).
