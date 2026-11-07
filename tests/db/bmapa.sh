@@ -486,10 +486,11 @@ sys "insert into vessels (id, name, operator, mmsi) values
   ('$V234','M/F DP234','Polferries',999234001)
   on conflict (id) do update set name=excluded.name, mmsi=excluded.mmsi" >/dev/null
 sys "delete from vessel_positions where vessel_id='$V234'" >/dev/null
-# GDN @ −12 h, wyjście @ −11.75 h, potem 48 binów 15 min na morzu (środek Bałtyku) — świeże bez strefy.
+# GDN @ −12 h; wyjście @ −11.75 h POZA wszystkimi PORT_ZONES (54.55/18.50 padało w GDY r=5 km
+# → last_zone = „wyjście”, bez kotwicy GDN). Potem 48 binów 15 min na morzu — świeże bez strefy.
 sys "insert into vessel_positions (vessel_id, lat, lon, sog_kn, cog, observed_at, source) values
   ('$V234', 54.40, 18.67, 5, 10, now() - interval '12 hours', 'AISSTREAM'),
-  ('$V234', 54.55, 18.50, 12, 350, now() - interval '11 hours 45 minutes', 'AISSTREAM')" >/dev/null
+  ('$V234', 54.85, 18.30, 12, 350, now() - interval '11 hours 45 minutes', 'AISSTREAM')" >/dev/null
 sys "insert into vessel_positions (vessel_id, lat, lon, sog_kn, cog, observed_at, source)
      select '$V234', 56.0 + (g.i * 0.02), 18.0, 14, 170,
             now() - (g.i * 15 || ' minutes')::interval, 'AISSTREAM'
@@ -502,7 +503,7 @@ o=$(sys "begin; set local role authenticated; set local request.jwt.claim.sub='$
 if [ "$o" -ge 21 ] && [ "$o" -le 24 ]; then ok=$((ok+1)); echo "  OK    DP-234 sample z kotwicami ($o)"; else fail=$((fail+1)); echo "  FAIL  DP-234 sample count → $o (oczekiwano 21–24)"; fi
 o=$(sys "begin; set local role authenticated; set local request.jwt.claim.sub='$HHL_BM';
   select (bool_or(abs(lat - 54.40) < 0.01 and abs(lon - 18.67) < 0.01)
-      and bool_or(abs(lat - 54.55) < 0.01 and abs(lon - 18.50) < 0.01))::text
+      and bool_or(abs(lat - 54.85) < 0.01 and abs(lon - 18.30) < 0.01))::text
     from ferry_track_sample() where vessel_id='$V234'; commit;" \
   | grep -v -E '^(BEGIN|SET|COMMIT|ROLLBACK)$' | tail -1)
 if [ "$o" = "true" ]; then ok=$((ok+1)); echo "  OK    DP-234 kotwice GDN + wyjście w RPC"; else fail=$((fail+1)); echo "  FAIL  DP-234 kotwice → $o"; fi

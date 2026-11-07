@@ -1,3 +1,9 @@
+## 2026-11-07 18:56 — DP-234 r2: fixture poza GDY (C4 / B-MAPA)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608 w planie. Bez nowego `pilne` do budowy.
+- Scalanie: brak „F7: gotowe” — #881 CI db FAIL (`DP-234 kotwice → false`). Bez push na main.
+- **Krok** C4 **DP-234** r2: punkt wyjścia fixture 54.85/18.30 (poza GDN+GDY; 54.55/18.50 padało w GDY → `last_zone` bez GDN); EXPECTED bmapa **229**; vitest dp234 4/4. Gałąź `pakiet/c4-dp-234-ferry-zone-history`. Czekam CI→F7.
+
 ## 2026-11-07 18:15 — #880 SCALONE; start DP-234 (C4 / B-MAPA)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500 w planie. Bez nowego `pilne`.

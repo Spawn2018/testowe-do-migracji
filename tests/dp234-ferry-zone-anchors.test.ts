@@ -12,7 +12,8 @@ const at = (h: number) => `2026-11-07T${String(h).padStart(2, '0')}:00:00.000Z`;
 describe('DP-234 ferry zone anchors / Q-18', () => {
   it('długi GDN→morze: same 5 h morza → COG; + kotwice strefy = faza jak pełna historia', () => {
     const gdn: TrackFix = { id: 'v', lat: 54.4, lng: 18.67, ts: at(0), cog: 10 };
-    const firstOut: TrackFix = { id: 'v', lat: 54.55, lng: 18.5, ts: at(1), cog: 350 };
+    /* Poza GDN (r=6) i GDY (r=5) — jak fixture bmapa DP-234. */
+    const firstOut: TrackFix = { id: 'v', lat: 54.85, lng: 18.3, ts: at(1), cog: 350 };
     /* 12 h rejsu — ostatnie 5 h bez strefy (jak limit DP-231). */
     const sea: TrackFix[] = Array.from({ length: 12 }, (_, i) => ({
       id: 'v',
@@ -61,7 +62,7 @@ describe('DP-234 ferry zone anchors / Q-18', () => {
       },
       {
         vessel_id: 'v1', name: 'Nova', mmsi: 1,
-        lat: 54.55, lon: 18.5, observed_at: at(1), cog: 350, sog_kn: 14,
+        lat: 54.85, lon: 18.3, observed_at: at(1), cog: 350, sog_kn: 14,
       },
       {
         vessel_id: 'v1', name: 'Nova', mmsi: 1,
