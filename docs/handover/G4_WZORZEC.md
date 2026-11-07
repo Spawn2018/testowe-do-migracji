@@ -398,3 +398,9 @@ Przyczyna: DP-215 (#798) â€” kafelki paska E28: Droga do portu / Port wyjÅ›cia /
 Dodatkowo `mapa-hhl-pl-1920-{light,dark-default}.png` z actual (light: 41919939041 @ `e02f7e42`, 2047 px; dark: 41924308018 @ `b13d126e`, 2060 px) â€” StageBar E28 na Mapie.
 Harmonogram III-2 (`visual-states`): 11Ã— `stan-*.png` (najechanie/fokus/pusty Ã— light+dark; wciÅ›niÄ™ty/zablokowany/Å‚adowanie/bÅ‚Ä…d/walidacja dark) z `visual.yml` `update=true` run 41930872357 @ `318accc3` â€” StageBar E28 na Harmonogramie 1440 (fail PR 41927587305: `stan-najechanie-dark`, 4277 px). PozostaÅ‚e z 15 smoke (pasek-na-promie = tracking bar, nie StageBar; awizacja/karty/drogi/pogoda/rejsy/ryzyka) bez zmian bajt w bajt. Matrycy 280/`shots-baseline` nie ruszano (P11).
 Wzorca `shots-baseline` nie zmieniano.
+
+## DP-233 (07.11.2026) — Harmonogram: filtr Za³adunki/Roz³adunki
+Odœwie¿one migawki Harmonogramu po dodaniu chipów Za³adunki/Roz³adunki · Dziœ/Jutro (`data-sched-day-filter` / `data-sched-day-row`).
+- `stan-najechanie-dark.png` — actual z faila zrzutów PR #867 (run 42337181191 @ `06660ee6`, 3019 px).
+- `harmonogram-zaladunki-dzis-hhl-pl-1440-light.png` — nowa migawka z aktywnym filtrem Za³adunki · Dziœ (update run 42339397365 @ `b481e21e`); telefon 390 i pozosta³e `stan-*` — po kolejnym `visual.yml` `update=true`.
+Matrycy 280/`shots-baseline` nie ruszano (P11).

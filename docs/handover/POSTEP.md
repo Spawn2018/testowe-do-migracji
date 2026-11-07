@@ -1,3 +1,9 @@
+## 2026-11-07 05:55 — DP-233: poprawka visual (C4)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne` do wykonania.
+- Scalanie: brak „F7: gotowe” na #867 (visual zrzuty FAIL — nowe chipy Harmonogramu). Bez push na main.
+- **Krok** C4 **DP-233** (#867): test visual filtra Załadunki (1440+390), fokus `data-quick`; migawka `stan-najechanie-dark` + 1440 filtra; `update=true` po push (reszta `stan-*` + 390). Gałąź `pakiet/c4-dp-233-harmonogram-zaladunki-rozladunki`.
+
 ## 2026-11-07 04:50 — #866 SCALONE; start DP-233 (C4)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne` do wykonania.
