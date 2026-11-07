@@ -65,6 +65,11 @@ export const CANCEL_SUSPECT_SAILING_IN_BATCH = 150;
 export const SAILING_CANCELLED_RISK_PAGE_SIZE = SAILINGS_PAGE_SIZE;
 export const SAILING_CANCELLED_RISK_MAX_PAGES = SAILINGS_MAX_PAGES;
 export const SAILING_CANCELLED_LOAD_IN_BATCH = CANCEL_SUSPECT_SAILING_IN_BATCH;
+/** DP-118 / F7 #693 r1: resolveStaleRisks — ten sam limit stron co sailings. */
+export const RISK_STALE_PAGE_SIZE = SAILINGS_PAGE_SIZE;
+export const RISK_STALE_MAX_PAGES = SAILINGS_MAX_PAGES;
+/** DP-118: `.in('id', …)` przy zamykaniu starych ryzyk — unikaj za długiego URL. */
+export const RISK_STALE_UPDATE_BATCH = CANCEL_SUSPECT_SAILING_IN_BATCH;
 
 type SailingCancelledRiskPageQuery = {
   select: (cols: string) => SailingCancelledRiskPageQuery;
@@ -141,6 +146,17 @@ type RiskDedupPageQuery = {
   }>;
 };
 
+type RiskIdDedupPageQuery = {
+  select: (cols: string) => RiskIdDedupPageQuery;
+  like: (col: string, val: string) => RiskIdDedupPageQuery;
+  is: (col: string, val: null) => RiskIdDedupPageQuery;
+  order: (col: string, opts?: { ascending?: boolean }) => RiskIdDedupPageQuery;
+  range: (from: number, to: number) => Promise<{
+    data: { id: string; dedup_key: string | null }[] | null;
+    error: { message: string } | null;
+  }>;
+};
+
 type SailingsByIdQuery = {
   select: (cols: string) => SailingsByIdQuery;
   in: (col: string, vals: string[]) => Promise<{ data: DbSailing[] | null; error: { message: string } | null }>;
@@ -176,6 +192,50 @@ export async function fetchSailingsSincePaged(
       await q.order('departure_at').order('id').range(from, from + pageSize - 1),
       'sailings page',
     ) as DbSailing[];
+    for (const row of r) {
+      if (seen.has(row.id)) continue;
+      seen.add(row.id);
+      out.push(row);
+    }
+    if (r.length < pageSize) break;
+    from += pageSize;
+  }
+  return out;
+}
+
+/**
+ * DP-118 / F7 #693 r1: otwarte ryzyka po prefiksie dedup ze stronicowaniem (max_rows=1000).
+ * Page cap / błąd → throw (nie ciche obcięcie → część starych ryzyk zostaje otwarta).
+ */
+export async function fetchOpenRiskIdDedupPaged(
+  fromTable: () => RiskIdDedupPageQuery,
+  likePattern: string,
+  opts?: {
+    pageSize?: number;
+    must?: <T>(r: { data: T; error: { message: string } | null }, what: string) => T;
+  },
+): Promise<{ id: string; dedup_key: string | null }[]> {
+  const pageSize = opts?.pageSize ?? RISK_STALE_PAGE_SIZE;
+  const mustFn = opts?.must ?? (<T>(r: { data: T; error: { message: string } | null }, what: string): T => {
+    if (r.error) throw new Error(`${what}: ${r.error.message}`);
+    return r.data;
+  });
+  const out: { id: string; dedup_key: string | null }[] = [];
+  const seen = new Set<string>();
+  let from = 0;
+  for (;;) {
+    if (from >= RISK_STALE_MAX_PAGES * pageSize) {
+      throw new Error('resolve-stale risk page cap exceeded');
+    }
+    const r = mustFn(
+      await fromTable()
+        .select('id,dedup_key')
+        .like('dedup_key', likePattern)
+        .is('resolved_at', null)
+        .order('id')
+        .range(from, from + pageSize - 1),
+      'risk_signals resolve-stale page',
+    ) as { id: string; dedup_key: string | null }[];
     for (const row of r) {
       if (seen.has(row.id)) continue;
       seen.add(row.id);
@@ -538,13 +598,27 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
       return r.length;
     },
     async resolveStaleRisks(dedupPrefix: string, keepDedup: string[]) {
+      // DP-118: range+order (max_rows=1000); zamknięcie `.in` w paczkach.
       const like = `${dedupPrefix.replace(/[%_]/g, (c) => `\\${c}`)}%`;
-      const rows = must(await sb.from('risk_signals').select('id,dedup_key').like('dedup_key', like).is('resolved_at', null), 'risk_signals stale') as { id: string; dedup_key: string | null }[];
+      const rows = await fetchOpenRiskIdDedupPaged(
+        () => sb.from('risk_signals') as RiskIdDedupPageQuery,
+        like,
+        { must },
+      );
       const keep = new Set(keepDedup);
       const drop = rows.filter((row) => row.dedup_key && !keep.has(row.dedup_key)).map((row) => row.id);
       if (!drop.length) return 0;
-      const updated = must(await sb.from('risk_signals').update({ resolved_at: new Date().toISOString() }).in('id', drop).is('resolved_at', null).select('id'), 'risk_signals resolve stale') as unknown[];
-      return updated.length;
+      let n = 0;
+      const nowIso = new Date().toISOString();
+      for (let i = 0; i < drop.length; i += RISK_STALE_UPDATE_BATCH) {
+        const chunk = drop.slice(i, i + RISK_STALE_UPDATE_BATCH);
+        const updated = must(
+          await sb.from('risk_signals').update({ resolved_at: nowIso }).in('id', chunk).is('resolved_at', null).select('id'),
+          'risk_signals resolve stale',
+        ) as unknown[];
+        n += updated.length;
+      }
+      return n;
     },
     /**
      * DP-187 / F7 #765 A: kotwica = `result.started_at` (fallback `ran_at`).

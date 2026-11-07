@@ -5,6 +5,7 @@
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import { isServiceRequest } from '../_shared/serviceAuth.ts';
 import { numOrNull, runRouteCheck, type LegName, type SetDims } from '../_shared/here/routeCheck.ts';
+import { fetchRouteCheckLoadRowsPaged } from '../_shared/here/routeCheckLoads.ts';
 
 Deno.serve(async (req: Request) => {
   const service = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
@@ -23,11 +24,8 @@ Deno.serve(async (req: Request) => {
         return data === true;
       },
       async loads() {
-        const { data, error } = await sb
-          .from('loads')
-          .select('id, combo_height_m, combo_width_m, combo_length_m, combo_weight_t, combo_axle_count, combo_axle_load_t, sailings(route)')
-          .limit(500);
-        if (error || !data) return [];
+        // DP-117: range+order+bez terminalnych (zamiast limitu 500 = losowy podzbiór).
+        const data = await fetchRouteCheckLoadRowsPaged(() => sb.from('loads') as never);
         return data.map((row: Record<string, unknown>) => {
           const sailing = row.sailings as { route?: string } | { route?: string }[] | null;
           const route = Array.isArray(sailing) ? sailing[0]?.route ?? null : sailing?.route ?? null;
