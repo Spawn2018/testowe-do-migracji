@@ -1,3 +1,9 @@
+## 2026-11-07 11:15 — DP-102+103 start (C4 / BN3)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500 w planie. Bez nowego `pilne`.
+- Scalanie: **#870 SCALONE** `4825aee3` (DP-230 F7 gotowe @ `92a56691`, CI unit/visual/db ✔). Bez push na main.
+- **Krok** C4 **DP-102+103**: ts.ee `pickUniqueInWindow` ±30 min + prefiks Lisainfo; Tallink Alert dedup ambiguous/unmatched bez `text.slice(0,40)`. Gałąź `pakiet/c4-dp-102-103-tsee-tallink-dedup`. Po F7: DP-105….
+
 ## 2026-11-07 10:40 — DP-230 F7 #870: bez stale przed ATD (C4)
 
 - **Gałąź / commit** `pakiet/c4-dp-230-gps-port-tractor-warn` (po push)
