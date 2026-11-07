@@ -33,6 +33,19 @@ val "HHL dostaje oba numery" $HHL "select hhl_order_no||'|'||carrier_order_no fr
 val "SCX dostaje numer HHL do odczytu i swój" $SCX "select hhl_order_no||'|'||carrier_order_no from load_order_numbers() where load_id='$L1'" "0005/09/S/2026|15062/2026/OSL/GDA/P"
 sval "SMS = kod wysyłki, nie numer z pliku" "select load_sms_code('$L1')" "SG-03"
 
+echo; echo "[e41] C5 — payload.code = shipment (0436)"
+# order_no / hhl_order_no ustawione powyżej; RISK_OPEN musi wziąć SG-03, nie KSH/1 ani UUID.
+sys "insert into risk_signals (id, project_id, load_id, kind, severity, title, title_key, audience)
+     values ('0c500000-0436-4000-8000-000000000001','$P','$L1','DOC_MISSING','HIGH',
+             'C5 test brak dokumentu','rk_c5_code','HHL')
+     on conflict (id) do update set resolved_at=null, severity='HIGH', load_id=excluded.load_id" >/dev/null
+sval "C5 RISK_OPEN code = SG-03" "select payload->>'code' from notifications
+     where template='RISK_OPEN' and payload->>'risk_id'='0c500000-0436-4000-8000-000000000001'
+     order by created_at desc nulls last limit 1" "SG-03"
+sval "C5 code ≠ order_no" "select (payload->>'code' is distinct from 'KSH/1')::text from notifications
+     where template='RISK_OPEN' and payload->>'risk_id'='0c500000-0436-4000-8000-000000000001'
+     order by created_at desc nulls last limit 1" "true"
+
 echo; echo "[e41] A4 — kolumny numerów bez SELECT dla KSH"
 # PostgREST/psql: SELECT kolumny bez uprawnienia → błąd; HHL/SCX też bez SELECT (numery tylko RPC).
 err_col() { out=$(run "$2" "$3" | grep -v -E '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tr '\n' ' ')
