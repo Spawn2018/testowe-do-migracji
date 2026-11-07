@@ -18,12 +18,17 @@ const FIRM_NAME: Record<'HHL' | 'KSH' | 'SCX', string> = { HHL: 'H&H Logistics',
 
 /* ---------- Użytkownicy ---------- */
 
+/** DP-233: wariant KSH przy CLIENT_USER (Harmonogram — załadunki/rozładunki). */
+export type ClientVariantOpt = 'LOADING' | 'UNLOADING' | null;
+
 export type PersonRow = {
   id: string;
   name: string;
   /** skrócony adres: „a.wisniewska@…” */
   mail: string;
   kind: AccountKind;
+  /** DP-233: tylko przy CLIENT_USER */
+  clientVariant?: ClientVariantOpt;
   /** „+48 600 000 010”; null = brak */
   phone: string | null;
   /** „dziś, 08:12” */
@@ -37,7 +42,7 @@ export type PersonRow = {
 };
 
 /** Działania przy osobie (E14 zmiana rodzaju, E37 „Działaj jako”, dzisiejsze UsersAdmin). */
-export type PersonAction = 'kind' | 'activate' | 'deactivate' | 'logout' | 'actas';
+export type PersonAction = 'kind' | 'variant' | 'activate' | 'deactivate' | 'logout' | 'actas';
 
 export type InviteStatus = 'sent' | 'unfinished' | 'expired' | 'nophone' | 'active';
 export type InviteRow = {
@@ -76,7 +81,7 @@ export function UsersScreen({ locale, counts, people, invites, readOnly, mark, o
   mark?: ReactNode;
   onInvite?: (v: { first: string; last: string; phone: string; mail: string; kind: AccountKind }) => void;
   onAction?: (id: string, action: string) => void;
-  onPerson?: (id: string, action: PersonAction, kind?: AccountKind) => void;
+  onPerson?: (id: string, action: PersonAction, kind?: AccountKind, variant?: ClientVariantOpt) => void;
   /** Rodzaje kont do wyboru przy osobie (produkcja: tylko rodzaje firmy tej osoby). Domyślnie wszystkie 5. */
   kindsFor?: (p: PersonRow) => readonly AccountKind[];
   /** Operacja w toku (produkcja): przyciski zmian wyłączone — bez podwójnego zaproszenia czy zapisu. */
@@ -102,7 +107,11 @@ export function UsersScreen({ locale, counts, people, invites, readOnly, mark, o
             {rows.flatMap((p) => [
               <tr key={p.id} data-person={p.id} className={p.active === false ? 'is-off' : undefined}>
                 <th scope="row" data-label={t(locale, 'p3c_u_person')}><b data-content>{p.name}</b><span className="ox-sub" data-content>{p.mail}</span></th>
-                <td data-label={t(locale, 'p3c_u_kind')}>{t(locale, `p3c_kind_${p.kind}`)}</td>
+                <td data-label={t(locale, 'p3c_u_kind')}>{
+                  p.kind === 'CLIENT_USER' && p.clientVariant === 'LOADING' ? t(locale, 'p3c_kind_CLIENT_LOADING')
+                    : p.kind === 'CLIENT_USER' && p.clientVariant === 'UNLOADING' ? t(locale, 'p3c_kind_CLIENT_UNLOADING')
+                      : t(locale, `p3c_kind_${p.kind}`)
+                }</td>
                 <td data-label={t(locale, 'p3c_u_tel')} className="ox-nowrap">{p.phone ? <span data-content>{p.phone}</span> : <span className="ox-alert">{t(locale, 'p3c_u_no_phone')}</span>}</td>
                 <td data-label={t(locale, 'p3c_u_last')} data-content>{p.last ?? '—'}</td>
                 <td data-label={t(locale, 'p3c_u_2fa')} className={p.mfa ? 'ox-go' : undefined}>{p.mfa == null ? '—' : t(locale, p.mfa ? 'p3c_yes' : 'p3c_no')}</td>
@@ -157,18 +166,36 @@ export function UsersScreen({ locale, counts, people, invites, readOnly, mark, o
   );
 }
 
-function PersonActions({ locale, p, onPerson, kinds, busy }: { locale: Locale; p: PersonRow; onPerson?: (id: string, action: PersonAction, kind?: AccountKind) => void; kinds: readonly AccountKind[]; busy?: boolean }) {
+function PersonActions({ locale, p, onPerson, kinds, busy }: { locale: Locale; p: PersonRow; onPerson?: (id: string, action: PersonAction, kind?: AccountKind, variant?: ClientVariantOpt) => void; kinds: readonly AccountKind[]; busy?: boolean }) {
   const [kind, setKind] = useState<AccountKind>(p.kind);
+  /* DP-233: trzy pozycje KSH w UI → rola CLIENT_USER + client_variant */
+  const [variant, setVariant] = useState<ClientVariantOpt>(p.clientVariant ?? null);
+  const kindDirty = kind !== p.kind;
+  const variantDirty = kind === 'CLIENT_USER' && (variant ?? null) !== (p.clientVariant ?? null);
+  const saveKind = () => {
+    if (kindDirty) onPerson?.(p.id, 'kind', kind, kind === 'CLIENT_USER' ? variant : null);
+    else if (variantDirty) onPerson?.(p.id, 'variant', 'CLIENT_USER', variant);
+  };
   return (
     <div className="ox-person-panel" data-person-actions={p.id}>
       <label className="ox-field ox-field-inline">
         <span>{t(locale, 'p3c_u_kind')}</span>
-        <select className="input" value={kind} disabled={p.self} onChange={(e) => setKind(e.target.value as AccountKind)}>
+        <select className="input" value={kind} disabled={p.self} onChange={(e) => { const k = e.target.value as AccountKind; setKind(k); if (k !== 'CLIENT_USER') setVariant(null); }}>
           {kinds.map((k) => <option key={k} value={k}>{t(locale, `p3c_role_${k}`)}</option>)}
         </select>
       </label>
+      {kind === 'CLIENT_USER' ? (
+        <label className="ox-field ox-field-inline" data-client-variant>
+          <span>{t(locale, 'p3c_u_ksh_variant')}</span>
+          <select className="input" value={variant ?? ''} disabled={p.self} onChange={(e) => setVariant((e.target.value || null) as ClientVariantOpt)}>
+            <option value="">{t(locale, 'p3c_role_CLIENT_USER')}</option>
+            <option value="LOADING">{t(locale, 'p3c_role_CLIENT_LOADING')}</option>
+            <option value="UNLOADING">{t(locale, 'p3c_role_CLIENT_UNLOADING')}</option>
+          </select>
+        </label>
+      ) : null}
       <div className="ox-actions ox-actions-start">
-        <button type="button" className="btn ox-btn" disabled={busy || p.self || kind === p.kind} onClick={() => onPerson?.(p.id, 'kind', kind)}>{t(locale, 'p3c_u_kind_save')}</button>
+        <button type="button" className="btn ox-btn" disabled={busy || p.self || (!kindDirty && !variantDirty)} onClick={saveKind}>{t(locale, 'p3c_u_kind_save')}</button>
         <button type="button" className="btn ghost ox-btn" disabled={busy || p.self} onClick={() => onPerson?.(p.id, p.active === false ? 'activate' : 'deactivate')}>{t(locale, p.active === false ? 'p3c_u_on' : 'p3c_u_off')}</button>
         <button type="button" className="btn ghost ox-btn" disabled={busy || p.self} onClick={() => onPerson?.(p.id, 'logout')}>{t(locale, 'p3c_u_logout')}</button>
         <button type="button" className="btn ghost ox-btn" disabled={busy || p.self || p.active === false} onClick={() => onPerson?.(p.id, 'actas')}>{t(locale, 'p3c_u_actas')}</button>

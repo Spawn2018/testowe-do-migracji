@@ -20,6 +20,8 @@ export type PersonDb = {
   active: boolean;
   org_id: string;
   must_set_password?: boolean | null;
+  /** DP-233: LOADING | UNLOADING | null (tylko CLIENT_USER). */
+  client_variant?: string | null;
 };
 
 /** Rola z bazy (7 wartości) → jeden z 5 rodzajów kont (E11 13:21: „KSH — administrator” i „Plac budowy” znikają). */

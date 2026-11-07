@@ -483,7 +483,7 @@ export default function AuthGate({ children }: { children: ReactNode }) {
       if (st.role !== viewRole) st.setRole(viewRole);
       /* to samo konto, profil i widok już na ekranie — tylko ciche odświeżenie danych (otwarty transport zostaje) */
       const key = [session.user.id, p.user_id, p.role, p.org_code, viewRole, p.acting_as ? 'as' : '', p.real_user_id ?? '',
-        p.full_name ?? '', p.phone ?? '', p.email ?? '', p.active ? '1' : '0'].join('|');
+        p.full_name ?? '', p.phone ?? '', p.email ?? '', p.active ? '1' : '0', p.client_variant ?? ''].join('|');
       const silent = prevKey === key;
       if (alive && !silent) setState({ kind: 'loading' });
       try {

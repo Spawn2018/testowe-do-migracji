@@ -398,3 +398,12 @@ Przyczyna: DP-215 (#798) — kafelki paska E28: Droga do portu / Port wyjścia /
 Dodatkowo `mapa-hhl-pl-1920-{light,dark-default}.png` z actual (light: 41919939041 @ `e02f7e42`, 2047 px; dark: 41924308018 @ `b13d126e`, 2060 px) — StageBar E28 na Mapie.
 Harmonogram III-2 (`visual-states`): 11× `stan-*.png` (najechanie/fokus/pusty × light+dark; wciśnięty/zablokowany/ładowanie/błąd/walidacja dark) z `visual.yml` `update=true` run 41930872357 @ `318accc3` — StageBar E28 na Harmonogramie 1440 (fail PR 41927587305: `stan-najechanie-dark`, 4277 px). Pozostałe z 15 smoke (pasek-na-promie = tracking bar, nie StageBar; awizacja/karty/drogi/pogoda/rejsy/ryzyka) bez zmian bajt w bajt. Matrycy 280/`shots-baseline` nie ruszano (P11).
 Wzorca `shots-baseline` nie zmieniano.
+
+## DP-233 (07.11.2026) — Harmonogram: filtr Załadunki/Rozładunki
+Odświeżone migawki Harmonogramu po dodaniu chipów Załadunki/Rozładunki · Dziś/Jutro (`data-sched-day-filter` / `data-sched-day-row`).
+- `stan-najechanie-dark.png` — actual z faila zrzutów PR #867 (run 42337181191 @ `06660ee6`, 3019 px); zmiana tylko w wierszu filtrów.
+- `harmonogram-zaladunki-dzis-hhl-pl-1440-light.png` — nowa migawka z aktywnym filtrem Załadunki · Dziś (update run 42339397365 @ `b481e21e`).
+- `harmonogram-zaladunki-dzis-hhl-pl-390-light.png` + pozostałe `stan-*` (III-2 light/dark: fokus, pusty, najechanie-light; dark: błąd, ładowanie, walidacja, wciśnięty, zablokowany) — z `visual.yml` `update=true` run 42343237066 @ `37bdedfc` (gałąź `pakiet/c4-dp-233-harmonogram-zaladunki-rozladunki`).
+Przyczyna: DP-233 (#861/#867) — chipy dnia poza arkuszem filtrów; lista bez zmiany wyglądu wierszy/kart.
+Pozostałe z 15 smoke (Kokpit, Mapa, karty, Ryzyka, Drogi, pogoda, Rejsy, pasek promu, awizacja) bez zmian bajt w bajt. Matrycy 280/`shots-baseline` nie ruszano (P11).
+Wzorca `shots-baseline` nie zmieniano.

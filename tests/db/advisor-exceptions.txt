@@ -51,6 +51,7 @@ authenticated_security_definer_function_executable	public.admin_set_mfa_enforcem
 authenticated_security_definer_function_executable	public.admin_set_permit_requirement	E19 — allowlista RPC; sprawdzenie roli w funkcji
 authenticated_security_definer_function_executable	public.admin_set_user_active	E19 — allowlista RPC; sprawdzenie roli w funkcji
 authenticated_security_definer_function_executable	public.admin_set_user_role	E19 — allowlista RPC; sprawdzenie roli w funkcji
+authenticated_security_definer_function_executable	public.admin_set_client_variant	E19 — allowlista RPC; sprawdzenie roli w funkcji
 authenticated_security_definer_function_executable	public.admin_sms_zone_recipient_set	E19 — allowlista RPC; sprawdzenie roli w funkcji
 authenticated_security_definer_function_executable	public.admin_sms_zone_test	E19 — allowlista RPC; sprawdzenie roli w funkcji
 authenticated_security_definer_function_executable	public.admin_sms_zone_trigger_set	E19 — allowlista RPC; sprawdzenie roli w funkcji

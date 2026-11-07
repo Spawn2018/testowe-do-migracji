@@ -537,3 +537,53 @@ test.describe('DP-67 visual — Awizacja: rejs przed planowanym załadunkiem (HH
     })
   }
 })
+
+/* DP-233 (#861) — Harmonogram: filtr Załadunki · Dziś widoczny bez arkusza filtrów (komputer 1440 + telefon 390).
+   Lista/wiersze bez zmian wyglądu; aktywny tylko day-filter. Demo: plannedLoadDate = 2026-09-23. */
+test.describe('DP-233 visual — filtr Załadunki dziś (HHL pl)', () => {
+  test.describe.configure({ mode: 'serial' })
+
+  for (const width of [1440, 390]) {
+    const file = `harmonogram-zaladunki-dzis__hhl__pl__${width}__light.png`
+    test(file, async ({ page }) => {
+      test.setTimeout(120_000)
+      await page.emulateMedia({ reducedMotion: 'reduce' })
+      await gotoFrozen(page, width)
+      await setRole(page, 'HHL')
+      await setTheme(page, 'light', 'dark')
+      await navTo(page, 'sched')
+      /* telefon: gotoFrozen otwiera boczne menu — zwiń, żeby treść Harmonogramu była w kadrze */
+      if (width < 769) {
+        await page.evaluate(() => document.querySelector('.app')?.classList.add('nav-collapsed'))
+        await page.waitForTimeout(200)
+      }
+      const loading = page.locator(
+        width < 769
+          ? '[data-sched-day-row] [data-day-kind="loading"]'
+          : '[data-sched-filters] [data-day-kind="loading"]',
+      )
+      await expect(loading).toBeVisible({ timeout: 60_000 })
+      await loading.click()
+      await expect(loading).toHaveAttribute('aria-pressed', 'true')
+      await expect(
+        page.locator(width < 769 ? '[data-sched-day-row] [data-day-offset="today"]' : '[data-sched-filters] [data-day-offset="today"]'),
+      ).toHaveAttribute('aria-pressed', 'true')
+      await expect(page.locator('.s7-sheet-back')).toHaveCount(0)
+      /* telefon: tabela `display:none`, karty widoczne — `.first()` bez filtra widoczności bierze ukryty <tr> */
+      await expect(page.locator('[data-load]').filter({ visible: true }).first()).toBeVisible({ timeout: 30_000 })
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
+      expect(overflow).toBeLessThanOrEqual(0)
+      await page.evaluate(async () => {
+        if (document.fonts?.ready) await document.fonts.ready
+      })
+      await page.waitForTimeout(300)
+      await expect(page).toHaveScreenshot(file, {
+        fullPage: false,
+        maxDiffPixelRatio: 0.001,
+        threshold: 0.28,
+        animations: 'disabled',
+        caret: 'hide',
+      })
+    })
+  }
+})

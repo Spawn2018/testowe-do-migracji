@@ -8,8 +8,9 @@ const banner = readFileSync(new URL('../src/auth/ImpersonationBanner.tsx', impor
 const css = readFileSync(new URL('../src/auth/auth.css', import.meta.url), 'utf8');
 
 describe('bez przeładowania po powrocie na kartę', () => {
-  it('klucz obejmuje konto widoku, rolę, „Działaj jako”, imię, telefon i aktywność', () => {
-    expect(gate).toMatch(/const key = \[session\.user\.id, p\.user_id, p\.role, p\.org_code, viewRole, p\.acting_as \? 'as' : '', p\.real_user_id \?\? '',\s*p\.full_name \?\? '', p\.phone \?\? '', p\.email \?\? '', p\.active \? '1' : '0'\]\.join\('\|'\);/);
+  it('klucz obejmuje konto widoku, rolę, „Działaj jako”, imię, telefon, aktywność i wariant KSH', () => {
+    /* DP-233 (#861): + client_variant — zmiana wariantu KSH też odświeża profil (nie cicho). */
+    expect(gate).toMatch(/const key = \[session\.user\.id, p\.user_id, p\.role, p\.org_code, viewRole, p\.acting_as \? 'as' : '', p\.real_user_id \?\? '',\s*p\.full_name \?\? '', p\.phone \?\? '', p\.email \?\? '', p\.active \? '1' : '0', p\.client_variant \?\? ''\]\.join\('\|'\);/);
   });
   it('każde wczytanie czyści klucz; wraca tylko po „ready”', () => {
     expect(gate).toContain('const prevKey = readyKeyRef.current;\n      readyKeyRef.current = null;');

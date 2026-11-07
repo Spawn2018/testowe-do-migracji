@@ -1,3 +1,21 @@
+## 2026-11-07 06:50 — DP-233: migawka 390 + reszta stan-* (C4)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne` do wykonania.
+- Scalanie: brak „F7: gotowe” na #867 (F7 @ `53547f7` — brak wzorca 390; po `37bdedfc` selector OK, CI zrzuty FAIL tylko na braku `…-390-light.png`). Bez push na main.
+- **Krok** C4 **DP-233** (#867): z artefaktu `visual.yml` `update=true` run 42343237066 @ `37bdedfc` — `harmonogram-zaladunki-dzis-hhl-pl-390-light.png` + 10× `stan-*` (reszta III-2); G4. Gałąź `pakiet/c4-dp-233-harmonogram-zaladunki-rozladunki`. Czekam CI→F7. Po F7: DP-232 (#860) → DP-230 (#852) → DP-102….
+
+## 2026-11-07 05:55 — DP-233: poprawka visual (C4)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne` do wykonania.
+- Scalanie: brak „F7: gotowe” na #867 (visual zrzuty FAIL — nowe chipy Harmonogramu). Bez push na main.
+- **Krok** C4 **DP-233** (#867): test visual filtra Załadunki (1440+390), fokus `data-quick`; migawka `stan-najechanie-dark` + 1440 filtra; `update=true` po push (reszta `stan-*` + 390). Gałąź `pakiet/c4-dp-233-harmonogram-zaladunki-rozladunki`.
+
+## 2026-11-07 04:50 — #866 SCALONE; start DP-233 (C4)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne` do wykonania.
+- Scalanie: **#866 SCALONE** `54bdb1c4` (DP-101 F7: gotowe @ `eadf18f4`; CI unit+db+visual zielone). Bez push na main.
+- **Krok** C4 **DP-233** (#861): filtr Harmonogramu Załadunki/Rozładunki · dziś/jutro + sort po godzinie; `app_users.client_variant` + `admin_set_client_variant` + `my_profile` (**0428**); UI kont KSH. Gałąź `pakiet/c4-dp-233-harmonogram-zaladunki-rozladunki`.
+
 ## 2026-11-07 04:00 — DP-101 F7 #866: atomowe sailing_cancel_auto (C4)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`. #861/#860/#852 (prośby właściciela) — w rejestrze DP-233/232/230; realizacja **po** F7+scaleniu #866.

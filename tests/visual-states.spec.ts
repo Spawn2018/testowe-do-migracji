@@ -68,8 +68,9 @@ test.describe('III-2 zrzuty stanów (HHL pl 1440)', () => {
     test(`stan-fokus (${theme})`, async ({ page }) => {
       await open(page, theme); await sched(page)
       /* B-SMOKE-LANG: między szukajką a chipami są pola dat (B-8.3) — Tab nie trafia już w chip.
-         Cel zrzutu: fokus wizualny na chipie filtra — focus() bezpośrednio. */
-      const chip = page.locator('[data-page="schedule"] .filters .chipbtn').first()
+         Cel zrzutu: fokus wizualny na chipie filtra stanu — focus() bezpośrednio.
+         DP-233: pierwsze `.chipbtn` to Załadunki/Rozładunki — bierzemy `data-quick`, nie day-filter. */
+      const chip = page.locator('[data-page="schedule"] .filters [data-quick="late"]')
       await chip.focus()
       await expect(chip).toBeFocused()
       await expect(page).toHaveScreenshot(`stan-fokus__${theme}.png`, SHOT)

@@ -66,7 +66,7 @@ export default function LiveUsers() {
     try {
     const sb = await getSupabase();
     const [u, i, o, l] = await Promise.all([
-      sb.from('app_users').select('id,email,full_name,first_name,last_name,phone,role,active,org_id,must_set_password').order('created_at'),
+      sb.from('app_users').select('id,email,full_name,first_name,last_name,phone,role,active,org_id,must_set_password,client_variant').order('created_at'),
       sb.from('user_invites').select('id,email,role,org_id,created_at,first_name,last_name,full_name').is('accepted_at', null).order('created_at'),
       sb.from('organizations').select('id,code').order('code'),
       /* F7 #414 pkt 4: baza nie ma RPC „ostatnie logowanie każdej osoby” — dziennik ma limit 200 (najnowsze); starsze logowania → „—” */
@@ -106,6 +106,9 @@ export default function LiveUsers() {
       name: personName(u),
       mail: u.email ?? '—',
       kind: kindOf(u.role),
+      clientVariant: u.role === 'CLIENT_USER'
+        ? ((u.client_variant === 'LOADING' || u.client_variant === 'UNLOADING') ? u.client_variant : null)
+        : null,
       phone: u.phone && isE164(u.phone) ? groupPhone(u.phone) : null,
       last: last ? formatListDateTime(last) : null,
       /* 2FA innych kont: baza nie podaje (auth.mfa_factors) — „—” zamiast zgadywania */
@@ -161,12 +164,21 @@ export default function LiveUsers() {
     });
   };
 
-  const onPerson = (id: string, action: PersonAction, kind?: AccountKind) => {
+  const onPerson = (id: string, action: PersonAction, kind?: AccountKind, variant?: 'LOADING' | 'UNLOADING' | null) => {
     const u = byId.get(id);
     if (!u || u.id === me.user_id) return;
     void guard(async () => {
       const sb = await getSupabase();
-      if (action === 'kind' && kind) await run(() => sb.rpc('admin_set_user_role', { p_user: id, p_role: kind }), t(locale, 'a6_ua_role_changed'));
+      if (action === 'kind' && kind) {
+        const ok = await run(() => sb.rpc('admin_set_user_role', { p_user: id, p_role: kind }), t(locale, 'a6_ua_role_changed'));
+        /* DP-233: po ustawieniu CLIENT_USER — wariant Harmonogramu */
+        if (ok && kind === 'CLIENT_USER') {
+          await run(() => sb.rpc('admin_set_client_variant', { p_user: id, p_variant: variant ?? null }), t(locale, 'a6_ua_role_changed'));
+        }
+      }
+      if (action === 'variant') {
+        await run(() => sb.rpc('admin_set_client_variant', { p_user: id, p_variant: variant ?? null }), t(locale, 'a6_ua_role_changed'));
+      }
       if (action === 'activate' || action === 'deactivate') {
         await run(() => sb.rpc('admin_set_user_active', { p_user: id, p_active: action === 'activate' }), t(locale, action === 'activate' ? 'a6_ua_act_done' : 'a6_ua_deact_done'));
       }
