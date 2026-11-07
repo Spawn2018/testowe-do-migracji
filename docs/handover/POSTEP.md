@@ -1,3 +1,39 @@
+## 2026-11-07 10:40 — DP-230 F7 #870: bez stale przed ATD (C4)
+
+- **Gałąź / commit** `pakiet/c4-dp-230-gps-port-tractor-warn` (po push)
+- **Migracje** **0429** (bez `gps_fresh_position`; ostatni GPS + `raw.stale_point` jak r1)
+- **Krok** C4 **DP-230** F7: cofnięty „powtórzony fix >30 min = stale” przed odejściem (psuło postój w porcie → fałszywy FERRY); test postój 2 h co 15 min + ATD → bez FERRY + ryzyko; status EXPECTED **707**. Repeat→stale tylko po ATD → **DP-235**. Czekam CI→F7. Po F7: DP-102….
+
+## 2026-11-07 10:05 — DP-230 stale GPS >30 min #870 (C4)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: CI @ b6fe3e02 zielone (unit/db/visual); brak „F7: gotowe do scalenia”. Bez push na main.
+- **Krok** C4 **DP-230**: `gps_fresh_position` — powtórzony identyczny fix >30 min = jak brak GPS; detect/blokada FERRY na świeżym GPS; resolve tylko przy świeżym GPS poza obcym portem (nie na stale); status EXPECTED **709**. Gałąź `pakiet/c4-dp-230-gps-port-tractor-warn` / #870. Czekam CI→F7. Po F7: DP-102….
+
+## 2026-11-07 09:40 — DP-230 CI fix #870 (C4)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: brak F7 po HEAD; db FAIL @ 5458603a. Bez push na main.
+- **Krok** C4 **DP-230** CI: UUID testów `230g`/`230h` → `2310`/`2311` (hex); risks automat **11** kluczy (bez fałszywego `rk_eta_breach`); rejestr **DP-235** (FERRY+PORT_IN obcej trasy). Gałąź `pakiet/c4-dp-230-gps-port-tractor-warn` / #870. Czekam CI→F7. Otwarte w DP-230: stale GPS >30 min. Po F7: DP-102….
+
+## 2026-11-07 09:05 — DP-230 F7 #870 B1/B2 (C4)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: #870 F7 „zmiany wymagane” @ 26a18cd — poprawki w tym PR. Bez push na main.
+- **Krok** C4 **DP-230** F7 B1/B2: bez zamykania `GPS_WRONG_PORT` samym FERRY/ATD; blokada przy otwartym ryzyku; `REMOVED` w `detect_duplicate_tractor_plate`; testy ATD+port rejsu / FERRY+obcy / REMOVED; risks 12 kluczy (+`rk_eta_breach`); status EXPECTED **705**. Gałąź `pakiet/c4-dp-230-gps-port-tractor-warn` / #870. Czekam CI→F7. Po F7: DP-102….
+
+## 2026-11-07 08:50 — DP-230: blokada FERRY + testy (C4)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: brak otwartego PR F7. Bez push na main.
+- **Krok** C4 **DP-230** (#852): `gps_allows_ferry_promote` w `promote_ferry_departures` (ATD + obcy PORT_OUT → bez FERRY + ryzyko); usunięty sprzeczny blok testów; status +13 (**0429**). Gałąź `pakiet/c4-dp-230-gps-port-tractor-warn`. Czekam CI→F7. Po F7: DP-102….
+
+## 2026-11-07 08:40 — #869 SCALONE; start DP-230 (C4)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: **#869 SCALONE** `2c5903e0` (DP-232 F7 @ `5c6a186a`). Bez push na main.
+- **Krok** C4 **DP-230** (#852): `detect_gps_wrong_ferry_port` + `detect_duplicate_tractor_plate` + flaga ETA obok „odpłynął” (**0429**); i18n; status.sh +10. Gałąź `pakiet/c4-dp-230-gps-port-tractor`. Po F7: DP-102….
+
 ## 2026-11-07 07:50 — DP-232: migawki + selektor e8 (C4)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.

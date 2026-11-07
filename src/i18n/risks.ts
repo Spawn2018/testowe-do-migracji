@@ -34,6 +34,10 @@ const pl: Dict = {
   rk_ferry_check_after_arrival: 'Sprawdź {code} po dopłynięciu ({vessel}, {arr})',
   /* DP-131 / F7 #703: FERRY + GPS ≤3 km port wyjścia po ATD/ATA */
   rk_ferry_not_departed: 'Transport nie wypłynął? — sprawdź {code}',
+  /* DP-230 (#852): GPS w PORT_OUT obcej trasy vs port wyjścia rejsu */
+  rk_gps_wrong_port: 'GPS w porcie {gps_port}, rejs z portu {dep_port} — sprawdź przydział',
+  /* DP-230 (#852): ta sama tablica ciągnika w ≥2 aktywnych zleceniach */
+  rk_tractor_duplicate: 'Ten sam ciągnik {plate} w {n} aktywnych zleceniach — sprawdź przydział',
   rk_sailing_mismatch: 'Auto w SE, a przypisany rejs jeszcze nie wypłynął',
   rk_sailing_cancelled: 'Rejs {vessel} z {dep} odwołany — transport wymaga nowego rejsu',
   rk_missed_sailing: 'Brak potwierdzenia pozycją, że transport był w porcie PL w chwili odejścia rejsu {vessel} {dep}',
