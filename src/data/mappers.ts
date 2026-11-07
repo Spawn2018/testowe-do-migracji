@@ -582,7 +582,8 @@ export function sailingFromRow(r: SailingDbRow): Sailing {
       : r.status === 'OPOZNIONY' ? 'OPOZNIONY'
         : r.status === 'W_REJSIE' ? 'W_REJSIE'
           : r.status === 'DOPLYNAL' ? 'DOPLYNAL'
-            : 'ZAPLANOWANY',
+            : r.status === 'ZAMKNIETY_BEZ_POTWIERDZENIA' ? 'ZAMKNIETY_BEZ_POTWIERDZENIA'
+              : 'ZAPLANOWANY',
     source: src,
   };
 }

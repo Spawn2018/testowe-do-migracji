@@ -660,49 +660,19 @@ function sleepMs(ms: number): Promise<void> {
 function sailingActualPatch(
   s: { source: string; status: string },
   actual: Pick<SailingPatch, 'actual_departure_at' | 'actual_arrival_at' | 'delayed_arrival_at'>,
-  status: 'W_REJSIE' | 'DOPLYNAL',
+  status: 'W_REJSIE' | 'DOPLYNAL' | 'ZAMKNIETY_BEZ_POTWIERDZENIA',
 ): SailingPatch {
   const patch: SailingPatch = { ...actual };
   if (s.source !== 'RECZNIE' && s.status !== 'ODWOLANY') patch.status = status;
   return patch;
 }
 
-/**
- * DP-222 F7 #818 B2: po ATD GDN-NYN — nie zostawiaj W_REJSIE na zawsze.
- * ATA → DOPLYNAL; bez ATA + (późniejszy rejs z ATD LUB arrival+6h < now) → DOPLYNAL;
- * trwający (np. BS-03) → W_REJSIE.
- */
-export function statusAfterGdnNynAtd(
-  s: Pick<DbSailing, 'id' | 'vessel_id' | 'route' | 'departure_at' | 'arrival_at'>,
-  peers: readonly Pick<DbSailing, 'id' | 'vessel_id' | 'departure_at' | 'actual_departure_at'>[],
-  nowMs: number,
-  ataIso: string | null = null,
-): 'W_REJSIE' | 'DOPLYNAL' {
-  if (ataIso) return 'DOPLYNAL';
-  if (s.route !== 'GDN-NYN') return 'W_REJSIE';
-  const depMs = Date.parse(s.departure_at);
-  const laterLeft = peers.some((x) =>
-    x.vessel_id === s.vessel_id
-    && x.id !== s.id
-    && x.actual_departure_at != null
-    && Date.parse(x.departure_at) > depMs);
-  if (laterLeft) return 'DOPLYNAL';
-  if (Date.parse(s.arrival_at) + 6 * 3600_000 < nowMs) return 'DOPLYNAL';
-  return 'W_REJSIE';
-}
+const FLEET_CLOSE_STATUS = 'ZAMKNIETY_BEZ_POTWIERDZENIA' as const;
 
-/**
- * DP-222 drobne #814: GDN-NYN ZAPLANOWANY/OPOZNIONY bez ATD i bez ATA —
- * gdy ten sam statek ma późniejszy rejs z ATD → DOPLYNAL (Wawel 03.11).
- * Bez arrival+6h: 61b — sam upływ czasu nie domyka bez potwierdzenia.
- */
-export function shouldCloseGdnNynWithoutAtd(
-  s: Pick<DbSailing, 'id' | 'vessel_id' | 'route' | 'status' | 'departure_at' | 'actual_departure_at' | 'actual_arrival_at'>,
+function laterVesselAtd(
+  s: Pick<DbSailing, 'id' | 'vessel_id' | 'departure_at'>,
   peers: readonly Pick<DbSailing, 'id' | 'vessel_id' | 'departure_at' | 'actual_departure_at'>[],
 ): boolean {
-  if (s.route !== 'GDN-NYN') return false;
-  if (s.status !== 'ZAPLANOWANY' && s.status !== 'OPOZNIONY') return false;
-  if (s.actual_departure_at != null || s.actual_arrival_at != null) return false;
   const depMs = Date.parse(s.departure_at);
   return peers.some((x) =>
     x.vessel_id === s.vessel_id
@@ -711,24 +681,67 @@ export function shouldCloseGdnNynWithoutAtd(
     && Date.parse(x.departure_at) > depMs);
 }
 
-/** DP-222 B2 + drobne: W_REJSIE bez ATA / ZAPLANOWANY bez ATD+ATA → DOPLYNAL. */
+/**
+ * DP-222 F7 #818 B2 + DP-237 / decyzja 114: po ATD — nie zostawiaj W_REJSIE na zawsze.
+ * ATA → DOPLYNAL; późniejszy ATD floty bez ATA → ZAMKNIETY_BEZ_POTWIERDZENIA (nie „Dopłynął”);
+ * GDN-NYN: arrival+6h przy znanym ATD (W_REJSIE) → DOPLYNAL; trwający → W_REJSIE.
+ */
+export function statusAfterGdnNynAtd(
+  s: Pick<DbSailing, 'id' | 'vessel_id' | 'route' | 'departure_at' | 'arrival_at'>,
+  peers: readonly Pick<DbSailing, 'id' | 'vessel_id' | 'departure_at' | 'actual_departure_at'>[],
+  nowMs: number,
+  ataIso: string | null = null,
+): 'W_REJSIE' | 'DOPLYNAL' | 'ZAMKNIETY_BEZ_POTWIERDZENIA' {
+  if (ataIso) return 'DOPLYNAL';
+  if (laterVesselAtd(s, peers)) return FLEET_CLOSE_STATUS;
+  if (s.route === 'GDN-NYN' && Date.parse(s.arrival_at) + 6 * 3600_000 < nowMs) return 'DOPLYNAL';
+  return 'W_REJSIE';
+}
+
+/**
+ * DP-222 drobne + DP-237: ZAPLANOWANY/OPOZNIONY bez ATD+ATA + późniejszy ATD floty
+ * (wszystkie trasy). Bez arrival+6h (61b).
+ */
+export function shouldCloseGdnNynWithoutAtd(
+  s: Pick<DbSailing, 'id' | 'vessel_id' | 'route' | 'status' | 'departure_at' | 'actual_departure_at' | 'actual_arrival_at'>,
+  peers: readonly Pick<DbSailing, 'id' | 'vessel_id' | 'departure_at' | 'actual_departure_at'>[],
+): boolean {
+  if (s.status !== 'ZAPLANOWANY' && s.status !== 'OPOZNIONY') return false;
+  if (s.actual_departure_at != null || s.actual_arrival_at != null) return false;
+  return laterVesselAtd(s, peers);
+}
+
+/** Alias DP-237 — ta sama reguła, wszystkie trasy. */
+export const shouldCloseFleetEvidenceWithoutAtd = shouldCloseGdnNynWithoutAtd;
+
+/**
+ * DP-222 B2 + DP-237: W_REJSIE bez ATA / ZAPLANOWANY bez ATD+ATA → znacznik floty
+ * (lub DOPLYNAL tylko przy GDN-NYN arrival+6h z ATD). Pomiń cancel-suspect; resolve AIS_DEP_DELAY.
+ */
 async function closeStaleGdnNynWithoutAta(deps: JobDeps, _sinceIso?: string): Promise<number> {
   const nowMs = deps.now().getTime();
-  /* Jak backfill 0412 — 7 d (portnet since=1 d za krótki na „stary” GDN-NYN). */
-  const lookback = new Date(nowMs - 7 * 864e5).toISOString();
+  /* 14 d — okno analizy DP-140; GDN-NYN wcześniej 7 d. */
+  const lookback = new Date(nowMs - 14 * 864e5).toISOString();
   const existing = await deps.store.sailingsSince(lookback);
   let updated = 0;
   for (const s of existing) {
-    if (s.route !== 'GDN-NYN') continue;
     if (s.actual_arrival_at != null) continue;
     if (s.source === 'RECZNIE') continue;
-    const close = s.status === 'W_REJSIE'
-      ? statusAfterGdnNynAtd(s, existing, nowMs, null) === 'DOPLYNAL'
-      : shouldCloseGdnNynWithoutAtd(s, existing);
-    if (!close) continue;
-    if (await deps.store.updateSailing(s.id, { status: 'DOPLYNAL' })) {
+    if (s.status !== 'W_REJSIE' && s.status !== 'ZAPLANOWANY' && s.status !== 'OPOZNIONY') continue;
+    const nextSt = s.status === 'W_REJSIE'
+      ? statusAfterGdnNynAtd(s, existing, nowMs, null)
+      : (shouldCloseGdnNynWithoutAtd(s, existing) ? FLEET_CLOSE_STATUS : null);
+    if (nextSt == null || nextSt === 'W_REJSIE') continue;
+    if (deps.store.hasOpenRisk
+      && await deps.store.hasOpenRisk(cancelSuspectRiskDedup(s.id))) {
+      continue;
+    }
+    if (await deps.store.updateSailing(s.id, { status: nextSt })) {
       updated += 1;
-      s.status = 'DOPLYNAL';
+      s.status = nextSt;
+      if (deps.store.resolveStaleRisks) {
+        await deps.store.resolveStaleRisks(`AIS_DEP_DELAY:${s.id}`, []);
+      }
     }
   }
   return updated;

@@ -1,3 +1,9 @@
+## 2026-11-07 22:15 — #885 SCALONE; start DP-237 (C4 / dowód floty)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608/#714/#716/#718/#720 w planie. Bez nowego `pilne` do budowy.
+- Scalanie: **#885 SCALONE** `b89d5926` (DP-140 F7: gotowe @ `c8e7d00f`; CI unit/visual ✔; decyzja 114). `deploy-main` robi resztę. Bez push na main.
+- **Krok** C4 **DP-237** (decyzja 114): status `ZAMKNIETY_BEZ_POTWIERDZENIA` (**0433**); backfill + job ferry (wszystkie trasy, późniejszy ATD, bez ATD/ATA, bez zegara, pominąć cancel-suspect, resolve `AIS_DEP_DELAY`) (**0434**); etykieta UI; testy dp222 (+TLLA-HEL). Gałąź `pakiet/c4-dp-237-fleet-evidence-close`.
+
 ## 2026-11-07 21:58 — #884 SCALONE; DP-140 analiza (C4 / BN4 sailings)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608 w planie. Bez nowego `pilne` do budowy.

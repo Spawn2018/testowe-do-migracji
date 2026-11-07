@@ -552,7 +552,7 @@ describe('ferry-ais — Digitraffic (prawdziwa odpowiedź 25.09.2026)', () => {
     const mid = AIS.replace('1790278580817', String(Date.parse('2026-11-05T12:00:00.000Z')));
     const r = await runFerryAis(deps(st, { 'digitraffic.fi': mid }, {}, new Date('2026-11-05T12:05:00Z')).d);
     expect(st.sailings.find((x) => x.id === old.id)).toMatchObject({
-      status: 'DOPLYNAL',
+      status: 'ZAMKNIETY_BEZ_POTWIERDZENIA',
       actual_arrival_at: null,
       actual_departure_at: '2026-11-03T17:10:00.000Z',
     });

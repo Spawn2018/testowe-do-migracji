@@ -250,6 +250,7 @@ const SAILING_STATUS_LABEL: Record<SailingStatus, Record<Locale, string>> = {
   ODWOLANY: dictEntry('a6_sailing_status_label_odwolany'),
   W_REJSIE: dictEntry('a6_sailing_status_label_w_rejsie'),
   DOPLYNAL: dictEntry('a6_sailing_status_label_doplynal'),
+  ZAMKNIETY_BEZ_POTWIERDZENIA: dictEntry('a6_sailing_status_label_zamkniety_bez_potwierdzenia'),
 };
 export const sailingStatusLabel = (s: SailingStatus, locale: Locale): string => SAILING_STATUS_LABEL[s][locale];
 export const sailingStatusPill = (s: SailingStatus): string => (
