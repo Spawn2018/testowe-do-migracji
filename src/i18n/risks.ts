@@ -40,7 +40,8 @@ const pl: Dict = {
   rk_tractor_duplicate: 'Ten sam ciągnik {plate} w {n} aktywnych zleceniach — sprawdź przydział',
   rk_sailing_mismatch: 'Auto w SE, a przypisany rejs jeszcze nie wypłynął',
   rk_sailing_cancelled: 'Rejs {vessel} z {dep} odwołany — transport wymaga nowego rejsu',
-  rk_missed_sailing: 'Brak potwierdzenia pozycją, że transport był w porcie PL w chwili odejścia rejsu {vessel} {dep}',
+  /* DP-236 (#873): świeży GPS daleko od PORT_OUT przed ATD — bez FERRY */
+  rk_missed_sailing: 'Transport nie zdążył na rejs {vessel} {dep} — GPS {km} km od portu; przypisz nowy rejs',
   rk_silent_vehicle: 'Brak pozycji pojazdu {plate} od {minutes} min',
   /** #622: pozycje naczepy w sierotach, transport bez GPS */
   rk_emtrack_orphan: 'Pozycje naczepy nie trafiają do transportu {code} — sprawdź nr naczepy',

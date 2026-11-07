@@ -1,3 +1,9 @@
+## 2026-11-07 13:05 — DP-236 start (#873 / 0430)
+
+- Skrzynka: #550 WSTRZYMANE; #873 DP-236 (Spawn2018, bez etykiety — polecenie z F7 #872); BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: **#872 SCALONE** `47751480` (DP-105+106 F7 @ `ca8d7393`, CI unit/visual/db ✔). Bez push na main.
+- **Krok** C4 **DP-236**: `gps_allows_ferry_promote` — świeży GPS ≤2 h przed ATD i > `FERRY_PROMOTE_MAX_KM_FROM_PORT` (5) od PORT_OUT → bez FERRY + `rk_missed_sailing` (HHL+SCX); backfill FERRY+DOPLYNAL; status EXPECTED **716**; risks 12 kluczy. Gałąź `pakiet/c4-dp-236-missed-sailing-gps`. Po F7: DP-235….
+
 ## 2026-11-07 12:40 — DP-106 w #872 (C4 / BN3)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500 w planie. Bez nowego `pilne`.
