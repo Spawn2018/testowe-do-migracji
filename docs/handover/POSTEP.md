@@ -1,3 +1,9 @@
+## 2026-11-07 12:40 — DP-106 w #872 (C4 / BN3)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500 w planie. Bez nowego `pilne`.
+- Scalanie: brak „F7: gotowe do scalenia” po CI ✔ @ `194d6158` (unit/visual/db). Bez push na main.
+- **Krok** C4 **DP-106** (łączenie z DP-105 w #872): `beyond_horizon` `start >= lastYmd` (cancel + restore); test same-day vs dzień+1; MemStore `horizonCover`. vitest bn3-tallink-alert **71**. Czekam CI→F7. Po F7: DP-107….
+
 ## 2026-11-07 12:10 — DP-105 start (C4 / BN3)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500 w planie. Bez nowego `pilne`.

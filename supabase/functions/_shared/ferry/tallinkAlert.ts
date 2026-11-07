@@ -1032,7 +1032,8 @@ export function matchTallinkAlertSailings(
       const last = vesselSails.reduce((a, b) =>
         Date.parse(a.departureAt) >= Date.parse(b.departureAt) ? a : b);
       const lastYmd = ymdHmInTz(last.departureAt, departureTzForRoute(last.route)).ymd;
-      if (start > lastYmd) return { kind: 'beyond_horizon' };
+      // DP-106: ostatni dzień rozkładu może być niepełny — start == lastYmd też beyond_horizon.
+      if (start >= lastYmd) return { kind: 'beyond_horizon' };
     }
   }
 
@@ -1078,7 +1079,8 @@ export function matchTallinkRestoreSailings(
       const last = vesselSails.reduce((a, b) =>
         Date.parse(a.departureAt) >= Date.parse(b.departureAt) ? a : b);
       const lastYmd = ymdHmInTz(last.departureAt, departureTzForRoute(last.route)).ymd;
-      if (start > lastYmd) return { kind: 'beyond_horizon' };
+      // DP-106: ostatni dzień rozkładu może być niepełny — start == lastYmd też beyond_horizon.
+      if (start >= lastYmd) return { kind: 'beyond_horizon' };
     }
   }
 
