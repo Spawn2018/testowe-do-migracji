@@ -8,6 +8,9 @@ import { PROD_BUILD } from './prodFacade';
 
 export type TrackerKind = 'emtrack' | 'rio' | 'safefleet' | 'monitorujpojazd' | 'other' | 'none';
 
+/** DP-232 (#860): stały adres aplikacji emtrack — dopasowanie pozycji po numerze naczepy (konto przewoźnika). */
+export const EMTRACK_APP_URL = 'https://emtrack.eu/app/';
+
 /** #662: pełny link tymczasowy SafeFleet (32 hex). */
 const SAFEFLEET_LINK_RE =
   /^https:\/\/portal\.safefleet\.pl\/safefleet\/temporary_link\/view\/[0-9a-f]{32}\/?$/i;

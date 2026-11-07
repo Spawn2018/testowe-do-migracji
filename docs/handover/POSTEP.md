@@ -1,3 +1,21 @@
+## 2026-11-07 07:50 — DP-232: migawki + selektor e8 (C4)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
+- Scalanie: brak F7 na #869. Bez push na main.
+- **Krok** C4 **DP-232** (#869): migawki awizacja emtrack + odświeżone `awizacja-rejs-*` z update 42347543584; e8-phone-gate `input.input` (checkbox nie psuje RIO). Czekam CI→F7. Po F7: DP-230 (#852) → DP-102….
+
+## 2026-11-07 07:20 — #867 SCALONE; start DP-232 (C4)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne` do wykonania.
+- Scalanie: **#867 SCALONE** `886648a6` (DP-233 F7: gotowe @ `851f131a`; CI unit+db+visual zielone). Bez push na main.
+- **Krok** C4 **DP-232** (#860): checkbox „emtrack” przy Link śledzenia → `EMTRACK_APP_URL`; ostrzeżenie naczepy; unit + visual 1440/390. Gałąź `pakiet/c4-dp-232-emtrack-checkbox`. Po F7: DP-230 (#852) → DP-102….
+
+## 2026-11-07 07:10 — DP-233 gotowe do F7 (#867)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne` do wykonania.
+- Scalanie: brak „F7: gotowe do scalenia” — komentarz „gotowe do F7” @ `851f131a` (CI unit/visual/db zielone). Bez push na main.
+- **Krok** C4 **DP-233** (#867): czekam F7; potem DP-232 (#860) → DP-230 (#852) → DP-102….
+
 ## 2026-11-07 06:50 — DP-233: migawka 390 + reszta stan-* (C4)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne` do wykonania.

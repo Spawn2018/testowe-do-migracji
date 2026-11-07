@@ -523,6 +523,10 @@ const pl: Dict = {
   p4c_tl_typed_monitorujpojazd_bad: 'Nieprawidłowy link monitorujpojazd — oczekiwany adres sledz.monitorujpojazd.pl/share/<uuid>/',
   p4c_tl_monitorujpojazd_chip: 'monitorujpojazd · link ustawiony',
   p4c_tl_typed_emtrack: 'Rozpoznano emtrack — pozycje z naczepy, jak dziś.',
+  /* DP-232 (#860): pole wyboru „emtrack” przy Link śledzenia */
+  p4c_tl_emtrack_check: 'emtrack',
+  p4c_tl_emtrack_locked: 'emtrack · konto przewoźnika',
+  p4c_tl_emtrack_need_trailer: 'Podaj numer naczepy — emtrack dopasowuje pozycje po numerze naczepy.',
   p4c_tl_typed_other: 'Nie rozpoznano dostawcy. Link zapiszemy, ale pozycje odczytujemy z emtrack, RIO i SafeFleet.',
   p4c_tl_empty: 'SCX zawsze dodaje link śledzenia. emtrack albo link RIO od podwykonawcy — nowy link na każdy przejazd.',
   p4c_tl_ok: 'Link RIO działa · {asset} · ważny do {to}',

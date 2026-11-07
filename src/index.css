@@ -1728,6 +1728,7 @@ img,video{max-width:100%;height:auto}
 /* ===== wyglad/P4-c — pole „Link śledzenia” (E44), „Gotowy” z brakami (L6, L9, L29), sprawa „czy dostarczono?” (E26, L14),
    Automatyzacje › „Działa samo” (E35 pkt 1, L13). Wzór: img/e32-after (pole w awizacji), img/e7-desk (karta sprawy),
    img/e35-after („Działa samo”, komputer i telefon). E44 bez obrazu — Z10 pkt 2: elementy, które już są (pigułki tła, .btn, karty). */
+.tlf-emtrack{margin:2px 0 6px}
 .tlf-saved{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;min-height:44px;padding:5px 6px 5px 12px;border:1px solid var(--rule);background:var(--surface-2)}
 .tlf-chip{flex:1 1 auto;min-width:0;font-family:var(--font-mono);font-size:14px;color:var(--ink);overflow-wrap:anywhere}
 .tlf-acts{display:flex;flex-wrap:wrap;gap:6px}
