@@ -78,7 +78,7 @@ class MemStore implements SyncStore {
       }
     }
   }
-  /** DP-101: symulacja wyścigu HHL (update status → false); notice już zapisany. */
+  /** DP-101: symulacja wyścigu HHL — cancelSailingAuto / update → false (bez notice). */
   failStatusUpdate = false;
   ops: string[] = [];
   async updateSailing(id: string, patch: SailingPatch) {
@@ -148,6 +148,23 @@ class MemStore implements SyncStore {
       sailingId: row.sailingId, operator: row.operator, kind: row.kind, note: row.note,
     });
     return `n${this.notices.length}`;
+  }
+  /** DP-101 / F7 #866: atomowe ODWOLANY + notice (jak RPC sailing_cancel_auto). */
+  async cancelSailingAuto(row: {
+    sailingId: string;
+    operator: string;
+    note?: string | null;
+    sourceUrl?: string | null;
+  }) {
+    this.ops.push('cancel_auto:ODWOLANY');
+    const s = this.sailings.find((x) => x.id === row.sailingId);
+    if (!s || s.source === 'RECZNIE' || s.status === 'ODWOLANY') return false;
+    if (this.failStatusUpdate) return false;
+    s.status = 'ODWOLANY';
+    this.notices.push({
+      sailingId: row.sailingId, operator: row.operator, kind: 'ODWOLANY', note: row.note,
+    });
+    return true;
   }
 }
 
@@ -435,12 +452,12 @@ describe('F7 #660 r2/r3 Port of Tallinn / Stockholm bez zmyślonych godzin', () 
       expect.objectContaining({ sailingId: 'finbo', operator: 'ECKERO', kind: 'ODWOLANY' }),
       expect.objectContaining({ sailingId: 'xprs', operator: 'VIKING', kind: 'ODWOLANY' }),
     ]));
-    // DP-101: notice przed update (nie odwrotnie).
-    expect(st.ops.filter((o) => o === 'notice:ODWOLANY' || o === 'update:ODWOLANY')).toEqual([
-      'notice:ODWOLANY', 'update:ODWOLANY', 'notice:ODWOLANY', 'update:ODWOLANY',
+    // DP-101 / F7 #866: atomowe cancelSailingAuto (nie para notice+update).
+    expect(st.ops.filter((o) => o === 'cancel_auto:ODWOLANY')).toEqual([
+      'cancel_auto:ODWOLANY', 'cancel_auto:ODWOLANY',
     ]);
 
-    // DP-101: update false → notice ODWOLANY zostaje, status bez zmian.
+    // DP-101 (d): dwa przebiegi przy fail → 0 notice, status bez zmian.
     const stFail = new MemStore();
     stFail.failStatusUpdate = true;
     stFail.vessels = async () => [
@@ -455,8 +472,9 @@ describe('F7 #660 r2/r3 Port of Tallinn / Stockholm bez zmyślonych godzin', () 
       status: 'ZAPLANOWANY', source: 'DIGITRAFFIC',
     });
     await runFerrySchedule(deps(stFail, pages));
+    await runFerrySchedule(deps(stFail, pages));
     expect(stFail.sailings[0]!.status).toBe('ZAPLANOWANY');
-    expect(stFail.notices.some((n) => n.sailingId === 'finbo' && n.kind === 'ODWOLANY')).toBe(true);
+    expect(stFail.notices.filter((n) => n.sailingId === 'finbo' && n.kind === 'ODWOLANY')).toHaveLength(0);
   });
 });
 

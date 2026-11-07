@@ -335,6 +335,16 @@ export interface SyncStore {
     newDeparture?: string | null;
   }): Promise<string | null>;
   /**
+   * DP-101 / F7 #866: atomowe AUTO ODWOLANY + notice (RPC `sailing_cancel_auto`).
+   * false gdy już ODWOLANY / RECZNIE / brak zapisu — bez osobnego insertu.
+   */
+  cancelSailingAuto?(row: {
+    sailingId: string;
+    operator: string;
+    note?: string | null;
+    sourceUrl?: string | null;
+  }): Promise<boolean>;
+  /**
    * #686 F7 B1: ostatni ODWOLANY (+ sourceUrl). Cofnięcie tylko Tallink Alert
    * (AUTO + tallink.com); brak metody / brak wpisu → ryzyko bez cofania.
    */
@@ -1871,20 +1881,17 @@ async function applyPortTallinn(deps: JobDeps, sinceIso: string): Promise<{
       && s.status !== 'ODWOLANY'
       && s.source !== 'RECZNIE');
     if (!hit) continue;
-    // DP-101 / F7 #683: najpierw AUTO notice (przetrwa wyjątek must), potem status —
-    // jak PRZYWROCONY. Notice po update → przy błędzie wpis nigdy nie powstanie
-    // (kolejny przebieg widzi już ODWOLANY / already_cancelled).
-    if (deps.store.insertOperatorNotice) {
-      await deps.store.insertOperatorNotice({
+    // DP-101 / F7 #866: atomowe AUTO ODWOLANY + notice (RPC) — bez wyścigu dwóch przebiegów.
+    const cancelledOk = deps.store.cancelSailingAuto
+      ? await deps.store.cancelSailingAuto({
         sailingId: hit.id,
-        // DP-99: data-company / company z ts.ee, potem source, potem pierwotny armator trasy (ferry_route_operators).
+        // DP-99: data-company / company z ts.ee, potem source, potem pierwotny armator trasy.
         operator: operatorFromSailingSource(hit.source, hit.route, e.company),
-        kind: 'ODWOLANY',
         note: e.lisainfo ?? 'Port of Tallinn: odwołanie (ts.ee)',
         sourceUrl: e.kind === 'DEPARTURE' ? PORT_TALLINN_DEPARTURES_URL : PORT_TALLINN_ARRIVALS_URL,
-      });
-    }
-    if (await deps.store.updateSailing(hit.id, { status: 'ODWOLANY' })) {
+      })
+      : await deps.store.updateSailing(hit.id, { status: 'ODWOLANY' });
+    if (cancelledOk) {
       cancelled += 1;
       hit.status = 'ODWOLANY';
     }
@@ -3349,20 +3356,16 @@ export async function runFerryStatus(deps: JobDeps): Promise<JobResult> {
         if (hit.kind === 'already_cancelled') continue;
         if (hit.kind === 'match') {
           const match = hit.sailing;
-          // DP-101 / F7 #683: najpierw ODWOLANY notice (przetrwa wyjątek must), potem status —
-          // jak F7 pkt 4 PRZYWROCONY. Notice po update → przy błędzie wpis nigdy nie powstanie.
-          if (deps.store.insertOperatorNotice) {
-            await deps.store.insertOperatorNotice({
+          // DP-101 / F7 #866: atomowe AUTO ODWOLANY + notice (RPC) — bez duplikatów przy wyścigu.
+          const cancelledOk = deps.store.cancelSailingAuto
+            ? await deps.store.cancelSailingAuto({
               sailingId: match.id,
               operator: 'TALLINK',
-              kind: 'ODWOLANY',
               note: alert.text.slice(0, 400),
               sourceUrl: alert.sourceUrl,
-            });
-          }
-          if (!(await deps.store.updateSailing(match.id, { status: 'ODWOLANY' }))) {
-            continue;
-          }
+            })
+            : await deps.store.updateSailing(match.id, { status: 'ODWOLANY' });
+          if (!cancelledOk) continue;
           updated += 1;
           match.status = 'ODWOLANY';
           const row = existing.find((x) => x.id === match.id);

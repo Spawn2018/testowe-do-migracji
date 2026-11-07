@@ -303,8 +303,13 @@ describe('BN3 Tallink Alert — runFerryStatus (F7 B5)', () => {
 
     // DP-100: nawet bezpośredni update ODWOLANY na już ODWOLANY → false (jak store.neq).
     expect(await st.updateSailing('s-ok', { status: 'ODWOLANY' })).toBe(false);
+    // DP-101: drugie cancelSailingAuto na już ODWOLANY → false, bez nowego notice.
+    expect(await st.cancelSailingAuto({
+      sailingId: 's-ok', operator: 'TALLINK', note: 'dup',
+    })).toBe(false);
+    expect(st.notices).toHaveLength(1);
 
-    // DP-101: notice przed statusem — przy fail update ODWOLANY zostaje w historii, status bez zmian.
+    // DP-101 (d): dwa przebiegi przy fail → 0 notice, status bez zmian.
     const stFail = new MemStore();
     stFail.failStatusUpdate = true;
     stFail.sailings.push({
@@ -315,9 +320,10 @@ describe('BN3 Tallink Alert — runFerryStatus (F7 B5)', () => {
       status: 'ZAPLANOWANY', source: 'TALLINK',
     });
     await runFerryStatus(deps(stFail, pages, NOW));
+    await runFerryStatus(deps(stFail, pages, NOW));
     expect(stFail.sailings[0]!.status).toBe('ZAPLANOWANY');
-    expect(stFail.notices.some((n) => n.kind === 'ODWOLANY' && n.sailingId === 's-fail')).toBe(true);
-    expect(stFail.ops).toEqual(['notice:ODWOLANY', 'update:ODWOLANY']);
+    expect(stFail.notices.filter((n) => n.kind === 'ODWOLANY' && n.sailingId === 's-fail')).toHaveLength(0);
+    expect(stFail.ops.filter((o) => o === 'cancel_auto:ODWOLANY').length).toBeGreaterThanOrEqual(2);
 
     // Niejednoznaczny: dwa rejsy TLL-HEL w ±30 min od 07:30 → ryzyko, bez ODWOLANY.
     const amb = new MemStore();
@@ -2194,9 +2200,9 @@ class MemStore implements SyncStore {
   runs: { job: string; at: string; ok: boolean; result: JobResult }[] = [];
   /** @deprecated F7 B2 — użyj risks + loadSailings; zostawione tylko gdy puste. */
   reassigned: string[] = [];
-  /** F7 #698 r2 B-r2-1: symulacja wyścigu HHL (updateSailing → false). */
+  /** F7 #698 r2 B-r2-1: symulacja wyścigu HHL (updateSailing / cancelSailingAuto → false). */
   failStatusUpdate = false;
-  /** DP-101: kolejność notice → update. */
+  /** DP-101: atomowe cancel_auto (nie para notice+update). */
   ops: string[] = [];
   n = 0;
   async projectId() { return 'p1'; }
@@ -2239,6 +2245,24 @@ class MemStore implements SyncStore {
       operator: row.operator, note: row.note, sourceUrl: row.sourceUrl ?? null,
     });
     return `n${this.notices.length}`;
+  }
+  /** DP-101 / F7 #866: atomowe ODWOLANY + notice (jak RPC sailing_cancel_auto). */
+  async cancelSailingAuto(row: {
+    sailingId: string;
+    operator: string;
+    note?: string | null;
+    sourceUrl?: string | null;
+  }) {
+    this.ops.push('cancel_auto:ODWOLANY');
+    const s = this.sailings.find((x) => x.id === row.sailingId);
+    if (!s || s.source === 'RECZNIE' || s.status === 'ODWOLANY') return false;
+    if (this.failStatusUpdate) return false;
+    s.status = 'ODWOLANY';
+    this.notices.push({
+      sailingId: row.sailingId, kind: 'ODWOLANY', source: 'AUTO',
+      operator: row.operator, note: row.note, sourceUrl: row.sourceUrl ?? null,
+    });
+    return true;
   }
   async latestCancelNotice(sailingId: string) {
     const hit = [...this.notices].reverse().find(
