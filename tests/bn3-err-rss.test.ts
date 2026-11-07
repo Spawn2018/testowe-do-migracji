@@ -13,7 +13,12 @@ import {
   isErrRssItemFresh,
   parseErrRss,
 } from '../supabase/functions/_shared/ferry/errRss';
-import { applyErrRssConfirmations, type JobDeps, type SyncStore } from '../supabase/functions/_shared/integrations/jobs';
+import {
+  applyErrRssConfirmations,
+  runFerryStatus,
+  type JobDeps,
+  type SyncStore,
+} from '../supabase/functions/_shared/integrations/jobs';
 import type { RiskInput } from '../supabase/functions/_shared/integrations/sync';
 
 const NOW = new Date('2026-11-01T10:00:00Z');
@@ -225,6 +230,24 @@ ${itemXml({
   guid: 'neg',
   description: 'Operator confirms Tallink will not cancel the ferry sailing.',
 })}
+${itemXml({
+  title: 'Tallink MyStar ferry sailing will not be cancelled tonight',
+  link: 'https://news.err.ee/neg-be',
+  guid: 'neg-be',
+  description: 'Tallink confirms the ferry departure will not be cancelled.',
+})}
+${itemXml({
+  title: "Viking Line XPRS trip won't be cancelled despite wind",
+  link: 'https://news.err.ee/neg-wont-be',
+  guid: 'neg-wont-be',
+  description: "Viking Line says the ferry crossing won't be cancelled.",
+})}
+${itemXml({
+  title: 'Tallink cancels Megastar crossing after technical issue',
+  link: 'https://news.err.ee/ok-cross',
+  guid: 'ok-cross',
+  description: 'Ferry cancellations: Tallink Megastar crossing from Tallinn.',
+})}
 </channel></rss>`).items;
     expect(filterErrFerryCancel([cases[0]!])).toEqual([]);
     expect(filterErrFerryCancel([cases[1]!])).toEqual([]); /* M2c Peru + Tallink + ferry */
@@ -238,6 +261,91 @@ ${itemXml({
     expect(fin[0]!.operators).toEqual(['ECKERO']);
     expect(filterErrFerryCancel([cases[8]!])).toHaveLength(1); /* cancellations + trips */
     expect(filterErrFerryCancel([cases[9]!])).toEqual([]); /* will not cancel */
+    expect(filterErrFerryCancel([cases[10]!])).toEqual([]); /* DP-126: will not be cancelled */
+    expect(filterErrFerryCancel([cases[11]!])).toEqual([]); /* DP-126: won't be cancelled */
+    expect(filterErrFerryCancel([cases[12]!])).toHaveLength(1); /* crossing + cancels */
+  });
+
+  it('DP-126: szersze filtry — without/no longer/not cancelled; crossing+trips OK', () => {
+    const items = parseErrRss(`<?xml version="1.0"?><rss version="2.0"><channel>
+${itemXml({
+  title: 'Tallink ferry sailing without cancellation risk tonight',
+  link: 'https://news.err.ee/wo',
+  guid: 'wo',
+  description: 'Tallink ferry departure without cancellation — schedule holds.',
+})}
+${itemXml({
+  title: 'Eckerö Finbo ferry is no longer cancelled after repair',
+  link: 'https://news.err.ee/nl',
+  guid: 'nl',
+  description: 'Finbo Cargo ferry sailing is no longer cancelled.',
+})}
+${itemXml({
+  title: 'Megastar trip not cancelled — Tallink ferry runs',
+  link: 'https://news.err.ee/nc',
+  guid: 'nc',
+  description: 'Tallink Megastar ferry trip not cancelled this evening.',
+})}
+${itemXml({
+  title: 'Viking Line cancels two trips on the Helsinki crossing',
+  link: 'https://news.err.ee/vk',
+  guid: 'vk',
+  description: 'Viking Line ferry cancellations on Helsinki route.',
+})}
+</channel></rss>`).items;
+    expect(filterErrFerryCancel([items[0]!])).toEqual([]);
+    expect(filterErrFerryCancel([items[1]!])).toEqual([]);
+    expect(filterErrFerryCancel([items[2]!])).toEqual([]);
+    const ok = filterErrFerryCancel([items[3]!]);
+    expect(ok).toHaveLength(1);
+    expect(ok[0]!.operators).toContain('VIKING');
+  });
+
+  it('DP-126 F7 #884 r2: have/has not been; \\s+; positive have been cancelled', () => {
+    const items = parseErrRss(`<?xml version="1.0"?><rss version="2.0"><channel>
+${itemXml({
+  title: 'Tallink ferry trips have been cancelled due to weather',
+  link: 'https://news.err.ee/pos-been',
+  guid: 'pos-been',
+  description: 'Tallink ferry sailings have been cancelled this evening.',
+})}
+${itemXml({
+  title: 'Tallink ferry trips have not been cancelled despite wind',
+  link: 'https://news.err.ee/neg-have-not',
+  guid: 'neg-have-not',
+  description: 'Operator says Tallink ferry departures have not been cancelled.',
+})}
+${itemXml({
+  title: 'Megastar sailing has not been cancelled — Tallink ferry runs',
+  link: 'https://news.err.ee/neg-has-not',
+  guid: 'neg-has-not',
+  description: 'Tallink Megastar ferry trip has not been cancelled tonight.',
+})}
+${itemXml({
+  title: "Viking XPRS ferry hasn't been cancelled after inspection",
+  link: 'https://news.err.ee/neg-hasnt',
+  guid: 'neg-hasnt',
+  description: "Viking Line ferry crossing hasn't been cancelled.",
+})}
+${itemXml({
+  title: "Finbo Cargo trips haven't been cancelled — Eckerö ferry OK",
+  link: 'https://news.err.ee/neg-havent',
+  guid: 'neg-havent',
+  description: "Eckerö ferry sailings haven't been cancelled today.",
+})}
+${itemXml({
+  title: 'Tallink MyStar ferry sailing will  not  be cancelled tonight',
+  link: 'https://news.err.ee/neg-spaces',
+  guid: 'neg-spaces',
+  description: 'Tallink confirms the ferry departure will  not  be cancelled.',
+})}
+</channel></rss>`).items;
+    expect(filterErrFerryCancel([items[0]!])).toHaveLength(1); /* have been cancelled = trafienie */
+    expect(filterErrFerryCancel([items[1]!])).toEqual([]); /* have not been */
+    expect(filterErrFerryCancel([items[2]!])).toEqual([]); /* has not been */
+    expect(filterErrFerryCancel([items[3]!])).toEqual([]); /* hasn't been */
+    expect(filterErrFerryCancel([items[4]!])).toEqual([]); /* haven't been */
+    expect(filterErrFerryCancel([items[5]!])).toEqual([]); /* will  not  be (\\s+) */
   });
 
   it('B1: detail i evidence — tylko tytuł + link + pubDate (bez opisu)', () => {
@@ -471,27 +579,37 @@ ${itemXml({
     expect(storeOk.risks.some((x) => x.dedup === 'SOURCE_DOWN:ERR_RSS' && (x as { resolved?: boolean }).resolved)).toBe(true);
   });
 
-  it('T1: wyjątek ze store łapany jak w runFerryStatus (nie przerywa joba)', async () => {
+  it('T1 DP-126: wyjątek ERR w runFerryStatus → warning, job nie pada', async () => {
     const store = makeStore();
-    store.raiseRisk = async () => {
-      throw new Error('boom-store');
+    const baseRaise = store.raiseRisk.bind(store);
+    store.raiseRisk = async (r: RiskInput & { loadId?: string }) => {
+      if (String(r.dedup).startsWith('FERRY_ERR_RSS:')) throw new Error('boom-store');
+      return baseRaise(r);
     };
-    let errRss: { enabled: boolean; items: number; hits: number; risks: number; warnings: string[] } = {
-      enabled: true, items: 0, hits: 0, risks: 0, warnings: [],
-    };
-    try {
-      errRss = await applyErrRssConfirmations(
-        depsOf(store, async () => new Response(SAMPLE, { status: 200 })),
-      );
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      errRss = {
-        enabled: true, items: 0, hits: 0, risks: 0,
-        warnings: [`ERR RSS: wyjątek — ${msg.slice(0, 160)}`],
-      };
-    }
-    expect(errRss.warnings[0]).toMatch(/boom-store/);
-    expect(errRss.risks).toBe(0);
+    Object.assign(store, {
+      async sailingsSince() { return []; },
+      async vessels() { return []; },
+      async insertSailings() { /* no-op */ },
+      async updateSailing() { return false; },
+      async lastRun() { return null; },
+      async recordRun() { /* no-op */ },
+      async projectId() { return 'p1'; },
+    });
+    const fetchImpl = (async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('news.err.ee')) return new Response(SAMPLE, { status: 200 });
+      return new Response('err', { status: 503 });
+    }) as typeof fetch;
+    const res = await runFerryStatus(depsOf(store as unknown as SyncStore, fetchImpl));
+    /* ok może być false (inne źródła 503) — ważne, że job nie rzucił i złapał ERR. */
+    expect(res.job).toBe('ferry-status');
+    expect(res.warnings.some((w) => /ERR RSS: wyjątek — boom-store/.test(w))).toBe(true);
+    expect(res.observations).toMatchObject({
+      err_rss_enabled: '1',
+      err_rss_items: '0',
+      err_rss_hits: '0',
+    });
+    expect(store.risks.some((x) => String(x.dedup).startsWith('FERRY_ERR_RSS:'))).toBe(false);
   });
 
   it('T2: za duża odpowiedź → SOURCE_DOWN', async () => {
@@ -503,6 +621,26 @@ ${itemXml({
     expect(r.risks).toBe(1);
     expect(store.risks.some((x) => x.dedup === 'SOURCE_DOWN:ERR_RSS')).toBe(true);
     expect(r.warnings.some((w) => /za duża/i.test(w))).toBe(true);
+  });
+
+  it('DP-126 F7 #884: Content-Length > limitu przed text() → SOURCE_DOWN', async () => {
+    const store = makeStore();
+    let textCalled = false;
+    const r = await applyErrRssConfirmations(
+      depsOf(store, async () => ({
+        ok: true,
+        status: 200,
+        headers: new Headers({ 'Content-Length': String(1_500_001) }),
+        async text() {
+          textCalled = true;
+          return 'should-not-read';
+        },
+      } as Response)),
+    );
+    expect(r.risks).toBe(1);
+    expect(store.risks.some((x) => x.dedup === 'SOURCE_DOWN:ERR_RSS')).toBe(true);
+    expect(r.warnings.some((w) => /za duża/i.test(w))).toBe(true);
+    expect(textCalled).toBe(false);
   });
 
   it('URL feedu = news.err.ee/rss (bez Yle)', () => {

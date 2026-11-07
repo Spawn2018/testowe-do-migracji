@@ -625,6 +625,8 @@ async function readText(
   url: string,
   init?: RequestInit,
   timeoutMs: number = READ_TEXT_TIMEOUT_MS,
+  /** DP-126 F7 #884: Content-Length przed text() — bez pobierania ciała ponad limit. */
+  maxChars?: number,
 ): Promise<{ ok: true; text: string } | { ok: false; warning: string }> {
   const ctrl = new AbortController();
   const ms = Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : READ_TEXT_TIMEOUT_MS;
@@ -632,6 +634,13 @@ async function readText(
   try {
     const res = await deps.fetch(url, { ...init, signal: ctrl.signal });
     if (!res.ok) return { ok: false, warning: `HTTP ${res.status} ${url}` };
+    if (maxChars != null) {
+      const clRaw = res.headers.get('content-length');
+      const cl = clRaw != null ? Number(clRaw) : NaN;
+      if (Number.isFinite(cl) && cl > maxChars) {
+        return { ok: false, warning: `Odpowiedź za duża (Content-Length) ${url}` };
+      }
+    }
     return { ok: true, text: await res.text() };
   } catch (e) {
     const msg = e instanceof Error ? e.message : String(e);
@@ -3518,20 +3527,30 @@ export async function applyErrRssConfirmations(deps: JobDeps, _sinceIso: string)
   }
   const now = deps.now();
   const nowIso = now.toISOString();
-  const page = await readText(deps, ERR_RSS_URL, {
-    headers: { 'User-Agent': ERR_RSS_UA, Accept: 'application/rss+xml, application/xml, text/xml, */*' },
-  });
+  const page = await readText(
+    deps,
+    ERR_RSS_URL,
+    {
+      headers: { 'User-Agent': ERR_RSS_UA, Accept: 'application/rss+xml, application/xml, text/xml, */*' },
+    },
+    READ_TEXT_TIMEOUT_MS,
+    ERR_RSS_MAX_CHARS,
+  );
   if (!page.ok) {
-    /* B4: nie zamykaj SOURCE_DOWN przy awarii; klucz sticky bez daty. */
+    /* B4: nie zamykaj SOURCE_DOWN przy awarii; klucz sticky bez daty.
+     * DP-126: Content-Length > limitu też tu (za duża → SOURCE_DOWN). */
+    const warn = /za duża/i.test(page.warning)
+      ? 'ERR RSS: odpowiedź za duża (limit).'
+      : page.warning;
     if (await deps.store.raiseRisk(sourceDownRisk(
       'ERR_RSS',
-      [page.warning],
+      [warn],
       nowIso,
       ERR_RSS_URL,
     ))) {
-      return { enabled: true, items: 0, hits: 0, risks: 1, warnings: [page.warning] };
+      return { enabled: true, items: 0, hits: 0, risks: 1, warnings: [warn] };
     }
-    return { enabled: true, items: 0, hits: 0, risks: 0, warnings: [page.warning] };
+    return { enabled: true, items: 0, hits: 0, risks: 0, warnings: [warn] };
   }
   if (page.text.length > ERR_RSS_MAX_CHARS) {
     const w = 'ERR RSS: odpowiedź za duża (limit).';

@@ -55,12 +55,14 @@ const FERRY_MARKERS: { re: RegExp; label: string; op: ErrOperator }[] = [
 ];
 
 /**
- * F7 B5 / r2: tylko EN (kanał news.err.ee); granice słów.
+ * F7 B5 / r2 / DP-126: tylko EN (kanał news.err.ee); granice słów.
  * cancel / cancels / cancelled / cancellation(s) / canceled.
- * Bez zaprzeczeń: no / without / not / won't / will not / no longer.
+ * Bez zaprzeczeń: no / without / not / won't / won't be / will not /
+ * will not be / no longer / not been / hasn't|haven't been (F7 #884 r2:
+ * `\s+` — RSS często ma podwójne spacje po strip HTML).
  */
 const CANCEL_RE =
-  /(?<!\bnot\s)(?<!\bwon'?t\s)(?<!\bwill\snot\s)(?<!\bno\slonger\s)(?<!\bno\s)(?<!\bwithout\s)\bcancel(?:s|l?ed|lations?)?\b/i;
+  /(?<!\bnot\s+)(?<!\bwon'?t\s+)(?<!\bwon'?t\s+be\s+)(?<!\bwill\s+not\s+)(?<!\bwill\s+not\s+be\s+)(?<!\bno\s+longer\s+)(?<!\bno\s+)(?<!\bwithout\s+)(?<!\bnot\s+been\s+)(?<!\bhasn'?t\s+been\s+)(?<!\bhaven'?t\s+been\s+)\bcancel(?:s|l?ed|lations?)?\b/i;
 
 /** Kontekst promowy — łącznie z armator+cancel (F7 B5/r2: +trip/crossing; bez ET). */
 const FERRY_CONTEXT_RE =

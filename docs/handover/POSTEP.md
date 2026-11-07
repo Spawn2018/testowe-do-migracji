@@ -1,3 +1,15 @@
+## 2026-11-07 21:28 — DP-126 r2: F7 #884 (C4 / ERR RSS)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608 w planie. Bez nowego `pilne` do budowy.
+- Scalanie: brak F7 „gotowe” na #884 (koordynator: zakres niepełny → r2). Bez push na main.
+- **Krok** C4 **DP-126** r2 (F7 #884): lookbehind `not been` / `hasn't|haven't been` + `\s+` we wszystkich; Content-Length przed `text()`; testy positive „have been cancelled” + negatywne + CL. vitest bn3-err-rss **21**. Czekam CI→F7. Po F7: DP-140.
+
+## 2026-11-07 21:05 — #883 SCALONE; start DP-126 (C4 / ERR RSS filtry)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608 w planie. Bez nowego `pilne` do budowy.
+- Scalanie: **#883 SCALONE** `97ebb46e` (DP-115 F7: gotowe @ `6af84d24`; CI unit/visual/db ✔). `deploy-main` robi resztę. Bez push na main.
+- **Krok** C4 **DP-126** (F7 #699 r3 nieblokujące): lookbehind `will not be` / `won't be` w `CANCEL_RE`; T1 przez `runFerryStatus` (wyjątek ERR → warning); szersze testy filtrów. Gałąź `pakiet/c4-dp-126-err-rss-filters`. Bez migracji. vitest bn3-err-rss 19.
+
 ## 2026-11-07 20:28 — #882 SCALONE; start DP-115 (C4 / Stena IRM backoff)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608 w planie. Bez nowego `pilne` do budowy.
