@@ -1,3 +1,15 @@
+## 2026-11-07 04:00 — DP-101 F7 #866: atomowe sailing_cancel_auto (C4)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`. #861/#860/#852 (prośby właściciela) — w rejestrze DP-233/232/230; realizacja **po** F7+scaleniu #866.
+- Scalanie: brak „F7: gotowe” (F7 #866 @ `3d737510` — zmiany wymagane). CI na starym SHA zielone; nie merge. Bez push na main.
+- **Krok** C4 **DP-101** poprawka F7: RPC `sailing_cancel_auto` (**0427**, tylko service_role) — update ODWOLANY + insert AUTO notice w jednej transakcji; Tallink Alert + Port of Tallinn wołają RPC. Testy db ferry-status +4 (EXPECTED 22); unit bn2/bn3: fail → 0 notice. Gałąź `pakiet/c4-dp-101-notice-before-status` / #866.
+
+## 2026-11-07 03:35 — #865 SCALONE; start DP-101 (C4)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne` do wykonania.
+- Scalanie: **#865 SCALONE** `0f983406` (DP-100 F7: gotowe @ `5a514071`; CI unit+db+visual zielone). Bez push na main.
+- **Krok** C4 **DP-101**: `insertOperatorNotice` ODWOLANY przed `updateSailing` (Tallink Alert + Port of Tallinn) — jak PRZYWROCONY; przy fail update notice zostaje. Testy bn3/bn2. Gałąź `pakiet/c4-dp-101-notice-before-status`. Bez migracji.
+
 ## 2026-11-07 03:10 — #864 SCALONE; start DP-100 (C4)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne` do wykonania.

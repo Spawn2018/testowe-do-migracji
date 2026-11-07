@@ -132,4 +132,52 @@ update sailings set status='ODWOLANY' where id='$SID5';" >/dev/null
 autost=$(sys "select status||'/'||(select count(*)::text from operator_notices where sailing_id='$SID5' and source='AUTO') from sailings where id='$SID5'")
 if [ "$autost" = "ODWOLANY/1" ]; then ok=$((ok+1)); echo "  OK    0358 AUTO notice + ODWOLANY (łańcuch jak job)"; else fail=$((fail+1)); echo "  FAIL  0358 łańcuch ($autost)"; fi
 
+# DP-101 / F7 #866: sailing_cancel_auto — atomowy AUTO ODWOLANY + notice.
+SID101=66666666-0000-0000-0000-000000010101
+SID101b=66666666-0000-0000-0000-000000010102
+SID101c=66666666-0000-0000-0000-000000010103
+sys "delete from operator_notices where sailing_id in ('$SID101','$SID101b','$SID101c');
+delete from sailings where id in ('$SID101','$SID101b','$SID101c');
+insert into sailings (id, project_id, vessel_id, route, departure_at, arrival_at, status, source) values
+  ('$SID101','22222222-0000-0000-0000-000000000001','55555555-0000-0000-0000-0000000000f3','TLL-HEL',
+   now() + interval '9 days', now() + interval '9 days 3 hours', 'ZAPLANOWANY', 'TALLINK'),
+  ('$SID101b','22222222-0000-0000-0000-000000000001','55555555-0000-0000-0000-0000000000f3','TLL-HEL',
+   now() + interval '10 days', now() + interval '10 days 3 hours', 'ZAPLANOWANY', 'RECZNIE'),
+  ('$SID101c','22222222-0000-0000-0000-000000000001','55555555-0000-0000-0000-0000000000f3','TLL-HEL',
+   now() + interval '11 days', now() + interval '11 days 3 hours', 'ZAPLANOWANY', 'TALLINK');" >/dev/null
+
+# (a) dwa wywołania → 1 notice
+sys "select sailing_cancel_auto('$SID101','TALLINK','DP-101 a1','https://www.tallink.com/')" >/dev/null
+sys "select sailing_cancel_auto('$SID101','TALLINK','DP-101 a2','https://www.tallink.com/')" >/dev/null
+twice=$(sys "select status||'/'||(select count(*)::text from operator_notices where sailing_id='$SID101' and source='AUTO') from sailings where id='$SID101'")
+if [ "$twice" = "ODWOLANY/1" ]; then ok=$((ok+1)); echo "  OK    DP-101: dwa RPC → 1 AUTO notice"; else fail=$((fail+1)); echo "  FAIL  DP-101 dwa RPC ($twice)"; fi
+
+# (b) RECZNIE → false, 0 notice, status bez zmian
+recz_ok=$(sys "select sailing_cancel_auto('$SID101b','TALLINK','DP-101 b',null)::text")
+recz_st=$(sys "select status||'/'||(select count(*)::text from operator_notices where sailing_id='$SID101b') from sailings where id='$SID101b'")
+if { [ "$recz_ok" = "false" ] || [ "$recz_ok" = "f" ]; } && [ "$recz_st" = "ZAPLANOWANY/0" ]; then
+  ok=$((ok+1)); echo "  OK    DP-101: RECZNIE → 0 notice, status bez zmian"
+else fail=$((fail+1)); echo "  FAIL  DP-101 RECZNIE ($recz_ok / $recz_st)"; fi
+
+# (c) zły operator (FK) → wycofuje także status
+sys "
+do \$\$
+begin
+  perform public.sailing_cancel_auto('$SID101c','NO_SUCH_OP','DP-101 c',null);
+exception when foreign_key_violation then
+  null;
+when others then
+  if sqlerrm ~* 'operator_notices_operator|foreign key|violates' then null;
+  else raise;
+  end if;
+end \$\$;" >/dev/null
+badop=$(sys "select status||'/'||(select count(*)::text from operator_notices where sailing_id='$SID101c') from sailings where id='$SID101c'")
+if [ "$badop" = "ZAPLANOWANY/0" ]; then ok=$((ok+1)); echo "  OK    DP-101: błąd insertu wycofuje status"; else fail=$((fail+1)); echo "  FAIL  DP-101 rollback ($badop)"; fi
+
+# authenticated bez EXECUTE
+authdeny=$(asuser "$HHL" "select sailing_cancel_auto('$SID101','TALLINK','x',null)")
+if echo "$authdeny" | grep -qiE 'permission denied|42501'; then
+  ok=$((ok+1)); echo "  OK    DP-101: authenticated bez EXECUTE"
+else fail=$((fail+1)); echo "  FAIL  DP-101 authenticated ($authdeny)"; fi
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"

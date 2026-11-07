@@ -382,6 +382,24 @@ export function supabaseStore(sb: Client, projectCode = 'STEGRA_BODEN'): SyncSto
       ) as { id: string } | null;
       return r?.id ?? null;
     },
+    /** DP-101 / F7 #866: RPC sailing_cancel_auto — status + notice w jednej transakcji. */
+    async cancelSailingAuto(row: {
+      sailingId: string;
+      operator: string;
+      note?: string | null;
+      sourceUrl?: string | null;
+    }) {
+      const r = must(
+        await sb.rpc('sailing_cancel_auto', {
+          p_sailing_id: row.sailingId,
+          p_operator: row.operator,
+          p_note: row.note ?? null,
+          p_source_url: row.sourceUrl ?? null,
+        }),
+        'sailing_cancel_auto',
+      ) as boolean | null;
+      return r === true;
+    },
     /** #686 F7 B1: ostatni ODWOLANY (+ source_url) — Tallink Alert vs ts.ee. */
     async latestCancelNotice(sailingId: string) {
       const rows = must(

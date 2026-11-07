@@ -78,7 +78,11 @@ class MemStore implements SyncStore {
       }
     }
   }
+  /** DP-101: symulacja wyścigu HHL — cancelSailingAuto / update → false (bez notice). */
+  failStatusUpdate = false;
+  ops: string[] = [];
   async updateSailing(id: string, patch: SailingPatch) {
+    if (patch.status) this.ops.push(`update:${patch.status}`);
     const s = this.sailings.find((x) => x.id === id);
     if (!s) return false;
     const { actual_departure_at, actual_arrival_at, ...rest } = patch;
@@ -86,6 +90,7 @@ class MemStore implements SyncStore {
     if (Object.keys(rest).length) {
       // DP-100: jak store.updateSailing — ODWOLANY na już ODWOLANY → false.
       if (rest.status === 'ODWOLANY' && s.status === 'ODWOLANY') return false;
+      if (this.failStatusUpdate && rest.status) return false;
       if (s.source !== 'RECZNIE') { Object.assign(s, rest); wrote = true; }
     }
     if (actual_departure_at !== undefined) { s.actual_departure_at = actual_departure_at; wrote = true; }
@@ -138,10 +143,28 @@ class MemStore implements SyncStore {
     note?: string | null;
     sourceUrl?: string | null;
   }) {
+    this.ops.push(`notice:${row.kind}`);
     this.notices.push({
       sailingId: row.sailingId, operator: row.operator, kind: row.kind, note: row.note,
     });
     return `n${this.notices.length}`;
+  }
+  /** DP-101 / F7 #866: atomowe ODWOLANY + notice (jak RPC sailing_cancel_auto). */
+  async cancelSailingAuto(row: {
+    sailingId: string;
+    operator: string;
+    note?: string | null;
+    sourceUrl?: string | null;
+  }) {
+    this.ops.push('cancel_auto:ODWOLANY');
+    const s = this.sailings.find((x) => x.id === row.sailingId);
+    if (!s || s.source === 'RECZNIE' || s.status === 'ODWOLANY') return false;
+    if (this.failStatusUpdate) return false;
+    s.status = 'ODWOLANY';
+    this.notices.push({
+      sailingId: row.sailingId, operator: row.operator, kind: 'ODWOLANY', note: row.note,
+    });
+    return true;
   }
 }
 
@@ -429,6 +452,29 @@ describe('F7 #660 r2/r3 Port of Tallinn / Stockholm bez zmyślonych godzin', () 
       expect.objectContaining({ sailingId: 'finbo', operator: 'ECKERO', kind: 'ODWOLANY' }),
       expect.objectContaining({ sailingId: 'xprs', operator: 'VIKING', kind: 'ODWOLANY' }),
     ]));
+    // DP-101 / F7 #866: atomowe cancelSailingAuto (nie para notice+update).
+    expect(st.ops.filter((o) => o === 'cancel_auto:ODWOLANY')).toEqual([
+      'cancel_auto:ODWOLANY', 'cancel_auto:ODWOLANY',
+    ]);
+
+    // DP-101 (d): dwa przebiegi przy fail → 0 notice, status bez zmian.
+    const stFail = new MemStore();
+    stFail.failStatusUpdate = true;
+    stFail.vessels = async () => [
+      ...(await new MemStore().vessels()),
+      { id: 'v-finbo', name: 'M/F Finbo Cargo', mmsi: 230987100 },
+    ];
+    stFail.sailings.push({
+      id: 'finbo', vessel_id: 'v-finbo', route: 'MUU-VUO',
+      departure_at: '2026-10-30T08:00:00.000Z', arrival_at: '2026-10-30T10:30:00.000Z',
+      delayed_departure_at: null, delayed_arrival_at: null,
+      actual_departure_at: null, actual_arrival_at: null,
+      status: 'ZAPLANOWANY', source: 'DIGITRAFFIC',
+    });
+    await runFerrySchedule(deps(stFail, pages));
+    await runFerrySchedule(deps(stFail, pages));
+    expect(stFail.sailings[0]!.status).toBe('ZAPLANOWANY');
+    expect(stFail.notices.filter((n) => n.sailingId === 'finbo' && n.kind === 'ODWOLANY')).toHaveLength(0);
   });
 });
 
