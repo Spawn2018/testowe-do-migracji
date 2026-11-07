@@ -44,7 +44,7 @@ export const EXPECTED_LOCAL = {
   h1: 14,
   h3: 27,
   smsksh: 16,
-  'ferry-status': 22, // DP-101 / 0427: +4 (dwa RPC, RECZNIE, rollback FK, auth deny); było 18
+  'ferry-status': 23, // DP-108: +1 AUTO→FERRY_CANCELLED; DP-101 / 0427: 22
   bmapa: 224, // DP-231: +6 ferry_track_sample limit/DESC/latest; DP-228: 218
   h4: 26, // DP-193 F7 #770: +3 (null, pusta, +N); było 23 (+4 collapse)
   p4k: 111, // #630 F7 r1: +rola PORT_CHECKIN; CROSSING mismatch w medianie; undo 7d

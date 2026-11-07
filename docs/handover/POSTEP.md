@@ -1,3 +1,9 @@
+## 2026-11-07 15:20 — DP-108 start (C4 / BN3)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500 w planie. Bez nowego `pilne`.
+- Scalanie: **#876 SCALONE** `2653f5e1` (DP-107 F7 @ `e4c1bffe`, CI unit/visual/db ✔). Bez push na main.
+- **Krok** C4 **DP-108**: `sailing_cancel_auto` + transport → asercja `FERRY_CANCELLED/ODWOLANY/1` (jak ścieżka ręczna); fixture SID/LID/V108; ferry-status EXPECTED **23**. Gałąź `pakiet/c4-dp-108-auto-ferry-cancelled`. Po F7: DP-109….
+
 ## 2026-11-07 14:50 — DP-107 start (C4 / BN3)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500 w planie. Bez nowego `pilne`.

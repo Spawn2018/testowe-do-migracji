@@ -123,6 +123,7 @@ rec=$(sys "select source from operator_notices where sailing_id='$SID3' and crea
 if [ "$rec" = "RECZNIE" ]; then ok=$((ok+1)); echo "  OK    0358 apply → source=RECZNIE"; else fail=$((fail+1)); echo "  FAIL  0358 RECZNIE ($rec)"; fi
 
 # ODWOLANY (ręczny) otworzył FERRY_CANCELLED — już sprawdzone wyżej (dec); tu potwierdzenie łańcucha AUTO→status.
+# DP-108: pełna asercja FERRY_CANCELLED jest przy SID108 poniżej (sailing_cancel_auto + transport).
 sys "update sailings set status='ZAPLANOWANY', source='TALLINK' where id='$SID5'" >/dev/null
 sys "delete from operator_notices where sailing_id='$SID5' and source='AUTO'" >/dev/null
 sys "
@@ -179,5 +180,32 @@ authdeny=$(asuser "$HHL" "select sailing_cancel_auto('$SID101','TALLINK','x',nul
 if echo "$authdeny" | grep -qiE 'permission denied|42501'; then
   ok=$((ok+1)); echo "  OK    DP-101: authenticated bez EXECUTE"
 else fail=$((fail+1)); echo "  FAIL  DP-101 authenticated ($authdeny)"; fi
+
+# DP-108 / F7 #683 r2: AUTO ODWOLANY (sailing_cancel_auto) → FERRY_CANCELLED jak ścieżka ręczna.
+# Fixture: własny vessel L108 + UUID z numerem DP; bez overlapping zakresów SID101.
+SID108=66666666-0000-0000-0000-00000000108
+LID108=33333333-0000-0000-0000-00000000108
+V108=55555555-0000-0000-0000-00000000108
+sys "delete from decisions where load_id='$LID108';
+delete from risk_signals where load_id='$LID108';
+delete from operator_notices where sailing_id='$SID108';
+delete from positions where load_id='$LID108';
+delete from loads where id='$LID108';
+delete from sailings where id='$SID108';
+delete from vessels where id='$V108';
+insert into vessels (id, name, operator) values
+  ('$V108','Megastar DP108','Tallink');
+insert into sailings (id, project_id, vessel_id, route, departure_at, arrival_at, status, source) values
+  ('$SID108','22222222-0000-0000-0000-000000000001','$V108','TLL-HEL',
+   now() + interval '12 days', now() + interval '12 days 3 hours', 'ZAPLANOWANY', 'TALLINK');
+insert into loads (id, project_id, carrier_org_id, order_no, hhl_order_no, carrier_order_no, sailing_id, status) values
+  ('$LID108','22222222-0000-0000-0000-000000000001','00000000-0000-0000-0000-00000000a003','FS-108','HHL/FS-108','SCX/FS-108','$SID108','IN_TRANSIT_PL');" >/dev/null
+cnt108=$(sys "select count(*)::text from sailings where id='$SID108'")
+if [ "$cnt108" = "1" ]; then :; else echo "  FAIL  DP-108 fixture sailing count=$cnt108"; fi
+sys "select sailing_cancel_auto('$SID108','TALLINK','DP-108 AUTO cancel','https://www.tallink.com/')" >/dev/null
+dec108=$(sys "select coalesce((select type_code from decisions where load_id='$LID108' and type_code='FERRY_CANCELLED' limit 1),'brak')||'/'||(select status from sailings where id='$SID108')||'/'||(select count(*)::text from operator_notices where sailing_id='$SID108' and source='AUTO')")
+if [ "$dec108" = "FERRY_CANCELLED/ODWOLANY/1" ]; then
+  ok=$((ok+1)); echo "  OK    DP-108: AUTO ODWOLANY otwiera FERRY_CANCELLED"
+else fail=$((fail+1)); echo "  FAIL  DP-108 AUTO→FERRY_CANCELLED ($dec108)"; fi
 
 echo; echo "WYNIK: $ok OK, $fail FAIL"
