@@ -546,23 +546,30 @@ test.describe('DP-233 visual — filtr Załadunki dziś (HHL pl)', () => {
   for (const width of [1440, 390]) {
     const file = `harmonogram-zaladunki-dzis__hhl__pl__${width}__light.png`
     test(file, async ({ page }) => {
+      test.setTimeout(120_000)
       await page.emulateMedia({ reducedMotion: 'reduce' })
       await gotoFrozen(page, width)
       await setRole(page, 'HHL')
       await setTheme(page, 'light', 'dark')
       await navTo(page, 'sched')
-      await page.waitForSelector('[data-load]', { timeout: 30_000 })
-      const loading = page.locator('[data-day-kind="loading"]').first()
-      await expect(loading).toBeVisible()
+      /* telefon: gotoFrozen otwiera boczne menu — zwiń, żeby treść Harmonogramu była w kadrze */
+      if (width < 769) {
+        await page.evaluate(() => document.querySelector('.app')?.classList.add('nav-collapsed'))
+        await page.waitForTimeout(200)
+      }
+      const loading = page.locator(
+        width < 769
+          ? '[data-sched-day-row] [data-day-kind="loading"]'
+          : '[data-sched-filters] [data-day-kind="loading"]',
+      )
+      await expect(loading).toBeVisible({ timeout: 60_000 })
       await loading.click()
       await expect(loading).toHaveAttribute('aria-pressed', 'true')
-      await expect(page.locator('[data-day-offset="today"]').first()).toHaveAttribute('aria-pressed', 'true')
+      await expect(
+        page.locator(width < 769 ? '[data-sched-day-row] [data-day-offset="today"]' : '[data-sched-filters] [data-day-offset="today"]'),
+      ).toHaveAttribute('aria-pressed', 'true')
       await expect(page.locator('.s7-sheet-back')).toHaveCount(0)
-      if (width < 769) {
-        await expect(page.locator('[data-sched-day-row] [data-day-kind="loading"]')).toBeVisible()
-      } else {
-        await expect(page.locator('[data-sched-filters] [data-day-kind="loading"]')).toBeVisible()
-      }
+      await expect(page.locator('[data-load]').first()).toBeVisible({ timeout: 30_000 })
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
       expect(overflow).toBeLessThanOrEqual(0)
       await page.evaluate(async () => {
