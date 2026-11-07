@@ -537,3 +537,45 @@ test.describe('DP-67 visual — Awizacja: rejs przed planowanym załadunkiem (HH
     })
   }
 })
+
+/* DP-233 (#861) — Harmonogram: filtr Załadunki · Dziś widoczny bez arkusza filtrów (komputer 1440 + telefon 390).
+   Lista/wiersze bez zmian wyglądu; aktywny tylko day-filter. Demo: plannedLoadDate = 2026-09-23. */
+test.describe('DP-233 visual — filtr Załadunki dziś (HHL pl)', () => {
+  test.describe.configure({ mode: 'serial' })
+
+  for (const width of [1440, 390]) {
+    const file = `harmonogram-zaladunki-dzis__hhl__pl__${width}__light.png`
+    test(file, async ({ page }) => {
+      await page.emulateMedia({ reducedMotion: 'reduce' })
+      await gotoFrozen(page, width)
+      await setRole(page, 'HHL')
+      await setTheme(page, 'light', 'dark')
+      await navTo(page, 'sched')
+      await page.waitForSelector('[data-load]', { timeout: 30_000 })
+      const loading = page.locator('[data-day-kind="loading"]').first()
+      await expect(loading).toBeVisible()
+      await loading.click()
+      await expect(loading).toHaveAttribute('aria-pressed', 'true')
+      await expect(page.locator('[data-day-offset="today"]').first()).toHaveAttribute('aria-pressed', 'true')
+      await expect(page.locator('.s7-sheet-back')).toHaveCount(0)
+      if (width < 769) {
+        await expect(page.locator('[data-sched-day-row] [data-day-kind="loading"]')).toBeVisible()
+      } else {
+        await expect(page.locator('[data-sched-filters] [data-day-kind="loading"]')).toBeVisible()
+      }
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
+      expect(overflow).toBeLessThanOrEqual(0)
+      await page.evaluate(async () => {
+        if (document.fonts?.ready) await document.fonts.ready
+      })
+      await page.waitForTimeout(300)
+      await expect(page).toHaveScreenshot(file, {
+        fullPage: false,
+        maxDiffPixelRatio: 0.001,
+        threshold: 0.28,
+        animations: 'disabled',
+        caret: 'hide',
+      })
+    })
+  }
+})
