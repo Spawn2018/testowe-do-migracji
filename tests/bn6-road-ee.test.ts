@@ -36,6 +36,7 @@ import {
   lvNapKeyAllowedForUrl,
   clearEeHeavyFeedCache,
   clearEeSitesCache,
+  type BalticRoadEvent,
   dimensionLimitRisk,
   EE_PROBE_API_PATH,
   eeDatexApiKey,
@@ -90,6 +91,8 @@ class MemStore implements SyncStore {
   staleCalls: { prefix: string; keep: string[] }[] = [];
   runs: { job: string; ok: boolean; result: JobResult }[] = [];
   corridor: { corridor: string; slowdownMult: number; reason: string | null } | null = null;
+  /** DP-186 — symulacja ee_road_feed_cache. */
+  eeDb = new Map<string, { fetchedAt: number; events: BalticRoadEvent[] }>();
   async projectId() { return 'p1'; }
   async vessels() { return []; }
   async sailingsSince() { return []; }
@@ -135,6 +138,23 @@ class MemStore implements SyncStore {
   async saveMarineCondition() { /* */ }
   async noteHereUsage() { /* */ }
   async hereMonthSpend() { return 0; }
+  async getEeHeavyFeedDbCache(
+    code: 'RESTRICTIONS' | 'SAFETY',
+    nowMs: number,
+    maxAgeMs: number = EE_HEAVY_FEED_CACHE_TTL_MS,
+  ) {
+    const hit = this.eeDb.get(code);
+    if (!hit) return null;
+    if (Number.isFinite(maxAgeMs) && nowMs - hit.fetchedAt > maxAgeMs) return null;
+    return { fetchedAt: hit.fetchedAt, events: hit.events.map((e) => ({ ...e })) };
+  }
+  async setEeHeavyFeedDbCache(
+    code: 'RESTRICTIONS' | 'SAFETY',
+    events: BalticRoadEvent[],
+    fetchedAtMs: number,
+  ) {
+    this.eeDb.set(code, { fetchedAt: fetchedAtMs, events: events.map((e) => ({ ...e })) });
+  }
 }
 
 function deps(
@@ -727,6 +747,118 @@ describe('BN6 runRoadEe', () => {
     expect(h2.filter((c) => c.url.includes('/restrictions')).length).toBe(0);
     expect(h2.filter((c) => c.url.includes('/safetyData')).length).toBe(0);
     expect(Number(r2.observations?.fetched_ok)).toBe(Number(r2.observations?.expected_fetches));
+  });
+
+  it('DP-186: po cold start (bez pamięci) cache z bazy → source=cache; bez HTTP heavy', async () => {
+    const pages: Record<string, string | number> = {
+      'https://tarktee.ee/': '<html>ok</html>',
+    };
+    for (const f of EE_DATEX_FEEDS) {
+      const url = eeDatexFeedUrl(f.path);
+      if (f.code === 'RESTRICTIONS') pages[url] = restXml;
+      else if (f.code === 'SAFETY') {
+        pages[url] = '<?xml version="1.0"?><d2LogicalModel><payloadPublication></payloadPublication></d2LogicalModel>';
+      } else if (f.code === 'MEASUREMENT_SITES') pages[url] = sitesXml;
+      else if (f.code === 'WEATHER') pages[url] = weatherXml;
+      else if (f.code === 'SRTI_ACCIDENT' || f.code === 'SRTI_BLOCKAGE') {
+        pages[url] = JSON.stringify(srtiJson);
+      } else if (f.code.startsWith('SRTI_')) {
+        pages[url] = JSON.stringify({
+          feedType: 'SRTI',
+          publicationTime: '2026-11-03T03:00:00Z',
+          payloadPublicationExtension: {},
+        });
+      } else {
+        pages[url] = '<?xml version="1.0"?><d2LogicalModel><payloadPublication></payloadPublication></d2LogicalModel>';
+      }
+    }
+    const sharedDb = new MemStore();
+    const { d: d1 } = deps(sharedDb, pages);
+    const r1 = await runRoadEe(d1);
+    expect(r1.observations?.ee_restrictions_source).toBe('fetch');
+    expect(sharedDb.eeDb.has('RESTRICTIONS')).toBe(true);
+    expect(sharedDb.eeDb.has('SAFETY')).toBe(true);
+
+    /* Cold start: pamięć pusta, ta sama baza. */
+    clearEeHeavyFeedCache();
+    clearEeSitesCache();
+    const store2 = new MemStore();
+    store2.eeDb = sharedDb.eeDb;
+    const { d: d2, headerCalls: h2 } = deps(store2, pages);
+    const r2 = await runRoadEe(d2);
+    expect(r2.observations?.ee_restrictions_source).toBe('cache');
+    expect(r2.observations?.ee_safety_source).toBe('cache');
+    expect(String(r2.observations?.ee_restrictions ?? '')).toMatch(/^ok:\d+:0:cache:0$/);
+    expect(h2.filter((c) => c.url.includes('/restrictions')).length).toBe(0);
+    expect(h2.filter((c) => c.url.includes('/safetyData')).length).toBe(0);
+    expect(Number(r2.observations?.fetched_ok)).toBe(Number(r2.observations?.expected_fetches));
+  });
+
+  it('DP-186: timeout RESTRICTIONS → cache-stale z bazy (complete bez utraty heavy)', async () => {
+    const pages: Record<string, string | number> = {
+      'https://tarktee.ee/': '<html>ok</html>',
+    };
+    for (const f of EE_DATEX_FEEDS) {
+      const url = eeDatexFeedUrl(f.path);
+      if (f.code === 'RESTRICTIONS') pages[url] = restXml;
+      else if (f.code === 'SAFETY') {
+        pages[url] = '<?xml version="1.0"?><d2LogicalModel><payloadPublication></payloadPublication></d2LogicalModel>';
+      } else if (f.code === 'MEASUREMENT_SITES') pages[url] = sitesXml;
+      else if (f.code === 'WEATHER') pages[url] = weatherXml;
+      else if (f.code === 'SRTI_ACCIDENT' || f.code === 'SRTI_BLOCKAGE') {
+        pages[url] = JSON.stringify(srtiJson);
+      } else if (f.code.startsWith('SRTI_')) {
+        pages[url] = JSON.stringify({
+          feedType: 'SRTI',
+          publicationTime: '2026-11-03T03:00:00Z',
+          payloadPublicationExtension: {},
+        });
+      } else {
+        pages[url] = '<?xml version="1.0"?><d2LogicalModel><payloadPublication></payloadPublication></d2LogicalModel>';
+      }
+    }
+    const store = new MemStore();
+    const { d: d1 } = deps(store, pages);
+    await runRoadEe(d1);
+    expect(store.eeDb.has('RESTRICTIONS')).toBe(true);
+    /* Kopia starsza niż TTL 60 min → nie pomija fetch; przy błędzie → cache-stale. */
+    const old = store.eeDb.get('RESTRICTIONS')!;
+    store.eeDb.set('RESTRICTIONS', {
+      fetchedAt: NOW.getTime() - EE_HEAVY_FEED_CACHE_TTL_MS - 60_000,
+      events: old.events,
+    });
+
+    clearEeHeavyFeedCache();
+    clearEeSitesCache();
+    /* Drugi przebieg: RESTRICTIONS timeout (AbortError), reszta OK. */
+    const pages2: Record<string, string | number> = { ...pages };
+    const restUrl = eeDatexFeedUrl('restrictions');
+    const headerCalls: { url: string }[] = [];
+    const f = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      headerCalls.push({ url });
+      if (url === restUrl) {
+        const err = new Error('The operation was aborted');
+        err.name = 'AbortError';
+        throw err;
+      }
+      const body = pages2[url];
+      if (body === undefined) return new Response('missing', { status: 404 });
+      if (typeof body === 'number') return new Response('err', { status: body });
+      return new Response(body, {
+        status: 200,
+        headers: { 'Content-Type': url.includes('srti') ? 'application/json' : 'application/xml' },
+      });
+    }) as typeof fetch;
+    const r2 = await runRoadEe({
+      now: () => NOW,
+      fetch: f,
+      env: { TARKTEE_DATEX_TOKEN: 'test-ee-key' },
+      store,
+    });
+    expect(r2.observations?.ee_restrictions_source).toBe('cache');
+    expect(String(r2.observations?.ee_restrictions ?? '')).toMatch(/^ok:\d+:0:cache-stale:0$/);
+    expect(headerCalls.some((c) => c.url.includes('/restrictions'))).toBe(true);
   });
 
   it('F7 B4: 4× SRTI {"message"} → incomplete, bez resolveStale', async () => {
