@@ -1,3 +1,9 @@
+## 2026-11-07 17:48 — DP-112 start (C4 / BN3)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500 w planie. Bez nowego `pilne`.
+- Scalanie: **#879 SCALONE** `9ae8e633` (DP-111 F7 @ `778366d0`, CI unit/visual/db ✔). Bez push na main.
+- **Krok** C4 **DP-112**: `stripParenTzHours` przed `uniqueHmIn` — HH:MM w nawiasie UTC/local/Finnish/Swedish (time) nie liczą się do multiTime; zakres „HH:MM–HH:MM” zostaje ambiguous; mutacja w teście. vitest bn3-tallink-alert **76**. Gałąź `pakiet/c4-dp-112-tallink-paren-tz-hours`. Po F7: DP-234….
+
 ## 2026-11-07 17:20 — DP-111 #879 r2 (C4 / BN3)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500 w planie. Bez nowego `pilne`.
