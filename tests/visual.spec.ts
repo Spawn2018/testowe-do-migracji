@@ -569,7 +569,8 @@ test.describe('DP-233 visual — filtr Załadunki dziś (HHL pl)', () => {
         page.locator(width < 769 ? '[data-sched-day-row] [data-day-offset="today"]' : '[data-sched-filters] [data-day-offset="today"]'),
       ).toHaveAttribute('aria-pressed', 'true')
       await expect(page.locator('.s7-sheet-back')).toHaveCount(0)
-      await expect(page.locator('[data-load]').first()).toBeVisible({ timeout: 30_000 })
+      /* telefon: tabela `display:none`, karty widoczne — `.first()` bez filtra widoczności bierze ukryty <tr> */
+      await expect(page.locator('[data-load]').filter({ visible: true }).first()).toBeVisible({ timeout: 30_000 })
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
       expect(overflow).toBeLessThanOrEqual(0)
       await page.evaluate(async () => {
