@@ -7,9 +7,10 @@
  * F7 #683 B1–B4; R2-B2: >1 HH:MM lub >1 data w treści → niejednoznaczne.
  * R3-B1: ODWOLANY tylko przy dacie sparsowanej z treści; Scheduler = wyłącznie wygaśnięcie.
  * R4-B1: auto-ODWOLANY tylko gdy w tym samym zdaniu co cancel: statek + 1×HH:MM + 1×data;
- *   bez wskazówek względnych/nierozpoznanych w całej treści (updated/tomorrow/dni tygodnia…).
+ *   bez wskazówek względnych w auto (tomorrow / dni tygodnia → ryzyko MEDIUM; F7 #879 r2).
  * DP-111: częste formy dat w allowliście i `parseAlertContentDates` — „November 2”, „2nd November”,
- *   „2–4 November”, „from 2 to 4 November”, „tomorrow”, dni tygodnia (kotwica = dateStart/dziś).
+ *   „2–4 November”, „from 2 to 4 November”, „tomorrow”, dni tygodnia (kotwica = dateStart/dziś);
+ *   bezwzględne → auto; tomorrow/weekday → `contentStartYmd` bez `autoCancelOk`/`autoRestoreOk`.
  * R5: auto-ODWOLANY wyłącznie przy ścisłym wzorcu zdania (allowlist) — bez may/buffet/trasy z innego zdania.
  * R6 / decyzja 68: cała treść = dokładnie jedno zdanie wzorcowe (+ opcjonalnie zdania z listy przeprosin);
  *   opcjonalny sufiks „due to (a )?(technical fault|…)”; każde inne zdanie → ryzyko MEDIUM.
@@ -605,7 +606,16 @@ export type AutoCancelFields = {
   hm: string;
   vessel: string;
   routes: FerryRoute[];
+  /** DP-111 / F7 #879 r2: tomorrow / weekday — data treści bez auto. */
+  relativeDate: boolean;
 };
+
+/** DP-111 r2: „tomorrow” / „Monday” — rozpoznane, nie auto (kotwica dateStart ≠ dzień publikacji). */
+function isRelativeDatePhrase(phrase: string): boolean {
+  const p = phrase.trim().replace(/\s+/g, ' ');
+  if (/^tomorrow$/i.test(p)) return true;
+  return new RegExp(`^(?:${WEEKDAY_NAMES})$`, 'i').test(p);
+}
 
 function mapShipAlias(raw: string): string | null {
   const n = raw.trim().toLowerCase().replace(/\s+/g, ' ');
@@ -691,25 +701,37 @@ function matchStrictAutoCancelSentence(
       const vessel = mapShipAlias(m[1]!);
       const hm = `${String(Number(m[2])).padStart(2, '0')}:${m[3]}`;
       const route = routeFromPorts(m[4]!, m[5]!);
-      const span = parseDatePhrase(m[6]!, year, anchorYmd);
+      const dateRaw = m[6]!;
+      const span = parseDatePhrase(dateRaw, year, anchorYmd);
       if (!vessel || !route || !span) return null;
-      return { startYmd: span.startYmd, endYmd: span.endYmd, hm, vessel, routes: [route] };
+      return {
+        startYmd: span.startYmd, endYmd: span.endYmd, hm, vessel, routes: [route],
+        relativeDate: isRelativeDatePhrase(dateRaw),
+      };
     }
     if (i === 1) {
       const vessel = mapShipAlias(m[1]!);
       const hm = `${String(Number(m[2])).padStart(2, '0')}:${m[3]}`;
-      const span = parseDatePhrase(m[4]!, year, anchorYmd);
+      const dateRaw = m[4]!;
+      const span = parseDatePhrase(dateRaw, year, anchorYmd);
       const route = routeFromPorts(m[5]!, m[6]!);
       if (!vessel || !route || !span) return null;
-      return { startYmd: span.startYmd, endYmd: span.endYmd, hm, vessel, routes: [route] };
+      return {
+        startYmd: span.startYmd, endYmd: span.endYmd, hm, vessel, routes: [route],
+        relativeDate: isRelativeDatePhrase(dateRaw),
+      };
     }
     // i === 2: date first
-    const span = parseDatePhrase(m[1]!, year, anchorYmd);
+    const dateRaw = m[1]!;
+    const span = parseDatePhrase(dateRaw, year, anchorYmd);
     const vessel = mapShipAlias(m[2]!);
     const hm = `${String(Number(m[3])).padStart(2, '0')}:${m[4]}`;
     const route = routeFromPorts(m[5]!, m[6]!);
     if (!vessel || !route || !span) return null;
-    return { startYmd: span.startYmd, endYmd: span.endYmd, hm, vessel, routes: [route] };
+    return {
+      startYmd: span.startYmd, endYmd: span.endYmd, hm, vessel, routes: [route],
+      relativeDate: isRelativeDatePhrase(dateRaw),
+    };
   }
   return null;
 }
@@ -778,24 +800,36 @@ function matchStrictAutoRestoreSentence(
       const vessel = mapShipAlias(m[1]!);
       const hm = `${String(Number(m[2])).padStart(2, '0')}:${m[3]}`;
       const route = routeFromPorts(m[4]!, m[5]!);
-      const span = parseDatePhrase(m[6]!, year, anchorYmd);
+      const dateRaw = m[6]!;
+      const span = parseDatePhrase(dateRaw, year, anchorYmd);
       if (!vessel || !route || !span) return null;
-      return { startYmd: span.startYmd, endYmd: span.endYmd, hm, vessel, routes: [route] };
+      return {
+        startYmd: span.startYmd, endYmd: span.endYmd, hm, vessel, routes: [route],
+        relativeDate: isRelativeDatePhrase(dateRaw),
+      };
     }
     if (i === 1) {
       const vessel = mapShipAlias(m[1]!);
       const hm = `${String(Number(m[2])).padStart(2, '0')}:${m[3]}`;
-      const span = parseDatePhrase(m[4]!, year, anchorYmd);
+      const dateRaw = m[4]!;
+      const span = parseDatePhrase(dateRaw, year, anchorYmd);
       const route = routeFromPorts(m[5]!, m[6]!);
       if (!vessel || !route || !span) return null;
-      return { startYmd: span.startYmd, endYmd: span.endYmd, hm, vessel, routes: [route] };
+      return {
+        startYmd: span.startYmd, endYmd: span.endYmd, hm, vessel, routes: [route],
+        relativeDate: isRelativeDatePhrase(dateRaw),
+      };
     }
-    const span = parseDatePhrase(m[1]!, year, anchorYmd);
+    const dateRaw = m[1]!;
+    const span = parseDatePhrase(dateRaw, year, anchorYmd);
     const vessel = mapShipAlias(m[2]!);
     const hm = `${String(Number(m[3])).padStart(2, '0')}:${m[4]}`;
     const route = routeFromPorts(m[5]!, m[6]!);
     if (!vessel || !route || !span) return null;
-    return { startYmd: span.startYmd, endYmd: span.endYmd, hm, vessel, routes: [route] };
+    return {
+      startYmd: span.startYmd, endYmd: span.endYmd, hm, vessel, routes: [route],
+      relativeDate: isRelativeDatePhrase(dateRaw),
+    };
   }
   return null;
 }
@@ -938,9 +972,10 @@ export function parseTallinkAlerts(
     const restore = (allowAutoCancel && !filterReject && kind === 'INFO' && !auto)
       ? autoRestoreFromRestoreSentence(text, yearHint, anchorYmd)
       : null;
-    let autoCancelOk = auto != null;
-    let autoRestoreOk = restore != null;
-    const fields = autoCancelOk ? auto! : (autoRestoreOk ? restore! : null);
+    // DP-111 r2 / R4-B1: pola daty z allowlisty także przy tomorrow/weekday; auto tylko bezwzględne.
+    const fields = auto ?? restore;
+    let autoCancelOk = !!(auto && !auto.relativeDate);
+    let autoRestoreOk = !!(restore && !restore.relativeDate);
     const multiTime = !autoCancelOk && kind === 'ODWOLANY'
       ? true
       : (!autoRestoreOk && kind === 'INFO' && RESUME_RE.test(text) && !fields

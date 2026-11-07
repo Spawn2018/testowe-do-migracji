@@ -387,7 +387,8 @@ describe('BN3 Tallink Alert', () => {
     }
   });
 
-  it('DP-111: November 2 / 2nd / zakres / tomorrow / Monday w allowliście → contentStartYmd', () => {
+  it('DP-111: November 2 / 2nd / zakres → auto; tomorrow / Monday → contentStartYmd bez auto (R4-B1)', () => {
+    // F7 #879 r2: bezwzględne w auto; względne rozpoznane (wygaśnięcie/ryzyko), bez autoCancelOk.
     const base = '2026-11-01'; // niedziela; Monday → 2.11; tomorrow → 2.11
     expect(parseDatePhrase('November 2', 2026, base)).toEqual({
       startYmd: '2026-11-02', endYmd: '2026-11-02',
@@ -408,7 +409,7 @@ describe('BN3 Tallink Alert', () => {
       startYmd: '2026-11-02', endYmd: '2026-11-02',
     });
 
-    const cases: Array<{ text: string; start: string; end: string }> = [
+    const absolute: Array<{ text: string; start: string; end: string }> = [
       {
         text: 'The MyStar 16:30 departure from Tallinn to Helsinki on November 2 is cancelled.',
         start: '2026-11-02', end: '2026-11-02',
@@ -425,23 +426,38 @@ describe('BN3 Tallink Alert', () => {
         text: 'The MyStar 16:30 departure from Tallinn to Helsinki from 2 to 4 November is cancelled.',
         start: '2026-11-02', end: '2026-11-04',
       },
-      {
-        text: 'The MyStar 16:30 departure from Tallinn to Helsinki tomorrow is cancelled.',
-        start: '2026-11-02', end: '2026-11-02',
-      },
-      {
-        text: 'The MyStar 16:30 departure from Tallinn to Helsinki on Monday is cancelled.',
-        start: '2026-11-02', end: '2026-11-02',
-      },
     ];
-    for (const c of cases) {
+    for (const c of absolute) {
       expect(autoCancelFromCancelSentence(c.text, 2026, base)).toMatchObject({
-        startYmd: c.start, endYmd: c.end, hm: '16:30', vessel: 'M/F MyStar',
+        startYmd: c.start, endYmd: c.end, hm: '16:30', vessel: 'M/F MyStar', relativeDate: false,
       });
       const alert = parseTallinkAlerts(wrapAlert(c.text, base), TALLINK_HOME(), NOW).alerts[0]!;
       expect(alert.autoCancelOk).toBe(true);
       expect(alert.contentStartYmd).toBe(c.start);
       expect(alert.contentEndYmd).toBe(c.end);
+      expect(alert.contentHm).toBe('16:30');
+    }
+
+    const relative: Array<{ text: string; start: string }> = [
+      {
+        text: 'The MyStar 16:30 departure from Tallinn to Helsinki tomorrow is cancelled.',
+        start: '2026-11-02',
+      },
+      {
+        text: 'The MyStar 16:30 departure from Tallinn to Helsinki on Monday is cancelled.',
+        start: '2026-11-02',
+      },
+    ];
+    for (const c of relative) {
+      expect(autoCancelFromCancelSentence(c.text, 2026, base)).toMatchObject({
+        startYmd: c.start, endYmd: c.start, hm: '16:30', vessel: 'M/F MyStar', relativeDate: true,
+      });
+      const alert = parseTallinkAlerts(wrapAlert(c.text, base), TALLINK_HOME(), NOW).alerts[0]!;
+      // Mutacja: dopuszczenie względnych w auto → ten expect pada.
+      expect(alert.autoCancelOk).toBe(false);
+      expect(alert.autoRestoreOk).toBe(false);
+      expect(alert.contentStartYmd).toBe(c.start);
+      expect(alert.contentEndYmd).toBe(c.start);
       expect(alert.contentHm).toBe('16:30');
     }
     // Zakres w parseAlertContentDates — jedna fraza, nie multiTime.
