@@ -454,13 +454,14 @@ function uniqueHmIn(text: string): string[] {
   )];
 }
 
-function countRecognizedDates(text: string, year: number): string[] {
+function countRecognizedDates(
+  text: string,
+  year: number,
+  anchorYmd?: string | null,
+): string[] {
   const ymds: string[] = [];
   const pushYmd = (dayRaw: string, monRaw: string, yearRaw: string | undefined) => {
-    const day = String(Number(dayRaw)).padStart(2, '0');
-    const mon = MONTH[monRaw.toLowerCase()]!;
-    const y = yearRaw ?? String(year);
-    const ymd = `${y}-${mon}-${day}`;
+    const ymd = ymdFromDateParts(dayRaw, monRaw, yearRaw, year, anchorYmd);
     if (!ymds.includes(ymd)) ymds.push(ymd);
   };
   for (const m of text.matchAll(
@@ -500,11 +501,31 @@ function mapShipAlias(raw: string): string | null {
   return null;
 }
 
-function ymdFromDateParts(dayRaw: string, monRaw: string, yearRaw: string | undefined, year: number): string {
+/**
+ * DP-107 / F7 #683: bez roku w tekście — gdy miesiąc treści < miesiąc kotwicy Schedulera
+ * (grudzień→styczeń, długie okno 2025-12…2026-11), bierz rok+1 zamiast cichego wygaśnięcia.
+ */
+function ymdFromDateParts(
+  dayRaw: string,
+  monRaw: string,
+  yearRaw: string | undefined,
+  year: number,
+  anchorYmd?: string | null,
+): string {
   const day = String(Number(dayRaw)).padStart(2, '0');
   const mon = MONTH[monRaw.toLowerCase()]!;
-  const y = yearRaw ?? String(year);
-  return `${y}-${mon}-${day}`;
+  let y = yearRaw ? Number(yearRaw) : year;
+  let ymd = `${String(y).padStart(4, '0')}-${mon}-${day}`;
+  if (
+    !yearRaw
+    && anchorYmd
+    && isValidYmd(anchorYmd)
+    && Number(mon) < Number(anchorYmd.slice(5, 7))
+  ) {
+    y += 1;
+    ymd = `${String(y).padStart(4, '0')}-${mon}-${day}`;
+  }
+  return ymd;
 }
 
 function routeFromPorts(aRaw: string, bRaw: string): FerryRoute | null {
@@ -519,7 +540,11 @@ function routeFromPorts(aRaw: string, bRaw: string): FerryRoute | null {
  * (statek + HH:MM + from/to + data + is/has been cancelled [+ due to …]; bez dodatkowego tekstu).
  * Mutacja: poluzowanie (dowolny tekst przed/po) albo zdjęcie `$` po sufiksie → test pada.
  */
-function matchStrictAutoCancelSentence(sent: string, year: number): AutoCancelFields | null {
+function matchStrictAutoCancelSentence(
+  sent: string,
+  year: number,
+  anchorYmd?: string | null,
+): AutoCancelFields | null {
   const s = sent.trim().replace(/\s+/g, ' ');
   const ship = SHIP_NAME_ALT;
   const port = PORT_NAME_ALT;
@@ -550,20 +575,20 @@ function matchStrictAutoCancelSentence(sent: string, year: number): AutoCancelFi
       const vessel = mapShipAlias(m[1]!);
       const hm = `${String(Number(m[2])).padStart(2, '0')}:${m[3]}`;
       const route = routeFromPorts(m[4]!, m[5]!);
-      const ymd = ymdFromDateParts(m[6]!, m[7]!, m[8], year);
+      const ymd = ymdFromDateParts(m[6]!, m[7]!, m[8], year, anchorYmd);
       if (!vessel || !route) return null;
       return { startYmd: ymd, endYmd: ymd, hm, vessel, routes: [route] };
     }
     if (i === 1) {
       const vessel = mapShipAlias(m[1]!);
       const hm = `${String(Number(m[2])).padStart(2, '0')}:${m[3]}`;
-      const ymd = ymdFromDateParts(m[4]!, m[5]!, m[6], year);
+      const ymd = ymdFromDateParts(m[4]!, m[5]!, m[6], year, anchorYmd);
       const route = routeFromPorts(m[7]!, m[8]!);
       if (!vessel || !route) return null;
       return { startYmd: ymd, endYmd: ymd, hm, vessel, routes: [route] };
     }
     // i === 2: date first
-    const ymd = ymdFromDateParts(m[1]!, m[2]!, m[3], year);
+    const ymd = ymdFromDateParts(m[1]!, m[2]!, m[3], year, anchorYmd);
     const vessel = mapShipAlias(m[4]!);
     const hm = `${String(Number(m[5])).padStart(2, '0')}:${m[6]}`;
     const route = routeFromPorts(m[7]!, m[8]!);
@@ -585,10 +610,11 @@ function isNeutralApologySentence(sent: string): boolean {
 export function autoCancelFromCancelSentence(
   text: string,
   year: number,
+  anchorYmd?: string | null,
 ): AutoCancelFields | null {
   const hits: AutoCancelFields[] = [];
   for (const sent of alertSentences(text)) {
-    const hit = matchStrictAutoCancelSentence(sent, year);
+    const hit = matchStrictAutoCancelSentence(sent, year, anchorYmd);
     if (hit) {
       hits.push(hit);
       continue;
@@ -605,7 +631,11 @@ export function autoCancelFromCancelSentence(
  * #686: zdanie przywrócenia — ta sama rama co cancel (statek + HH:MM + from/to + data),
  * sufiks: will operate as planned|scheduled | has been reinstated | is no longer cancelled.
  */
-function matchStrictAutoRestoreSentence(sent: string, year: number): AutoCancelFields | null {
+function matchStrictAutoRestoreSentence(
+  sent: string,
+  year: number,
+  anchorYmd?: string | null,
+): AutoCancelFields | null {
   const s = sent.trim().replace(/\s+/g, ' ');
   const ship = SHIP_NAME_ALT;
   const port = PORT_NAME_ALT;
@@ -631,19 +661,19 @@ function matchStrictAutoRestoreSentence(sent: string, year: number): AutoCancelF
       const vessel = mapShipAlias(m[1]!);
       const hm = `${String(Number(m[2])).padStart(2, '0')}:${m[3]}`;
       const route = routeFromPorts(m[4]!, m[5]!);
-      const ymd = ymdFromDateParts(m[6]!, m[7]!, m[8], year);
+      const ymd = ymdFromDateParts(m[6]!, m[7]!, m[8], year, anchorYmd);
       if (!vessel || !route) return null;
       return { startYmd: ymd, endYmd: ymd, hm, vessel, routes: [route] };
     }
     if (i === 1) {
       const vessel = mapShipAlias(m[1]!);
       const hm = `${String(Number(m[2])).padStart(2, '0')}:${m[3]}`;
-      const ymd = ymdFromDateParts(m[4]!, m[5]!, m[6], year);
+      const ymd = ymdFromDateParts(m[4]!, m[5]!, m[6], year, anchorYmd);
       const route = routeFromPorts(m[7]!, m[8]!);
       if (!vessel || !route) return null;
       return { startYmd: ymd, endYmd: ymd, hm, vessel, routes: [route] };
     }
-    const ymd = ymdFromDateParts(m[1]!, m[2]!, m[3], year);
+    const ymd = ymdFromDateParts(m[1]!, m[2]!, m[3], year, anchorYmd);
     const vessel = mapShipAlias(m[4]!);
     const hm = `${String(Number(m[5])).padStart(2, '0')}:${m[6]}`;
     const route = routeFromPorts(m[7]!, m[8]!);
@@ -657,10 +687,11 @@ function matchStrictAutoRestoreSentence(sent: string, year: number): AutoCancelF
 export function autoRestoreFromRestoreSentence(
   text: string,
   year: number,
+  anchorYmd?: string | null,
 ): AutoCancelFields | null {
   const hits: AutoCancelFields[] = [];
   for (const sent of alertSentences(text)) {
-    const hit = matchStrictAutoRestoreSentence(sent, year);
+    const hit = matchStrictAutoRestoreSentence(sent, year, anchorYmd);
     if (hit) {
       hits.push(hit);
       continue;
@@ -675,12 +706,13 @@ export function autoRestoreFromRestoreSentence(
 export function parseAlertContentDates(
   text: string,
   year: number,
+  anchorYmd?: string | null,
 ): { startYmd: string; endYmd: string; hm: string | null; multiTime: boolean } | null {
   const hmUnique = uniqueHmIn(text);
   const multiHm = hmUnique.length > 1;
   const hm = hmUnique.length === 1 ? hmUnique[0]! : null;
 
-  const ymds = countRecognizedDates(text, year);
+  const ymds = countRecognizedDates(text, year, anchorYmd);
   const multiDate = ymds.length > 1;
   const multiTime = multiHm || multiDate;
   if (ymds.length === 0) {
@@ -779,12 +811,14 @@ export function parseTallinkAlerts(
     // Rok z okna Schedulera tylko gdy blisko teraz (R12-B2: 1000-01-01 nie może dać treści z roku 1000).
     const ys = startOk && dateStart ? Number(dateStart.slice(0, 4)) : yearNow;
     const yearHint = (ys >= yearNow - 1 && ys <= yearNow + 1) ? ys : yearNow;
-    const content = text ? parseAlertContentDates(text, yearHint) : null;
+    // DP-107: kotwica = dateStart — „on 2 January” przy grudniowym oknie → rok+1.
+    const anchorYmd = startOk ? dateStart : null;
+    const content = text ? parseAlertContentDates(text, yearHint, anchorYmd) : null;
     const auto = (allowAutoCancel && !filterReject && kind === 'ODWOLANY')
-      ? autoCancelFromCancelSentence(text, yearHint)
+      ? autoCancelFromCancelSentence(text, yearHint, anchorYmd)
       : null;
     const restore = (allowAutoCancel && !filterReject && kind === 'INFO' && !auto)
-      ? autoRestoreFromRestoreSentence(text, yearHint)
+      ? autoRestoreFromRestoreSentence(text, yearHint, anchorYmd)
       : null;
     let autoCancelOk = auto != null;
     let autoRestoreOk = restore != null;

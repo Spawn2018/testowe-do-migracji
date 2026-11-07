@@ -1,3 +1,9 @@
+## 2026-11-07 14:50 — DP-107 start (C4 / BN3)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500 w planie. Bez nowego `pilne`.
+- Scalanie: **#875 SCALONE** `007bc1bc` (DP-235 F7 @ `4650d309`, CI unit/visual/db ✔). Bez push na main.
+- **Krok** C4 **DP-107**: Tallink Alert — bez roku w tekście, miesiąc treści < miesiąc `dateStart` → rok+1 (grudzień→styczeń, długie okno 2025-12…2026-11); bez cichego `expired`. vitest bn3-tallink-alert **73**. Gałąź `pakiet/c4-dp-107-tallink-year-wrap`. Po F7: DP-108….
+
 ## 2026-11-07 14:10 — DP-235 #875 F7 r2 (C4)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500 w planie. Bez nowego `pilne`.
