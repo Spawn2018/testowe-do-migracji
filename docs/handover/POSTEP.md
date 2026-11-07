@@ -1,3 +1,9 @@
+## 2026-11-07 13:50 — DP-235 start (#870 / 0431)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500 w planie. Bez nowego `pilne`.
+- Scalanie: **#874 SCALONE** `12cb27ca` (DP-236 F7 @ `48474c00`, CI unit/visual/db ✔). Bez push na main.
+- **Krok** C4 **DP-235**: `detect_gps_wrong_ferry_port` — FERRY + GPS w obcym PORT_IN → `rk_gps_wrong_port`; `gps_is_repeat_stale_after_dep` (powtórzony fix ≥30 min tylko po ATD, przy FERRY najnowszy punkt); status EXPECTED **725**. Gałąź `pakiet/c4-dp-235-ferry-port-in-stale`. Po F7: DP-107….
+
 ## 2026-11-07 13:20 — DP-236 #874 r2 (C4)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500 w planie. Bez nowego `pilne`.
