@@ -304,6 +304,21 @@ describe('BN3 Tallink Alert — runFerryStatus (F7 B5)', () => {
     // DP-100: nawet bezpośredni update ODWOLANY na już ODWOLANY → false (jak store.neq).
     expect(await st.updateSailing('s-ok', { status: 'ODWOLANY' })).toBe(false);
 
+    // DP-101: notice przed statusem — przy fail update ODWOLANY zostaje w historii, status bez zmian.
+    const stFail = new MemStore();
+    stFail.failStatusUpdate = true;
+    stFail.sailings.push({
+      id: 's-fail', vessel_id: MYST, route: 'TLL-HEL',
+      departure_at: '2026-11-02T05:30:00.000Z', arrival_at: '2026-11-02T07:30:00.000Z',
+      delayed_departure_at: null, delayed_arrival_at: null,
+      actual_departure_at: null, actual_arrival_at: null,
+      status: 'ZAPLANOWANY', source: 'TALLINK',
+    });
+    await runFerryStatus(deps(stFail, pages, NOW));
+    expect(stFail.sailings[0]!.status).toBe('ZAPLANOWANY');
+    expect(stFail.notices.some((n) => n.kind === 'ODWOLANY' && n.sailingId === 's-fail')).toBe(true);
+    expect(stFail.ops).toEqual(['notice:ODWOLANY', 'update:ODWOLANY']);
+
     // Niejednoznaczny: dwa rejsy TLL-HEL w ±30 min od 07:30 → ryzyko, bez ODWOLANY.
     const amb = new MemStore();
     amb.sailings.push(
@@ -2181,6 +2196,8 @@ class MemStore implements SyncStore {
   reassigned: string[] = [];
   /** F7 #698 r2 B-r2-1: symulacja wyścigu HHL (updateSailing → false). */
   failStatusUpdate = false;
+  /** DP-101: kolejność notice → update. */
+  ops: string[] = [];
   n = 0;
   async projectId() { return 'p1'; }
   async vessels() {
@@ -2200,6 +2217,7 @@ class MemStore implements SyncStore {
     }
   }
   async updateSailing(id: string, patch: SailingPatch) {
+    if (patch.status) this.ops.push(`update:${patch.status}`);
     const s = this.sailings.find((x) => x.id === id);
     if (!s) return false;
     if (s.source === 'RECZNIE' && patch.status) return false;
@@ -2215,6 +2233,7 @@ class MemStore implements SyncStore {
     kind: 'ODWOLANY' | 'OPOZNIONY' | 'ZMIANA_GODZINY' | 'PRZYWROCONY';
     note?: string | null; sourceUrl?: string | null;
   }) {
+    this.ops.push(`notice:${row.kind}`);
     this.notices.push({
       sailingId: row.sailingId, kind: row.kind, source: 'AUTO',
       operator: row.operator, note: row.note, sourceUrl: row.sourceUrl ?? null,

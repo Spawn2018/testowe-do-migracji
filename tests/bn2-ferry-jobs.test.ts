@@ -78,7 +78,11 @@ class MemStore implements SyncStore {
       }
     }
   }
+  /** DP-101: symulacja wyścigu HHL (update status → false); notice już zapisany. */
+  failStatusUpdate = false;
+  ops: string[] = [];
   async updateSailing(id: string, patch: SailingPatch) {
+    if (patch.status) this.ops.push(`update:${patch.status}`);
     const s = this.sailings.find((x) => x.id === id);
     if (!s) return false;
     const { actual_departure_at, actual_arrival_at, ...rest } = patch;
@@ -86,6 +90,7 @@ class MemStore implements SyncStore {
     if (Object.keys(rest).length) {
       // DP-100: jak store.updateSailing — ODWOLANY na już ODWOLANY → false.
       if (rest.status === 'ODWOLANY' && s.status === 'ODWOLANY') return false;
+      if (this.failStatusUpdate && rest.status) return false;
       if (s.source !== 'RECZNIE') { Object.assign(s, rest); wrote = true; }
     }
     if (actual_departure_at !== undefined) { s.actual_departure_at = actual_departure_at; wrote = true; }
@@ -138,6 +143,7 @@ class MemStore implements SyncStore {
     note?: string | null;
     sourceUrl?: string | null;
   }) {
+    this.ops.push(`notice:${row.kind}`);
     this.notices.push({
       sailingId: row.sailingId, operator: row.operator, kind: row.kind, note: row.note,
     });
@@ -429,6 +435,28 @@ describe('F7 #660 r2/r3 Port of Tallinn / Stockholm bez zmyślonych godzin', () 
       expect.objectContaining({ sailingId: 'finbo', operator: 'ECKERO', kind: 'ODWOLANY' }),
       expect.objectContaining({ sailingId: 'xprs', operator: 'VIKING', kind: 'ODWOLANY' }),
     ]));
+    // DP-101: notice przed update (nie odwrotnie).
+    expect(st.ops.filter((o) => o === 'notice:ODWOLANY' || o === 'update:ODWOLANY')).toEqual([
+      'notice:ODWOLANY', 'update:ODWOLANY', 'notice:ODWOLANY', 'update:ODWOLANY',
+    ]);
+
+    // DP-101: update false → notice ODWOLANY zostaje, status bez zmian.
+    const stFail = new MemStore();
+    stFail.failStatusUpdate = true;
+    stFail.vessels = async () => [
+      ...(await new MemStore().vessels()),
+      { id: 'v-finbo', name: 'M/F Finbo Cargo', mmsi: 230987100 },
+    ];
+    stFail.sailings.push({
+      id: 'finbo', vessel_id: 'v-finbo', route: 'MUU-VUO',
+      departure_at: '2026-10-30T08:00:00.000Z', arrival_at: '2026-10-30T10:30:00.000Z',
+      delayed_departure_at: null, delayed_arrival_at: null,
+      actual_departure_at: null, actual_arrival_at: null,
+      status: 'ZAPLANOWANY', source: 'DIGITRAFFIC',
+    });
+    await runFerrySchedule(deps(stFail, pages));
+    expect(stFail.sailings[0]!.status).toBe('ZAPLANOWANY');
+    expect(stFail.notices.some((n) => n.sailingId === 'finbo' && n.kind === 'ODWOLANY')).toBe(true);
   });
 });
 

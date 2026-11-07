@@ -1870,20 +1870,23 @@ async function applyPortTallinn(deps: JobDeps, sinceIso: string): Promise<{
       && Math.abs(Date.parse(e.kind === 'DEPARTURE' ? s.departure_at : s.arrival_at) - t) <= WINDOW_MS
       && s.status !== 'ODWOLANY'
       && s.source !== 'RECZNIE');
-    if (hit && await deps.store.updateSailing(hit.id, { status: 'ODWOLANY' })) {
+    if (!hit) continue;
+    // DP-101 / F7 #683: najpierw AUTO notice (przetrwa wyjątek must), potem status —
+    // jak PRZYWROCONY. Notice po update → przy błędzie wpis nigdy nie powstanie
+    // (kolejny przebieg widzi już ODWOLANY / already_cancelled).
+    if (deps.store.insertOperatorNotice) {
+      await deps.store.insertOperatorNotice({
+        sailingId: hit.id,
+        // DP-99: data-company / company z ts.ee, potem source, potem pierwotny armator trasy (ferry_route_operators).
+        operator: operatorFromSailingSource(hit.source, hit.route, e.company),
+        kind: 'ODWOLANY',
+        note: e.lisainfo ?? 'Port of Tallinn: odwołanie (ts.ee)',
+        sourceUrl: e.kind === 'DEPARTURE' ? PORT_TALLINN_DEPARTURES_URL : PORT_TALLINN_ARRIVALS_URL,
+      });
+    }
+    if (await deps.store.updateSailing(hit.id, { status: 'ODWOLANY' })) {
       cancelled += 1;
       hit.status = 'ODWOLANY';
-      // BN3 decyzja 57: AUTO historia (ts.ee Lisainfo / cancelled).
-      if (deps.store.insertOperatorNotice) {
-        await deps.store.insertOperatorNotice({
-          sailingId: hit.id,
-          // DP-99: data-company / company z ts.ee, potem source, potem pierwotny armator trasy (ferry_route_operators).
-          operator: operatorFromSailingSource(hit.source, hit.route, e.company),
-          kind: 'ODWOLANY',
-          note: e.lisainfo ?? 'Port of Tallinn: odwołanie (ts.ee)',
-          sourceUrl: e.kind === 'DEPARTURE' ? PORT_TALLINN_DEPARTURES_URL : PORT_TALLINN_ARRIVALS_URL,
-        });
-      }
     }
   }
   return { warnings, fail: false, cancelled };
@@ -3346,21 +3349,24 @@ export async function runFerryStatus(deps: JobDeps): Promise<JobResult> {
         if (hit.kind === 'already_cancelled') continue;
         if (hit.kind === 'match') {
           const match = hit.sailing;
-          if (await deps.store.updateSailing(match.id, { status: 'ODWOLANY' })) {
-            updated += 1;
-            match.status = 'ODWOLANY';
-            const row = existing.find((x) => x.id === match.id);
-            if (row) row.status = 'ODWOLANY';
-            if (deps.store.insertOperatorNotice) {
-              await deps.store.insertOperatorNotice({
-                sailingId: match.id,
-                operator: 'TALLINK',
-                kind: 'ODWOLANY',
-                note: alert.text.slice(0, 400),
-                sourceUrl: alert.sourceUrl,
-              });
-            }
+          // DP-101 / F7 #683: najpierw ODWOLANY notice (przetrwa wyjątek must), potem status —
+          // jak F7 pkt 4 PRZYWROCONY. Notice po update → przy błędzie wpis nigdy nie powstanie.
+          if (deps.store.insertOperatorNotice) {
+            await deps.store.insertOperatorNotice({
+              sailingId: match.id,
+              operator: 'TALLINK',
+              kind: 'ODWOLANY',
+              note: alert.text.slice(0, 400),
+              sourceUrl: alert.sourceUrl,
+            });
           }
+          if (!(await deps.store.updateSailing(match.id, { status: 'ODWOLANY' }))) {
+            continue;
+          }
+          updated += 1;
+          match.status = 'ODWOLANY';
+          const row = existing.find((x) => x.id === match.id);
+          if (row) row.status = 'ODWOLANY';
           continue;
         }
         const ambiguous = hit.kind === 'ambiguous' || hit.kind === 'manual_only';

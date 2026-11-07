@@ -1,3 +1,9 @@
+## 2026-11-07 03:35 — #865 SCALONE; start DP-101 (C4)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne` do wykonania.
+- Scalanie: **#865 SCALONE** `0f983406` (DP-100 F7: gotowe @ `5a514071`; CI unit+db+visual zielone). Bez push na main.
+- **Krok** C4 **DP-101**: `insertOperatorNotice` ODWOLANY przed `updateSailing` (Tallink Alert + Port of Tallinn) — jak PRZYWROCONY; przy fail update notice zostaje. Testy bn3/bn2. Gałąź `pakiet/c4-dp-101-notice-before-status`. Bez migracji.
+
 ## 2026-11-07 03:10 — #864 SCALONE; start DP-100 (C4)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne` do wykonania.
