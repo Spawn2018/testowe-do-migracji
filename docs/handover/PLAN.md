@@ -1332,7 +1332,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-99 | Cursor | `operatorFromSailingSource` fallback MUU-VUO → VIKING (prod tylko ECKERO), domyślnie TALLINK → z `data-company` ts.ee albo `ferry_route_operators` (DP-1) | F7 #683 | BN3 | SCALONE (#864 `7d4aa352`) |
 | DP-100 | Cursor | dedup AUTO tylko aplikacyjny → partial unique index `(sailing_id, kind) where source='AUTO'` albo `.neq('status','ODWOLANY')` w update | F7 #683 | BN3 | SCALONE (#865 `0f983406`) |
 | DP-101 | Cursor | AUTO ODWOLANY + notice atomowo (RPC `sailing_cancel_auto` / **0427**) — Tallink Alert + ts.ee; bez duplikatów przy wyścigu | F7 #683 / F7 #866 | BN3 | SCALONE (#866 `54bdb1c4`) |
-| DP-230 | Cursor | ostrzeżenie: GPS w innym porcie niż rejs / ten sam ciągnik w dwóch zleceniach; bez FERRY przy obcym GPS (**0429**) | #852 (właściciel) | C4 | W TOKU (`pakiet/c4-dp-230-gps-port-tractor-warn`) |
+| DP-230 | Cursor | ostrzeżenie: GPS w innym porcie niż rejs / ten sam ciągnik w dwóch zleceniach; bez FERRY przy obcym GPS; REMOVED poza dup; ryzyko nie znika samym ATD (**0429**, F7 #870) | #852 → PR #870 | C4 | W TOKU (`pakiet/c4-dp-230-gps-port-tractor-warn`) |
 | DP-232 | Cursor | pole wyboru „emtrack” przy Link śledzenia w oknie awizacji (stały link aplikacji emtrack) | #860 → PR #869 | C4 / awizacja | SCALONE (#869 `2c5903e0`) |
 | DP-233 | Cursor | Harmonogram: filtr Załadunki/Rozładunki dziś/jutro + `app_users.client_variant` (**0428**) | #861 → PR #867 | C4 / Harmonogram | SCALONE (#867 `886648a6`) |
 | DP-102 | Cursor | ts.ee dopasowanie `existing.find` ±3 h (BN2) → reguła jednego kandydata, ±30 min dla komunikatu z godziną; prefiks „Lisainfo” w nocie | F7 #683 | BN3 | w kolejce |

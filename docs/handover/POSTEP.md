@@ -1,14 +1,8 @@
-## 2026-11-07 08:50 — DP-230: blokada FERRY + testy (C4)
+## 2026-11-07 09:05 — DP-230 F7 #870 B1/B2 (C4)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
-- Scalanie: brak otwartego PR F7. Bez push na main.
-- **Krok** C4 **DP-230** (#852): `gps_allows_ferry_promote` w `promote_ferry_departures` (ATD + obcy PORT_OUT → bez FERRY + ryzyko); usunięty sprzeczny blok testów; status +13 (**0429**). Gałąź `pakiet/c4-dp-230-gps-port-tractor-warn`. Czekam CI→F7. Po F7: DP-102….
-
-## 2026-11-07 08:50 — DP-230: blokada FERRY + testy (C4)
-
-- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne`.
-- Scalanie: brak otwartego PR F7. Bez push na main.
-- **Krok** C4 **DP-230** (#852): `gps_allows_ferry_promote` w `promote_ferry_departures` (ATD + obcy PORT_OUT → bez FERRY + ryzyko); usunięty sprzeczny blok testów; status +13 (**0429**). Gałąź `pakiet/c4-dp-230-gps-port-tractor-warn`. Czekam CI→F7. Po F7: DP-102….
+- Scalanie: #870 F7 „zmiany wymagane” @ 26a18cd — poprawki w tym PR. Bez push na main.
+- **Krok** C4 **DP-230** F7 B1/B2: bez zamykania `GPS_WRONG_PORT` samym FERRY/ATD; blokada przy otwartym ryzyku; `REMOVED` w `detect_duplicate_tractor_plate`; testy ATD+port rejsu / FERRY+obcy / REMOVED; risks 12 kluczy (+`rk_eta_breach`); status EXPECTED **705**. Gałąź `pakiet/c4-dp-230-gps-port-tractor-warn` / #870. Czekam CI→F7. Po F7: DP-102….
 
 ## 2026-11-07 08:50 — DP-230: blokada FERRY + testy (C4)
 

@@ -4479,6 +4479,54 @@ q "insert into load_events (load_id, event_type, occurred_at) values
  ('$L230f','MILESTONE_LOADED','2026-11-10 08:00+00')" >/dev/null
 q "select public.promote_ferry_departures('2026-11-10 20:10+00')" >/dev/null
 chk "DP-230: ATD + brak GPS → FERRY" "$(st $L230f)" FERRY
+# ATD + GPS w porcie rejsu → FERRY jak dziś (F7 #870 B1)
+L230g=55555555-0000-0000-0000-00000000230g
+S230g=77777777-0000-0000-0000-00000000230g
+q "insert into sailings (id, project_id, vessel_id, route, departure_at, arrival_at,
+    actual_departure_at, status, source) values
+  ('$S230g', '$P', '$V230', 'GDY-KAA',
+   '2026-11-10 22:00+00', '2026-11-11 08:00+00',
+   '2026-11-10 22:05+00', 'W_REJSIE', 'STENA')
+ on conflict (id) do nothing" >/dev/null
+mk $L230g G230 "'HHL/G230'" "'SCX/G230'" IN_TRANSIT_PL "'$S230g'"
+q "insert into load_events (load_id, event_type, occurred_at) values
+ ('$L230g','MILESTONE_LOADED','2026-11-10 08:00+00');
+ insert into positions (load_id, ts, geom_raw, source) values
+ ('$L230g', '2026-11-10 21:50+00',
+  st_setsrid(st_makepoint(18.54425, 54.53321), 4326), 'TELEMATICS_API')" >/dev/null
+q "select public.promote_ferry_departures('2026-11-10 22:10+00')" >/dev/null
+chk "DP-230: ATD + GPS port rejsu → FERRY" "$(st $L230g)" FERRY
+chk "DP-230: ATD + GPS port rejsu → 0 GPS_WRONG_PORT" \
+  "$(rk $L230g GPS_WRONG_PORT)" 0
+# F7 B1: ręczne FERRY + GPS obcy → ryzyko nie znika samym statusem
+q "set session_replication_role=replica;
+    update loads set status='FERRY' where id='$L230e';
+    set session_replication_role=origin" >/dev/null
+q "select public.detect_gps_wrong_ferry_port('2026-11-10 18:20+00')" >/dev/null
+chk "DP-230: FERRY + obcy GPS → GPS_WRONG_PORT zostaje" \
+  "$(rk $L230e GPS_WRONG_PORT)" 1
+# F7 B2: REMOVED nie liczy się do TRACTOR_DUP
+L230h=55555555-0000-0000-0000-00000000230h
+mk $L230h H230 "'HHL/H230'" "'SCX/H230'" IN_TRANSIT_PL null
+q "update loads set
+    tractor_plate = 'WT 23001',
+    plan_load_date = '2026-11-08',
+    plan_delivery_date = '2026-11-12'
+   where id='$L230h';
+  set session_replication_role=replica;
+  update loads set status='REMOVED', removed_at=now(), removed_prev_status='IN_TRANSIT_PL'
+   where id='$L230h';
+  set session_replication_role=origin;
+  update loads set
+    tractor_plate = 'WT 23001',
+    plan_load_date = '2026-11-08',
+    plan_delivery_date = '2026-11-12'
+   where id='$L230c'" >/dev/null
+q "select public.detect_duplicate_tractor_plate('2026-11-09 12:10+00')" >/dev/null
+chk "DP-230: REMOVED nie daje TRACTOR_DUP" \
+  "select count(*) from risk_signals
+    where dedup_key like 'TRACTOR_DUP:%' and resolved_at is null
+      and load_id in ('$L230c','$L230h')" 0
 if [ "$(q "select to_regclass('cron.job') is not null")" = "t" ]; then
   chk "DP-230: cron tower-gps-wrong-port" \
     "select count(*) from cron.job where jobname='tower-gps-wrong-port' and command ilike '%detect_gps_wrong_ferry_port%'" 1

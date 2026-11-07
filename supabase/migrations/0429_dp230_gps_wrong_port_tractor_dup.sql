@@ -95,7 +95,8 @@ declare
   v_gps_port text;
   v_dep_port text;
 begin
-  -- Zamknij, gdy status ≥ FERRY / brak rejsu / GPS poza obcą strefą / poza oknem.
+  -- Zamknij tylko gdy: GPS poza obcą strefą / zmieniono rejs / FERRY z GPS w porcie rejsu.
+  -- Nie zamykaj samym ATD ani statusem ≥ FERRY przy GPS w obcym porcie (F7 #870 B1).
   update public.risk_signals rs
      set resolved_at = coalesce(v_now, now())
    where rs.resolved_at is null
@@ -106,9 +107,7 @@ begin
            from public.loads l
            join public.sailings s on s.id = l.sailing_id
           where l.id = rs.load_id
-            and l.status < 'FERRY'
-            and coalesce(s.delayed_departure_at, s.departure_at) is not null
-            and v_now >= coalesce(s.delayed_departure_at, s.departure_at) - v_win
+            and rs.dedup_key = 'GPS_WRONG_PORT:' || l.id::text || ':' || s.id::text
        )
        or not exists (
          select 1
@@ -129,6 +128,29 @@ begin
             and st_contains(g.geom, lp.geom_raw)
             and public.ferry_geofence_matches_route(g.route, s.route) is not true
           where l.id = rs.load_id
+            and rs.dedup_key = 'GPS_WRONG_PORT:' || l.id::text || ':' || s.id::text
+       )
+       or exists (
+         select 1
+           from public.loads l
+           join public.sailings s on s.id = l.sailing_id
+           join lateral (
+             select p.geom_raw
+               from public.positions p
+              where p.load_id = l.id
+                and coalesce((p.raw->>'stale_point')::boolean, false) is not true
+              order by p.ts desc
+              limit 1
+           ) lp on true
+           join public.geofences g
+             on g.project_id = l.project_id
+            and g.active
+            and g.kind = 'PORT_OUT'
+            and st_contains(g.geom, lp.geom_raw)
+            and public.ferry_geofence_matches_route(g.route, s.route) is true
+          where l.id = rs.load_id
+            and l.status >= 'FERRY'
+            and rs.dedup_key = 'GPS_WRONG_PORT:' || l.id::text || ':' || s.id::text
        )
      );
 
@@ -225,7 +247,7 @@ revoke all on function public.detect_gps_wrong_ferry_port(timestamptz, interval)
 grant execute on function public.detect_gps_wrong_ferry_port(timestamptz, interval)
   to service_role;
 comment on function public.detect_gps_wrong_ferry_port(timestamptz, interval) is
-  'DP-230: GPS w PORT_OUT obcej trasy vs rejs (od dep−6 h, status < FERRY) → HIGH rk_gps_wrong_port; bez zmiany zlecenia.';
+  'DP-230: GPS w PORT_OUT obcej trasy vs rejs (od dep−6 h, status < FERRY) → HIGH rk_gps_wrong_port; zamykanie bez samego ATD/FERRY (F7 #870).';
 
 -- ---------------------------------------------------------------------------
 -- 2) Ten sam ciągnik w ≥2 aktywnych zleceniach
@@ -259,7 +281,7 @@ begin
          join public.loads b on b.id <> a.id
           and public.telm_norm_plate(b.tractor_plate) = public.telm_norm_plate(a.tractor_plate)
           and b.status not in (
-            'CANCELLED', 'UNLOADED', 'DELIVERED', 'READY_TO_INVOICE', 'INVOICED'
+            'CANCELLED', 'REMOVED', 'UNLOADED', 'DELIVERED', 'READY_TO_INVOICE', 'INVOICED'
           )
           and tstzrange(
                 coalesce(a.plan_load_from, (a.plan_load_date + time '00:00') at time zone 'Europe/Warsaw'),
@@ -274,7 +296,7 @@ begin
         where a.id = rs.load_id
           and nullif(public.telm_norm_plate(a.tractor_plate), '') is not null
           and a.status not in (
-            'CANCELLED', 'UNLOADED', 'DELIVERED', 'READY_TO_INVOICE', 'INVOICED'
+            'CANCELLED', 'REMOVED', 'UNLOADED', 'DELIVERED', 'READY_TO_INVOICE', 'INVOICED'
           )
      );
 
@@ -292,7 +314,7 @@ begin
         from public.loads l
        where nullif(public.telm_norm_plate(l.tractor_plate), '') is not null
          and l.status not in (
-           'CANCELLED', 'UNLOADED', 'DELIVERED', 'READY_TO_INVOICE', 'INVOICED'
+           'CANCELLED', 'REMOVED', 'UNLOADED', 'DELIVERED', 'READY_TO_INVOICE', 'INVOICED'
          )
          and l.plan_load_date is not null
          and l.plan_delivery_date is not null
@@ -433,6 +455,16 @@ begin
     into v_project, v_sailing
     from public.loads l
    where l.id = p_load_id;
+
+  -- Otwarte GPS_WRONG_PORT → bez FERRY (F7 #870 B1).
+  if v_sailing is not null and exists (
+    select 1 from public.risk_signals rs
+     where rs.load_id = p_load_id
+       and rs.resolved_at is null
+       and rs.dedup_key = 'GPS_WRONG_PORT:' || p_load_id::text || ':' || v_sailing::text
+  ) then
+    return false;
+  end if;
 
   select p.geom_raw::geometry
     into v_geom
