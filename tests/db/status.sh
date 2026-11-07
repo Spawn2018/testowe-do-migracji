@@ -4651,5 +4651,115 @@ chk "DP-236: GPS >2 h przed ATD → 0 MISSED_SAILING" "$(rk $L236d MISSED_SAILIN
 chk "DP-236: parametr FERRY_PROMOTE_MAX_KM_FROM_PORT" \
   "select value::text from app_parameters where key='FERRY_PROMOTE_MAX_KM_FROM_PORT'" 5
 
+# ---------------------------------------------------------------------------
+# DP-235 (F7 #870): FERRY + GPS w PORT_IN obcej trasy; repeat→stale tylko po ATD/FERRY
+# UUID …2350–2352; vessel DP-235; L xx: 16–17.11.
+# ---------------------------------------------------------------------------
+V235=66666666-0000-0000-0000-000000002350
+L235a=55555555-0000-0000-0000-000000002350
+L235b=55555555-0000-0000-0000-000000002351
+L235c=55555555-0000-0000-0000-000000002352
+S235a=77777777-0000-0000-0000-000000002350
+S235b=77777777-0000-0000-0000-000000002351
+S235c=77777777-0000-0000-0000-000000002352
+q "insert into vessels (id, name, operator) values
+ ('$V235', 'M/F DP-235 Nova', 'Polferries')
+ on conflict (id) do nothing;
+ insert into geofences (project_id, name, kind, geom, hysteresis_m, dwell_seconds, debounce_fixes, country, route)
+ select '$P', 'Port Karlskrona DP-235', 'PORT_IN', make_circle_fence(56.16460,15.63080, 800), 200, 600, 2, 'SE', 'STENA'
+  where not exists (
+    select 1 from geofences
+     where project_id='$P' and kind='PORT_IN' and route='STENA' and name like 'Port Karlskrona DP-235%'
+  );
+ insert into sailings (id, project_id, vessel_id, route, departure_at, arrival_at,
+    actual_departure_at, status, source) values
+  ('$S235a', '$P', '$V235', 'GDN-NYN',
+   '2026-11-16 12:00+00', '2026-11-17 06:00+00',
+   '2026-11-16 12:05+00', 'W_REJSIE', 'POLFERRIES'),
+  ('$S235b', '$P', '$V235', 'GDN-NYN',
+   '2026-11-16 16:00+00', '2026-11-17 10:00+00',
+   '2026-11-16 16:05+00', 'W_REJSIE', 'POLFERRIES'),
+  ('$S235c', '$P', '$V235', 'GDN-NYN',
+   '2026-11-16 20:00+00', '2026-11-17 14:00+00',
+   '2026-11-16 20:05+00', 'W_REJSIE', 'POLFERRIES')
+ on conflict (id) do nothing" >/dev/null
+# (a) FERRY + GPS w Karlskronie (STENA PORT_IN) przy rejsie GDN-NYN → GPS_WRONG_PORT
+mk $L235a A235 "'HHL/A235'" "'SCX/A235'" FERRY "'$S235a'"
+q "insert into load_events (load_id, event_type, occurred_at) values
+ ('$L235a','MILESTONE_LOADED','2026-11-16 06:00+00');
+ insert into positions (load_id, ts, geom_raw, source) values
+ ('$L235a', '2026-11-16 18:00+00',
+  st_setsrid(st_makepoint(15.63080, 56.16460), 4326), 'TELEMATICS_API')" >/dev/null
+q "select public.detect_gps_wrong_ferry_port('2026-11-16 18:05+00')" >/dev/null
+chk "DP-235: FERRY + GPS Karlskrona / rejs GDN-NYN → GPS_WRONG_PORT" \
+  "$(rk $L235a GPS_WRONG_PORT)" 1
+chk "DP-235: title_key rk_gps_wrong_port (PORT_IN)" \
+  "select title_key from risk_signals
+    where load_id='$L235a' and dedup_key like 'GPS_WRONG_PORT:%' and resolved_at is null limit 1" \
+  rk_gps_wrong_port
+chk "DP-235: gps_port Karlskrona" \
+  "select detail->'params'->>'gps_port' from risk_signals
+    where load_id='$L235a' and dedup_key like 'GPS_WRONG_PORT:%' and resolved_at is null limit 1" \
+  Karlskrona
+# F7 #875: 3× identyczny punkt co 15 min (≥30 min) → ryzyko nadal otwarte (powtórka ≠ wyjazd)
+q "insert into positions (load_id, ts, geom_raw, source) values
+ ('$L235a', '2026-11-16 18:15+00',
+  st_setsrid(st_makepoint(15.63080, 56.16460), 4326), 'TELEMATICS_API'),
+ ('$L235a', '2026-11-16 18:30+00',
+  st_setsrid(st_makepoint(15.63080, 56.16460), 4326), 'TELEMATICS_API'),
+ ('$L235a', '2026-11-16 18:45+00',
+  st_setsrid(st_makepoint(15.63080, 56.16460), 4326), 'TELEMATICS_API')" >/dev/null
+q "select public.detect_gps_wrong_ferry_port('2026-11-16 18:50+00')" >/dev/null
+chk "DP-235: F7 powtórki Karlskrona ≥30 min → ryzyko nadal otwarte" \
+  "select count(*) from risk_signals
+    where load_id='$L235a' and dedup_key like 'GPS_WRONG_PORT:%' and resolved_at is null" 1
+# świeży punkt poza obcą strefą → zamknięte
+q "insert into positions (load_id, ts, geom_raw, source) values
+ ('$L235a', '2026-11-16 19:00+00',
+  st_setsrid(st_makepoint(16.5000, 56.5000), 4326), 'TELEMATICS_API')" >/dev/null
+q "select public.detect_gps_wrong_ferry_port('2026-11-16 19:05+00')" >/dev/null
+chk "DP-235: F7 świeży punkt poza strefą → GPS_WRONG_PORT zamknięte" \
+  "select count(*) from risk_signals
+    where load_id='$L235a' and dedup_key like 'GPS_WRONG_PORT:%' and resolved_at is null" 0
+# własny PORT_IN (Nynäshamn) → zamknięcie / brak
+mk $L235b B235 "'HHL/B235'" "'SCX/B235'" FERRY "'$S235b'"
+q "insert into load_events (load_id, event_type, occurred_at) values
+ ('$L235b','MILESTONE_LOADED','2026-11-16 08:00+00');
+ insert into positions (load_id, ts, geom_raw, source) values
+ ('$L235b', '2026-11-17 05:00+00',
+  st_setsrid(st_makepoint(17.9500, 58.9350), 4326), 'TELEMATICS_API')" >/dev/null
+q "select public.detect_gps_wrong_ferry_port('2026-11-17 05:05+00')" >/dev/null
+chk "DP-235: FERRY + GPS Nynäshamn (własny) → 0 GPS_WRONG_PORT" \
+  "$(rk $L235b GPS_WRONG_PORT)" 0
+# (b) po ATD/FERRY: powtórzony Gdańsk ≥30 min = stale; potem Karlskrona → ryzyko
+mk $L235c C235 "'HHL/C235'" "'SCX/C235'" FERRY "'$S235c'"
+q "insert into load_events (load_id, event_type, occurred_at) values
+ ('$L235c','MILESTONE_LOADED','2026-11-16 10:00+00');
+ insert into positions (load_id, ts, geom_raw, source) values
+ ('$L235c', '2026-11-16 20:10+00',
+  st_setsrid(st_makepoint(18.6800, 54.4030), 4326), 'TELEMATICS_API'),
+ ('$L235c', '2026-11-16 20:25+00',
+  st_setsrid(st_makepoint(18.6800, 54.4030), 4326), 'TELEMATICS_API'),
+ ('$L235c', '2026-11-16 20:40+00',
+  st_setsrid(st_makepoint(18.6800, 54.4030), 4326), 'TELEMATICS_API'),
+ ('$L235c', '2026-11-16 20:55+00',
+  st_setsrid(st_makepoint(18.6800, 54.4030), 4326), 'TELEMATICS_API')" >/dev/null
+q "select public.detect_gps_wrong_ferry_port('2026-11-16 21:00+00')" >/dev/null
+chk "DP-235: FERRY + powtórzony Gdańsk po ATD → 0 GPS_WRONG_PORT (stale)" \
+  "$(rk $L235c GPS_WRONG_PORT)" 0
+q "insert into positions (load_id, ts, geom_raw, source) values
+ ('$L235c', '2026-11-17 08:00+00',
+  st_setsrid(st_makepoint(15.63080, 56.16460), 4326), 'TELEMATICS_API')" >/dev/null
+q "select public.detect_gps_wrong_ferry_port('2026-11-17 08:05+00')" >/dev/null
+chk "DP-235: po stale Gdańsk + GPS Karlskrona → GPS_WRONG_PORT" \
+  "$(rk $L235c GPS_WRONG_PORT)" 1
+chk "DP-235: helper repeat_stale po ATD" \
+  "select public.gps_is_repeat_stale_after_dep(
+      '$L235c'::uuid,
+      st_setsrid(st_makepoint(18.6800, 54.4030), 4326),
+      '2026-11-16 20:55+00'::timestamptz,
+      '2026-11-16 20:05+00'::timestamptz
+    )::text" true
+
 echo; echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]
