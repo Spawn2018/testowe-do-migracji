@@ -160,14 +160,21 @@ const warsaw = (utc: string) => new Intl.DateTimeFormat('pl-PL', {
   timeZone: 'Europe/Warsaw', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',
 }).format(new Date(utc));
 
+/** DP-97: params.dep zawsze ISO UTC (nie Europe/Warsaw) — titleKey `{dep}` i odbiór HHL. */
+export function riskDepUtc(utc: string): string {
+  const ms = Date.parse(utc);
+  return Number.isFinite(ms) ? new Date(ms).toISOString() : utc;
+}
+
 /** Ryzyko dla HHL: status rejsu nierozpoznany — rejs bez zmian, do weryfikacji. */
 export function unknownStatusRisk(s: IncomingSailing, raw: string, source: AutoSailingSource = 'POLFERRIES'): RiskInput {
+  const depUtc = riskDepUtc(s.departureUtc);
   return {
     kind: 'FERRY', severity: 'MEDIUM',
     title: `Nieznany status rejsu ${s.vessel} ${warsaw(s.departureUtc)} — bez zmiany, do weryfikacji HHL`,
-    titleKey: 'rk_ferry_status_unknown', params: { vessel: s.vessel, dep: warsaw(s.departureUtc) },
+    titleKey: 'rk_ferry_status_unknown', params: { vessel: s.vessel, dep: depUtc },
     detail: { zrodlo: source, statek: s.vessel, odejscie: s.departureUtc, surowy_status: raw },
-    dedup: `FERRY_UNKNOWN:${s.vessel}:${new Date(s.departureUtc).toISOString()}`,
+    dedup: `FERRY_UNKNOWN:${s.vessel}:${depUtc}`,
   };
 }
 

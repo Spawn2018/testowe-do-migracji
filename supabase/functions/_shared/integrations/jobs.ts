@@ -170,7 +170,7 @@ import {
   unquoteSecret,
 } from './emtrackLogin.ts';
 import {
-  isSourceFailure, planSailingSync, sourceDownRisk, unknownStatusRisk,
+  isSourceFailure, planSailingSync, riskDepUtc, sourceDownRisk, unknownStatusRisk,
   type AutoSailingSource, type DbSailing, type IncomingSailing, type RiskInput, type SailingInsert, type SailingPatch, type VesselRow,
 } from './sync.ts';
 
@@ -1500,12 +1500,13 @@ async function applyDigitrafficPortCallActuals(deps: JobDeps, sinceIso: string):
         && s.actual_arrival_at == null);
       const pick = pickUniqueInWindow(pool, t, (s) => Date.parse(s.arrival_at), WINDOW_MS);
       if (pick.kind === 'ambiguous') {
+        // DP-97: FERRY_UNKNOWN:PORTNET_* bez resolveRisks/resolveStale — zostaje dla HHL.
         warnings.push(`Portnet ATA niejednoznaczna: ${c.vessel} ${c.arrivalRoute} (±3 h, ${pick.items.length} rejsy)`);
         await deps.store.raiseRisk({
           kind: 'FERRY', severity: 'MEDIUM',
           title: `Portnet: niejednoznaczne dopasowanie ATA ${c.vessel} — bez zmiany, do weryfikacji HHL`,
           titleKey: 'rk_ferry_status_unknown',
-          params: { vessel: c.vessel, dep: c.actualArrivalUtc.slice(0, 16) },
+          params: { vessel: c.vessel, dep: riskDepUtc(c.actualArrivalUtc) },
           detail: { zrodlo: 'DIGITRAFFIC_PORTCALL', statek: c.vessel, ata: c.actualArrivalUtc, rejsy: pick.items.length },
           dedup: `FERRY_UNKNOWN:PORTNET_ATA:${vesselId}:${c.actualArrivalUtc}`,
         });
@@ -1542,12 +1543,13 @@ async function applyDigitrafficPortCallActuals(deps: JobDeps, sinceIso: string):
         && s.actual_departure_at == null);
       const pick = pickUniqueInWindow(pool, t, (s) => Date.parse(s.departure_at), WINDOW_MS);
       if (pick.kind === 'ambiguous') {
+        // DP-97: FERRY_UNKNOWN:PORTNET_* bez resolveRisks/resolveStale — zostaje dla HHL.
         warnings.push(`Portnet ATD niejednoznaczna: ${c.vessel} ${c.departureRoute} (±3 h, ${pick.items.length} rejsy)`);
         await deps.store.raiseRisk({
           kind: 'FERRY', severity: 'MEDIUM',
           title: `Portnet: niejednoznaczne dopasowanie ATD ${byId.get(vesselId) ?? c.vessel} — bez zmiany, do weryfikacji HHL`,
           titleKey: 'rk_ferry_status_unknown',
-          params: { vessel: c.vessel, dep: c.actualDepartureUtc.slice(0, 16) },
+          params: { vessel: c.vessel, dep: riskDepUtc(c.actualDepartureUtc) },
           detail: { zrodlo: 'DIGITRAFFIC_PORTCALL', statek: c.vessel, atd: c.actualDepartureUtc, rejsy: pick.items.length },
           dedup: `FERRY_UNKNOWN:PORTNET_ATD:${vesselId}:${c.actualDepartureUtc}`,
         });

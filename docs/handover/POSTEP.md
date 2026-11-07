@@ -1,3 +1,9 @@
+## 2026-11-07 01:15 — #858 SCALONE; start DP-97 (C4)
+
+- Skrzynka: #550 WSTRZYMANE. BN5–8 w planie. Bez nowego `pilne` do wykonania.
+- Scalanie: **#858 SCALONE** `d1c63bed` (DP-90…93 F7: gotowe @ `570f90b4`; CI unit+db+visual zielone). Bez push na main.
+- **Krok** C4 **DP-97**: `riskDepUtc` + `unknownStatusRisk`/`PORTNET_ATA|ATD` → `params.dep` ISO UTC; ryzyka Portnet bez `resolveRisks`/`resolveStale` (test: zostają po jednoznacznym hicie). Gałąź `pakiet/c4-dp-97-portnet-unknown-utc`. Bez migracji. Czekam CI→F7.
+
 ## 2026-11-06 23:55 — #857 SCALONE; start DP-90…93 (C4)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne` do wykonania.
