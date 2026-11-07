@@ -486,11 +486,12 @@ sys "insert into vessels (id, name, operator, mmsi) values
   ('$V234','M/F DP234','Polferries',999234001)
   on conflict (id) do update set name=excluded.name, mmsi=excluded.mmsi" >/dev/null
 sys "delete from vessel_positions where vessel_id='$V234'" >/dev/null
-# GDN @ −12 h; wyjście @ −11.75 h POZA wszystkimi PORT_ZONES (54.55/18.50 padało w GDY r=5 km
-# → last_zone = „wyjście”, bez kotwicy GDN). Potem 48 binów 15 min na morzu — świeże bez strefy.
+# GDN @ −13 h; wyjście @ −12.5 h POZA GDN+GDY (54.55/18.50 padało w GDY → last_zone bez GDN).
+# Morze i=0..47 → do −11.75 h — osobne bine 15 min niż kotwice (r2: wyjście @ −11.75 = i=47
+# → ten sam bin, morze wypierało kotwicę wyjścia → bool_or 54.85/18.30 = false).
 sys "insert into vessel_positions (vessel_id, lat, lon, sog_kn, cog, observed_at, source) values
-  ('$V234', 54.40, 18.67, 5, 10, now() - interval '12 hours', 'AISSTREAM'),
-  ('$V234', 54.85, 18.30, 12, 350, now() - interval '11 hours 45 minutes', 'AISSTREAM')" >/dev/null
+  ('$V234', 54.40, 18.67, 5, 10, now() - interval '13 hours', 'AISSTREAM'),
+  ('$V234', 54.85, 18.30, 12, 350, now() - interval '12 hours 30 minutes', 'AISSTREAM')" >/dev/null
 sys "insert into vessel_positions (vessel_id, lat, lon, sog_kn, cog, observed_at, source)
      select '$V234', 56.0 + (g.i * 0.02), 18.0, 14, 170,
             now() - (g.i * 15 || ' minutes')::interval, 'AISSTREAM'

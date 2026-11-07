@@ -2717,6 +2717,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 07.11.2026 04:00 | DP-101 F7 #866: atomowe `sailing_cancel_auto` **0427**; rejestr DP-230/232/233 (#852/#860/#861) | pętla / C4 F7 |
 | 07.11.2026 04:50 | #866 SCALONE `54bdb1c4` (DP-101); start **DP-233** / **0428** (`client_variant` + filtr Harmonogramu) | pętla / C4 |
 | 07.11.2026 07:10 | DP-233 #867 `851f131a` gotowe do F7 (CI unit/visual/db); potem DP-232/230 | pętla / C4 |
+| 07.11.2026 19:33 | DP-234 #881 r3: GDN −13 h / wyjście −12.5 h (bez kolizji binu z morzem i=47); vitest 11 stref | pętla / C4 |
 | 07.11.2026 18:56 | DP-234 #881 r2: fixture wyjścia poza GDY (54.85/18.30); bmapa **229**; CI db FAIL→fix | pętla / C4 |
 | 07.11.2026 18:15 | #880 SCALONE `1f1afb3d` (DP-112 F7 @ `f7508f4a`); start **DP-234** / **0432** (kotwice stref Q-18) | pętla / C4 |
 | 07.11.2026 17:45 | #879 SCALONE `9ae8e633` (DP-111 F7 @ `778366d0`); start **DP-112** (HH:MM w nawiasie TZ ≠ multiTime) | pętla / C4 |

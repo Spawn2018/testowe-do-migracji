@@ -4,7 +4,7 @@
  */
 import { describe, expect, it } from 'vitest';
 import { readFileSync } from 'node:fs';
-import { ferryPhase, ferryVisible, type TrackFix } from '../src/lib/map/draw';
+import { ferryPhase, ferryVisible, PORT_ZONES, type TrackFix } from '../src/lib/map/draw';
 import { markersFromTrack } from '../src/lib/aisDb';
 
 const at = (h: number) => `2026-11-07T${String(h).padStart(2, '0')}:00:00.000Z`;
@@ -74,14 +74,22 @@ describe('DP-234 ferry zone anchors / Q-18', () => {
     expect(markers[0].ts).toBe(at(14));
   });
 
-  it('migracja 0432: kotwice stref + PORT_ZONES jak draw.ts', () => {
+  it('migracja 0432: kotwice stref + PORT_ZONES jak draw.ts (wszystkie 11)', () => {
     const sql = readFileSync('supabase/migrations/0432_dp234_ferry_zone_anchors.sql', 'utf8');
     expect(sql).toMatch(/last_zone/);
     expect(sql).toMatch(/first_after/);
-    expect(sql).toMatch(/54\.4/);
-    expect(sql).toMatch(/59\.443/);
     expect(sql).toMatch(/rn_recent <= 20/);
     // Mutacja: bez kotwic stref — ten expect pada.
     expect(sql).toMatch(/in_zone/);
+    expect(PORT_ZONES).toHaveLength(11);
+    const zoneRows = [...sql.matchAll(/\('([A-Z]+)'(::text)?, *([0-9.]+)(::float8)?, *([0-9.]+)(::float8)?, *([0-9.]+)/g)]
+      .map((m) => ({ id: m[1], lat: Number(m[3]), lng: Number(m[5]), radiusKm: Number(m[7]) }));
+    expect(zoneRows).toHaveLength(11);
+    // F7 #881: id + środek + promień — zmiana w draw.ts bez 0432 rozjeżdża mapę.
+    for (const z of PORT_ZONES) {
+      expect(zoneRows, `strefa ${z.id} w 0432`).toContainEqual({
+        id: z.id, lat: z.lat, lng: z.lng, radiusKm: z.radiusKm,
+      });
+    }
   });
 });

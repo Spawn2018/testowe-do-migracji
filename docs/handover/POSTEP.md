@@ -1,3 +1,9 @@
+## 2026-11-07 19:33 — DP-234 r3: bin wyjścia ≠ morze i=47 (C4 / B-MAPA)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608 w planie. Bez nowego `pilne` do budowy.
+- Scalanie: brak „F7: gotowe” — #881 @ `dafe10f7` db FAIL (`DP-234 kotwice → false`; 228/1). Bez push na main.
+- **Krok** C4 **DP-234** r3: GDN −13 h / wyjście −12.5 h (osobne bine 15 min od morza i=47 @ −11.75 — r2 kolidowało); vitest porównuje wszystkie 11 PORT_ZONES z 0432. Gałąź `pakiet/c4-dp-234-ferry-zone-history`. Czekam CI→F7.
+
 ## 2026-11-07 18:56 — DP-234 r2: fixture poza GDY (C4 / B-MAPA)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608 w planie. Bez nowego `pilne` do budowy.
