@@ -1829,9 +1829,22 @@ function tallinnDateYmd(now: Date): string {
 }
 
 /**
- * BN2 / F7 r3 — Port of Tallinn: tylko odwołania na istniejących (statek + ±3 h).
- * Bez insertów, bez zmiany godzin, bez actual_* z planu (atUtc = godzina planowana
- * tablicy — actual_* wyłącznie z Portnet / Ports of Stockholm / AIS).
+ * DP-102 / F7 #871 — nota AUTO z ts.ee: treść komunikatu bez nagłówka kolumny
+ * „Lisainfo” / „Additional info” (źródło i tak w source_url + source=AUTO).
+ */
+export function portTallinnCancelNote(lisainfo: string | null | undefined): string {
+  const raw = (lisainfo ?? '').trim();
+  if (!raw) return 'Port of Tallinn: odwołanie (ts.ee)';
+  const stripped = raw
+    .replace(/^(?:Lisainfo\s*:?\s*|Additional\s+info\s*:\s*)/i, '')
+    .trim();
+  return stripped || 'Port of Tallinn: odwołanie (ts.ee)';
+}
+
+/**
+ * BN2 / F7 r3 — Port of Tallinn: tylko odwołania na istniejących.
+ * DP-102 (F7 #683): reguła jednego kandydata w ±30 min (tablica ma godzinę);
+ * bez `existing.find` ±3 h. Bez insertów / godzin / actual_* z planu.
  */
 async function applyPortTallinn(deps: JobDeps, sinceIso: string): Promise<{
   warnings: string[]; fail: boolean; cancelled: number;
@@ -1863,7 +1876,8 @@ async function applyPortTallinn(deps: JobDeps, sinceIso: string): Promise<{
     deps.store.vessels(), deps.store.sailingsSince(sinceIso),
   ]);
   const byName = new Map(vessels.map((v) => [v.name, v.id]));
-  const WINDOW_MS = 3 * 3600_000;
+  // DP-102: komunikat z godziną tablicy → ±30 min + dokładnie 1 kandydat.
+  const WINDOW_MS = 30 * 60_000;
   let cancelled = 0;
   const seen = new Set<string>();
   for (const e of events) {
@@ -1874,20 +1888,47 @@ async function applyPortTallinn(deps: JobDeps, sinceIso: string): Promise<{
     const vesselId = byName.get(e.vessel);
     if (!vesselId) continue;
     const t = Date.parse(e.atUtc);
-    const hit = existing.find((s) =>
+    const pool = existing.filter((s) =>
       s.vessel_id === vesselId
       && s.route === e.route
-      && Math.abs(Date.parse(e.kind === 'DEPARTURE' ? s.departure_at : s.arrival_at) - t) <= WINDOW_MS
       && s.status !== 'ODWOLANY'
       && s.source !== 'RECZNIE');
-    if (!hit) continue;
+    const pick = pickUniqueInWindow(
+      pool,
+      t,
+      (s) => Date.parse(e.kind === 'DEPARTURE' ? s.departure_at : s.arrival_at),
+      WINDOW_MS,
+    );
+    const ambDedup = `FERRY_UNKNOWN:TS_EE:${vesselId}:${e.route}:${e.atUtc}`;
+    // F7 #871 (nieblokujące): ambiguous w ±30 min → ryzyko HHL jak Portnet FERRY_UNKNOWN.
+    if (pick.kind === 'ambiguous') {
+      warnings.push(
+        `ts.ee odwołanie niejednoznaczne: ${e.vessel} ${e.route} (±30 min, ${pick.items.length} rejsy)`,
+      );
+      await deps.store.raiseRisk({
+        kind: 'FERRY', severity: 'MEDIUM',
+        title: `ts.ee: niejednoznaczne odwołanie ${e.vessel} — bez zmiany, do weryfikacji HHL`,
+        titleKey: 'rk_ferry_status_unknown',
+        params: { vessel: e.vessel, dep: warsaw(e.atUtc) },
+        detail: {
+          zrodlo: 'PORT_TALLINN', statek: e.vessel, at: e.atUtc, rejsy: pick.items.length,
+        },
+        dedup: ambDedup,
+      });
+      continue;
+    }
+    if (pick.kind === 'none') {
+      await deps.store.resolveRisks(ambDedup);
+      continue;
+    }
+    const hit = pick.item;
     // DP-101 / F7 #866: atomowe AUTO ODWOLANY + notice (RPC) — bez wyścigu dwóch przebiegów.
     const cancelledOk = deps.store.cancelSailingAuto
       ? await deps.store.cancelSailingAuto({
         sailingId: hit.id,
         // DP-99: data-company / company z ts.ee, potem source, potem pierwotny armator trasy.
         operator: operatorFromSailingSource(hit.source, hit.route, e.company),
-        note: e.lisainfo ?? 'Port of Tallinn: odwołanie (ts.ee)',
+        note: portTallinnCancelNote(e.lisainfo),
         sourceUrl: e.kind === 'DEPARTURE' ? PORT_TALLINN_DEPARTURES_URL : PORT_TALLINN_ARRIVALS_URL,
       })
       : await deps.store.updateSailing(hit.id, { status: 'ODWOLANY' });
@@ -1895,6 +1936,7 @@ async function applyPortTallinn(deps: JobDeps, sinceIso: string): Promise<{
       cancelled += 1;
       hit.status = 'ODWOLANY';
     }
+    await deps.store.resolveRisks(ambDedup);
   }
   return { warnings, fail: false, cancelled };
 }
@@ -3395,7 +3437,8 @@ export async function runFerryStatus(deps: JobDeps): Promise<JobResult> {
             recznie: hit.kind === 'manual_only',
             atrybucja: 'Komunikat: Tallink (tallink.com)',
           },
-          dedup: `TALLINK_ALERT:${alert.vessel ?? 'any'}:${alert.contentStartYmd ?? alert.windowStartYmd ?? 'x'}:${alert.text.slice(0, 40)}`,
+          // DP-103 (F7 #683): bez text.slice(0,40) — drobna zmiana treści nie mnoży ryzyk.
+          dedup: `TALLINK_ALERT:${alert.vessel ?? 'any'}:${alert.contentStartYmd ?? alert.windowStartYmd ?? 'x'}:${ambiguous ? 'ambiguous' : beyond ? 'beyond' : 'unmatched'}`,
           sourceUrl: alert.sourceUrl,
         });
         if (ok) risks += 1;

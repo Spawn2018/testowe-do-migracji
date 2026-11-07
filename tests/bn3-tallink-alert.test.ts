@@ -26,6 +26,7 @@ import {
 } from '../src/lib/ferry/tallinkAlert';
 import { parsePortTallinnHtml } from '../src/lib/ferry/portTallinn';
 import {
+  portTallinnCancelNote,
   runFerryPortnet,
   runFerryStatus,
   type JobDeps,
@@ -345,6 +346,14 @@ describe('BN3 Tallink Alert — runFerryStatus (F7 B5)', () => {
     expect(amb.sailings.every((s) => s.status === 'ZAPLANOWANY')).toBe(true);
     expect(amb.notices).toHaveLength(0);
     expect(amb.risks.some((r) => String(r.titleKey).includes('tallink_alert'))).toBe(true);
+    // DP-103: dedup bez text.slice(0,40) — drobna zmiana treści nie mnoży ryzyk.
+    const ambRisks = amb.risks.filter((r) => String(r.dedup).startsWith('TALLINK_ALERT:'));
+    expect(ambRisks).toHaveLength(1);
+    // DP-103: statek+data+rodzaj — bez text.slice(0,40) (drobna zmiana treści nie mnoży ryzyk).
+    expect(ambRisks[0]!.dedup).toBe('TALLINK_ALERT:M/F MyStar:2026-11-02:ambiguous');
+    expect(ambRisks[0]!.dedup.includes('sailing')).toBe(false);
+    await runFerryStatus(deps(amb, pages, NOW));
+    expect(amb.risks.filter((r) => String(r.dedup).startsWith('TALLINK_ALERT:'))).toHaveLength(1);
   });
 
   it('DP-114: TALLINK_HEL_TLL_URL = travelling/one-way/helsinki-tallinn-ferry (nie /en/helsinki-tallinn)', () => {
@@ -2073,6 +2082,15 @@ describe('BN3 Port of Tallinn Lisainfo', () => {
     expect(r.events[0]!.lisainfo).toMatch(/Cancelled/i);
     expect(r.events[0]!.vessel).toBe('M/F Megastar');
     expect(r.events[0]!.route).toBe('TLL-HEL');
+    // DP-102 / F7 #871: bez prefiksu Lisainfo w nocie AUTO (treść komunikatu).
+    expect(portTallinnCancelNote(r.events[0]!.lisainfo)).not.toMatch(/^Lisainfo/i);
+    expect(portTallinnCancelNote(r.events[0]!.lisainfo)).toMatch(/Cancelled/i);
+    expect(portTallinnCancelNote(null)).toBe('Port of Tallinn: odwołanie (ts.ee)');
+    expect(portTallinnCancelNote('Lisainfo: Cancelled — technical reasons'))
+      .toBe('Cancelled — technical reasons');
+    expect(portTallinnCancelNote('Additional info: Cancelled overnight'))
+      .toBe('Cancelled overnight');
+    expect(portTallinnCancelNote('Lisainfo')).toBe('Port of Tallinn: odwołanie (ts.ee)');
   });
 
   it('F7 B5: ts.ee cancelled → AUTO notice + dedup przy drugim przebiegu', async () => {
@@ -2107,8 +2125,64 @@ describe('BN3 Port of Tallinn Lisainfo', () => {
     expect(st.sailings[0]!.status).toBe('ODWOLANY');
     expect(st.notices).toHaveLength(1);
     expect(st.notices[0]!.source).toBe('AUTO');
+    expect(st.notices[0]!.note).not.toMatch(/^Lisainfo/i);
+    expect(st.notices[0]!.note).toMatch(/Cancelled/i);
     await runFerryPortnet(deps(st, pages, NOW));
     expect(st.notices).toHaveLength(1);
+  });
+
+  // DP-102: ±30 min + dokładnie 1 kandydat (nie existing.find ±3 h).
+  it('DP-102: dwa rejsy w ±30 min → bez ODWOLANY; rejs 2 h poza oknem → bez ODWOLANY', async () => {
+    const tllHtml = `
+<table id="passenger-lines-outbound">
+<tr data-terminal="d" data-from_to="helsinki" data-company="tallink">
+<td data-sort_value="07:30">07:30</td>
+<td data-sort_value="MyStar">MyStar</td>
+<td data-sort_value="Tallinn">Tallinn</td>
+<td data-sort_value="Helsinki">Helsinki</td>
+<td data-sort_value="D">D</td>
+<td data-sort_value="Tallink">Tallink</td>
+<td data-sort_value="cancelled">Cancelled — DP-102 amb</td>
+</tr>
+</table>
+<table id="passenger-lines-inbound"></table>`;
+    const pages = {
+      'ts.ee': tllHtml,
+      portsofstockholm: 503,
+      'port-calls': 503,
+    };
+    const amb = new MemStore();
+    amb.sailings.push(
+      {
+        id: 'near-a', vessel_id: MYST, route: 'TLL-HEL',
+        departure_at: '2026-10-31T05:30:00.000Z', arrival_at: '2026-10-31T07:30:00.000Z',
+        delayed_departure_at: null, delayed_arrival_at: null,
+        status: 'ZAPLANOWANY', source: 'TALLINK',
+      },
+      {
+        id: 'near-b', vessel_id: MYST, route: 'TLL-HEL',
+        departure_at: '2026-10-31T05:45:00.000Z', arrival_at: '2026-10-31T07:45:00.000Z',
+        delayed_departure_at: null, delayed_arrival_at: null,
+        status: 'ZAPLANOWANY', source: 'TALLINK',
+      },
+    );
+    await runFerryPortnet(deps(amb, pages, NOW));
+    expect(amb.sailings.every((s) => s.status === 'ZAPLANOWANY')).toBe(true);
+    expect(amb.notices).toHaveLength(0);
+    expect(amb.risks.some((r) => String(r.dedup).startsWith('FERRY_UNKNOWN:TS_EE:'))).toBe(true);
+    expect(amb.risks.some((r) => r.titleKey === 'rk_ferry_status_unknown')).toBe(true);
+
+    const far = new MemStore();
+    // 03:30Z = 2 h przed 05:30Z (07:30 Tallinn) — w starym ±3 h trafilibyśmy; w ±30 min nie.
+    far.sailings.push({
+      id: 'far', vessel_id: MYST, route: 'TLL-HEL',
+      departure_at: '2026-10-31T03:30:00.000Z', arrival_at: '2026-10-31T05:30:00.000Z',
+      delayed_departure_at: null, delayed_arrival_at: null,
+      status: 'ZAPLANOWANY', source: 'TALLINK',
+    });
+    await runFerryPortnet(deps(far, pages, NOW));
+    expect(far.sailings[0]!.status).toBe('ZAPLANOWANY');
+    expect(far.notices).toHaveLength(0);
   });
 });
 
