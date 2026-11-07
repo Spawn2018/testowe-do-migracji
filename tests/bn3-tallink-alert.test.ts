@@ -19,6 +19,7 @@ import {
   matchTallinkAlertSailings,
   matchTallinkRestoreSailings,
   parseAlertContentDates,
+  parseDatePhrase,
   parseTallinkAlerts,
   TALLINK_ALERT_FAIL_STREAK_SOURCE_DOWN,
   TALLINK_ALERT_PAGE_MIN_BYTES,
@@ -349,8 +350,9 @@ describe('BN3 Tallink Alert', () => {
     expect(hit.kind).toBe('ambiguous');
   });
 
-  it('F7 R3-B1: nierozpoznana data w treści → ambiguous (nie ODWOLANY na dacie okna Schedulera)', () => {
-    // Probe F7 r3: okno wyświetlania 1.11; treść z datą w formacie, którego parser nie zna.
+  it('F7 R3-B1: data po „cancelled” (poza allowlistą) → ambiguous (nie ODWOLANY na dacie okna Schedulera)', () => {
+    // Probe F7 r3: okno 1.11; data po „is cancelled …” — poza wzorcem 68 → bez auto.
+    // DP-111 rozpoznaje te formy w allowliście; tu kolejność słów nadal nie auto.
     const windowYmd = '2026-11-01';
     const sailings = [
       {
@@ -375,6 +377,7 @@ describe('BN3 Tallink Alert', () => {
     ]) {
       const alert = parseTallinkAlerts(wrapAlert(text, windowYmd), TALLINK_HOME(), NOW).alerts[0]!;
       expect(alert.kind).toBe('ODWOLANY');
+      expect(alert.autoCancelOk).toBe(false);
       expect(alert.contentStartYmd).toBeNull();
       expect(alert.windowStartYmd).toBe(windowYmd);
       // Mutacja: contentStartYmd ?? windowStartYmd → match na 1.11 16:30 — ten test pada.
@@ -382,6 +385,73 @@ describe('BN3 Tallink Alert', () => {
       const hit = matchTallinkAlertSailings(alert, sailings);
       expect(hit.kind).toBe('ambiguous');
     }
+  });
+
+  it('DP-111: November 2 / 2nd / zakres / tomorrow / Monday w allowliście → contentStartYmd', () => {
+    const base = '2026-11-01'; // niedziela; Monday → 2.11; tomorrow → 2.11
+    expect(parseDatePhrase('November 2', 2026, base)).toEqual({
+      startYmd: '2026-11-02', endYmd: '2026-11-02',
+    });
+    expect(parseDatePhrase('2nd November', 2026, base)).toEqual({
+      startYmd: '2026-11-02', endYmd: '2026-11-02',
+    });
+    expect(parseDatePhrase('2–4 November', 2026, base)).toEqual({
+      startYmd: '2026-11-02', endYmd: '2026-11-04',
+    });
+    expect(parseDatePhrase('from 2 to 4 November', 2026, base)).toEqual({
+      startYmd: '2026-11-02', endYmd: '2026-11-04',
+    });
+    expect(parseDatePhrase('tomorrow', 2026, base)).toEqual({
+      startYmd: '2026-11-02', endYmd: '2026-11-02',
+    });
+    expect(parseDatePhrase('Monday', 2026, base)).toEqual({
+      startYmd: '2026-11-02', endYmd: '2026-11-02',
+    });
+
+    const cases: Array<{ text: string; start: string; end: string }> = [
+      {
+        text: 'The MyStar 16:30 departure from Tallinn to Helsinki on November 2 is cancelled.',
+        start: '2026-11-02', end: '2026-11-02',
+      },
+      {
+        text: 'The MyStar 16:30 departure from Tallinn to Helsinki on 2nd November is cancelled.',
+        start: '2026-11-02', end: '2026-11-02',
+      },
+      {
+        text: 'The MyStar 16:30 departure from Tallinn to Helsinki on 2–4 November is cancelled.',
+        start: '2026-11-02', end: '2026-11-04',
+      },
+      {
+        text: 'The MyStar 16:30 departure from Tallinn to Helsinki from 2 to 4 November is cancelled.',
+        start: '2026-11-02', end: '2026-11-04',
+      },
+      {
+        text: 'The MyStar 16:30 departure from Tallinn to Helsinki tomorrow is cancelled.',
+        start: '2026-11-02', end: '2026-11-02',
+      },
+      {
+        text: 'The MyStar 16:30 departure from Tallinn to Helsinki on Monday is cancelled.',
+        start: '2026-11-02', end: '2026-11-02',
+      },
+    ];
+    for (const c of cases) {
+      expect(autoCancelFromCancelSentence(c.text, 2026, base)).toMatchObject({
+        startYmd: c.start, endYmd: c.end, hm: '16:30', vessel: 'M/F MyStar',
+      });
+      const alert = parseTallinkAlerts(wrapAlert(c.text, base), TALLINK_HOME(), NOW).alerts[0]!;
+      expect(alert.autoCancelOk).toBe(true);
+      expect(alert.contentStartYmd).toBe(c.start);
+      expect(alert.contentEndYmd).toBe(c.end);
+      expect(alert.contentHm).toBe('16:30');
+    }
+    // Zakres w parseAlertContentDates — jedna fraza, nie multiTime.
+    expect(parseAlertContentDates(
+      'departure on 2–4 November at 16:30',
+      2026,
+      base,
+    )).toMatchObject({
+      startYmd: '2026-11-02', endYmd: '2026-11-04', hm: '16:30', multiTime: false,
+    });
   });
 
   it('F7 R4-B1: data ogłoszenia / względny dzień → ambiguous (nie ODWOLANY na dniu ogłoszenia)', () => {

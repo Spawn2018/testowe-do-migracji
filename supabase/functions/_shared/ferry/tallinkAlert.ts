@@ -8,6 +8,8 @@
  * R3-B1: ODWOLANY tylko przy dacie sparsowanej z treści; Scheduler = wyłącznie wygaśnięcie.
  * R4-B1: auto-ODWOLANY tylko gdy w tym samym zdaniu co cancel: statek + 1×HH:MM + 1×data;
  *   bez wskazówek względnych/nierozpoznanych w całej treści (updated/tomorrow/dni tygodnia…).
+ * DP-111: częste formy dat w allowliście i `parseAlertContentDates` — „November 2”, „2nd November”,
+ *   „2–4 November”, „from 2 to 4 November”, „tomorrow”, dni tygodnia (kotwica = dateStart/dziś).
  * R5: auto-ODWOLANY wyłącznie przy ścisłym wzorcu zdania (allowlist) — bez may/buffet/trasy z innego zdania.
  * R6 / decyzja 68: cała treść = dokładnie jedno zdanie wzorcowe (+ opcjonalnie zdania z listy przeprosin);
  *   opcjonalny sufiks „due to (a )?(technical fault|…)”; każde inne zdanie → ryzyko MEDIUM.
@@ -101,6 +103,12 @@ const MONTH: Record<string, string> = {
 
 const MONTH_NAMES =
   'January|February|March|April|May|June|July|August|September|October|November|December';
+const WEEKDAY_NAMES =
+  'Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday';
+/** JS getUTCDay(): Sun=0 … Sat=6. */
+const WEEKDAY_UTC: Record<string, number> = {
+  sunday: 0, monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6,
+};
 
 const CANCEL_RE = /\b(cancel(?:led|ed)?|call(?:ed)?\s+off|will\s+not\s+(?:sail|operate|depart)|odwo[lł]an|anulowan|tühistatud|tühistamine)\b/i;
 const SUSPEND_SAILING_RE = /\bsuspended\b/i;
@@ -125,7 +133,18 @@ const CAMPAIGN_TYPE_RE = /(?<![\w-])type\s*=\s*(["'])campaign\1/i;
 const ALERT_GROUP_RE = /data-analytics-group\s*=\s*(?:(["'])Alert\1|Alert\b)/i;
 /** F7 #683 R13-B3: kampania z treścią serwisową zatruwa całą pulę. */
 const CAMPAIGN_SERVICE_RE = /\b(correction|update|operate|reinstat)/i;
-const DATE_CAPTURE = String.raw`(\d{1,2})\s+(${MONTH_NAMES})(?:\s+(\d{4}))?`;
+/**
+ * DP-111: jedna grupa = cała fraza daty (D Month / Month D / ordinal / zakres / tomorrow / weekday).
+ * Kolejność alternatyw: najpierw dłuższe (from…to / zakres), potem pojedyncze.
+ */
+const DATE_FLEX = String.raw`(` +
+  String.raw`from\s+\d{1,2}\s+to\s+\d{1,2}\s+(?:${MONTH_NAMES})(?:\s+\d{4})?` +
+  String.raw`|\d{1,2}\s*[–\-]\s*\d{1,2}\s+(?:${MONTH_NAMES})(?:\s+\d{4})?` +
+  String.raw`|\d{1,2}(?:st|nd|rd|th)?\s+(?:${MONTH_NAMES})(?:\s+\d{4})?` +
+  String.raw`|(?:${MONTH_NAMES})\s+\d{1,2}(?:st|nd|rd|th)?(?:\s+\d{4})?` +
+  String.raw`|tomorrow` +
+  String.raw`|(?:${WEEKDAY_NAMES})` +
+`)`;
 /** F7 #683 R6 / decyzja 68: jedyny dozwolony sufiks przed kropką (prawdziwy Alert 28.10). */
 const DUE_TO_SUFFIX = String.raw`(?:\s+due\s+to\s+(?:a\s+)?(?:technical\s+fault|technical\s+reasons|weather\s+conditions|storm|strong\s+winds))?`;
 /** F7 #683 R6: zamknięta lista zdań neutralnych (dokładne dopasowanie całego zdania). */
@@ -462,27 +481,114 @@ function uniqueHmIn(text: string): string[] {
   )];
 }
 
-function countRecognizedDates(
+function addDaysYmd(ymd: string, days: number): string {
+  const y = Number(ymd.slice(0, 4));
+  const m = Number(ymd.slice(5, 7));
+  const d = Number(ymd.slice(8, 10));
+  const dt = new Date(Date.UTC(y, m - 1, d + days));
+  return [
+    String(dt.getUTCFullYear()).padStart(4, '0'),
+    String(dt.getUTCMonth() + 1).padStart(2, '0'),
+    String(dt.getUTCDate()).padStart(2, '0'),
+  ].join('-');
+}
+
+function nextWeekdayOnOrAfter(baseYmd: string, weekdayUtc: number): string {
+  const y = Number(baseYmd.slice(0, 4));
+  const m = Number(baseYmd.slice(5, 7));
+  const d = Number(baseYmd.slice(8, 10));
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  const delta = (weekdayUtc - dt.getUTCDay() + 7) % 7;
+  return addDaysYmd(baseYmd, delta);
+}
+
+export type DateSpan = { startYmd: string; endYmd: string };
+
+/**
+ * DP-111: „November 2” / „2nd November” / „2–4 November” / „from 2 to 4 November” /
+ * „tomorrow” / „Monday” → zakres YMD. Kotwica względna = `baseYmd` (dateStart albo dziś).
+ */
+export function parseDatePhrase(
+  phrase: string,
+  year: number,
+  baseYmd?: string | null,
+): DateSpan | null {
+  const p = phrase.trim().replace(/\s+/g, ' ');
+  if (!p) return null;
+  const base = baseYmd && isValidYmd(baseYmd)
+    ? baseYmd
+    : `${String(year).padStart(4, '0')}-01-01`;
+
+  if (/^tomorrow$/i.test(p)) {
+    const ymd = addDaysYmd(base, 1);
+    return { startYmd: ymd, endYmd: ymd };
+  }
+  const wd = p.match(new RegExp(`^(${WEEKDAY_NAMES})$`, 'i'));
+  if (wd) {
+    const ymd = nextWeekdayOnOrAfter(base, WEEKDAY_UTC[wd[1]!.toLowerCase()]!);
+    return { startYmd: ymd, endYmd: ymd };
+  }
+
+  let m = p.match(new RegExp(
+    `^from\\s+(\\d{1,2})\\s+to\\s+(\\d{1,2})\\s+(${MONTH_NAMES})(?:\\s+(\\d{4}))?$`,
+    'i',
+  ));
+  if (m) {
+    const start = ymdFromDateParts(m[1]!, m[3]!, m[4], year, baseYmd);
+    const end = ymdFromDateParts(m[2]!, m[3]!, m[4], year, baseYmd);
+    if (!isValidYmd(start) || !isValidYmd(end) || end < start) return null;
+    return { startYmd: start, endYmd: end };
+  }
+  m = p.match(new RegExp(
+    `^(\\d{1,2})\\s*[–\\-]\\s*(\\d{1,2})\\s+(${MONTH_NAMES})(?:\\s+(\\d{4}))?$`,
+    'i',
+  ));
+  if (m) {
+    const start = ymdFromDateParts(m[1]!, m[3]!, m[4], year, baseYmd);
+    const end = ymdFromDateParts(m[2]!, m[3]!, m[4], year, baseYmd);
+    if (!isValidYmd(start) || !isValidYmd(end) || end < start) return null;
+    return { startYmd: start, endYmd: end };
+  }
+  m = p.match(new RegExp(
+    `^(\\d{1,2})(?:st|nd|rd|th)?\\s+(${MONTH_NAMES})(?:\\s+(\\d{4}))?$`,
+    'i',
+  ));
+  if (m) {
+    const ymd = ymdFromDateParts(m[1]!, m[2]!, m[3], year, baseYmd);
+    if (!isValidYmd(ymd)) return null;
+    return { startYmd: ymd, endYmd: ymd };
+  }
+  m = p.match(new RegExp(
+    `^(${MONTH_NAMES})\\s+(\\d{1,2})(?:st|nd|rd|th)?(?:\\s+(\\d{4}))?$`,
+    'i',
+  ));
+  if (m) {
+    const ymd = ymdFromDateParts(m[2]!, m[1]!, m[3], year, baseYmd);
+    if (!isValidYmd(ymd)) return null;
+    return { startYmd: ymd, endYmd: ymd };
+  }
+  return null;
+}
+
+/** DP-111: wszystkie rozpoznane frazy dat (zakres = jedna fraza, nie multiTime). */
+function extractDateSpans(
   text: string,
   year: number,
   anchorYmd?: string | null,
-): string[] {
-  const ymds: string[] = [];
-  const pushYmd = (dayRaw: string, monRaw: string, yearRaw: string | undefined) => {
-    const ymd = ymdFromDateParts(dayRaw, monRaw, yearRaw, year, anchorYmd);
-    if (!ymds.includes(ymd)) ymds.push(ymd);
+): DateSpan[] {
+  const spans: DateSpan[] = [];
+  const seen = new Set<string>();
+  const push = (span: DateSpan | null) => {
+    if (!span) return;
+    const key = `${span.startYmd}/${span.endYmd}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    spans.push(span);
   };
-  for (const m of text.matchAll(
-    new RegExp(`\\b(?:on|today,?)\\s+(\\d{1,2})\\s+(${MONTH_NAMES})(?:\\s+(\\d{4}))?\\b`, 'gi'),
-  )) {
-    pushYmd(m[1]!, m[2]!, m[3]);
+  for (const m of text.matchAll(new RegExp(`\\b${DATE_FLEX}\\b`, 'gi'))) {
+    push(parseDatePhrase(m[1] ?? m[0]!, year, anchorYmd));
   }
-  for (const m of text.matchAll(
-    new RegExp(`\\b(\\d{1,2})\\s+(${MONTH_NAMES})\\s+(\\d{4})\\b`, 'gi'),
-  )) {
-    pushYmd(m[1]!, m[2]!, m[3]);
-  }
-  return ymds;
+  return spans;
 }
 
 /** F7 #683 R5: zdania tylko po .!? — dwukropek nie wycina prefiksu („Please note: …”). */
@@ -556,18 +662,20 @@ function matchStrictAutoCancelSentence(
   const s = sent.trim().replace(/\s+/g, ' ');
   const ship = SHIP_NAME_ALT;
   const port = PORT_NAME_ALT;
-  const date = DATE_CAPTURE;
+  const date = DATE_FLEX;
   // R6: opcjonalny due-to, potem kropka; `$` obowiązkowe (mutacja: bez `$` → test pada).
   const cancelTail = String.raw`(?:is|has been)\s+cancel(?:led|ed)${DUE_TO_SUFFIX}\.?`;
+  // DP-111: `on` opcjonalne (tomorrow / November 2); `today,` przed frazą jak dotąd.
+  const onDate = String.raw`(?:on\s+)?(?:today,?\s+)?${date}`;
   const patterns: RegExp[] = [
     // The MyStar 16:30 departure from Tallinn to Helsinki on 2 November is cancelled.
     new RegExp(
-      String.raw`^(?:The\s+)?(${ship})\s+(\d{1,2}):(\d{2})\s+(?:departure|sailing)\s+from\s+(${port})\s+to\s+(${port})\s+on\s+(?:today,?\s+)?${date}\s+${cancelTail}$`,
+      String.raw`^(?:The\s+)?(${ship})\s+(\d{1,2}):(\d{2})\s+(?:departure|sailing)\s+from\s+(${port})\s+to\s+(${port})\s+${onDate}\s+${cancelTail}$`,
       'i',
     ),
     // The MyStar 16:30 departure on 2 November from Tallinn to Helsinki is cancelled.
     new RegExp(
-      String.raw`^(?:The\s+)?(${ship})\s+(\d{1,2}):(\d{2})\s+(?:departure|sailing)\s+on\s+(?:today,?\s+)?${date}\s+from\s+(${port})\s+to\s+(${port})\s+${cancelTail}$`,
+      String.raw`^(?:The\s+)?(${ship})\s+(\d{1,2}):(\d{2})\s+(?:departure|sailing)\s+${onDate}\s+from\s+(${port})\s+to\s+(${port})\s+${cancelTail}$`,
       'i',
     ),
     // today, 2 November, the MyStar 16:30 departure from Tallinn to Helsinki is cancelled.
@@ -583,25 +691,25 @@ function matchStrictAutoCancelSentence(
       const vessel = mapShipAlias(m[1]!);
       const hm = `${String(Number(m[2])).padStart(2, '0')}:${m[3]}`;
       const route = routeFromPorts(m[4]!, m[5]!);
-      const ymd = ymdFromDateParts(m[6]!, m[7]!, m[8], year, anchorYmd);
-      if (!vessel || !route) return null;
-      return { startYmd: ymd, endYmd: ymd, hm, vessel, routes: [route] };
+      const span = parseDatePhrase(m[6]!, year, anchorYmd);
+      if (!vessel || !route || !span) return null;
+      return { startYmd: span.startYmd, endYmd: span.endYmd, hm, vessel, routes: [route] };
     }
     if (i === 1) {
       const vessel = mapShipAlias(m[1]!);
       const hm = `${String(Number(m[2])).padStart(2, '0')}:${m[3]}`;
-      const ymd = ymdFromDateParts(m[4]!, m[5]!, m[6], year, anchorYmd);
-      const route = routeFromPorts(m[7]!, m[8]!);
-      if (!vessel || !route) return null;
-      return { startYmd: ymd, endYmd: ymd, hm, vessel, routes: [route] };
+      const span = parseDatePhrase(m[4]!, year, anchorYmd);
+      const route = routeFromPorts(m[5]!, m[6]!);
+      if (!vessel || !route || !span) return null;
+      return { startYmd: span.startYmd, endYmd: span.endYmd, hm, vessel, routes: [route] };
     }
     // i === 2: date first
-    const ymd = ymdFromDateParts(m[1]!, m[2]!, m[3], year, anchorYmd);
-    const vessel = mapShipAlias(m[4]!);
-    const hm = `${String(Number(m[5])).padStart(2, '0')}:${m[6]}`;
-    const route = routeFromPorts(m[7]!, m[8]!);
-    if (!vessel || !route) return null;
-    return { startYmd: ymd, endYmd: ymd, hm, vessel, routes: [route] };
+    const span = parseDatePhrase(m[1]!, year, anchorYmd);
+    const vessel = mapShipAlias(m[2]!);
+    const hm = `${String(Number(m[3])).padStart(2, '0')}:${m[4]}`;
+    const route = routeFromPorts(m[5]!, m[6]!);
+    if (!vessel || !route || !span) return null;
+    return { startYmd: span.startYmd, endYmd: span.endYmd, hm, vessel, routes: [route] };
   }
   return null;
 }
@@ -647,14 +755,15 @@ function matchStrictAutoRestoreSentence(
   const s = sent.trim().replace(/\s+/g, ' ');
   const ship = SHIP_NAME_ALT;
   const port = PORT_NAME_ALT;
-  const date = DATE_CAPTURE;
+  const date = DATE_FLEX;
+  const onDate = String.raw`(?:on\s+)?(?:today,?\s+)?${date}`;
   const patterns: RegExp[] = [
     new RegExp(
-      String.raw`^(?:The\s+)?(${ship})\s+(\d{1,2}):(\d{2})\s+(?:departure|sailing)\s+from\s+(${port})\s+to\s+(${port})\s+on\s+(?:today,?\s+)?${date}\s+${RESTORE_TAIL}$`,
+      String.raw`^(?:The\s+)?(${ship})\s+(\d{1,2}):(\d{2})\s+(?:departure|sailing)\s+from\s+(${port})\s+to\s+(${port})\s+${onDate}\s+${RESTORE_TAIL}$`,
       'i',
     ),
     new RegExp(
-      String.raw`^(?:The\s+)?(${ship})\s+(\d{1,2}):(\d{2})\s+(?:departure|sailing)\s+on\s+(?:today,?\s+)?${date}\s+from\s+(${port})\s+to\s+(${port})\s+${RESTORE_TAIL}$`,
+      String.raw`^(?:The\s+)?(${ship})\s+(\d{1,2}):(\d{2})\s+(?:departure|sailing)\s+${onDate}\s+from\s+(${port})\s+to\s+(${port})\s+${RESTORE_TAIL}$`,
       'i',
     ),
     new RegExp(
@@ -669,24 +778,24 @@ function matchStrictAutoRestoreSentence(
       const vessel = mapShipAlias(m[1]!);
       const hm = `${String(Number(m[2])).padStart(2, '0')}:${m[3]}`;
       const route = routeFromPorts(m[4]!, m[5]!);
-      const ymd = ymdFromDateParts(m[6]!, m[7]!, m[8], year, anchorYmd);
-      if (!vessel || !route) return null;
-      return { startYmd: ymd, endYmd: ymd, hm, vessel, routes: [route] };
+      const span = parseDatePhrase(m[6]!, year, anchorYmd);
+      if (!vessel || !route || !span) return null;
+      return { startYmd: span.startYmd, endYmd: span.endYmd, hm, vessel, routes: [route] };
     }
     if (i === 1) {
       const vessel = mapShipAlias(m[1]!);
       const hm = `${String(Number(m[2])).padStart(2, '0')}:${m[3]}`;
-      const ymd = ymdFromDateParts(m[4]!, m[5]!, m[6], year, anchorYmd);
-      const route = routeFromPorts(m[7]!, m[8]!);
-      if (!vessel || !route) return null;
-      return { startYmd: ymd, endYmd: ymd, hm, vessel, routes: [route] };
+      const span = parseDatePhrase(m[4]!, year, anchorYmd);
+      const route = routeFromPorts(m[5]!, m[6]!);
+      if (!vessel || !route || !span) return null;
+      return { startYmd: span.startYmd, endYmd: span.endYmd, hm, vessel, routes: [route] };
     }
-    const ymd = ymdFromDateParts(m[1]!, m[2]!, m[3], year, anchorYmd);
-    const vessel = mapShipAlias(m[4]!);
-    const hm = `${String(Number(m[5])).padStart(2, '0')}:${m[6]}`;
-    const route = routeFromPorts(m[7]!, m[8]!);
-    if (!vessel || !route) return null;
-    return { startYmd: ymd, endYmd: ymd, hm, vessel, routes: [route] };
+    const span = parseDatePhrase(m[1]!, year, anchorYmd);
+    const vessel = mapShipAlias(m[2]!);
+    const hm = `${String(Number(m[3])).padStart(2, '0')}:${m[4]}`;
+    const route = routeFromPorts(m[5]!, m[6]!);
+    if (!vessel || !route || !span) return null;
+    return { startYmd: span.startYmd, endYmd: span.endYmd, hm, vessel, routes: [route] };
   }
   return null;
 }
@@ -720,17 +829,17 @@ export function parseAlertContentDates(
   const multiHm = hmUnique.length > 1;
   const hm = hmUnique.length === 1 ? hmUnique[0]! : null;
 
-  const ymds = countRecognizedDates(text, year, anchorYmd);
-  const multiDate = ymds.length > 1;
+  const spans = extractDateSpans(text, year, anchorYmd);
+  const multiDate = spans.length > 1;
   const multiTime = multiHm || multiDate;
-  if (ymds.length === 0) {
+  if (spans.length === 0) {
     if (!hm && !multiTime) return null;
     return { startYmd: '', endYmd: '', hm: multiTime ? null : hm, multiTime };
   }
-  const ymd = ymds[0]!;
+  const span = spans[0]!;
   return {
-    startYmd: multiTime ? '' : ymd,
-    endYmd: multiTime ? '' : ymd,
+    startYmd: multiTime ? '' : span.startYmd,
+    endYmd: multiTime ? '' : span.endYmd,
     hm: multiTime ? null : hm,
     multiTime,
   };
@@ -820,7 +929,8 @@ export function parseTallinkAlerts(
     const ys = startOk && dateStart ? Number(dateStart.slice(0, 4)) : yearNow;
     const yearHint = (ys >= yearNow - 1 && ys <= yearNow + 1) ? ys : yearNow;
     // DP-107: kotwica = dateStart — „on 2 January” przy grudniowym oknie → rok+1.
-    const anchorYmd = startOk ? dateStart : null;
+    // DP-111: ta sama kotwica dla tomorrow/weekday (brak dateStart → dziś Tallinn).
+    const anchorYmd = startOk && dateStart ? dateStart : today;
     const content = text ? parseAlertContentDates(text, yearHint, anchorYmd) : null;
     const auto = (allowAutoCancel && !filterReject && kind === 'ODWOLANY')
       ? autoCancelFromCancelSentence(text, yearHint, anchorYmd)
