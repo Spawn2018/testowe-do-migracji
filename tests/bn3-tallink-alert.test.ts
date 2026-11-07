@@ -269,6 +269,33 @@ describe('BN3 Tallink Alert', () => {
     expect(tickets.alerts.every((a) => a.kind !== 'ODWOLANY')).toBe(true);
   });
 
+  it('DP-109: „passengers return to Tallinn by bus” nie wycisza ODWOLANY; statek/trasa nadal INFO', () => {
+    // F7 #683 r2: luźne `returns? to` w RESUME_RE wyciszało prawdziwe odwołanie.
+    const bus = parseTallinkAlerts(
+      wrapAlert(
+        'Megastar sailing cancelled; passengers return to Tallinn by bus.',
+        '2026-11-02',
+      ),
+      TALLINK_HOME(),
+      NOW,
+    ).alerts[0]!;
+    expect(bus.kind).toBe('ODWOLANY');
+
+    const shipReturns = parseTallinkAlerts(
+      wrapAlert('MyStar returns to the Tallinn–Helsinki route on 2 November.', '2026-11-02'),
+      TALLINK_HOME(),
+      NOW,
+    ).alerts[0]!;
+    expect(shipReturns.kind).toBe('INFO');
+
+    const toService = parseTallinkAlerts(
+      wrapAlert('Ferry returns to service on the Tallinn–Helsinki route on 2 November.', '2026-11-02'),
+      TALLINK_HOME(),
+      NOW,
+    ).alerts[0]!;
+    expect(toService.kind).toBe('INFO');
+  });
+
   it('F7 B4 / R7-B3: kilka statków → ambiguous (!autoCancelOk); samo queen nie łapie', () => {
     // R7-B3: multiVessel nie z vesselsIn — reguła zdań → !autoCancelOk → ambiguous.
     const multi = parseTallinkAlerts(

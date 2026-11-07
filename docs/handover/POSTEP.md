@@ -1,3 +1,9 @@
+## 2026-11-07 16:14 — DP-109 start (C4 / BN3)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500 w planie. Bez nowego `pilne`.
+- Scalanie: **#877 SCALONE** `a80a3a35` (DP-108 F7 @ `b15073b6`, CI unit/visual/db ✔). Bez push na main.
+- **Krok** C4 **DP-109**: `RESUME_RE` — `returns? to` tylko po nazwie statku albo przed `route`/`service`; „passengers return to Tallinn by bus” nie wycisza ODWOLANY; usunięty zbędny warunek w `classify`. vitest bn3-tallink-alert **74**. Gałąź `pakiet/c4-dp-109-resume-returns-to`. Po F7: DP-111….
+
 ## 2026-11-07 15:50 — DP-108 #877 F7 r2 (C4 / BN3)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500 w planie. Bez nowego `pilne`.
