@@ -1,3 +1,9 @@
+## 2026-11-07 23:45 — #886 SCALONE; start DP-238 (C4 / warsaw B3)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608/#714/#716/#718/#720 w planie. Bez nowego `pilne` do budowy.
+- Scalanie: **#886 SCALONE** `d355ddc2` (DP-237 F7: gotowe @ `02a78ba2`; CI unit/visual/db ✔). `deploy-main` robi resztę. Bez push na main.
+- **Krok** C4 **DP-238**: `fleetUnconfirmedDepRisk` — `params.dep` / tytuł przez `warsaw()` (jak DP-97); test B3 asercja pl-PL. Gałąź `pakiet/c4-dp-238-unconfirmed-dep-warsaw`.
+
 ## 2026-11-07 23:15 — DP-237 r3: licznik status 730 (+ DP-238)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608/#714/#716/#718/#720 w planie. Bez nowego `pilne` do budowy.

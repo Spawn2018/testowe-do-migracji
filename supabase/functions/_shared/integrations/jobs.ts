@@ -729,7 +729,8 @@ export function fleetUnconfirmedDepRisk(
   loadId: string,
   vesselName?: string,
 ): RiskInput & { loadId: string } {
-  const dep = s.departure_at.slice(0, 16);
+  // DP-238: params.dep / tytuł = warsaw (jak DP-97 Portnet), nie surowy UTC.
+  const dep = warsaw(s.departure_at);
   const vessel = vesselName ?? 'prom';
   return {
     kind: 'FERRY',

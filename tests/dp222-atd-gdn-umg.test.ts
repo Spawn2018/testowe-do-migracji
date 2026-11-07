@@ -338,14 +338,21 @@ describe('DP-222 UMG × ferry-portnet — ATD GDN-NYN', () => {
     }, new Date('2026-11-05T12:00:00Z')));
     expect(r.ok).toBe(true);
     expect(st.sailings.find((s) => s.id === 'gdn-waw-b3')?.status).toBe('ZAPLANOWANY');
+    // DP-238: dep w params/tytule = Europe/Warsaw (pl-PL), nie ISO UTC.
+    const depWarsaw = new Intl.DateTimeFormat('pl-PL', {
+      timeZone: 'Europe/Warsaw', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit',
+    }).format(new Date('2026-11-03T17:00:00.000Z'));
     expect(st.risks).toEqual(expect.arrayContaining([
       expect.objectContaining({
         severity: 'HIGH',
         titleKey: 'rk_ferry_unconfirmed_dep',
         loadId: 'load-b3',
         dedup: 'FERRY_UNCONFIRMED_DEP:gdn-waw-b3:load-b3',
+        params: expect.objectContaining({ dep: depWarsaw }),
+        title: expect.stringContaining(depWarsaw),
         detail: expect.objectContaining({ audience: 'HHL_PRZEWOZNIK' }),
       }),
     ]));
+    expect(depWarsaw).not.toMatch(/T17:00/);
   });
 });
