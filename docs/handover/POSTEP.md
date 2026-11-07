@@ -1,3 +1,9 @@
+## 2026-11-07 23:15 — DP-237 r3: licznik status 730 (+ DP-238)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608/#714/#716/#718/#720 w planie. Bez nowego `pilne` do budowy.
+- Scalanie: brak F7 na #886 (CI r2: unit/visual ✔, db FAIL tylko licznik 727→730). Bez push na main.
+- **Krok** C4 **DP-237** r3 (#886): `EXPECTED_LOCAL.status` **730** (+3 B1). DP-238 (format daty B3 UTC) wpisane do rejestru — w kolejce po scaleniu. Czekam CI → F7.
+
 ## 2026-11-07 22:50 — DP-237 r2: B1–B3 (C4 / dowód floty)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608/#714/#716/#718/#720 w planie. Bez nowego `pilne` do budowy.

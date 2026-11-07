@@ -1251,6 +1251,7 @@ security **486** (+9 C9; było 477 C11). Po F7 r3 + C9: OWASP (termin 29.10). Wy
 | DP-139 | Cursor | MMSI/IMO Victoria I + Sirena Seaways (null w 0347); alias AIS „VICTORIA 1”; analiza floty 0347 (brak dalszych null MMSI) | F7 #715 / F7 #719 | BN4 / vessels | SCALONE #719 `eddc4bae` / **0374** |
 | DP-140 | Cursor | Analiza 28 przeterminowanych rejsów (przypłynięcie > 6 h, status ZAPLANOWANY/OPOZNIONY/W_REJSIE): brak potwierdzenia vs odbyte; wpływ na najbliższy prom/ETA/mapę; propozycja zasady zgodnej z 61b (bez auto-zamykania) | F7 #719 / #713 | BN4 / sailings | SCALONE #885 `b89d5926` (prod 07.11: 10 rejsów; decyzja 114 → DP-237) |
 | DP-237 | Cursor | Wdrożenie dowodu floty (decyzja 114 / F7 #885 + r2 #886): bez ATD → `ZAMKNIETY_BEZ_POTWIERDZENIA`; W_REJSIE+ATD → `DOPLYNAL`; trigger nie cofa znacznika (B1); transport bez ATD → HIGH HHL+SCX bez domknięcia (B3); bez zegara (61b); cancel-suspect; resolve `AIS_DEP_DELAY` | F7 #885 decyzja 114 / #886 | BN4 / sailings | W TOKU (`pakiet/c4-dp-237-fleet-evidence-close` / **0433**+**0434**) |
+| DP-238 | Cursor | Format daty w ryzyku B3 `rk_ferry_unconfirmed_dep` (dziś surowy UTC `departure_at.slice(0,16)`) — warsaw / czytelny PL; nieblokujące | F7 #886 @ a9010bf | BN4 / sailings | w kolejce (po DP-237) |
 | DP-141 | koordynator | Namiar GDN-NYN (BN9-c2) | #717 | BN9-c2 | SCALONE #717 `ae308fce` |
 | DP-142 | Cursor | PDF ferry (osobno od BN9-c2) | #717 / #767 | ferry / PDF | zamknięte nieaktualne (#767: PDF transportu usunięty w #547) |
 | DP-143 | Cursor | Typy frontu: `GeofenceCountry` bez EE/FI; `Geofence.route` jako `FerryOperator` choć zapisane kody tras — ryzyko ekranu Strefy | #720 §6 | BN8 | DONE (BN8 front: EE/FI + route kod/rodzina) |
@@ -2724,6 +2725,7 @@ Zamknięte 09.10.2026: E44 (link RIO jest — E44 w P4), W20 / D-18 (zgody armat
 | 07.11.2026 21:54 | #884 SCALONE `fe98b825` (DP-126 F7 @ `5be7cf8d`); start **DP-140** (analiza przeterminowanych rejsów) | pętla / C4 / F7 #884 |
 | 07.11.2026 21:58 | DP-140: prod 10 rejsów (nie 28); 10/10 z późniejszym ATD; mapa/najbliższy=0 wpływu; propozycja dowodu floty (jak DP-222) bez auto+6h | pętla / C4 |
 | 07.11.2026 22:11 | #885 SCALONE `b89d5926` (DP-140 F7 @ `c8e7d00f`; decyzja 114); start **DP-237** / **0433**+**0434** (`ZAMKNIETY_BEZ_POTWIERDZENIA`) | pętla / C4 / F7 #885 |
+| 07.11.2026 23:15 | DP-237 #886 r3: `EXPECTED_LOCAL.status` 730 (+3 B1); DP-238 (data B3 UTC→warsaw) w kolejce | pętla / C4 |
 | 07.11.2026 19:33 | DP-234 #881 r3: GDN −13 h / wyjście −12.5 h (bez kolizji binu z morzem i=47); vitest 11 stref | pętla / C4 |
 | 07.11.2026 18:56 | DP-234 #881 r2: fixture wyjścia poza GDY (54.85/18.30); bmapa **229**; CI db FAIL→fix | pętla / C4 |
 | 07.11.2026 18:15 | #880 SCALONE `1f1afb3d` (DP-112 F7 @ `f7508f4a`); start **DP-234** / **0432** (kotwice stref Q-18) | pętla / C4 |
