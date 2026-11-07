@@ -45,7 +45,7 @@ export const EXPECTED_LOCAL = {
   h3: 27,
   smsksh: 16,
   'ferry-status': 18, // BN3 #683 F7 B5 / 0358: +4 (AUTO null, CHECK, apply RECZNIE, łańcuch AUTO); było 14
-  bmapa: 218, // DP-228: +4 geom_reject przy odrzucie starej linii; DP-226: 214
+  bmapa: 224, // DP-231: +6 ferry_track_sample limit/DESC/latest; DP-228: 218
   h4: 26, // DP-193 F7 #770: +3 (null, pusta, +N); było 23 (+4 collapse)
   p4k: 111, // #630 F7 r1: +rola PORT_CHECKIN; CROSSING mismatch w medianie; undo 7d
   aud03: 32, // D-0005 F7: +OPS, by=HHL_ADMIN, P2 bez sprawy, ASK_FIX/DECISION_HOLD
