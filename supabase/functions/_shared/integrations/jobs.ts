@@ -52,6 +52,7 @@ import {
 } from '../ferry/umgdyShipMovements.ts';
 import {
   PORT_TALLINN_ARRIVALS_URL, PORT_TALLINN_DEPARTURES_URL, PORT_TALLINN_UA,
+  operatorFromTsCompany,
   parsePortTallinnHtml,
 } from '../ferry/portTallinn.ts';
 import {
@@ -1876,7 +1877,8 @@ async function applyPortTallinn(deps: JobDeps, sinceIso: string): Promise<{
       if (deps.store.insertOperatorNotice) {
         await deps.store.insertOperatorNotice({
           sailingId: hit.id,
-          operator: operatorFromSailingSource(hit.source, hit.route),
+          // DP-99: data-company / company z ts.ee, potem source, potem pierwotny armator trasy (ferry_route_operators).
+          operator: operatorFromSailingSource(hit.source, hit.route, e.company),
           kind: 'ODWOLANY',
           note: e.lisainfo ?? 'Port of Tallinn: odwołanie (ts.ee)',
           sourceUrl: e.kind === 'DEPARTURE' ? PORT_TALLINN_DEPARTURES_URL : PORT_TALLINN_ARRIVALS_URL,
@@ -2838,12 +2840,24 @@ export async function fetchStenaFreight(deps: JobDeps): Promise<{
 
 const FERRY_OPERATOR_SOURCES = new Set(['POLFERRIES', 'STENA', 'TALLINK', 'VIKING', 'ECKERO', 'DFDS']);
 
-function operatorFromSailingSource(source: string, route: string): string {
+/**
+ * DP-99: armator do `operator_notices` — najpierw `data-company` ts.ee, potem source rejsu,
+ * potem pierwotny z `ferry_route_operators` / seed (MUU-VUO = ECKERO, nie VIKING).
+ */
+export function operatorFromSailingSource(
+  source: string,
+  route: string,
+  companyHint?: string | null,
+): string {
+  const fromCompany = operatorFromTsCompany(companyHint);
+  if (fromCompany) return fromCompany;
   const up = source.trim().toUpperCase();
   if (FERRY_OPERATOR_SOURCES.has(up)) return up;
+  // Jak ferryCatalog / ferry_route_operators (DP-1 / DP-83).
   if (route === 'GDY-KAA' || route === 'KAA-GDY') return 'STENA';
   if (route === 'GDN-NYN' || route === 'NYN-GDN') return 'POLFERRIES';
-  if (route.startsWith('TLLA') || route.startsWith('HELA') || route === 'MUU-VUO' || route === 'VUO-MUU') return 'VIKING';
+  if (route === 'MUU-VUO' || route === 'VUO-MUU') return 'ECKERO';
+  if (route.startsWith('TLLA') || route.startsWith('HELA')) return 'VIKING';
   if (route === 'TLL-HEL' || route === 'HEL-TLL' || route === 'TLL-STO' || route === 'STO-TLL') return 'TALLINK';
   if (route === 'PLD-KPS' || route === 'KPS-PLD') return 'DFDS';
   return 'TALLINK';

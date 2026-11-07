@@ -145,6 +145,8 @@ function parseTable(
     if (!/data-terminal=/i.test(attrs)) continue;
     dataRows += 1;
     const dataTerminal = (attrs.match(/data-terminal="([^"]*)"/i)?.[1] ?? '').trim();
+    // DP-99: data-company (slug) ma pierwszeństwo przed tekstem komórki Company.
+    const dataCompany = (attrs.match(/data-company="([^"]*)"/i)?.[1] ?? '').trim();
     const tds = [...body.matchAll(/<td\b([^>]*)>([\s\S]*?)<\/td>/gi)];
     if (tds.length < 5) {
       warnings.push(`Port of Tallinn (${kind}): nieczytelny wiersz.`);
@@ -169,7 +171,7 @@ function parseTable(
     const fromRaw = cellVal(2);
     const toRaw = cellVal(3);
     const terminal = terminalLetter(cellVal(4), dataTerminal);
-    const company = cellVal(5);
+    const company = dataCompany || cellVal(5);
     // BN3: Lisainfo (kolumna Additional info) — jawna treść odwołania / opóźnienia.
     const lisainfoRaw = tds.length >= 7 ? stripTags(tds[6]?.[2] ?? '') : '';
     const lisainfo = lisainfoRaw && !/^Lisainfo$/i.test(lisainfoRaw) && !/^Additional info$/i.test(lisainfoRaw)
@@ -218,6 +220,22 @@ export function parsePortTallinnHtml(
     return { events, warnings };
   }
   return { events, warnings };
+}
+
+/**
+ * DP-99 — mapowanie `data-company` / komórki Company z ts.ee → kod armatora.
+ * Slugi: tallink, viking_line_abp, eckeroe_line_ab_oy, …
+ */
+export function operatorFromTsCompany(raw: string | null | undefined): string | null {
+  if (raw == null || !String(raw).trim()) return null;
+  const s = String(raw).trim().toLowerCase().replace(/[_-]+/g, ' ');
+  if (/tallink|silja/.test(s)) return 'TALLINK';
+  if (/viking/.test(s)) return 'VIKING';
+  if (/ecker|eckero|finbo/.test(s)) return 'ECKERO';
+  if (/dfds|sirena/.test(s)) return 'DFDS';
+  if (/stena/.test(s)) return 'STENA';
+  if (/polferr/.test(s)) return 'POLFERRIES';
+  return null;
 }
 
 /** @deprecated F7 #660 r2: Port of Tallinn nie tworzy rozkładu (CROSSING_MIN = zmyślony czas). Zostaje dla testów parsera. */

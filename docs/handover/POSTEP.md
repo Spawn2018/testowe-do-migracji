@@ -1,3 +1,9 @@
+## 2026-11-07 02:30 — #862 SCALONE; start DP-99 (C4)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne` do wykonania.
+- Scalanie: **#862 SCALONE** `e29f647d` (DP-97 F7: gotowe @ `36df13f2`; CI unit+db+visual zielone). Bez push na main.
+- **Krok** C4 **DP-99**: `operatorFromTsCompany` z `data-company` ts.ee; fallback tras jak `ferry_route_operators` (MUU-VUO→ECKERO, nie VIKING); notice AUTO z company. Gałąź `pakiet/c4-dp-99-operator-from-company`. Bez migracji.
+
 ## 2026-11-07 02:00 — #863 SCALONE; DP-97 F7 poprawki (warsaw + auto-zamknięcie)
 
 - Skrzynka: #859 zamknięte; #550 WSTRZYMANE; BN5–8 w planie. F7 #863 → **DP-234** w rejestrze (Q-18 strefy przy skróconej historii).
