@@ -1,3 +1,9 @@
+## 2026-11-07 20:00 — #881 SCALONE; start DP-117+118 (C4 / max_rows)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608 w planie. Bez nowego `pilne` do budowy.
+- Scalanie: **#881 SCALONE** `8869bab2` (DP-234 F7: gotowe @ `3f7ebb66`; CI unit/visual/db ✔). `deploy-main` robi resztę. Bez push na main.
+- **Krok** C4 **DP-117+118** (łączone, ten sam obszar max_rows / F7 #693): `route-check` loads — range+order+bez statusów terminalnych (zamiast limitu 500); `resolveStaleRisks` — stronicowanie otwartych `risk_signals` + update `.in` w paczkach. vitest dp117-118. Gałąź `pakiet/c4-dp-117-118-max-rows`. Bez migracji.
+
 ## 2026-11-07 19:33 — DP-234 r3: bin wyjścia ≠ morze i=47 (C4 / B-MAPA)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608 w planie. Bez nowego `pilne` do budowy.
