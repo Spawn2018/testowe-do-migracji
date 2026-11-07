@@ -4701,6 +4701,26 @@ chk "DP-235: gps_port Karlskrona" \
   "select detail->'params'->>'gps_port' from risk_signals
     where load_id='$L235a' and dedup_key like 'GPS_WRONG_PORT:%' and resolved_at is null limit 1" \
   Karlskrona
+# F7 #875: 3× identyczny punkt co 15 min (≥30 min) → ryzyko nadal otwarte (powtórka ≠ wyjazd)
+q "insert into positions (load_id, ts, geom_raw, source) values
+ ('$L235a', '2026-11-16 18:15+00',
+  st_setsrid(st_makepoint(15.63080, 56.16460), 4326), 'TELEMATICS_API'),
+ ('$L235a', '2026-11-16 18:30+00',
+  st_setsrid(st_makepoint(15.63080, 56.16460), 4326), 'TELEMATICS_API'),
+ ('$L235a', '2026-11-16 18:45+00',
+  st_setsrid(st_makepoint(15.63080, 56.16460), 4326), 'TELEMATICS_API')" >/dev/null
+q "select public.detect_gps_wrong_ferry_port('2026-11-16 18:50+00')" >/dev/null
+chk "DP-235: F7 powtórki Karlskrona ≥30 min → ryzyko nadal otwarte" \
+  "select count(*) from risk_signals
+    where load_id='$L235a' and dedup_key like 'GPS_WRONG_PORT:%' and resolved_at is null" 1
+# świeży punkt poza obcą strefą → zamknięte
+q "insert into positions (load_id, ts, geom_raw, source) values
+ ('$L235a', '2026-11-16 19:00+00',
+  st_setsrid(st_makepoint(16.5000, 56.5000), 4326), 'TELEMATICS_API')" >/dev/null
+q "select public.detect_gps_wrong_ferry_port('2026-11-16 19:05+00')" >/dev/null
+chk "DP-235: F7 świeży punkt poza strefą → GPS_WRONG_PORT zamknięte" \
+  "select count(*) from risk_signals
+    where load_id='$L235a' and dedup_key like 'GPS_WRONG_PORT:%' and resolved_at is null" 0
 # własny PORT_IN (Nynäshamn) → zamknięcie / brak
 mk $L235b B235 "'HHL/B235'" "'SCX/B235'" FERRY "'$S235b'"
 q "insert into load_events (load_id, event_type, occurred_at) values

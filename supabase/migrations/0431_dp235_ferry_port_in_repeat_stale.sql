@@ -1,7 +1,9 @@
--- DP-235 (F7 #870 / prod 17184):
+-- DP-235 (F7 #870 / prod 17184; F7 #875 r2):
 -- (a) FERRY + GPS w PORT_IN obcej trasy niż rejs → to samo HIGH rk_gps_wrong_port (HHL+SCX);
--- (b) powtórzony identyczny fix (±5 m) ≥30 min = jak stale_point — tylko po ATD/dep
---     (przed odejściem postój w porcie = sygnał, bez zmian względem DP-230).
+-- (b) powtórzony identyczny fix (±1 m) ≥30 min po ATD/dep = nie otwieraj nowego ryzyka
+--     i nie zamykaj otwartego (emtrack przy postoju powtarza te same współrzędne);
+--     zamykanie tylko przy świeżym punkcie poza obcą strefą / w porcie rejsu / zmiana rejsu.
+--     Przed odejściem postój w porcie = sygnał (bez zmian względem DP-230).
 
 begin;
 
@@ -11,7 +13,7 @@ create or replace function public.gps_is_repeat_stale_after_dep(
   p_geom geometry,
   p_ts timestamptz,
   p_dep timestamptz,
-  p_tol_m double precision default 5,
+  p_tol_m double precision default 1,
   p_age interval default interval '30 minutes'
 ) returns boolean
 language sql
@@ -30,7 +32,7 @@ as $function$
          and st_dwithin(
                p.geom_raw::geography,
                p_geom::geography,
-               coalesce(p_tol_m, 5)
+               coalesce(p_tol_m, 1)
              )
     )
   end;
@@ -41,7 +43,7 @@ revoke all on function public.gps_is_repeat_stale_after_dep(uuid, geometry, time
 grant execute on function public.gps_is_repeat_stale_after_dep(uuid, geometry, timestamptz, timestamptz, double precision, interval)
   to service_role;
 comment on function public.gps_is_repeat_stale_after_dep(uuid, geometry, timestamptz, timestamptz, double precision, interval) is
-  'DP-235: po ATD/dep powtórzony identyczny fix (±5 m) sprzed ≥30 min = jak brak świeżego GPS; przed ATD zawsze false.';
+  'DP-235: po ATD/dep powtórzony identyczny fix (±1 m) sprzed ≥30 min = nie otwieraj/nie zamykaj ryzyka; przed ATD zawsze false.';
 
 create or replace function public.detect_gps_wrong_ferry_port(
   p_now timestamptz default now(),
@@ -63,8 +65,8 @@ declare
   v_gps_port text;
   v_dep_port text;
 begin
-  -- Zamknij gdy: brak rejsu / GPS poza obcą strefą (OUT lub IN) / FERRY z GPS w porcie rejsu.
-  -- Nie zamykaj samym ATD. Po ATD pomijaj powtórzony fix (DP-235).
+  -- Zamknij gdy: brak rejsu / świeży GPS poza obcą strefą (OUT lub IN) / FERRY ze świeżym GPS w porcie rejsu.
+  -- Nie zamykaj samym ATD. Powtórka po ATD ≠ wyjazd: nie zamyka otwartego (F7 #875).
   update public.risk_signals rs
      set resolved_at = coalesce(v_now, now())
    where rs.resolved_at is null
@@ -78,7 +80,7 @@ begin
             and rs.dedup_key = 'GPS_WRONG_PORT:' || l.id::text || ':' || s.id::text
        )
        or (
-         -- brak świeżego GPS w obcym PORT_OUT ani obcym PORT_IN
+         -- świeży (niepowtórzony) punkt poza obcym PORT_OUT/PORT_IN — albo brak pozycji
          not exists (
            select 1
              from public.loads l
@@ -105,8 +107,28 @@ begin
               and public.ferry_geofence_matches_route(g.route, s.route) is not true
             where l.id = rs.load_id
               and rs.dedup_key = 'GPS_WRONG_PORT:' || l.id::text || ':' || s.id::text
-              -- DP-235: przy FERRY sam najnowszy punkt; powtórka ≥30 min = jak brak GPS
-              and (l.status < 'FERRY' or lp.repeat_stale is not true)
+         )
+         and not exists (
+           -- F7 #875: powtórka ≥30 min po ATD = brak nowej informacji → nie zamykaj
+           select 1
+             from public.loads l
+             join public.sailings s on s.id = l.sailing_id
+             join lateral (
+               select public.gps_is_repeat_stale_after_dep(
+                        l.id,
+                        p.geom_raw::geometry,
+                        p.ts,
+                        coalesce(s.actual_departure_at, s.delayed_departure_at, s.departure_at)
+                      ) as repeat_stale
+                 from public.positions p
+                where p.load_id = l.id
+                  and coalesce((p.raw->>'stale_point')::boolean, false) is not true
+                order by p.ts desc
+                limit 1
+             ) lp on true
+            where l.id = rs.load_id
+              and rs.dedup_key = 'GPS_WRONG_PORT:' || l.id::text || ':' || s.id::text
+              and lp.repeat_stale is true
          )
        )
        or exists (
@@ -354,6 +376,6 @@ revoke all on function public.detect_gps_wrong_ferry_port(timestamptz, interval)
 grant execute on function public.detect_gps_wrong_ferry_port(timestamptz, interval)
   to service_role;
 comment on function public.detect_gps_wrong_ferry_port(timestamptz, interval) is
-  'DP-235: GPS w obcym PORT_OUT (status < FERRY) lub obcym PORT_IN (FERRY) → HIGH rk_gps_wrong_port; po ATD powtórzony fix ≥30 min jak stale.';
+  'DP-235: GPS w obcym PORT_OUT (< FERRY) lub obcym PORT_IN (FERRY) → HIGH rk_gps_wrong_port; powtórka po ATD nie otwiera i nie zamyka.';
 
 commit;
