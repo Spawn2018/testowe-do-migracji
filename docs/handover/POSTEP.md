@@ -1,3 +1,9 @@
+## 2026-11-08 00:30 — #887 SCALONE; start DP-186 (C5 / EE cache baza)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608/#714/#716/#718/#720 w planie. Bez nowego `pilne` do budowy.
+- Scalanie: **#887 SCALONE** `317614e9` (DP-238 F7: gotowe @ `17fd9add`; CI unit/visual/db ✔). `deploy-main` robi resztę. Bez push na main.
+- **Krok** C5 **DP-186**: `ee_road_feed_cache` (**0435**) + `get/setEeHeavyFeedDbCache`; cold start → `ee_*_source=cache`; timeout → cache-stale z bazy. Gałąź `pakiet/c5-dp-186-ee-feed-db-cache`.
+
 ## 2026-11-07 23:45 — #886 SCALONE; start DP-238 (C4 / warsaw B3)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608/#714/#716/#718/#720 w planie. Bez nowego `pilne` do budowy.
