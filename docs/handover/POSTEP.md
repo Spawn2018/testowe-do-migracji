@@ -1,8 +1,8 @@
-## 2026-11-07 06:50 — DP-233: migawki z update=true (C4)
+## 2026-11-07 06:50 — DP-233: migawka 390 + reszta stan-* (C4)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 w planie. Bez nowego `pilne` do wykonania.
-- Scalanie: brak „F7: gotowe” na #867 — czekam CI po commitcie migawek. Bez push na main.
-- **Krok** C4 **DP-233** (#867): 11× `stan-*` + `harmonogram-zaladunki-dzis` 1440/390 z run 42343237066 @ `37bdedfc`; G4. Gałąź `pakiet/c4-dp-233-harmonogram-zaladunki-rozladunki`.
+- Scalanie: brak „F7: gotowe” na #867 (F7 @ `53547f7` — brak wzorca 390; po `37bdedfc` selector OK, CI zrzuty FAIL tylko na braku `…-390-light.png`). Bez push na main.
+- **Krok** C4 **DP-233** (#867): z artefaktu `visual.yml` `update=true` run 42343237066 @ `37bdedfc` — `harmonogram-zaladunki-dzis-hhl-pl-390-light.png` + 10× `stan-*` (reszta III-2); G4. Gałąź `pakiet/c4-dp-233-harmonogram-zaladunki-rozladunki`. Czekam CI→F7. Po F7: DP-232 (#860) → DP-230 (#852) → DP-102….
 
 ## 2026-11-07 05:55 — DP-233: poprawka visual (C4)
 
