@@ -1,3 +1,9 @@
+## 2026-11-07 21:28 — DP-126 r2: F7 #884 (C4 / ERR RSS)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608 w planie. Bez nowego `pilne` do budowy.
+- Scalanie: brak F7 „gotowe” na #884 (koordynator: zakres niepełny → r2). Bez push na main.
+- **Krok** C4 **DP-126** r2 (F7 #884): lookbehind `not been` / `hasn't|haven't been` + `\s+` we wszystkich; Content-Length przed `text()`; testy positive „have been cancelled” + negatywne + CL. vitest bn3-err-rss **21**. Czekam CI→F7. Po F7: DP-140.
+
 ## 2026-11-07 21:05 — #883 SCALONE; start DP-126 (C4 / ERR RSS filtry)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608 w planie. Bez nowego `pilne` do budowy.
