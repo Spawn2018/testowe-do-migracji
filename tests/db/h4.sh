@@ -155,4 +155,57 @@ val "DP-193: pusta tablica → pusta" \
 val "DP-193: authenticated bez EXECUTE eta_flags_collapse" \
   "select has_function_privilege('authenticated','eta_flags_collapse(text[])','execute')::text" "false"
 
+# DP-199 (decyzja 111 / F7 #895): krótki prom TLL-HEL (~2 h) — bez flagi D-9;
+# własny load (#713); sailing_id=null → rodzina z ferry_route; pozycja ląd EE (Tallinn).
+# GPS z odpoczynkiem 11 h + ~4 h jazdy (nie 1 punkt → ostrożne 8,5 h): since≈4, driven≈4;
+# po krótkim promie since=0 → pierwszy EU_DRIVE ≥4 h (przy since=4 byłoby ~0,5 h).
+# carrier_order_no wymagane przy IN_TRANSIT_* (enforce_order_numbers — CI db h4).
+L199=a1990000-0000-4000-8000-000000000199
+sys "insert into loads (id, project_id, carrier_org_id, order_no, hhl_order_no, carrier_order_no, ferry_route, sailing_id, status, plan_load_date, telematics_vehicle_id, trailer_swap, trailer_swap_at)
+  values ('$L199','22222222-0000-0000-0000-000000000001','00000000-0000-0000-0000-00000000a003','KSH/D199','HHL-D199','SCX-D199','TLL-HEL',null,'IN_TRANSIT_PL', current_date - 1, 'TEL-H4-199', false, null)
+  on conflict (id) do update set ferry_route='TLL-HEL', sailing_id=null, status='IN_TRANSIT_PL',
+    hhl_order_no=excluded.hhl_order_no, carrier_order_no=excluded.carrier_order_no,
+    plan_load_date=excluded.plan_load_date, telematics_vehicle_id=excluded.telematics_vehicle_id,
+    trailer_swap=false, trailer_swap_at=null" >/dev/null
+val "DP-199 fixture: 1 load TLL-HEL" \
+  "select count(*)::text from loads where id='$L199' and ferry_route='TLL-HEL' and sailing_id is null" "1"
+val "DP-199 fixture: rodzina TLL-HEL" \
+  "select public.load_route_family('$L199')" "TLL-HEL"
+val "DP-199 fixture: CROSSING ~2 h" \
+  "select round(hours, 2)::text from eta_segment_params where code = public.eta_obs_segment_code(public.load_route_family('$L199'), 'CROSSING')" "2.00"
+val "DP-199 0442: rdzeń ma warunek ≥9 h" \
+  "select (pg_get_functiondef('public.compute_load_eta_core(uuid, timestamptz)'::regprocedure) like '%DP-199 / F7 #895%')::text" "true"
+sys "delete from positions where load_id='$L199'" >/dev/null
+sys "delete from load_events where load_id='$L199'" >/dev/null
+sys "insert into load_events (load_id, event_type, occurred_at, payload) values ('$L199','GEOFENCE_EXIT', now()-interval '1 day', '{\"geofence_kind\":\"LOADING\"}')" >/dev/null
+# Tallinn ląd: odpoczynek 11 h, potem ~4 h jazdy (since≈4) — przed promem TLL-HEL
+sys "insert into positions (load_id, ts, geom_raw, speed_kmh, source, raw) values
+  ('$L199', now()-interval '15 hours 30 minutes', st_setsrid(st_makepoint(24.753, 59.437), 4326), 0, 'TELEMATICS_API', '{}'::jsonb),
+  ('$L199', now()-interval '4 hours 30 minutes', st_setsrid(st_makepoint(24.753, 59.437), 4326), 0, 'TELEMATICS_API', '{}'::jsonb),
+  ('$L199', now()-interval '2 hours', st_setsrid(st_makepoint(24.70, 59.40), 4326), 72, 'TELEMATICS_API', '{}'::jsonb),
+  ('$L199', now()-interval '5 minutes', st_setsrid(st_makepoint(24.75, 59.44), 4326), 68, 'TELEMATICS_API', '{}'::jsonb)" >/dev/null
+val "DP-199 TLL-HEL GPS: since_break ~4 (nie ostrożne 8,5)" \
+  "select (since_break_h between 3.5 and 4.6 and driven_today_h between 3.5 and 5.0 and cautious is false)::text
+     from h4_driver_state_from_gps('$L199', now())" "true"
+val "DP-199 TLL-HEL przed promem: bez flagi H-4 po promie" \
+  "select (coalesce(basis->'flags','[]'::jsonb)::text not like '%H-4 po promie%')::text from compute_load_eta('$L199', now()) limit 1" "true"
+val "DP-199 TLL-HEL: po krótkim promie pierwszy EU_DRIVE ≥4 h (since=0)" \
+  "select (coalesce((
+     select (t.elem->>'hours')::numeric
+     from compute_load_eta('$L199', now()) e
+     cross join lateral jsonb_array_elements(coalesce(e.basis->'segments','[]'::jsonb)) s(seg)
+     cross join lateral jsonb_array_elements(coalesce(s.seg->'items','[]'::jsonb))
+       with ordinality t(elem, ord)
+     where s.seg->>'code' = 'H4_SEGMENTS'
+       and t.elem->>'code' = 'EU_DRIVE'
+     order by t.ord
+     limit 1
+   ), 0) >= 4.0)::text" "true"
+
+sys "update loads set ferry_route='GDN-NYN', sailing_id=null, status='IN_TRANSIT_PL' where id='$L199'" >/dev/null
+sys "delete from positions where load_id='$L199'" >/dev/null
+sys "insert into positions (load_id, ts, geom_raw, source, raw) values ('$L199', now()-interval '5 minutes', st_setsrid(st_makepoint(18.65, 54.35), 4326), 'TELEMATICS_API', '{}'::jsonb)" >/dev/null
+val "DP-199 GDN-NYN przed promem: flaga H-4 po promie (D-9)" \
+  "select (coalesce(basis->'flags','[]'::jsonb)::text like '%H-4 po promie%')::text from compute_load_eta('$L199', now()) limit 1" "true"
+
 echo "WYNIK: $ok OK, $fail FAIL"

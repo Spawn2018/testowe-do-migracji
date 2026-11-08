@@ -1,3 +1,33 @@
+## 2026-11-08 07:50 — DP-199 r5 (#895): GPS since≈4 (h4 EU_DRIVE FAIL)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608/#714/#716/#718/#720 w planie. Bez nowego `pilne` do budowy.
+- Scalanie: brak „F7: gotowe” — CI @ `38d64a0c` unit/visual ✔, db FAIL h4 32/33 (`EU_DRIVE≥4` przy ostrożnym driven=8,5 → chunk 0,5 h). Bez push na main.
+- **Krok** DP-199 (**0442** r5): fixture GPS rest 11 h + ~4 h jazdy (since≈4, driven≈4, nie ostrożne); asercja stanu + `EU_DRIVE≥4`. h4 **34**. Gałąź `pakiet/c5-dp-199-h4-baltic-rest`. Czekam CI → F7.
+
+## 2026-11-08 07:20 — DP-199 r4 (#895): fixture + carrier_order_no
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608/#714/#716/#718/#720 w planie. Bez nowego `pilne` do budowy.
+- Scalanie: brak „F7: gotowe” — CI @ `69fb7ed6` unit/visual ✔, db FAIL h4 28/33 (insert load bez `carrier_order_no` → enforce). Bez push na main.
+- **Krok** DP-199 (**0442** r4): fixtura TLL-HEL z `carrier_order_no=SCX-D199` (IN_TRANSIT_*). h4 **33**. Gałąź `pakiet/c5-dp-199-h4-baltic-rest`. Czekam CI → F7.
+
+## 2026-11-08 06:20 — DP-199 r3 (#895): db FAIL → fixture + EU_DRIVE≥4
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608/#714/#716/#718/#720 w planie. Bez nowego `pilne` do budowy.
+- Scalanie: brak „F7: gotowe” — CI db FAIL h4 27/29 (TLL-HEL flaga + EU_BREAK `ord≤3` mylące przy since=0). Bez push na main.
+- **Krok** DP-199 (**0442** r3): warunek `greatest(h_cross, v_arr−v_dep)≥9`; własny load TLL-HEL + asercje rodziny/CROSSING/0442; pierwszy `EU_DRIVE≥4` zamiast `ord≤3`. h4 **33**. Gałąź `pakiet/c5-dp-199-h4-baltic-rest`.
+
+## 2026-11-08 06:00 — DP-199 F7 r2 (#895): since_break=0 po krótkim promie
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608/#714/#716/#718/#720 w planie. Bez nowego `pilne` do budowy.
+- Scalanie: brak „F7: gotowe” — F7 #895 @ `0accd847` (kierunek OK, 1 poprawka); CI db FAIL (TLL-HEL: `sailing_id` zasłaniał `ferry_route`). Bez push na main.
+- **Krok** DP-199 (**0442** r2): po krótkim promie `driven`/`extended` z GPS, `since_break_h=0` (UE 561/2006 art. 7); testy z `sailing_id=null` + bez EU_BREAK_45 na starcie FI. h4 **29** (+1). Gałąź `pakiet/c5-dp-199-h4-baltic-rest`.
+
+## 2026-11-08 05:35 — #894 SCALONE; C5 zamknięte; start DP-199 (H-4 bałtyk)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608/#714/#716/#718/#720 w planie. Bez nowego `pilne` do budowy.
+- Scalanie: **#894 SCALONE** `74313768` (C5 0441 F7: gotowe @ `586e1500`; CI unit/visual/db ✔). C5 checklista w komentarzu #894. `deploy-main` robi resztę. Bez push na main.
+- **Krok** DP-199 (**0442**): `compute_load_eta_core` — H-4 „po promie / zegar od zera” tylko gdy `h_cross≥9`; TLL-HEL (~2 h) kontynuuje stan GPS. h4 **28** (+2). Gałąź `pakiet/c5-dp-199-h4-baltic-rest`.
+
 ## 2026-11-08 05:05 — #893 SCALONE; C5 krok 6 (telm orphan = load_sms_code)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608/#714/#716/#718/#720 w planie. Bez nowego `pilne` do budowy.
