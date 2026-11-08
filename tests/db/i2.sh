@@ -1069,6 +1069,56 @@ val "SCX: z dwóch transportów tylko ten z pozycjami, ostatni punkt" $SCX "sele
 val "duplikaty i NULL w tablicy → jeden wiersz" $HHL "select count(*) from latest_vehicle_fixes(array['$LT','$LT',null]::uuid[])" 1
 val "pusta tablica / NULL → 0 wierszy" $HHL "select (select count(*) from latest_vehicle_fixes('{}'::uuid[]))||'/'||(select count(*) from latest_vehicle_fixes(null))" "0/0"
 val "inny przewoźnik: 0 wierszy (RLS positions_read)" 11111111-0000-0000-0000-00000000000b "select count(*) from latest_vehicle_fixes(array['$LT','$LN']::uuid[])" 0
+
+echo; echo "[#566 / W52] stale_point — mapa, ślad, ETA, cisza (0445)"
+L566=a566a566-0000-4000-8000-000000000001
+$PSQL -c "set session_replication_role=replica;
+ insert into loads (id, project_id, carrier_org_id, order_no, hhl_order_no, carrier_order_no, status,
+   plan_load_date, plan_delivery_date, telematics_vehicle_id, tractor_plate)
+ values ('$L566','$P','00000000-0000-0000-0000-00000000a003','KSH/W52','HHL-W52','SCX-W52','IN_TRANSIT_PL',
+   current_date-1, current_date+3, 'TEL-W52', 'PO 56600')
+ on conflict (id) do update set status='IN_TRANSIT_PL', telematics_vehicle_id='TEL-W52',
+   hhl_order_no='HHL-W52', carrier_order_no='SCX-W52', tractor_plate='PO 56600';
+ delete from positions where load_id='$L566';
+ delete from risk_signals where dedup_key='SILENT:$L566';
+ insert into positions (load_id, ts, geom_raw, source, raw) values
+  ('$L566', now() - interval '3 hours', st_setsrid(st_makepoint(17.1, 52.2), 4326), 'TELEMATICS_API',
+   '{}'::jsonb),
+  ('$L566', now() - interval '5 minutes', st_setsrid(st_makepoint(19.9, 54.9), 4326), 'TELEMATICS_API',
+   '{\"stale_point\":true}'::jsonb);
+ set session_replication_role=origin" >/dev/null
+chk "#566 fixture: 2 pozycje (świeża + nowszy stale)" \
+  "$(Q "select count(*) from positions where load_id='$L566'")" 2
+chk "#566 load_track: tylko punkt świeży (1)" \
+  "$(Q "select count(*) from load_track('$L566')")" 1
+chk "#566 load_track: lng świeżego = 17.1" \
+  "$(Q "select lng::text from load_track('$L566')")" 17.1
+val "#566 latest_vehicle_fixes: lng świeżego (nie 19.9)" $HHL \
+  "select lng::text from latest_vehicle_fixes(array['$L566']::uuid[])" 17.1
+chk "#566 latest_vehicle_positions: lon świeżego" \
+  "$(Q "select lon::text from latest_vehicle_positions(180) where load_id='$L566'")" 17.1
+# Cisza: świeży punkt 3 h temu (> SILENT_MIN), nowszy stale nie resetuje
+Q "select detect_silent_vehicles(90)" >/dev/null
+chk "#566 cisza: SILENT otwarte mimo nowszego stale_point" \
+  "$(Q "select count(*) from risk_signals where dedup_key='SILENT:$L566' and resolved_at is null")" 1
+chk "#566 cisza: last_fix = świeży (nie stale)" \
+  "$(Q "select (detail->>'last_fix' is not null and (detail->>'last_fix')::timestamptz < now() - interval '2 hours')::text from risk_signals where dedup_key='SILENT:$L566' and resolved_at is null")" true
+# ETA: po stale insert bez zmiany eta_computed_at; po świeżym — przeliczenie
+ETA0=$(Q "select coalesce(eta_computed_at::text,'∅') from loads where id='$L566'")
+$PSQL -c "insert into positions (load_id, ts, geom_raw, source, raw) values
+ ('$L566', now() - interval '1 minutes', st_setsrid(st_makepoint(20.1, 55.0), 4326), 'TELEMATICS_API',
+  '{\"stale_point\":true}'::jsonb)" >/dev/null
+chk "#566 ETA: po stale insert eta_computed_at bez zmian" \
+  "$(Q "select coalesce(eta_computed_at::text,'∅') from loads where id='$L566'")" "$ETA0"
+$PSQL -c "insert into positions (load_id, ts, geom_raw, source, raw) values
+ ('$L566', now(), st_setsrid(st_makepoint(17.2, 52.3), 4326), 'TELEMATICS_API', '{}'::jsonb)" >/dev/null
+chk "#566 ETA: po świeżym insert eta_computed_at ustawione/zmienione" \
+  "$(Q "select (eta_computed_at is not null and eta_computed_at::text is distinct from '$ETA0')::text from loads where id='$L566'")" true
+chk "#566 SMS trigger: definicja pomija stale_point" \
+  "$(Q "select (pg_get_functiondef('public.sms_ksh_1h_on_position()'::regprocedure) like '%stale_point%')::text")" true
+$PSQL -c "update risk_signals set resolved_at=now() where dedup_key='SILENT:$L566';
+ update loads set status='CANCELLED' where id='$L566'" >/dev/null
+
 $PSQL -c "update loads set status='CANCELLED' where id='$LN'" >/dev/null 2>&1
 $PSQL -c "delete from app_users where email='cx3@test'; delete from organizations where code='CX3'; update loads set status='CANCELLED' where id='$LT'" >/dev/null 2>&1
 fi # tower-i2-part 4
