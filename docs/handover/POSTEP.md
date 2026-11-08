@@ -1,3 +1,15 @@
+## 2026-11-08 12:05 — DP-132 testy geofence (F7 #703 r3)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608/#714/#716/#718/#720 w planie. Bez nowego `pilne` do budowy.
+- Scalanie: brak otwartego PR z „F7: gotowe” (po #900). Bez push na main.
+- **Krok** DP-132: 5 testów w `dp128-geofence-transition` — `sinceIso`, page cap throw, najpóźniejsza para ATD, ATA poza 15 km (pure + fetch). Gałąź `pakiet/dp-132-geofence-tests-dp128`. Bez migracji. Czekam CI→F7. Dalej: DP-153+154.
+
+## 2026-11-08 12:00 — #900 SCALONE; start DP-132
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608/#714/#716/#718/#720 w planie. Bez nowego `pilne` do budowy.
+- Scalanie: **#900 SCALONE** `c2da1683` (DP-129 F7: gotowe @ `c1a4ccc0`; CI unit/visual/db ✔). `deploy-main` robi resztę. Bez push na main.
+- **Krok** DP-132: brakujące testy DP-128 (F7 #703 r3) — filtr `sinceIso`, throw page cap, najpóźniejsza para ATD, ATA poza 15 km. Gałąź `pakiet/dp-132-geofence-tests-dp128`. Bez migracji. Czekam CI→F7. Dalej: DP-153+154.
+
 ## 2026-11-08 11:35 — #899 SCALONE; start DP-129
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608/#714/#716/#718/#720 w planie. Bez nowego `pilne` do budowy.

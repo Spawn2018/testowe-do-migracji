@@ -12,6 +12,7 @@ import {
   GEOFENCE_QUERY_RADIUS_KM,
   haversineKm,
   supabaseStore,
+  VESSEL_POS_MAX_PAGES,
   VESSEL_POS_PAGE_SIZE,
 } from '../supabase/functions/_shared/integrations/store.ts';
 import type { GeofencePos } from '../supabase/functions/_shared/ferry/geofenceTransition.ts';
@@ -262,6 +263,37 @@ describe('DP-128 geofenceTransition — pure', () => {
       );
     }
   });
+
+  /* DP-132 (F7 #703 r3 — brakujące testy, nieblokujące). */
+  it('DP-132: kilka par ATD → najpóźniejsza para (nie pierwsza)', () => {
+    const earlyOut = northOf(GDN, 5);
+    const lateOut = northOf(GDN, 5.5);
+    const rows = [
+      pos('2026-09-24T08:00:00.000Z', GDN.lat, GDN.lon, 0),
+      pos('2026-09-24T08:10:00.000Z', earlyOut.lat, earlyOut.lon, 8),
+      /* Powrót do hubu i drugie wyjście — ATD = ta późniejsza para. */
+      pos('2026-09-24T10:00:00.000Z', GDN.lat, GDN.lon, 0),
+      pos('2026-09-24T10:08:00.000Z', lateOut.lat, lateOut.lon, 9),
+    ];
+    expect(findAtdTransitionIso(rows, GDN)).toBe('2026-09-24T10:00:00.000Z');
+  });
+
+  it('DP-132: ATA — klar >4 km poza oknem 15 km nie wchodzi do pary', () => {
+    const far = northOf(NYN, GEOFENCE_QUERY_RADIUS_KM + 2); /* ~17 km */
+    expect(haversineKm(far.lat, far.lon, NYN.lat, NYN.lon))
+      .toBeGreaterThan(GEOFENCE_QUERY_RADIUS_KM);
+    /* Tylko punkty z zapytania ≤15 km — daleka „klar” nie trafia do rows. */
+    const inWindow = [
+      pos('2026-09-25T06:10:00.000Z', NYN.lat, NYN.lon, 0),
+    ];
+    expect(findAtaTransitionIso(inWindow, NYN)).toBeNull();
+    /* Kontrola: ta sama ATA gdy klar jest w 15 km. */
+    const near = northOf(NYN, 6);
+    expect(findAtaTransitionIso([
+      pos('2026-09-25T06:00:00.000Z', near.lat, near.lon, 8),
+      pos('2026-09-25T06:10:00.000Z', NYN.lat, NYN.lon, 0),
+    ], NYN)).toBe('2026-09-25T06:10:00.000Z');
+  });
 });
 
 describe('DP-128 fetchVesselPositionsNearHubPaged — atrapa PostgREST', () => {
@@ -365,6 +397,77 @@ describe('DP-128 fetchVesselPositionsNearHubPaged — atrapa PostgREST', () => {
       GDN,
       '2026-09-24T00:00:00.000Z',
     )).rejects.toThrow(/vessel_positions geofence page/);
+  });
+
+  it('DP-132: filtr sinceIso — pozycje wcześniejsze pominięte', async () => {
+    const hub = GDN;
+    const out = northOf(hub, 5);
+    const all = [
+      pos('2026-09-24T10:00:00.000Z', hub.lat, hub.lon, 0),
+      pos('2026-09-24T10:10:00.000Z', out.lat, out.lon, 8),
+      pos('2026-09-24T18:00:00.000Z', hub.lat, hub.lon, 0),
+      pos('2026-09-24T18:08:00.000Z', out.lat, out.lon, 9),
+    ];
+    const client = limitingPosClient(all, 50);
+    const fetched = await fetchVesselPositionsNearHubPaged(
+      () => client.from('vessel_positions'),
+      'v1',
+      hub,
+      '2026-09-24T17:00:00.000Z',
+      { pageSize: 50 },
+    );
+    expect(fetched.every((r) => r.observed_at >= '2026-09-24T17:00:00.000Z')).toBe(true);
+    expect(fetched).toHaveLength(2);
+    expect(findAtdTransitionIso(fetched, hub)).toBe('2026-09-24T18:00:00.000Z');
+  });
+
+  it('DP-132: throw przy limicie stron (page cap)', async () => {
+    const hub = GDY;
+    const out = northOf(hub, 6);
+    const pageSize = 10;
+    const maxPages = 2;
+    const rows: GeofencePos[] = [];
+    const t0 = Date.parse('2026-10-22T00:00:00.000Z');
+    /* Pełne strony bez końca — cap = maxPages * pageSize. */
+    for (let i = 0; i < maxPages * pageSize + 5; i++) {
+      rows.push(pos(new Date(t0 + i * 60_000).toISOString(), out.lat, out.lon, 10));
+    }
+    const client = limitingPosClient(rows, pageSize);
+    await expect(fetchVesselPositionsNearHubPaged(
+      () => client.from('vessel_positions'),
+      'v1',
+      hub,
+      '2026-10-22T00:00:00.000Z',
+      { pageSize, maxPages },
+    )).rejects.toThrow(/page cap exceeded/);
+    expect(VESSEL_POS_MAX_PAGES).toBeGreaterThanOrEqual(2);
+  });
+
+  it('DP-132: haversine — pozycja >15 km poza hubem nie wraca z zapytania', async () => {
+    const hub = NYN;
+    const far = northOf(hub, GEOFENCE_QUERY_RADIUS_KM + 2);
+    const near = northOf(hub, 6);
+    const all = [
+      pos('2026-09-25T06:00:00.000Z', far.lat, far.lon, 8),
+      pos('2026-09-25T06:05:00.000Z', near.lat, near.lon, 6),
+      pos('2026-09-25T06:10:00.000Z', hub.lat, hub.lon, 0),
+    ];
+    /* Bbox atrapy jest szeroki — filtr haversine w fetch odcina >15 km. */
+    const client = limitingPosClient(all, 50);
+    const fetched = await fetchVesselPositionsNearHubPaged(
+      () => client.from('vessel_positions'),
+      'v1',
+      hub,
+      '2026-09-25T00:00:00.000Z',
+      { pageSize: 50, queryKm: GEOFENCE_QUERY_RADIUS_KM },
+    );
+    expect(fetched.every((r) =>
+      haversineKm(r.lat, r.lon, hub.lat, hub.lon) <= GEOFENCE_QUERY_RADIUS_KM
+    )).toBe(true);
+    expect(fetched.some((r) =>
+      haversineKm(r.lat, r.lon, hub.lat, hub.lon) > GEOFENCE_QUERY_RADIUS_KM
+    )).toBe(false);
+    expect(findAtaTransitionIso(fetched, hub)).toBe('2026-09-25T06:10:00.000Z');
   });
 
   it('supabaseStore.lastPortPosition / firstPortEntryAfter na atrapie', async () => {
