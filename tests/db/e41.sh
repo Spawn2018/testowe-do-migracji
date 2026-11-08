@@ -110,6 +110,13 @@ sval "C5 wf_action = load_sms_code" "select (pg_get_functiondef('public.wf_actio
 sval "C5 wf_action bez else order_no" "select (pg_get_functiondef('public.wf_action(workflows,workflow_runs,jsonb,jsonb)'::regprocedure)
      !~ 'else nullif\\(v_code')::text" "true"
 
+echo; echo "[e41] C5 — guard_load_update (0440)"
+# komunikat anulowania importu na fakturze = load_sms_code, nie order_no / UUID.
+sval "C5 guard_load_update = load_sms_code" "select (pg_get_functiondef('public.guard_load_update()'::regprocedure)
+     like '%load_sms_code%')::text" "true"
+sval "C5 guard bez order_no+left(id)" "select (pg_get_functiondef('public.guard_load_update()'::regprocedure)
+     !~ 'coalesce\\(old\\.order_no, left\\(old\\.id')::text" "true"
+
 echo; echo "[e41] A4 — kolumny numerów bez SELECT dla KSH"
 # PostgREST/psql: SELECT kolumny bez uprawnienia → błąd; HHL/SCX też bez SELECT (numery tylko RPC).
 err_col() { out=$(run "$2" "$3" | grep -v -E '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tr '\n' ' ')
