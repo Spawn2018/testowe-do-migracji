@@ -613,6 +613,11 @@ export interface JobResult {
    */
   stena_irm_backoff_until?: string;
   /**
+   * DP-154: po 3 przebiegach bez DMI — ISO do kiedy pomijać DMI
+   * (persist w integration_runs; zimny start Edge nie resetuje okna).
+   */
+  dmi_skip_until?: string;
+  /**
    * DP-187: początek przebiegu (ISO) — `runJob` liczy odstęp od startu, nie od `ran_at`
    * (wolny Tark Tee ~90 s nie pomija następnego crona co 15 min).
    */
@@ -630,13 +635,51 @@ const READ_TEXT_TIMEOUT_MS = 20_000;
 const DMI_READ_TIMEOUT_MS = 8_000;
 const DMI_CACHE_TTL_MS = 3 * 3600_000;
 const DMI_DEFAULT_GAP_MS = 400;
+/** DP-154: po 3 przebiegach bez odpowiedzi DMI — pomiń 24 h (jeden warn). */
+export const DMI_SKIP_AFTER_FAILS = 3;
+export const DMI_SKIP_MS = 24 * 3600_000;
 
 type DmiCacheEntry = { fetchedAt: number; text: string };
 const dmiResponseCache = new Map<string, DmiCacheEntry>();
+/** Pamięć izolatu + hydrate z integration_runs (zimny start Edge). */
+let dmiSkipUntilMs = 0;
 
-/** Testy DP-150: wyczyść cache odpowiedzi DMI między przebiegami. */
+/** Testy DP-150 / DP-154: wyczyść cache odpowiedzi DMI i okno pominięcia. */
 export function clearDmiResponseCache(): void {
   dmiResponseCache.clear();
+  dmiSkipUntilMs = 0;
+}
+
+/** Testy DP-154: wyczyść tylko okno pominięcia DMI. */
+export function clearDmiSkip(): void {
+  dmiSkipUntilMs = 0;
+}
+
+/** DP-154: przywróć okno z ostatniego ferry-weather, gdy pamięć izolatu jest pusta/wygasła. */
+async function hydrateDmiSkip(deps: JobDeps, nowMs: number): Promise<void> {
+  if (nowMs < dmiSkipUntilMs) return;
+  if (!deps.store.recentJobResults) return;
+  const recent = await deps.store.recentJobResults('ferry-weather', 1);
+  const until = recent[0]?.dmi_skip_until;
+  if (typeof until !== 'string') return;
+  const ms = Date.parse(until);
+  if (Number.isFinite(ms) && ms > nowMs) dmiSkipUntilMs = ms;
+}
+
+/**
+ * DP-154: ile kolejnych przebiegów ferry-weather miało dmi=0 bez aktywnego pominięcia.
+ * Najnowsze pierwsze (jak road-* streak).
+ */
+async function dmiFailStreak(deps: JobDeps): Promise<number> {
+  let streak = 0;
+  if (!deps.store.recentJobResults) return streak;
+  const rows = await deps.store.recentJobResults('ferry-weather', 5);
+  for (const r of rows) {
+    if (r.observations?.dmi_skipped === '1') break;
+    if (r.observations?.dmi === '0') streak++;
+    else break;
+  }
+  return streak;
 }
 
 async function readText(
@@ -5955,44 +5998,65 @@ export async function runFerryWeather(deps: JobDeps): Promise<JobResult> {
     if (fHorizonTo < fTo) fTo = fHorizonTo;
   }
 
-  /* DP-150: DMI — 1 punkt/korytarz, szeregowo z odstępem, cache 3 h, timeout 8 s. */
-  const dmiGapMs = Math.max(0, Number(deps.env.DMI_REQUEST_GAP_MS ?? DMI_DEFAULT_GAP_MS));
-  const dmiTimeoutMs = Math.max(1_000, Number(deps.env.DMI_TIMEOUT_MS ?? DMI_READ_TIMEOUT_MS));
-  const dmiCodes = dmiPointsUnique();
-  for (let i = 0; i < dmiCodes.length; i++) {
-    const code = dmiCodes[i]!;
-    if (i > 0) await sleepMs(dmiGapMs);
-    const p = MARINE_POINTS[code];
-    const dUrl = dmiWamUrl(p.lon, p.lat, fFrom, fTo);
-    const cacheKey = `${code}|${fFrom}|${fTo}`;
-    const cached = dmiResponseCache.get(cacheKey);
-    let dText: string | null = null;
-    if (cached && now.getTime() - cached.fetchedAt < DMI_CACHE_TTL_MS) {
-      dText = cached.text;
-    } else {
-      let dRes = await readText(deps, dUrl, {
-        headers: { 'User-Agent': USER_AGENT, Accept: 'application/prs.coverage+json,application/json' },
-      }, dmiTimeoutMs);
-      if (!dRes.ok && /HTTP 429/.test(dRes.warning)) {
-        await sleepMs(dmiGapMs);
-        dRes = await readText(deps, dUrl, {
+  /* DP-150: DMI — 1 punkt/korytarz, szeregowo z odstępem, cache 3 h, timeout 8 s.
+   * DP-154: po 3 przebiegach bez odpowiedzi — pomiń 24 h (jedno ostrzeżenie). */
+  let dmiSkipped = false;
+  await hydrateDmiSkip(deps, now.getTime());
+  if (now.getTime() < dmiSkipUntilMs) {
+    dmiSkipped = true;
+    warnings.push(
+      `DMI pominięte do ${new Date(dmiSkipUntilMs).toISOString()} (po ${DMI_SKIP_AFTER_FAILS} przebiegach bez odpowiedzi)`,
+    );
+  } else {
+    const dmiGapMs = Math.max(0, Number(deps.env.DMI_REQUEST_GAP_MS ?? DMI_DEFAULT_GAP_MS));
+    const dmiTimeoutMs = Math.max(1_000, Number(deps.env.DMI_TIMEOUT_MS ?? DMI_READ_TIMEOUT_MS));
+    const dmiCodes = dmiPointsUnique();
+    for (let i = 0; i < dmiCodes.length; i++) {
+      const code = dmiCodes[i]!;
+      if (i > 0) await sleepMs(dmiGapMs);
+      const p = MARINE_POINTS[code];
+      const dUrl = dmiWamUrl(p.lon, p.lat, fFrom, fTo);
+      const cacheKey = `${code}|${fFrom}|${fTo}`;
+      const cached = dmiResponseCache.get(cacheKey);
+      let dText: string | null = null;
+      if (cached && now.getTime() - cached.fetchedAt < DMI_CACHE_TTL_MS) {
+        dText = cached.text;
+      } else {
+        let dRes = await readText(deps, dUrl, {
           headers: { 'User-Agent': USER_AGENT, Accept: 'application/prs.coverage+json,application/json' },
         }, dmiTimeoutMs);
+        if (!dRes.ok && /HTTP 429/.test(dRes.warning)) {
+          await sleepMs(dmiGapMs);
+          dRes = await readText(deps, dUrl, {
+            headers: { 'User-Agent': USER_AGENT, Accept: 'application/prs.coverage+json,application/json' },
+          }, dmiTimeoutMs);
+        }
+        if (dRes.ok) {
+          dText = dRes.text;
+          dmiResponseCache.set(cacheKey, { fetchedAt: now.getTime(), text: dRes.text });
+        } else {
+          warnings.push(`DMI ${code}: ${dRes.warning}`);
+        }
       }
-      if (dRes.ok) {
-        dText = dRes.text;
-        dmiResponseCache.set(cacheKey, { fetchedAt: now.getTime(), text: dRes.text });
-      } else {
-        warnings.push(`DMI ${code}: ${dRes.warning}`);
+      if (dText == null) continue;
+      try {
+        const parsed = parseDmiCoverageJson(JSON.parse(dText), code);
+        samples.push(...parsed);
+        if (parsed.length) dmiOk++;
+      } catch {
+        warnings.push(`DMI ${code}: nieczytelny CoverageJSON`);
       }
     }
-    if (dText == null) continue;
-    try {
-      const parsed = parseDmiCoverageJson(JSON.parse(dText), code);
-      samples.push(...parsed);
-      if (parsed.length) dmiOk++;
-    } catch {
-      warnings.push(`DMI ${code}: nieczytelny CoverageJSON`);
+    if (dmiOk > 0) {
+      dmiSkipUntilMs = 0;
+    } else {
+      const streak = (await dmiFailStreak(deps)) + 1;
+      if (streak >= DMI_SKIP_AFTER_FAILS) {
+        dmiSkipUntilMs = now.getTime() + DMI_SKIP_MS;
+        warnings.push(
+          `DMI: ${DMI_SKIP_AFTER_FAILS} przebiegi bez odpowiedzi — pomijam do ${new Date(dmiSkipUntilMs).toISOString()}`,
+        );
+      }
     }
   }
 
@@ -6014,7 +6078,16 @@ export async function runFerryWeather(deps: JobDeps): Promise<JobResult> {
   // BN5: SOURCE_DOWN gdy brak FMI i DMI (SMHI ocobs nie zastępuje prognoz).
   if (fmiOk === 0 && dmiOk === 0) {
     await deps.store.raiseRisk(sourceDownRisk('MARINE_WEATHER', warnings, nowIso, 'https://en.ilmatieteenlaitos.fi/open-data'));
-    return { job: 'ferry-weather', mode: 'LIVE', ok: false, risks: 1, warnings };
+    return {
+      job: 'ferry-weather', mode: 'LIVE', ok: false, risks: 1, warnings,
+      ...(dmiSkipUntilMs > now.getTime()
+        ? { dmi_skip_until: new Date(dmiSkipUntilMs).toISOString() }
+        : {}),
+      observations: {
+        fmi: String(fmiOk), dmi: String(dmiOk), smhi: String(smhiOk),
+        ...(dmiSkipped ? { dmi_skipped: '1' } : {}),
+      },
+    };
   }
   await deps.store.resolveRisks('SOURCE_DOWN:MARINE_WEATHER:');
 
@@ -6102,12 +6175,17 @@ export async function runFerryWeather(deps: JobDeps): Promise<JobResult> {
 
   return {
     job: 'ferry-weather', mode: 'LIVE', ok: true, risks, warnings,
+    /* DP-154: okno pominięcia DMI — zimny start Edge czyta recentJobResults. */
+    ...(dmiSkipUntilMs > now.getTime()
+      ? { dmi_skip_until: new Date(dmiSkipUntilMs).toISOString() }
+      : {}),
     observations: {
       wave: globalEval.maxWaveM != null ? String(globalEval.maxWaveM) : '',
       gust: globalEval.maxGustKn != null ? String(globalEval.maxGustKn) : '',
       risk: globalEval.risk,
       sources: globalEval.sources.join('+'),
       fmi: String(fmiOk), dmi: String(dmiOk), smhi: String(smhiOk),
+      ...(dmiSkipped ? { dmi_skipped: '1' } : {}),
       attribution: iceSnap.attribution
         ? `${globalEval.attribution} · ${iceSnap.attribution}`
         : globalEval.attribution,

@@ -1203,7 +1203,8 @@ describe('ferry-weather — II-8 FMI+DMI+SMHI', () => {
     const inner = d.fetch!;
     d.fetch = (async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
-      if (url.includes('forecast::wam') && url.includes('54.4')) {
+      /* DP-153: GDN = 54.65 — nadal używamy krótkiego horyzontu jako „przybrzeżny” w teście max. */
+      if (url.includes('forecast::wam') && url.includes('54.65')) {
         return new Response(FMI_COASTAL, { status: 200 });
       }
       if (url.includes('forecast::wam')) {

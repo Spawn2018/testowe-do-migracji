@@ -1,3 +1,9 @@
+## 2026-11-08 12:35 — #901 SCALONE; start DP-153+154
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608/#714/#716/#718/#720 w planie. Bez nowego `pilne` do budowy.
+- Scalanie: **#901 SCALONE** `473dfe6e` (DP-132 F7: gotowe @ `2bb39918`; CI unit/visual ✔). `deploy-main` robi resztę. Bez push na main.
+- **Krok** DP-153+154: FMI WAM GDN/NYN → otwarta woda (54.65/18.80, 58.75/18.20); DMI skip 24 h po 3× bez odpowiedzi (`dmi_skip_until`). Gałąź `pakiet/dp-153-154-bn5-fmi-dmi`. Bez migracji. Czekam CI→F7. Dalej: P4-k2 / #566.
+
 ## 2026-11-08 12:05 — DP-132 testy geofence (F7 #703 r3)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608/#714/#716/#718/#720 w planie. Bez nowego `pilne` do budowy.

@@ -72,9 +72,10 @@ function familyFromDict(
 
 /** Punkty PL–SE + otwarta woda bałtycka (#714). */
 export const MARINE_POINTS = {
-  GDN: { lat: 54.4, lon: 18.67, label: 'Gdańsk' },
+  /* DP-153: GDN/NYN na otwartej wodzie — przybrzeżne 54.40/58.90 dawały same NaN w FMI WAM. */
+  GDN: { lat: 54.65, lon: 18.80, label: 'Zatoka Gdańska (otwarta woda)' },
   MID: { lat: 56.5, lon: 18.5, label: 'środek trasy Gdańsk–Nynäshamn' },
-  NYN: { lat: 58.9, lon: 17.95, label: 'podejście Nynäshamn' },
+  NYN: { lat: 58.75, lon: 18.20, label: 'podejście Nynäshamn (otwarta woda)' },
   GDY: { lat: 54.53, lon: 18.55, label: 'Gdynia' },
   MID_STENA: { lat: 55.6, lon: 16.6, label: 'środek trasy Gdynia–Karlskrona' },
   KAA: { lat: 56.16, lon: 15.59, label: 'podejście Karlskrona' },
