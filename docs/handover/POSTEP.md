@@ -1,3 +1,9 @@
+## 2026-11-08 07:50 — DP-199 r5 (#895): GPS since≈4 (h4 EU_DRIVE FAIL)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608/#714/#716/#718/#720 w planie. Bez nowego `pilne` do budowy.
+- Scalanie: brak „F7: gotowe” — CI @ `38d64a0c` unit/visual ✔, db FAIL h4 32/33 (`EU_DRIVE≥4` przy ostrożnym driven=8,5 → chunk 0,5 h). Bez push na main.
+- **Krok** DP-199 (**0442** r5): fixture GPS rest 11 h + ~4 h jazdy (since≈4, driven≈4, nie ostrożne); asercja stanu + `EU_DRIVE≥4`. h4 **34**. Gałąź `pakiet/c5-dp-199-h4-baltic-rest`. Czekam CI → F7.
+
 ## 2026-11-08 07:20 — DP-199 r4 (#895): fixture + carrier_order_no
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608/#714/#716/#718/#720 w planie. Bez nowego `pilne` do budowy.
