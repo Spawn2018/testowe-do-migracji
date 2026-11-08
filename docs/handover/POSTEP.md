@@ -1,3 +1,9 @@
+## 2026-11-08 03:55 — #893 db FAIL → r3 (bump_ctx test = HHL)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608/#714/#716/#718/#720 w planie. Bez nowego `pilne` do budowy.
+- Scalanie: brak „F7: gotowe” po r2 @ `56809eca`. db FAIL e41: bump_ctx jako KSH → RLS 0 wierszy. Bez push na main.
+- **Krok** C5 (**0440** r3): testy bump_ctx jak i2 eta_ctx — rola **HHL** (nie KSH). e41 **55**. Gałąź `pakiet/c5-guard-load-update-code-sms`.
+
 ## 2026-11-08 03:30 — #893 F7 NIE → r2 (0440 bump_ctx + 0351)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608/#714/#716/#718/#720 w planie. Bez nowego `pilne` do budowy.
