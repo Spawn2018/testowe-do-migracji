@@ -59,6 +59,11 @@ describe('BN5 marineCorridorForRoute / marinePointsForRoute', () => {
     expect(MARINE_POINTS.GULF_MID).toEqual({ lat: 59.80, lon: 24.85, label: expect.any(String) });
     expect(MARINE_POINTS.NB_EAST.lat).toBeCloseTo(59.55, 2);
     expect(MARINE_POINTS.ALAND_SEA.lon).toBeCloseTo(19.40, 2);
+    /* DP-153: GDN/NYN na otwartej wodzie (nie przybrzeżne NaN). */
+    expect(MARINE_POINTS.GDN.lat).toBeCloseTo(54.65, 2);
+    expect(MARINE_POINTS.GDN.lon).toBeCloseTo(18.80, 2);
+    expect(MARINE_POINTS.NYN.lat).toBeCloseTo(58.75, 2);
+    expect(MARINE_POINTS.NYN.lon).toBeCloseTo(18.20, 2);
     for (const c of MARINE_CORRIDORS) {
       expect(marinePointsForCorridor(c).length).toBeGreaterThan(0);
     }
