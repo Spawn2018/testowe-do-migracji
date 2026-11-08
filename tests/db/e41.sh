@@ -101,6 +101,15 @@ sys "update loads set hhl_order_no='0005/09/S/2026', carrier_order_no='15062/202
 sys "update risk_signals set resolved_at=now()
      where load_id='$L1' and dedup_key like 'ORDERNO:%' and resolved_at is null" >/dev/null
 
+echo; echo "[e41] C5 — wf_load_context + wf_action (0439)"
+# order_no=KSH/1; kontekst i akcje workflow → SG-03.
+sval "C5 wf_load_context code = SG-03" "select public.wf_load_context('$L1')->>'code'" "SG-03"
+sval "C5 wf_load_context ≠ order_no" "select ((public.wf_load_context('$L1')->>'code') is distinct from 'KSH/1')::text" "true"
+sval "C5 wf_action = load_sms_code" "select (pg_get_functiondef('public.wf_action(workflows,workflow_runs,jsonb,jsonb)'::regprocedure)
+     like '%load_sms_code%')::text" "true"
+sval "C5 wf_action bez else order_no" "select (pg_get_functiondef('public.wf_action(workflows,workflow_runs,jsonb,jsonb)'::regprocedure)
+     !~ 'else nullif\\(v_code')::text" "true"
+
 echo; echo "[e41] A4 — kolumny numerów bez SELECT dla KSH"
 # PostgREST/psql: SELECT kolumny bez uprawnienia → błąd; HHL/SCX też bez SELECT (numery tylko RPC).
 err_col() { out=$(run "$2" "$3" | grep -v -E '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tr '\n' ' ')
