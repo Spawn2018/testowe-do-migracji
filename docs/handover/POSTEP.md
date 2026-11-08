@@ -1,3 +1,9 @@
+## 2026-11-08 11:35 — #899 SCALONE; start DP-129
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608/#714/#716/#718/#720 w planie. Bez nowego `pilne` do budowy.
+- Scalanie: **#899 SCALONE** `05936a8e` (DP-81+82 F7: gotowe @ `8778c4bb`; CI unit/visual/db ✔). `deploy-main` robi resztę. Bez push na main.
+- **Krok** DP-129: `ferry-ais` — postój w hubie trasy (Zatoka) → `W_PORCIE_<kod>` (`interpretRouteFix`); test XPRS w HEL. Gałąź `pakiet/dp-129-ferry-ais-w-porcie`. Bez migracji. Czekam CI→F7. Dalej: DP-132 → 153+154.
+
 ## 2026-11-08 10:55 — #898 SCALONE; start DP-81+82
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608/#714/#716/#718/#720 w planie. #762 opisy DP-81/82/129/132/153/154 wpisane do rejestru. Bez nowego `pilne` do budowy.
