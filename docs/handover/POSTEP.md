@@ -1,3 +1,9 @@
+## 2026-11-08 05:35 — #894 SCALONE; C5 zamknięte; start DP-199 (H-4 bałtyk)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608/#714/#716/#718/#720 w planie. Bez nowego `pilne` do budowy.
+- Scalanie: **#894 SCALONE** `74313768` (C5 0441 F7: gotowe @ `586e1500`; CI unit/visual/db ✔). C5 checklista w komentarzu #894. `deploy-main` robi resztę. Bez push na main.
+- **Krok** DP-199 (**0442**): `compute_load_eta_core` — H-4 „po promie / zegar od zera” tylko gdy `h_cross≥9`; TLL-HEL (~2 h) kontynuuje stan GPS. h4 **28** (+2). Gałąź `pakiet/c5-dp-199-h4-baltic-rest`.
+
 ## 2026-11-08 05:05 — #893 SCALONE; C5 krok 6 (telm orphan = load_sms_code)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608/#714/#716/#718/#720 w planie. Bez nowego `pilne` do budowy.
