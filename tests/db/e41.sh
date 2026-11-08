@@ -46,6 +46,24 @@ sval "C5 code ≠ order_no" "select (payload->>'code' is distinct from 'KSH/1'):
      where template='RISK_OPEN' and payload->>'risk_id'='0c500000-0436-4000-8000-000000000001'
      order by created_at desc nulls last limit 1" "true"
 
+echo; echo "[e41] C5 — czat + matrix_notify (0437)"
+# hhl_order_no / order_no ustawione wyżej; tytuł i code czatu = SG-03, nie numer zlecenia.
+sys "insert into load_messages (id, load_id, author_id, body, visible_to)
+     select 900437, '$L1', u.id, 'c5-chat-code',
+            array['FORWARDER','CARRIER','CLIENT']::org_kind[]
+       from app_users u where u.auth_id='$HHL'
+     on conflict (id) do update
+       set body=excluded.body, visible_to=excluded.visible_to" >/dev/null
+sval "C5 czat code = SG-03" "select payload->>'code' from notifications
+     where template='LOAD_CHAT_MESSAGE' and dedup_key like 'CHAT:900437:%'
+       and channel='IN_APP' order by created_at desc nulls last limit 1" "SG-03"
+sval "C5 czat title zaczyna SG-03" "select (payload->>'title' like 'SG-03 — %')::text from notifications
+     where template='LOAD_CHAT_MESSAGE' and dedup_key like 'CHAT:900437:%'
+       and channel='IN_APP' order by created_at desc nulls last limit 1" "true"
+sval "C5 czat code ≠ hhl_order_no" "select (payload->>'code' is distinct from '0005/09/S/2026')::text from notifications
+     where template='LOAD_CHAT_MESSAGE' and dedup_key like 'CHAT:900437:%'
+       and channel='IN_APP' order by created_at desc nulls last limit 1" "true"
+
 echo; echo "[e41] A4 — kolumny numerów bez SELECT dla KSH"
 # PostgREST/psql: SELECT kolumny bez uprawnienia → błąd; HHL/SCX też bez SELECT (numery tylko RPC).
 err_col() { out=$(run "$2" "$3" | grep -v -E '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tr '\n' ' ')
