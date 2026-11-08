@@ -158,10 +158,12 @@ val "DP-193: authenticated bez EXECUTE eta_flags_collapse" \
 # DP-199 (decyzja 111 / F7 #895): krótki prom TLL-HEL (~2 h) — bez flagi D-9;
 # własny load (#713); sailing_id=null → rodzina z ferry_route; pozycja ląd EE (Tallinn).
 # 1 pozycja → since_break≈4 (ostrożne); po krótkim promie since=0 → pierwszy EU_DRIVE ≥4 h.
+# carrier_order_no wymagane przy IN_TRANSIT_* (enforce_order_numbers — CI db h4 28/33).
 L199=a1990000-0000-4000-8000-000000000199
-sys "insert into loads (id, project_id, carrier_org_id, order_no, hhl_order_no, ferry_route, sailing_id, status, plan_load_date, telematics_vehicle_id, trailer_swap, trailer_swap_at)
-  values ('$L199','22222222-0000-0000-0000-000000000001','00000000-0000-0000-0000-00000000a003','KSH/D199','HHL-D199','TLL-HEL',null,'IN_TRANSIT_PL', current_date - 1, 'TEL-H4-199', false, null)
+sys "insert into loads (id, project_id, carrier_org_id, order_no, hhl_order_no, carrier_order_no, ferry_route, sailing_id, status, plan_load_date, telematics_vehicle_id, trailer_swap, trailer_swap_at)
+  values ('$L199','22222222-0000-0000-0000-000000000001','00000000-0000-0000-0000-00000000a003','KSH/D199','HHL-D199','SCX-D199','TLL-HEL',null,'IN_TRANSIT_PL', current_date - 1, 'TEL-H4-199', false, null)
   on conflict (id) do update set ferry_route='TLL-HEL', sailing_id=null, status='IN_TRANSIT_PL',
+    hhl_order_no=excluded.hhl_order_no, carrier_order_no=excluded.carrier_order_no,
     plan_load_date=excluded.plan_load_date, telematics_vehicle_id=excluded.telematics_vehicle_id,
     trailer_swap=false, trailer_swap_at=null" >/dev/null
 val "DP-199 fixture: 1 load TLL-HEL" \

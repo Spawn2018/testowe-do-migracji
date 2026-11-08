@@ -1,3 +1,9 @@
+## 2026-11-08 07:20 — DP-199 r4 (#895): fixture + carrier_order_no
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608/#714/#716/#718/#720 w planie. Bez nowego `pilne` do budowy.
+- Scalanie: brak „F7: gotowe” — CI @ `69fb7ed6` unit/visual ✔, db FAIL h4 28/33 (insert load bez `carrier_order_no` → enforce). Bez push na main.
+- **Krok** DP-199 (**0442** r4): fixtura TLL-HEL z `carrier_order_no=SCX-D199` (IN_TRANSIT_*). h4 **33**. Gałąź `pakiet/c5-dp-199-h4-baltic-rest`. Czekam CI → F7.
+
 ## 2026-11-08 06:20 — DP-199 r3 (#895): db FAIL → fixture + EU_DRIVE≥4
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608/#714/#716/#718/#720 w planie. Bez nowego `pilne` do budowy.
