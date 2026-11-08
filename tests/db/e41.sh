@@ -124,6 +124,13 @@ err "C5 bump_ctx: inna kolumna → błąd" $HHL \
   "select set_config('tower.bump_ctx','on',true); update loads set driver_name='HACK' where id='$L1'" \
   "Podbicie wersji może zmienić wyłącznie updated_at"
 
+echo; echo "[e41] C5 — telm_scan_orphan_trailer_alerts (0441)"
+# tytuł / params.code EMTRACK_ORPHAN = load_sms_code, nie order_no / UUID.
+sval "C5 orphan scan = load_sms_code" "select (pg_get_functiondef('public.telm_scan_orphan_trailer_alerts(timestamptz)'::regprocedure)
+     like '%load_sms_code%')::text" "true"
+sval "C5 orphan bez order_no+left(id)" "select (pg_get_functiondef('public.telm_scan_orphan_trailer_alerts(timestamptz)'::regprocedure)
+     !~ 'l\\.order_no,\\s*left\\(l\\.id')::text" "true"
+
 echo; echo "[e41] A4 — kolumny numerów bez SELECT dla KSH"
 # PostgREST/psql: SELECT kolumny bez uprawnienia → błąd; HHL/SCX też bez SELECT (numery tylko RPC).
 err_col() { out=$(run "$2" "$3" | grep -v -E '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tr '\n' ' ')
