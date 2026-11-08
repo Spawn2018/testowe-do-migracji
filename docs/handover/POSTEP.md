@@ -1,3 +1,9 @@
+## 2026-11-08 09:08 — #895 SCALONE; C5 ostatnie 2 miejsca (0443)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608/#714/#716/#718/#720 w planie. Bez nowego `pilne` do budowy.
+- Scalanie: **#895 SCALONE** `59c7a282` (DP-199 0442 F7: gotowe @ `29861733`; CI unit/visual/db ✔). `deploy-main` robi resztę. Bez push na main.
+- **Krok** C5 (**0443**): `sms_watchdog` SMS_FALLBACK + `notify_click_url` — kod = `load_sms_code` (bez `order_no`/hhl w URL). e41 **63** (+6). Gałąź `pakiet/c5-sms-watchdog-notify-click-url`.
+
 ## 2026-11-08 07:50 — DP-199 r5 (#895): GPS since≈4 (h4 EU_DRIVE FAIL)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608/#714/#716/#718/#720 w planie. Bez nowego `pilne` do budowy.
