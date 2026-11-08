@@ -1,3 +1,21 @@
+## 2026-11-08 03:55 — #893 db FAIL → r3 (bump_ctx test = HHL)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608/#714/#716/#718/#720 w planie. Bez nowego `pilne` do budowy.
+- Scalanie: brak „F7: gotowe” po r2 @ `56809eca`. db FAIL e41: bump_ctx jako KSH → RLS 0 wierszy. Bez push na main.
+- **Krok** C5 (**0440** r3): testy bump_ctx jak i2 eta_ctx — rola **HHL** (nie KSH). e41 **55**. Gałąź `pakiet/c5-guard-load-update-code-sms`.
+
+## 2026-11-08 03:30 — #893 F7 NIE → r2 (0440 bump_ctx + 0351)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608/#714/#716/#718/#720 w planie. Bez nowego `pilne` do budowy.
+- Scalanie: brak „F7: gotowe” — F7 #893 NIE @ `676e184d` (cofnięcie `bump_ctx` 0293). Bez push na main.
+- **Krok** C5 (**0440** r2): ciało = prod (0246 + `bump_ctx` 0293 + `actual_departure_at` 0351); wyłącznie komunikat = `load_sms_code`. e41 **55** (+2 bump_ctx). Gałąź `pakiet/c5-guard-load-update-code-sms`.
+
+## 2026-11-08 02:55 — #892 SCALONE; C5 krok 5 (guard_load_update)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608/#714/#716/#718/#720 w planie. F7 #892 @ `522b8c31`. DP-199 wpisane (po C5).
+- Scalanie: **#892 SCALONE** `a3966d1b` (C5 0439 F7: gotowe @ `522b8c31`; CI unit/visual/db ✔). `deploy-main` robi resztę. Bez push na main.
+- **Krok** C5 (**0440**): `guard_load_update` — komunikat anulowania na fakturze = `load_sms_code` (bez `order_no`/UUID). e41 **53** (+2). Gałąź `pakiet/c5-guard-load-update-code-sms`.
+
 ## 2026-11-08 02:25 — #891 SCALONE; C5 krok 4 (wf_load_context + wf_action)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608/#714/#716/#718/#720 w planie. F7 #891 + kolejność właściciela 08.11 02:18 (C5→DP→P4-k2→#566).
