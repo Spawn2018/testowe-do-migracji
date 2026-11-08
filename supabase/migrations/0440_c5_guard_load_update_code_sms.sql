@@ -1,10 +1,12 @@
 -- C5 (D-20261015-0300-01): guard_load_update
--- kod transportu w komunikacie = load_sms_code; bez fallbacku order_no / UUID. Po 0439.
+-- kod transportu w komunikacie = load_sms_code; bez fallbacku order_no / UUID.
+-- F7 #893 r2: baza = prod (0246 + bump_ctx 0293 + actual_departure_at 0351);
+-- zmiana wyłącznie komunikatu anulowania na fakturze. Po 0439.
 
 begin;
 
 -- ---------------------------------------------------------------------------
--- 1. guard_load_update — komunikat faktury = load_sms_code (nigdy order_no / UUID)
+-- 1. guard_load_update — ciało z prod; komunikat faktury = load_sms_code
 -- ---------------------------------------------------------------------------
 create or replace function public.guard_load_update()
 returns trigger
@@ -28,6 +30,18 @@ declare
     'combo_length_m','combo_width_m','combo_height_m','combo_weight_t',
     'actual_load_at','actual_delivery_at','status','updated_at'];
 begin
+  /* #530 F7: podbicie updated_at z child (sailings/escorts) — wyłącznie updated_at. */
+  if current_setting('tower.bump_ctx', true) = 'on' then
+    select coalesce(array_agg(n.key), '{}') into v_changed
+      from jsonb_each(to_jsonb(new)) n
+     where n.value is distinct from (to_jsonb(old) -> n.key);
+    if (v_changed <@ array['updated_at']::text[]) is not true then
+      raise exception 'Podbicie wersji może zmienić wyłącznie updated_at (zmienione: %)',
+        array_to_string(v_changed, ', ');
+    end if;
+    return new;
+  end if;
+
   if current_setting('tower.eta_ctx', true) = 'on' then
     select coalesce(array_agg(n.key), '{}') into v_changed
       from jsonb_each(to_jsonb(new)) n
@@ -120,14 +134,16 @@ begin
   end if;
 
   /* D-1501 / F7 B3+N2: nie-HHL_ADMIN — żadnej zmiany sailing_id po FERRY
-     albo gdy dotychczasowy rejs już wypłynął (wyjątek: ODWOLANY — FERRY_CANCELLED). */
+     albo gdy dotychczasowy rejs już wypłynął (wyjątek: ODWOLANY — FERRY_CANCELLED).
+     #666/0351: wypłynięcie także po actual_departure_at. */
   if new.sailing_id is distinct from old.sailing_id then
     if current_app_role() is distinct from 'HHL_ADMIN' then
       if old.status >= 'FERRY' then
         raise exception 'Zmiana rejsu po wypłynięciu — wyłącznie HHL Administrator';
       end if;
       if old.sailing_id is not null then
-        select s.status::text, coalesce(s.delayed_departure_at, s.departure_at)
+        select s.status::text,
+               coalesce(s.actual_departure_at, s.delayed_departure_at, s.departure_at)
           into v_sail_st, v_dep
           from public.sailings s where s.id = old.sailing_id;
         if v_sail_st is distinct from 'ODWOLANY'
@@ -137,7 +153,8 @@ begin
       end if;
     end if;
     if new.sailing_id is not null then
-      select s.status::text, coalesce(s.delayed_departure_at, s.departure_at)
+      select s.status::text,
+             coalesce(s.actual_departure_at, s.delayed_departure_at, s.departure_at)
         into v_sail_st, v_dep
         from public.sailings s where s.id = new.sailing_id;
       if not found or v_dep is null then
@@ -206,6 +223,6 @@ begin
 end $$;
 
 comment on function public.guard_load_update() is
-  'C5 0440: komunikat anulowania = load_sms_code; bez order_no / UUID.';
+  'C5 0440: komunikat anulowania = load_sms_code; bump_ctx 0293; actual_departure_at 0351.';
 
 commit;

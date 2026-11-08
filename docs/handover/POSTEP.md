@@ -1,3 +1,9 @@
+## 2026-11-08 03:30 — #893 F7 NIE → r2 (0440 bump_ctx + 0351)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608/#714/#716/#718/#720 w planie. Bez nowego `pilne` do budowy.
+- Scalanie: brak „F7: gotowe” — F7 #893 NIE @ `676e184d` (cofnięcie `bump_ctx` 0293). Bez push na main.
+- **Krok** C5 (**0440** r2): ciało = prod (0246 + `bump_ctx` 0293 + `actual_departure_at` 0351); wyłącznie komunikat = `load_sms_code`. e41 **55** (+2 bump_ctx). Gałąź `pakiet/c5-guard-load-update-code-sms`.
+
 ## 2026-11-08 02:55 — #892 SCALONE; C5 krok 5 (guard_load_update)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608/#714/#716/#718/#720 w planie. F7 #892 @ `522b8c31`. DP-199 wpisane (po C5).

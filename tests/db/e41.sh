@@ -116,6 +116,13 @@ sval "C5 guard_load_update = load_sms_code" "select (pg_get_functiondef('public.
      like '%load_sms_code%')::text" "true"
 sval "C5 guard bez order_no+left(id)" "select (pg_get_functiondef('public.guard_load_update()'::regprocedure)
      !~ 'coalesce\\(old\\.order_no, left\\(old\\.id')::text" "true"
+# F7 #893 r2: bump_ctx z 0293 — wyłącznie updated_at (KSH inaczej: Brak uprawnień).
+err() { out=$(run "$2" "$3"); if echo "$out" | grep -qiE "$4"; then ok=$((ok+1)); echo "  OK    $1"; else fail=$((fail+1)); bad="${bad} [$1]"; echo "  FAIL  $1  →  $(echo "$out" | tail -1)"; fi; }
+val "C5 bump_ctx: tylko updated_at OK" $KSH \
+  "select set_config('tower.bump_ctx','on',true); with u as (update loads set updated_at=now() where id='$L1' returning 1) select count(*) from u" 1
+err "C5 bump_ctx: inna kolumna → błąd" $KSH \
+  "select set_config('tower.bump_ctx','on',true); update loads set driver_name='HACK' where id='$L1'" \
+  "Podbicie wersji może zmienić wyłącznie updated_at"
 
 echo; echo "[e41] A4 — kolumny numerów bez SELECT dla KSH"
 # PostgREST/psql: SELECT kolumny bez uprawnienia → błąd; HHL/SCX też bez SELECT (numery tylko RPC).
