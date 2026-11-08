@@ -2105,5 +2105,88 @@ val "#630: CROSSING sailing_mismatch zostaje w n_obs" \
    left join eta_calibration_versions v on v.id = (p.j->>'proposal')::bigint;
    rollback;" "true"
 
+# P4-k2 (#581/#608): Stena SE — GPS inland → SE_ROAD_KAA_INLAND; coastal → SE_ROAD_KAA
+val "P4-k2: GPS Västerås → SE_ROAD_KAA_INLAND" \
+  "begin;
+   insert into loads (id, project_id, order_no, hhl_order_no, carrier_order_no, status,
+                      plan_load_date, plan_delivery_date, actual_delivery_at)
+   select 'a442a442-0000-4000-8000-000000000001', project_id, 'P4K-K2A', 'HHL-K2A', 'SCX-K2A',
+          'DELIVERED', current_date - 3, current_date - 1, timestamptz '2026-10-20 18:00+02'
+     from loads where id='a581a581-0000-4000-8000-000000000581';
+   with f as (select kind::text k, id, route from geofences where name like 'P4K %'),
+   t(ev, k, ts) as (values
+     ('GEOFENCE_EXIT','LOADING',   timestamptz '2026-10-18 06:00+02'),
+     ('GEOFENCE_ENTER','PORT_OUT', timestamptz '2026-10-18 14:00+02'),
+     ('GEOFENCE_EXIT','PORT_OUT',  timestamptz '2026-10-18 17:00+02'),
+     ('GEOFENCE_ENTER','PORT_IN',  timestamptz '2026-10-19 11:00+02'),
+     ('GEOFENCE_EXIT','PORT_IN',   timestamptz '2026-10-19 12:00+02'),
+     ('GEOFENCE_ENTER','SITE',     timestamptz '2026-10-20 06:00+02')
+   )
+   insert into load_events (load_id, event_type, occurred_at, payload)
+   select 'a442a442-0000-4000-8000-000000000001', t.ev, t.ts,
+          jsonb_build_object('geofence_id', f.id, 'geofence_kind', f.k,
+                             'route', 'STENA')
+     from t join f on f.k = t.k;
+   update geofences set route = 'STENA' where name like 'P4K %' and kind in ('PORT_OUT','PORT_IN');
+   insert into positions (load_id, ts, geom_raw, source, raw)
+   select 'a442a442-0000-4000-8000-000000000001',
+          timestamptz '2026-10-19 12:00+02' + (g || ' hours')::interval,
+          st_setsrid(st_makepoint(16.5448, 59.6099), 4326),
+          'TELEMATICS_API', '{}'::jsonb
+     from generate_series(0, 17) g;
+   select eta_record_segment_observations('a442a442-0000-4000-8000-000000000001');
+   select (
+     exists (
+       select 1 from eta_segment_observations
+        where load_id='a442a442-0000-4000-8000-000000000001'
+          and corridor='SE_ROAD_KAA_INLAND' and (features->>'p4k')='true'
+          and exclude_reason is null
+          and features->>'se_corridor' = 'SE_KAA_INLAND'
+     )
+   )::text;
+   update geofences set route = 'POLFERRIES' where name like 'P4K %' and kind in ('PORT_OUT','PORT_IN');
+   rollback;" "true"
+
+val "P4-k2: GPS wybrzeże → SE_ROAD_KAA (E22)" \
+  "begin;
+   insert into loads (id, project_id, order_no, hhl_order_no, carrier_order_no, status,
+                      plan_load_date, plan_delivery_date, actual_delivery_at)
+   select 'a442a442-0000-4000-8000-000000000002', project_id, 'P4K-K2B', 'HHL-K2B', 'SCX-K2B',
+          'DELIVERED', current_date - 3, current_date - 1, timestamptz '2026-10-20 18:00+02'
+     from loads where id='a581a581-0000-4000-8000-000000000581';
+   with f as (select kind::text k, id, route from geofences where name like 'P4K %'),
+   t(ev, k, ts) as (values
+     ('GEOFENCE_EXIT','LOADING',   timestamptz '2026-10-18 06:00+02'),
+     ('GEOFENCE_ENTER','PORT_OUT', timestamptz '2026-10-18 14:00+02'),
+     ('GEOFENCE_EXIT','PORT_OUT',  timestamptz '2026-10-18 17:00+02'),
+     ('GEOFENCE_ENTER','PORT_IN',  timestamptz '2026-10-19 11:00+02'),
+     ('GEOFENCE_EXIT','PORT_IN',   timestamptz '2026-10-19 12:00+02'),
+     ('GEOFENCE_ENTER','SITE',     timestamptz '2026-10-20 06:00+02')
+   )
+   insert into load_events (load_id, event_type, occurred_at, payload)
+   select 'a442a442-0000-4000-8000-000000000002', t.ev, t.ts,
+          jsonb_build_object('geofence_id', f.id, 'geofence_kind', f.k,
+                             'route', 'STENA')
+     from t join f on f.k = t.k;
+   update geofences set route = 'STENA' where name like 'P4K %' and kind in ('PORT_OUT','PORT_IN');
+   insert into positions (load_id, ts, geom_raw, source, raw)
+   select 'a442a442-0000-4000-8000-000000000002',
+          timestamptz '2026-10-19 12:00+02' + (g || ' hours')::interval,
+          st_setsrid(st_makepoint(18.0686, 59.3293), 4326),
+          'TELEMATICS_API', '{}'::jsonb
+     from generate_series(0, 17) g;
+   select eta_record_segment_observations('a442a442-0000-4000-8000-000000000002');
+   select (
+     exists (
+       select 1 from eta_segment_observations
+        where load_id='a442a442-0000-4000-8000-000000000002'
+          and corridor='SE_ROAD_KAA' and (features->>'p4k')='true'
+          and exclude_reason is null
+          and features->>'se_corridor' = 'SE_E22'
+     )
+   )::text;
+   update geofences set route = 'POLFERRIES' where name like 'P4K %' and kind in ('PORT_OUT','PORT_IN');
+   rollback;" "true"
+
 echo "WYNIK: $ok OK, $fail FAIL"
 [ "$fail" -eq 0 ]
