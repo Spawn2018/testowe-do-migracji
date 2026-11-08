@@ -64,6 +64,43 @@ sval "C5 czat code ≠ hhl_order_no" "select (payload->>'code' is distinct from 
      where template='LOAD_CHAT_MESSAGE' and dedup_key like 'CHAT:900437:%'
        and channel='IN_APP' order by created_at desc nulls last limit 1" "true"
 
+echo; echo "[e41] C5 — l13_decision_email + detect_missing (0438)"
+# FERRY_CANCELLED = critical → transports[].order_no; C5: SG-03, nie KSH/1.
+sys "update notification_matrix set email=false where event_key='dec_new'" >/dev/null
+sys "delete from notifications where channel='EMAIL' and dedup_key like 'bundle:c5-dec-0438%'" >/dev/null
+DEC_C5=$(sys "select public.decision_open_from_event(
+  '$P','FERRY_CANCELLED','c5-dec-0438','C5 dec code',
+  '{\"bundle_key\":\"c5-dec-0438\"}'::jsonb,'$L1',null)" | tail -1 | tr -d '\r')
+run "$HHL" "select admin_notification_matrix_set('dec_new','HHL_ADMIN',true,true,false)" commit >/dev/null
+sys "select public.l13_decision_email('$DEC_C5'::uuid)" >/dev/null
+sval "C5 l13 transports.order_no = SG-03" "select payload->'transports'->0->>'order_no' from notifications
+     where channel='EMAIL' and payload->>'decision_id'='$DEC_C5'
+     order by created_at desc nulls last limit 1" "SG-03"
+sval "C5 l13 payload.code = SG-03" "select payload->>'code' from notifications
+     where channel='EMAIL' and payload->>'decision_id'='$DEC_C5'
+     order by created_at desc nulls last limit 1" "SG-03"
+sval "C5 l13 ≠ order_no KSH/1" "select (payload->'transports'->0->>'order_no' is distinct from 'KSH/1')::text
+     from notifications where channel='EMAIL' and payload->>'decision_id'='$DEC_C5'
+     order by created_at desc nulls last limit 1" "true"
+sys "update notification_matrix set email=false where event_key='dec_new'" >/dev/null
+# detect_missing: tytuł / params.code = SG-03 (nie order_no / UUID).
+sys "update risk_signals set resolved_at=now()
+     where load_id='$L1' and dedup_key like 'ORDERNO:%' and resolved_at is null" >/dev/null
+sys "update loads set hhl_order_no=null, status='PLANNED',
+       plan_load_from=now()+interval '2 hours'
+     where id='$L1'" >/dev/null
+sys "select public.detect_missing_order_numbers(now(), 48)" >/dev/null
+sval "C5 ORDERNO title = SG-03" "select (title like 'SG-03:%')::text from risk_signals
+     where dedup_key='ORDERNO:HHL:$L1' and resolved_at is null limit 1" "true"
+sval "C5 ORDERNO params.code = SG-03" "select detail->'params'->>'code' from risk_signals
+     where dedup_key='ORDERNO:HHL:$L1' and resolved_at is null limit 1" "SG-03"
+sval "C5 ORDERNO code ≠ order_no" "select (detail->'params'->>'code' is distinct from 'KSH/1')::text
+     from risk_signals where dedup_key='ORDERNO:HHL:$L1' and resolved_at is null limit 1" "true"
+sys "update loads set hhl_order_no='0005/09/S/2026', carrier_order_no='15062/2026/OSL/GDA/P',
+       order_no='KSH/1' where id='$L1'" >/dev/null
+sys "update risk_signals set resolved_at=now()
+     where load_id='$L1' and dedup_key like 'ORDERNO:%' and resolved_at is null" >/dev/null
+
 echo; echo "[e41] A4 — kolumny numerów bez SELECT dla KSH"
 # PostgREST/psql: SELECT kolumny bez uprawnienia → błąd; HHL/SCX też bez SELECT (numery tylko RPC).
 err_col() { out=$(run "$2" "$3" | grep -v -E '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tr '\n' ' ')
