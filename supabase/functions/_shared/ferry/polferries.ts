@@ -167,9 +167,14 @@ export interface ScheduledSailing {
   route: FerryRoute; vessel: string; date: string; departureUtc: string; arrivalUtc: string;
 }
 
-export function parsePolferriesSchedule(html: string): { sailings: ScheduledSailing[]; warnings: string[] } {
+export function parsePolferriesSchedule(
+  html: string,
+  opts: { now?: Date } = {},
+): { sailings: ScheduledSailing[]; warnings: string[] } {
   const warnings: string[] = [];
   const sailings: ScheduledSailing[] = [];
+  const now = opts.now ?? new Date();
+  const todayYmd = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}-${String(now.getUTCDate()).padStart(2, '0')}`;
   const headers = [...html.matchAll(/class="[^"]*\bnavy-header\b[^"]*"[^>]*>\s*([^<]+?)\s*</g)]
     .map((m) => ({ text: m[1].replace(/\s+/g, ' ').trim(), at: m.index! }));
   const routed = headers.filter((h) => ROUTES[h.text.toLowerCase()]);
@@ -196,7 +201,12 @@ export function parsePolferriesSchedule(html: string): { sailings: ScheduledSail
           if (!code) return;
           const vessel = VESSEL_CODES[code];
           const date = `${year}-${String(month).padStart(2, '0')}-${String(d + 1).padStart(2, '0')}`;
-          if (!vessel) { warnings.push(`Rozkład ${route} ${date}: nieznany kod statku „${code}” — pominięty.`); return; }
+          if (!vessel) {
+            /* DP-82 (#762): przeszłe daty (np. kod „–”) — bez ostrzeżenia w każdym przebiegu. */
+            if (date < todayYmd) return;
+            warnings.push(`Rozkład ${route} ${date}: nieznany kod statku „${code}” — pominięty.`);
+            return;
+          }
           sailings.push({ route, vessel, date, departureUtc: localToUtc(date, t[1]), arrivalUtc: localToUtc(date, t[2], nextDay ? 1 : 0) });
         });
       }
@@ -207,8 +217,8 @@ export function parsePolferriesSchedule(html: string): { sailings: ScheduledSail
 }
 
 /** Pobranie rozkładu — raz w tygodniu (harmonogram) albo ręcznie przez HHL. */
-export async function fetchPolferriesSchedule(userAgent: string) {
+export async function fetchPolferriesSchedule(userAgent: string, opts: { now?: Date } = {}) {
   const res = await fetch(POLFERRIES_SCHEDULE_URL, { headers: { 'User-Agent': userAgent, Accept: 'text/html' } });
   if (!res.ok) return { sailings: [] as ScheduledSailing[], warnings: [`Polferries rozkład HTTP ${res.status}`] };
-  return parsePolferriesSchedule(await res.text());
+  return parsePolferriesSchedule(await res.text(), opts);
 }
