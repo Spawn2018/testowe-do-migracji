@@ -131,6 +131,22 @@ sval "C5 orphan scan = load_sms_code" "select (pg_get_functiondef('public.telm_s
 sval "C5 orphan bez order_no+left(id)" "select (pg_get_functiondef('public.telm_scan_orphan_trailer_alerts(timestamptz)'::regprocedure)
      !~ 'l\\.order_no,\\s*left\\(l\\.id')::text" "true"
 
+echo; echo "[e41] C5 — sms_watchdog + notify_click_url (0443)"
+# SMS_FALLBACK i link #/transport = load_sms_code; KSH nigdy numeru zlecenia w URL.
+sval "C5 sms_watchdog = load_sms_code" "select (pg_get_functiondef('public.sms_watchdog(timestamptz)'::regprocedure)
+     like '%load_sms_code%')::text" "true"
+sval "C5 sms_watchdog bez coalesce(o.order_no" "select (pg_get_functiondef('public.sms_watchdog(timestamptz)'::regprocedure)
+     !~ 'coalesce\\(o\\.order_no')::text" "true"
+sval "C5 notify_click_url = load_sms_code" "select (pg_get_functiondef('public.notify_click_url(text,jsonb,uuid)'::regprocedure)
+     like '%load_sms_code%')::text" "true"
+sval "C5 notify_click bez payload.order_no" "select (pg_get_functiondef('public.notify_click_url(text,jsonb,uuid)'::regprocedure)
+     not like '%->>''order_no''%')::text" "true"
+sval "C5 notify_click URL = SG-03" "select public.notify_click_url('RISK_OPEN',
+     jsonb_build_object('order_no','KSH/1','hhl_order_no','0005/09/S/2026'), '$L1'::uuid)" \
+     "/#/transport/SG-03?zakladka=status"
+sval "C5 notify_click bez load_id + order_no → /" "select public.notify_click_url('RISK_OPEN',
+     jsonb_build_object('order_no','KSH/1'), null)" "/"
+
 echo; echo "[e41] A4 — kolumny numerów bez SELECT dla KSH"
 # PostgREST/psql: SELECT kolumny bez uprawnienia → błąd; HHL/SCX też bez SELECT (numery tylko RPC).
 err_col() { out=$(run "$2" "$3" | grep -v -E '^(BEGIN|SET|ROLLBACK|COMMIT)$' | tr '\n' ' ')
