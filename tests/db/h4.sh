@@ -155,17 +155,29 @@ val "DP-193: pusta tablica → pusta" \
 val "DP-193: authenticated bez EXECUTE eta_flags_collapse" \
   "select has_function_privilege('authenticated','eta_flags_collapse(text[])','execute')::text" "false"
 
-# DP-199 (decyzja 111): krótki prom bałtycki TLL-HEL (~2 h) — bez „H-4 po promie / zegar od zera”;
-# długi GDN-NYN (~18 h) — flaga D-9 zostaje.
-sys "update loads set ferry_route='TLL-HEL', status='IN_TRANSIT_PL', plan_load_date=current_date - 1, telematics_vehicle_id='TEL-H4-1', trailer_swap=false, trailer_swap_at=null where id='$L1'" >/dev/null
+# DP-199 (decyzja 111 / F7 #895): krótki prom TLL-HEL (~2 h) — bez flagi D-9;
+# sailing_id=null, żeby load_route_family wziął ferry_route (rejs ma pierwszeństwo).
+# 1 pozycja → since_break≈4.0 (ostrożne); po krótkim promie since=0 → bez EU_BREAK_45 na starcie FI.
+sys "update loads set ferry_route='TLL-HEL', sailing_id=null, status='IN_TRANSIT_PL', plan_load_date=current_date - 1, telematics_vehicle_id='TEL-H4-1', trailer_swap=false, trailer_swap_at=null where id='$L1'" >/dev/null
 sys "delete from positions where load_id='$L1'" >/dev/null
 sys "delete from load_events where load_id='$L1' and event_type='GEOFENCE_EXIT'" >/dev/null
 sys "insert into load_events (load_id, event_type, occurred_at, payload) values ('$L1','GEOFENCE_EXIT', now()-interval '1 day', '{\"geofence_kind\":\"LOADING\"}')" >/dev/null
 sys "insert into positions (load_id, ts, geom_raw, source, raw) values ('$L1', now()-interval '5 minutes', st_setsrid(st_makepoint(24.75, 59.40), 4326), 'TELEMATICS_API', '{}'::jsonb)" >/dev/null
 val "DP-199 TLL-HEL przed promem: bez flagi H-4 po promie" \
   "select (coalesce(basis->'flags','[]'::jsonb)::text not like '%H-4 po promie%')::text from compute_load_eta('$L1', now()) limit 1" "true"
+val "DP-199 TLL-HEL: po krótkim promie bez zbędnej przerwy 45 min na starcie FI" \
+  "select (not exists (
+     select 1
+     from compute_load_eta('$L1', now()) e
+     cross join lateral jsonb_array_elements(coalesce(e.basis->'segments','[]'::jsonb)) s(seg)
+     cross join lateral jsonb_array_elements(coalesce(s.seg->'items','[]'::jsonb))
+       with ordinality t(elem, ord)
+     where s.seg->>'code' = 'H4_SEGMENTS'
+       and t.elem->>'code' = 'EU_BREAK_45'
+       and t.ord <= 3
+   ))::text" "true"
 
-sys "update loads set ferry_route='GDN-NYN', status='IN_TRANSIT_PL' where id='$L1'" >/dev/null
+sys "update loads set ferry_route='GDN-NYN', sailing_id=null, status='IN_TRANSIT_PL' where id='$L1'" >/dev/null
 sys "delete from positions where load_id='$L1'" >/dev/null
 sys "insert into positions (load_id, ts, geom_raw, source, raw) values ('$L1', now()-interval '5 minutes', st_setsrid(st_makepoint(18.65, 54.35), 4326), 'TELEMATICS_API', '{}'::jsonb)" >/dev/null
 val "DP-199 GDN-NYN przed promem: flaga H-4 po promie (D-9)" \

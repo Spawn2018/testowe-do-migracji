@@ -29,7 +29,8 @@ $o$;
 
   v_new := $n$
     -- H-4 po promie: D-9 (zegar od zera) tylko gdy przeprawa ≥ 9 h (odpoczynek dobowy).
-    -- Krótki prom bałtycki (TLL-HEL ~2 h) — bez resetu (DP-199 / decyzja 111).
+    -- Krótki prom bałtycki (TLL-HEL ~2 h): driven/extended z GPS, since_break_h=0
+    -- (prom ≥45 min = przerwa UE 561/2006 art. 7 — DP-199 / F7 #895).
     if coalesce(h_cross, 0) >= 9 then
       select * into sch from h4_schedule_remaining(h_road_eff, 0, 0, 0);
       v_flags := array_append(v_flags, 'H-4 po promie — odpoczynek D-9, zegar od zera'::text);
@@ -38,7 +39,7 @@ $o$;
         h_road_eff,
         coalesce(st.driven_today_h, 0),
         coalesce(st.extended_used, 0),
-        coalesce(st.since_break_h, st.driven_today_h)
+        0
       );
     end if;
     v_drive_h := coalesce(v_drive_h, 0) + sch.drive_h;

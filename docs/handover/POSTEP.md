@@ -1,3 +1,9 @@
+## 2026-11-08 06:00 — DP-199 F7 r2 (#895): since_break=0 po krótkim promie
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608/#714/#716/#718/#720 w planie. Bez nowego `pilne` do budowy.
+- Scalanie: brak „F7: gotowe” — F7 #895 @ `0accd847` (kierunek OK, 1 poprawka); CI db FAIL (TLL-HEL: `sailing_id` zasłaniał `ferry_route`). Bez push na main.
+- **Krok** DP-199 (**0442** r2): po krótkim promie `driven`/`extended` z GPS, `since_break_h=0` (UE 561/2006 art. 7); testy z `sailing_id=null` + bez EU_BREAK_45 na starcie FI. h4 **29** (+1). Gałąź `pakiet/c5-dp-199-h4-baltic-rest`.
+
 ## 2026-11-08 05:35 — #894 SCALONE; C5 zamknięte; start DP-199 (H-4 bałtyk)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608/#714/#716/#718/#720 w planie. Bez nowego `pilne` do budowy.
