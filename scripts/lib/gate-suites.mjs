@@ -25,7 +25,7 @@ export const EXPECTED_LOCAL = {
   risks: 46, // #398: +8 +1 SMS; #411: +3 (blok *_RESOLVED + url)
   import: 425, // #653 revoke enqueue_active_wt: +2 privilege chk; było 423
   nullguard: 919, // DP-233: +5 admin_set_client_variant GUARD (4 odmowy + 1 pozytywny HHL); było 914
-  i2: 677, // DP-224 F7 #822: +2 info/watch OK; #666 było 675
+  i2: 687, // #566 W52: +10 stale_point (mapa/ślad/ETA/cisza/SMS); było 677
   i30: 10,
   i31: 10, // D-1300: +korekta n_sek=7
   dec2: 73, // #455: +2 Działaj jako; katalog 28 typów (#581 ETA_CALIBRATION_APPROVAL; #563/#590)
