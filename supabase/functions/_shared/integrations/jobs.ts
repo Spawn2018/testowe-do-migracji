@@ -14,7 +14,7 @@ import {
   freightSecurityToken, freightWindow, parseStenaFreightTimetable,
 } from '../ferry/stenaFreight.ts';
 import {
-  DIGITRAFFIC_ATTRIBUTION, interpretFix, parseDigitrafficLocations, aisDepartureDelayMin,
+  DIGITRAFFIC_ATTRIBUTION, interpretRouteFix, parseDigitrafficLocations, aisDepartureDelayMin,
   departurePortForRoute, arrivalPortForRoute, portCoords, distanceKm, type VesselFix,
 } from '../ferry/digitraffic.ts';
 import { collectAisstreamFixes, type AisstreamStats } from '../ferry/aisstream.ts';
@@ -3916,23 +3916,9 @@ export async function runFerryAis(deps: JobDeps): Promise<JobResult> {
     if (!fix) { observations[v.name] = 'BRAK_SWIEZEGO_SYGNALU'; continue; }
     const arrPort = arrivalPortForRoute(s.route);
     const depPort = departurePortForRoute(s.route);
-    // BN4 F7 #701: interpretFix (NYN/KAA) tylko dla tras z portem SE; inaczej SOG → W_REJSIE / POSTOJ.
+    // DP-129 / BN4: huby dep+arr (Zatoka → W_PORCIE_<kod>); bez mapy → BRAK_MAPY_PORTU.
     // Nigdy nie licz Zatoki względem Nynäshamn (stary fallback GDN/NYN).
-    let obs: ReturnType<typeof interpretFix> | 'W_REJSIE' | 'POSTOJ_POZA_PORTEM' | 'BRAK_MAPY_PORTU';
-    if (arrPort === 'NYN' || arrPort === 'KAA' || depPort === 'NYN' || depPort === 'KAA') {
-      const seObsPort: 'NYN' | 'KAA' =
-        arrPort === 'NYN' || arrPort === 'KAA' ? arrPort
-          : depPort === 'NYN' || depPort === 'KAA' ? depPort
-            : 'NYN';
-      obs = interpretFix(fix, now, 60, seObsPort);
-    } else if (!depPort || !arrPort) {
-      obs = 'BRAK_MAPY_PORTU';
-    } else {
-      const ageMin = (Date.parse(now) - Date.parse(fix.timestampUtc)) / 60_000;
-      obs = ageMin > 60 ? 'BRAK_SWIEZEGO_SYGNALU'
-        : (fix.sogKn ?? 0) >= 3 ? 'W_REJSIE'
-          : 'POSTOJ_POZA_PORTEM';
-    }
+    const obs = interpretRouteFix(fix, now, depPort, arrPort, 60);
     observations[v.name] = obs;
 
     // #421 / DP-128 / DP-222: ATD przy parze geofence (3/4 km; ≤20/60 min + SOG≥1).

@@ -66,27 +66,20 @@ export function distanceKm(aLat: number, aLon: number, bLat: number, bLon: numbe
 export type FerryObservation =
   | 'W_PORCIE_NYNASHAMN'
   | 'W_PORCIE_KARLSKRONA'
+  | 'W_PORCIE_GDN'
+  | 'W_PORCIE_GDY'
+  | 'W_PORCIE_TLL'
+  | 'W_PORCIE_TLLA'
+  | 'W_PORCIE_HEL'
+  | 'W_PORCIE_HELA'
+  | 'W_PORCIE_MUU'
+  | 'W_PORCIE_VUO'
+  | 'W_PORCIE_PLD'
+  | 'W_PORCIE_KPS'
+  | 'W_PORCIE_STO'
   | 'W_REJSIE'
   | 'POSTOJ_POZA_PORTEM'
   | 'BRAK_SWIEZEGO_SYGNALU';
-
-/**
- * Interpretacja pozycji. Sygnał starszy niż maxAgeMin → BRAK_SWIEZEGO_SYGNALU —
- * to NIE jest informacja o statku, tylko o zasięgu odbiorników.
- * `port`: NYN (domyślnie) albo KAA (Stena).
- */
-export function interpretFix(
-  fix: VesselFix, nowUtc: string, maxAgeMin = 60, port: 'NYN' | 'KAA' = 'NYN',
-): FerryObservation {
-  const ageMin = (Date.parse(nowUtc) - Date.parse(fix.timestampUtc)) / 60000;
-  if (ageMin > maxAgeMin) return 'BRAK_SWIEZEGO_SYGNALU';
-  const hub = port === 'KAA' ? KARLSKRONA : NYNASHAMN;
-  const inPort = distanceKm(fix.lat, fix.lon, hub.lat, hub.lon) <= 3;
-  const moving = (fix.sogKn ?? 0) >= 3;
-  if (inPort && !moving) return port === 'KAA' ? 'W_PORCIE_KARLSKRONA' : 'W_PORCIE_NYNASHAMN';
-  if (moving) return 'W_REJSIE';
-  return 'POSTOJ_POZA_PORTEM';
-}
 
 export const DIGITRAFFIC_ATTRIBUTION = 'Dane AIS: Fintraffic / digitraffic.fi, licencja CC BY 4.0';
 
@@ -160,6 +153,51 @@ export function arrivalPortForRoute(route: string): AisPortCode | null {
 export function portCoords(port: AisPortCode | null | undefined): { lat: number; lon: number } | null {
   if (!port) return null;
   return AIS_PORT_COORDS[port] ?? null;
+}
+
+/** Etykieta postoju w hubie AIS — NYN/KAA zostają przy historycznych nazwach. */
+export function portStayLabel(port: AisPortCode): FerryObservation {
+  if (port === 'NYN') return 'W_PORCIE_NYNASHAMN';
+  if (port === 'KAA') return 'W_PORCIE_KARLSKRONA';
+  return `W_PORCIE_${port}` as FerryObservation;
+}
+
+/**
+ * Interpretacja pozycji względem portów trasy (dep + arr).
+ * DP-129: postój w hubie Zatoki → `W_PORCIE_<kod>`, nie `POSTOJ_POZA_PORTEM`.
+ * Sygnał starszy niż maxAgeMin → BRAK_SWIEZEGO_SYGNALU (zasięg, nie statek).
+ */
+export function interpretRouteFix(
+  fix: VesselFix,
+  nowUtc: string,
+  depPort: AisPortCode | null | undefined,
+  arrPort: AisPortCode | null | undefined,
+  maxAgeMin = 60,
+): FerryObservation | 'BRAK_MAPY_PORTU' {
+  if (!depPort || !arrPort) return 'BRAK_MAPY_PORTU';
+  const ageMin = (Date.parse(nowUtc) - Date.parse(fix.timestampUtc)) / 60_000;
+  if (ageMin > maxAgeMin) return 'BRAK_SWIEZEGO_SYGNALU';
+  const moving = (fix.sogKn ?? 0) >= 3;
+  if (moving) return 'W_REJSIE';
+  /* Arr pierwszy — typowy postój po dopłynięciu; dep dla postoju przed odejściem. */
+  for (const port of [arrPort, depPort]) {
+    const hub = portCoords(port);
+    if (hub && distanceKm(fix.lat, fix.lon, hub.lat, hub.lon) <= 3) return portStayLabel(port);
+  }
+  return 'POSTOJ_POZA_PORTEM';
+}
+
+/**
+ * Interpretacja pozycji. Sygnał starszy niż maxAgeMin → BRAK_SWIEZEGO_SYGNALU —
+ * to NIE jest informacja o statku, tylko o zasięgu odbiorników.
+ * `port`: NYN (domyślnie) albo KAA (Stena). Preferuj `interpretRouteFix` dla pełnej trasy.
+ */
+export function interpretFix(
+  fix: VesselFix, nowUtc: string, maxAgeMin = 60, port: 'NYN' | 'KAA' = 'NYN',
+): FerryObservation {
+  const other: AisPortCode = port === 'KAA' ? 'GDY' : 'GDN';
+  const obs = interpretRouteFix(fix, nowUtc, other, port, maxAgeMin);
+  return obs === 'BRAK_MAPY_PORTU' ? 'POSTOJ_POZA_PORTEM' : obs;
 }
 
 /**

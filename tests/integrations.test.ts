@@ -580,6 +580,30 @@ describe('ferry-ais — Digitraffic (prawdziwa odpowiedź 25.09.2026)', () => {
       actual_arrival_at: null,
     });
   });
+  it('DP-129: Viking XPRS w Helsinkach SOG 0 (TLL-HEL) → W_PORCIE_HEL, nie POSTOJ_POZA_PORTEM', async () => {
+    const XPRS = 'v-xprs';
+    class XprsStore extends MemStore {
+      async vessels() {
+        return [{ id: XPRS, name: 'M/F Viking XPRS', mmsi: 230629000 }];
+      }
+    }
+    const st = new XprsStore();
+    st.sailings.push({
+      id: 'ais-xprs-tll-hel', vessel_id: XPRS, route: 'TLL-HEL',
+      departure_at: '2026-09-24T16:00:00.000Z', arrival_at: '2026-09-25T10:00:00.000Z',
+      delayed_departure_at: null, delayed_arrival_at: null,
+      actual_departure_at: '2026-09-24T16:10:00.000Z', actual_arrival_at: null,
+      status: 'W_REJSIE', source: 'TALLINK',
+    });
+    /* HEL West Harbour + MMSI XPRS w fixture Digitraffic. */
+    const inHel = AIS
+      .replace('17.850695, 57.980348', '24.914, 60.154')
+      .replace('"sog" : 17.1', '"sog" : 0')
+      .replace(/"mmsi"\s*:\s*311000787/g, '"mmsi": 230629000');
+    const r = await runFerryAis(deps(st, { 'digitraffic.fi': inHel }, {}, new Date('2026-09-24T19:40:00Z')).d);
+    expect(r.observations?.['M/F Viking XPRS']).toBe('W_PORCIE_HEL');
+    expect(r.observations?.['M/F Viking XPRS']).not.toBe('POSTOJ_POZA_PORTEM');
+  });
   it('KAA-GDY w Karlskronie (port odejścia) → bez fałszywego dopłynięcia; NYN-GDN w Gdańsku + geofence → actual_arrival', async () => {
     const st = new MemStore();
     st.sailings.push(sail(NS, '2026-09-24T16:00:00.000Z', '2026-09-25T10:00:00.000Z', 'KAA-GDY'));

@@ -6,7 +6,9 @@
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { parsePolferriesStatus, localToUtc } from '../src/lib/ferry/polferries';
-import { parseDigitrafficLocations, interpretFix, aisDepartureDelayMin } from '../src/lib/ferry/digitraffic';
+import {
+  parseDigitrafficLocations, interpretFix, interpretRouteFix, aisDepartureDelayMin,
+} from '../src/lib/ferry/digitraffic';
 import { parseStenaTimetable, stenaTimetableUrl } from '../src/lib/ferry/stena';
 
 const HTML = readFileSync(new URL('./fixtures/polferries-komunikaty-2026-09-25.html', import.meta.url), 'utf8');
@@ -125,6 +127,22 @@ describe('Digitraffic — prawdziwa odpowiedź dla Nova Star', () => {
     const inPort = { ...fix, lat: 56.1646, lon: 15.6308, sogKn: 0.1 };
     const now = new Date(Date.parse(fix.timestampUtc) + 5 * 60000).toISOString();
     expect(interpretFix(inPort, now, 60, 'KAA')).toBe('W_PORCIE_KARLSKRONA');
+  });
+  it('DP-129: postój w Helsinkach (TLL-HEL) → W_PORCIE_HEL, nie POSTOJ_POZA_PORTEM', () => {
+    const inHel = { ...fix, lat: 60.154, lon: 24.914, sogKn: 0 };
+    const now = new Date(Date.parse(fix.timestampUtc) + 5 * 60000).toISOString();
+    expect(interpretRouteFix(inHel, now, 'TLL', 'HEL')).toBe('W_PORCIE_HEL');
+    expect(interpretRouteFix(inHel, now, 'TLL', 'HEL')).not.toBe('POSTOJ_POZA_PORTEM');
+  });
+  it('DP-129: postój w Tallinnie (HEL-TLL) → W_PORCIE_TLL', () => {
+    const inTll = { ...fix, lat: 59.440, lon: 24.775, sogKn: 0.2 };
+    const now = new Date(Date.parse(fix.timestampUtc) + 5 * 60000).toISOString();
+    expect(interpretRouteFix(inTll, now, 'HEL', 'TLL')).toBe('W_PORCIE_TLL');
+  });
+  it('DP-129: poza hubami trasy przy SOG 0 → POSTOJ_POZA_PORTEM', () => {
+    const mid = { ...fix, lat: 59.80, lon: 24.85, sogKn: 0 };
+    const now = new Date(Date.parse(fix.timestampUtc) + 5 * 60000).toISOString();
+    expect(interpretRouteFix(mid, now, 'TLL', 'HEL')).toBe('POSTOJ_POZA_PORTEM');
   });
 
   it('II-9: brak pozycji / stary sygnał / brak SOG → null (nie opóźnienie)', () => {
