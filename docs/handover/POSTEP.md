@@ -1,3 +1,9 @@
+## 2026-11-08 05:05 — #893 SCALONE; C5 krok 6 (telm orphan = load_sms_code)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608/#714/#716/#718/#720 w planie. Bez nowego `pilne` do budowy.
+- Scalanie: **#893 SCALONE** `a58d4baf` (C5 0440 F7: gotowe @ `7bd7884c`; CI unit/visual/db ✔ po rerun hung). `deploy-main` robi resztę. Bez push na main.
+- **Krok** C5 (**0441**): `telm_scan_orphan_trailer_alerts` — kod = `load_sms_code` (bez `order_no`/UUID). e41 **57** (+2). Gałąź `pakiet/c5-detect-emtrack-orphans-code-sms`.
+
 ## 2026-11-08 03:55 — #893 db FAIL → r3 (bump_ctx test = HHL)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608/#714/#716/#718/#720 w planie. Bez nowego `pilne` do budowy.
