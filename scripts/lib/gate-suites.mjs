@@ -52,7 +52,7 @@ export const EXPECTED_LOCAL = {
   g20: 15, // P3-poprawki — G-20; D-0005: HHL_ADMIN może daty (err→val)
   baf: 105, // #563/F7 r4: +4 chk sefs_week_calc / new_mult / event; było 101
   e18: 41, // P1 — porządki E18 (0193), D-20261012-2335-01 K8
-  e41: 36, // P2 + P2-poprawki; A4 +6 kolumny; A2 +4 (msgs_read + loads_read / drugi SCX, D-0330)
+  e41: 38, // P2 + P2-poprawki; A4 +6; A2 +4; C5 +2 payload.code=load_sms_code (0436)
   e25: 93, // A10 F7: +PLANNED bez daty (3) + SCX claims (1) + wahanie trasy STATUS_AUTO (3)
   'c16-push': 18, // C16 N8 + C16-H H5 (D-20261015-1955-01, D-20261016-0100-01)
   c3: 61, // F7 #785 r2: +7 audience E49_WIND/FERRY HHL (KSH/SCX); #780 → 54

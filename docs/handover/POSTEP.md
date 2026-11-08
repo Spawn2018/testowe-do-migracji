@@ -1,3 +1,9 @@
+## 2026-11-08 01:00 — #888 SCALONE; start C5 audyt (payload.code = load_sms_code)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608/#714/#716/#718/#720 w planie. Bez nowego `pilne` do budowy.
+- Scalanie: **#888 SCALONE** `9c5ab3ab` (DP-186 F7: gotowe @ `2e3e1797`; CI unit/visual/db ✔). `deploy-main` robi resztę. Bez push na main. #762 C5 warunkowe zamknięte.
+- **Krok** C5 audyt 15.10 (**0436**): `trg_risk_matrix_notify` + `e49_detour_decide` — `payload.code` = `load_sms_code` (nie `order_no`/UUID). e41 **38** (+2). Gałąź `pakiet/c5-transport-label-shipment-code`.
+
 ## 2026-11-08 00:30 — #887 SCALONE; start DP-186 (C5 / EE cache baza)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608/#714/#716/#718/#720 w planie. Bez nowego `pilne` do budowy.
