@@ -1,3 +1,9 @@
+## 2026-11-08 01:25 — #889 SCALONE; C5 krok 2 (czat + matrix_notify)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608/#714/#716/#718/#720 w planie. Bez nowego `pilne` do budowy.
+- Scalanie: **#889 SCALONE** `5a674d88` (C5 0436 F7: gotowe @ `021ce561`; CI unit/visual/db ✔). `deploy-main` robi resztę. Bez push na main.
+- **Krok** C5 (**0437**): `notify_load_chat_message` + `matrix_notify` — `payload.code` / tytuł czatu = `load_sms_code` (bez `order_no`). e41 **41** (+3). Gałąź `pakiet/c5-chat-matrix-code-sms`.
+
 ## 2026-11-08 01:00 — #888 SCALONE; start C5 audyt (payload.code = load_sms_code)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608/#714/#716/#718/#720 w planie. Bez nowego `pilne` do budowy.
