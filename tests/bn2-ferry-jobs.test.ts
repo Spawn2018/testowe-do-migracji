@@ -1182,6 +1182,45 @@ describe('F7 #661 B1/B2 DFDS bez stałej HTML; PoT tylko dziś', () => {
     expect(st.risks.some((x) => isDfdsSchedDown(x.dedup))).toBe(false);
   });
 
+  it('DP-81: wiele pustych tygodni po dacie granicznej API → jedno podsumowanie', async () => {
+    const st = new MemStore();
+    const both = JSON.parse(DFDS_API) as { pld_kps_week44: unknown[]; kps_pld_week44: unknown[] };
+    const f = (async (input: RequestInfo | URL) => {
+      const url = String(input);
+      if (url.includes('api/timetable')) {
+        const u = new URL(url);
+        const from = u.searchParams.get('dateFrom') ?? '';
+        const load = u.searchParams.get('portOfLoading') ?? '';
+        /* Tydzień z NOW (26.10) ma dane; kolejne tygodnie = [] (po dacie granicznej API). */
+        if (from.startsWith('2026-10-26')) {
+          const body = load === 'EEPLN' ? both.pld_kps_week44 : both.kps_pld_week44;
+          return new Response(JSON.stringify(body), { status: 200 });
+        }
+        return new Response('[]', { status: 200 });
+      }
+      if (url.includes('routes-and-schedules') || url.includes('ctfassets.net')) {
+        throw new Error('DP-81: PDF nie powinien być wywoływany przy samych pustych tygodniach po OK');
+      }
+      const pages: Record<string, string | number> = { ...tallinkPages };
+      const hit = Object.entries(pages).find(([k]) => url.includes(k));
+      if (hit) {
+        return typeof hit[1] === 'number'
+          ? new Response('err', { status: hit[1] })
+          : new Response(hit[1], { status: 200 });
+      }
+      if (url.includes('_jcr_content.timetable.')) return new Response('[]', { status: 200 });
+      if (url.includes('ts.ee') || url.includes('portsofstockholm') || url.includes('stenalinefreight')) {
+        return new Response('err', { status: 503 });
+      }
+      throw new Error(`nieoczekiwane: ${url}`);
+    }) as typeof fetch;
+    const out = await runFerrySchedule({ store: st, fetch: f, env: {}, now: () => NOW });
+    const emptyWarns = out.warnings.filter((w) => /API pusty tydzień/i.test(w));
+    expect(emptyWarns).toHaveLength(1);
+    expect(emptyWarns[0]).toMatch(/×\d+ od 2026-11-02 \(po dacie granicznej API\)/);
+    expect(st.risks.some((x) => isDfdsSchedDown(x.dedup))).toBe(false);
+  });
+
   it('F7 #668 r6: jeden pusty tydzień [] + reszta OK → ostrzeżenie, bez PDF', async () => {
     const st = new MemStore();
     const both = JSON.parse(DFDS_API) as { pld_kps_week44: unknown[]; kps_pld_week44: unknown[] };

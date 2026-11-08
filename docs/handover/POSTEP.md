@@ -1,3 +1,9 @@
+## 2026-11-08 10:55 — #898 SCALONE; start DP-81+82
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608/#714/#716/#718/#720 w planie. #762 opisy DP-81/82/129/132/153/154 wpisane do rejestru. Bez nowego `pilne` do budowy.
+- Scalanie: **#898 SCALONE** `a716a4c0` (P4-k2 0444 F7: gotowe @ `8f789dcf`; CI unit/visual/db ✔). `deploy-main` robi resztę. Bez push na main.
+- **Krok** DP-81+82: `ferry-schedule` — zbiorcze ostrzeżenie pustych tygodni DFDS; Polferries bez warn dla nieznanych kodów na przeszłych datach. Gałąź `pakiet/dp-81-82-ferry-schedule-noise`. Bez migracji. Czekam CI→F7. Dalej: DP-129 → 132 → 153+154.
+
 ## 2026-11-08 10:25 — P4-k2 r2 (#898): UUID fixture hex
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608/#714/#716/#718/#720 w planie. Bez nowego `pilne` do budowy.

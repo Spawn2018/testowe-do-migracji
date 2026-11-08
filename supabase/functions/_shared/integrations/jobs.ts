@@ -1098,9 +1098,10 @@ async function fetchDfdsDays(
        JSON nie-tablica albo niepusta tablica z 0 sparsowanymi → struktura / failedWindow + PDF. */
     const emptyOk = Array.isArray(json) && json.length === 0;
     if (emptyOk) {
+      /* DP-81: ostrzeżenie o pustym tygodniu zbiorczo po pętli (nie per tydzień×kierunek). */
       return {
         sailings: [] as ReturnType<typeof parseDfdsTimetableApi>['sailings'],
-        warn: [...parsed.warnings, `DFDS Dynamic: API pusty tydzień ${job.dateFromIso.slice(0, 10)}`],
+        warn: [...parsed.warnings],
         job,
         ok: true,
         emptyOk: true,
@@ -1127,12 +1128,16 @@ async function fetchDfdsDays(
     };
   });
   let apiSailings: ReturnType<typeof parseDfdsTimetableApi>['sailings'] = [];
+  const emptyWeekDates: string[] = [];
   for (const part of apiParts) {
     warnings.push(...part.warn);
     if (part.ok) {
       apiOk += 1;
       apiSailings = mergeDfdsSailings(apiSailings, part.sailings);
       /* Pusty tydzień OK — nie wrzucaj do failedWindows (PDF nie „przywraca” odwołanych). */
+      if ((part as { emptyOk?: boolean }).emptyOk) {
+        emptyWeekDates.push(part.job.dateFromIso.slice(0, 10));
+      }
     } else {
       failedWindows.push({
         dateFromIso: part.job.dateFromIso,
@@ -1143,6 +1148,17 @@ async function fetchDfdsDays(
       if (part.warn.some((w) => /Struktura|nie-JSON|nieznan|nieczytelny rejs|nieczytelne godziny|oczekiwano tablicy/i.test(w))) {
         apiStructureFail = true;
       }
+    }
+  }
+  /* DP-81 (#762): po dacie granicznej API — jedno podsumowanie zamiast wpisu na każdy tydzień×kierunek. */
+  if (emptyWeekDates.length > 0) {
+    const unique = [...new Set(emptyWeekDates)].sort();
+    if (unique.length === 1) {
+      warnings.push(`DFDS Dynamic: API pusty tydzień ${unique[0]}`);
+    } else {
+      warnings.push(
+        `DFDS Dynamic: API pusty tydzień ×${unique.length} od ${unique[0]} (po dacie granicznej API)`,
+      );
     }
   }
 
@@ -2113,7 +2129,9 @@ async function applyPortsStockholm(deps: JobDeps, sinceIso: string): Promise<{
 export async function runFerrySchedule(deps: JobDeps): Promise<JobResult> {
   const now = deps.now().toISOString();
   const page = await readText(deps, POLFERRIES_SCHEDULE_URL, { headers: { 'User-Agent': USER_AGENT, Accept: 'text/html' } });
-  const parsed = page.ok ? parsePolferriesSchedule(page.text) : { sailings: [], warnings: [page.warning] };
+  const parsed = page.ok
+    ? parsePolferriesSchedule(page.text, { now: deps.now() })
+    : { sailings: [], warnings: [page.warning] };
   const pfFail = isSourceFailure({ warnings: parsed.warnings, count: parsed.sailings.length });
   if (pfFail) {
     await deps.store.raiseRisk(sourceDownRisk('POLFERRIES_SCHEDULE', parsed.warnings, now, POLFERRIES_SCHEDULE_URL));
