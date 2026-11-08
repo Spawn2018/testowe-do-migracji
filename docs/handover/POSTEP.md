@@ -1,3 +1,9 @@
+## 2026-11-08 10:25 — P4-k2 r2 (#898): UUID fixture hex
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608/#714/#716/#718/#720 w planie. Bez nowego `pilne` do budowy.
+- Scalanie: brak „F7: gotowe” — CI @ `fd637bd5` unit/visual ✔, db FAIL p4k 111/113 (UUID `a4k2…` z literą `k` → invalid uuid / `^`). Bez push na main.
+- **Krok** P4-k2 (**0444** r2): fixture UUID `a442a442-…0001/0002` (tylko hex). p4k **113**. Gałąź `pakiet/p4-k2-se-road-kaa-inland-calib`. Czekam CI → F7.
+
 ## 2026-11-08 09:45 — #897 SCALONE; start P4-k2 (0444)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608/#714/#716/#718/#720 w planie. Lista 18 DP z 08.11 02:18: SCALONE/DONE/odnotowane albo brak w rejestrze — bez otwartego kodu. Bez nowego `pilne` do budowy.
