@@ -1,3 +1,9 @@
+## 2026-11-08 09:45 — #897 SCALONE; start P4-k2 (0444)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608/#714/#716/#718/#720 w planie. Lista 18 DP z 08.11 02:18: SCALONE/DONE/odnotowane albo brak w rejestrze — bez otwartego kodu. Bez nowego `pilne` do budowy.
+- Scalanie: **#897 SCALONE** `3962ce05` (C5 0443 F7: gotowe @ `9a995d49`; CI unit/visual/db ✔). `deploy-main` robi resztę. Bez push na main.
+- **Krok** P4-k2 (**0444**): pomiar GDY-KAA/STENA — `SE_ROAD_KAA` vs `SE_ROAD_KAA_INLAND` z `stena_se_eta_corridor` (większość GPS lat≥58,55); features `se_corridor`/`se_road_code`. p4k **113** (+2). Gałąź `pakiet/p4-k2-se-road-kaa-inland-calib`.
+
 ## 2026-11-08 09:08 — #895 SCALONE; C5 ostatnie 2 miejsca (0443)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608/#714/#716/#718/#720 w planie. Bez nowego `pilne` do budowy.

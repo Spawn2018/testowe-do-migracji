@@ -47,7 +47,7 @@ export const EXPECTED_LOCAL = {
   'ferry-status': 23, // DP-108: +1 AUTO→FERRY_CANCELLED; DP-101 / 0427: 22
   bmapa: 229, // DP-234: +5 kotwice stref Q-18; DP-231: 224
   h4: 34, // DP-199 r5: +1 GPS since≈4 (nie ostrożne 8,5); było 33
-  p4k: 111, // #630 F7 r1: +rola PORT_CHECKIN; CROSSING mismatch w medianie; undo 7d
+  p4k: 113, // P4-k2: +2 SE_ROAD_KAA vs INLAND ze śladu; było 111 (#630)
   aud03: 32, // D-0005 F7: +OPS, by=HHL_ADMIN, P2 bez sprawy, ASK_FIX/DECISION_HOLD
   g20: 15, // P3-poprawki — G-20; D-0005: HHL_ADMIN może daty (err→val)
   baf: 105, // #563/F7 r4: +4 chk sefs_week_calc / new_mult / event; było 101
