@@ -1,3 +1,9 @@
+## 2026-11-08 14:20 — #566 W52 r2: trg_eta tylko positions.raw
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608/#714/#716/#718/#720 w planie. Bez nowego `pilne` do budowy.
+- Scalanie: brak „F7: gotowe”. Bez push na main.
+- **Krok** #566 / W52 r2 (PR #903): `trg_eta_after_event` — filtr `stale_point` tylko gdy `tg_table_name='positions'` (load_events bez `raw` → e25 FAIL). Gałąź `pakiet/566-w52-stale-point` / **0445**. Czekam CI→F7.
+
 ## 2026-11-08 13:35 — #902 SCALONE; start #566 W52 (0445)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608/#714/#716/#718/#720 w planie. Bez nowego `pilne` do budowy.

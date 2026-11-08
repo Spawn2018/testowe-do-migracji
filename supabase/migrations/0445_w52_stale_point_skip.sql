@@ -3,14 +3,16 @@
 -- Warunek jak w process_position: coalesce((raw->>'stale_point')::boolean, false) is not true.
 select set_config('tower.audit_source', 'migracja 0445 (#566 W52 stale_point)', true);
 
--- 1) ETA — wyzwalacz trg_positions_eta → trg_eta_after_event
+-- 1) ETA — ta sama funkcja na load_events i positions (trg_positions_eta)
 create or replace function public.trg_eta_after_event() returns trigger
 language plpgsql
 security definer
 set search_path = public
 as $$
 begin
-  if coalesce((new.raw->>'stale_point')::boolean, false) is true then
+  -- load_events nie ma kolumny raw; filtr tylko na positions
+  if tg_table_name = 'positions'
+     and coalesce((new.raw->>'stale_point')::boolean, false) is true then
     return null;
   end if;
   perform public.refresh_load_eta(new.load_id);
@@ -20,7 +22,7 @@ $$;
 
 revoke all on function public.trg_eta_after_event() from public, anon, authenticated;
 comment on function public.trg_eta_after_event() is
-  'ETA po INSERT positions; #566: pomija raw.stale_point=true.';
+  'ETA po INSERT load_events/positions; #566: na positions pomija raw.stale_point=true.';
 
 -- 2) SMS KSH 1 h — wyzwalacz trg_sms_ksh_1h_position
 create or replace function public.sms_ksh_1h_on_position() returns trigger
