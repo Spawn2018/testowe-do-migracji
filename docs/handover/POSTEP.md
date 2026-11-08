@@ -1,3 +1,9 @@
+## 2026-11-08 06:20 — DP-199 r3 (#895): db FAIL → fixture + EU_DRIVE≥4
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608/#714/#716/#718/#720 w planie. Bez nowego `pilne` do budowy.
+- Scalanie: brak „F7: gotowe” — CI db FAIL h4 27/29 (TLL-HEL flaga + EU_BREAK `ord≤3` mylące przy since=0). Bez push na main.
+- **Krok** DP-199 (**0442** r3): warunek `greatest(h_cross, v_arr−v_dep)≥9`; własny load TLL-HEL + asercje rodziny/CROSSING/0442; pierwszy `EU_DRIVE≥4` zamiast `ord≤3`. h4 **33**. Gałąź `pakiet/c5-dp-199-h4-baltic-rest`.
+
 ## 2026-11-08 06:00 — DP-199 F7 r2 (#895): since_break=0 po krótkim promie
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608/#714/#716/#718/#720 w planie. Bez nowego `pilne` do budowy.
