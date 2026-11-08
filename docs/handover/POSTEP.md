@@ -1,3 +1,9 @@
+## 2026-11-08 01:55 — #890 SCALONE; C5 krok 3 (l13 + detect_missing)
+
+- Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608/#714/#716/#718/#720 w planie. Bez nowego `pilne` do budowy.
+- Scalanie: **#890 SCALONE** `e19af629` (C5 0437 F7: gotowe @ `a2081535`; CI unit/visual/db ✔). `deploy-main` robi resztę. Bez push na main.
+- **Krok** C5 (**0438**): `l13_decision_email` + `detect_missing_order_numbers` — kod = `load_sms_code` (bez `order_no`/UUID). e41 **47** (+6). Gałąź `pakiet/c5-l13-detect-missing-code-sms`.
+
 ## 2026-11-08 01:25 — #889 SCALONE; C5 krok 2 (czat + matrix_notify)
 
 - Skrzynka: #550 WSTRZYMANE; BN5–8 / #537/#538/#499/#500/#608/#714/#716/#718/#720 w planie. Bez nowego `pilne` do budowy.
